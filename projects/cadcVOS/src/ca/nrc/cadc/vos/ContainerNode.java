@@ -94,6 +94,7 @@ public class ContainerNode extends Node
     public ContainerNode()
     {
         super();
+        nodes = new ArrayList<Node>();
     }
     
     /**
