@@ -67,27 +67,35 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
 
 /**
- * An interface defining the methods available for working with VOSpace
- * nodes in the persistent layer.
+ * Class used to hold the id of a Node in it's 'appId' memeber.
  * 
  * @author majorb
+ *
  */
-public interface NodePersistence
+public class NodeID
 {
+    // The node ID
+    private Long id;
     
-    Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException;
+    /**
+     * NodeID constructor.
+     * 
+     * @param id
+     */
+    public NodeID(Long id)
+    {
+        this.id = id;
+    }
     
-    Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException;
+    /**
+     * @return The node ID.
+     */
+    public Long getId()
+    {
+        return id;
+    }
     
-    void delete(Node node, boolean deleteChildren) throws NodeNotFoundException;
-    
-    Node updateProperties(Node node) throws NodeNotFoundException;
-    
-    void move(Node node, String newPath);
-    
-    void copy(Node node, String copyToPath);
-
 }
