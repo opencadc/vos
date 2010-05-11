@@ -111,7 +111,8 @@ public class NodeProperty
             NodeProperty np = (NodeProperty) o;
             if (propertyURI != null)
             {
-                return propertyURI.equals(np.getPropertyURI());
+                boolean returnValue = propertyURI.equals(np.getPropertyURI());
+                return returnValue;
             }
         }
         return false;
