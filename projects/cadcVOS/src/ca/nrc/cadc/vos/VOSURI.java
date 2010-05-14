@@ -80,9 +80,27 @@ import java.net.URISyntaxException;
 public class VOSURI
 {
     private URI vosURI;
-
+    
     /**
      * Attempts to create a URI using the specified uri. The scheme for the uri
+     * is expected to be vos, else a URISyntaxException will be thrown.
+     *
+     * @param uri The URI to use.
+     * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
+     * @throws NullPointerException if uri is null.
+     */
+    public VOSURI(URI uri)
+        throws URISyntaxException
+    {
+        vosURI = uri;
+
+        // Check the scheme is vos
+        if (!vosURI.getScheme().equalsIgnoreCase("vos"))
+            throw new URISyntaxException(uri.toString(), "Scheme must be vos");
+    }
+
+    /**
+     * Attempts to create a URI using the specified uri string. The scheme for the uri
      * is expected to be vos, else a URISyntaxException will be thrown.
      *
      * @param uri String representation of a URI to decode.
