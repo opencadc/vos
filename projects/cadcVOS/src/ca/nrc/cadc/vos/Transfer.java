@@ -69,9 +69,23 @@
 
 package ca.nrc.cadc.vos;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.vos.client.VOSpaceClient;
+import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -79,6 +93,7 @@ import java.util.List;
  */
 public class Transfer implements Runnable
 {
+    private static Logger log = Logger.getLogger(Transfer.class);
     /**
      * Transfer Directions
      */
@@ -95,13 +110,45 @@ public class Transfer implements Runnable
     protected List<Protocol> protocols;
     protected boolean keepBytes;
 
-    // Result member variables
-    protected String endpoint = null;
-
     public Transfer()
     {
     }
 
+    public void doUpload(File file)
+    {
+        URL url;
+        try
+        {
+            url = new URL(getPutEndpoint());
+        }
+        catch (MalformedURLException e)
+        {
+            log.error("get putEndpoint");
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+        log.debug(url);
+        
+        SecuredUpload upload = new SecuredUpload(file, url);
+        upload.run();
+    }
+
+    public String getPutEndpoint() 
+    {
+        String rtn = null;
+        if (this.protocols != null)
+        {
+            for (Protocol p : this.protocols)
+            {
+                if (p.getUri().equalsIgnoreCase(VOS.PROTOCOL_HTTP_PUT)) {
+                    rtn = p.getEndpoint();
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
+    
     public String getPhase()
     {
         throw new UnsupportedOperationException("Feature under construction.");
@@ -109,7 +156,8 @@ public class Transfer implements Runnable
 
     public String getResults()
     {
-        return endpoint;
+        //TODO
+        return null;
         //throw new UnsupportedOperationException("Feature under construction.");
     }
 
@@ -201,13 +249,5 @@ public class Transfer implements Runnable
         this.keepBytes = keepBytes;
     }
 
-    public String getEndpoint()
-    {
-        return endpoint;
-    }
 
-    public void setEndpoint(String endpoint)
-    {
-        this.endpoint = endpoint;
-    }
 }
