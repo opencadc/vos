@@ -119,7 +119,7 @@ public class Transfer implements Runnable
         URL url;
         try
         {
-            url = new URL(getPutEndpoint());
+            url = new URL(getUploadEndpoint());
         }
         catch (MalformedURLException e)
         {
@@ -129,18 +129,30 @@ public class Transfer implements Runnable
         }
         log.debug(url);
         
-        SecuredUpload upload = new SecuredUpload(file, url);
+        Upload upload = new Upload(file, url);
         upload.run();
     }
 
-    public String getPutEndpoint() 
+    public String getUploadEndpoint() 
+    {
+        return getEndpoint(VOS.PROTOCOL_HTTP_PUT);
+    }
+
+    public String getDownloadEndpoint() 
+    {
+        String rtn = null;
+        rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
+        return rtn;
+    }
+
+    public String getEndpoint(String strProtocol) 
     {
         String rtn = null;
         if (this.protocols != null)
         {
             for (Protocol p : this.protocols)
             {
-                if (p.getUri().equalsIgnoreCase(VOS.PROTOCOL_HTTP_PUT)) {
+                if (p.getUri().equalsIgnoreCase(strProtocol)) {
                     rtn = p.getEndpoint();
                     break;
                 }
@@ -148,7 +160,7 @@ public class Transfer implements Runnable
         }
         return rtn;
     }
-    
+
     public String getPhase()
     {
         throw new UnsupportedOperationException("Feature under construction.");
