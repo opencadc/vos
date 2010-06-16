@@ -88,6 +88,8 @@
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
+    <property name="cadcDownloadManagerClient" value="${lib}/cadcDownloadManagerClient.jar" />
+    
 
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
     <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
@@ -95,7 +97,7 @@
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}" />
+    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcDownloadManagerClient}" />
 
     <target name="build" depends="compile">
         <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
