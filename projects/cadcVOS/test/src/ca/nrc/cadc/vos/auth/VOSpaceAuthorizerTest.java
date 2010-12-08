@@ -136,7 +136,6 @@ public class VOSpaceAuthorizerTest
             this.uri = uri;
         }
 
-        @Override
         public Object run() throws Exception
         {
             return authorizer.getReadPermission(uri);
