@@ -69,33 +69,43 @@
 
 package ca.nrc.cadc.vos.server;
 
+import javax.security.auth.Subject;
+
 /**
- * Class used to hold the id of a Node in it's 'appId' memeber.
+ * Class used to hold server-side implementation objects.
  * 
  * @author majorb
  *
  */
 public class NodeID
 {
-    // The node ID
     private Long id;
+
+    private Subject owner;
     
     /**
      * NodeID constructor.
      * 
      * @param id
+     * @param owner
      */
-    public NodeID(Long id)
+    public NodeID(Long id, Subject owner)
     {
         this.id = id;
+        this.owner = owner;
     }
     
     /**
      * @return The node ID.
      */
-    public Long getId()
+    public Long getID()
     {
         return id;
+    }
+
+    public Subject getOwner()
+    {
+        return owner;
     }
 
     public String toString()
