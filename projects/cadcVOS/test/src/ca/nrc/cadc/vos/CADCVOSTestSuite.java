@@ -95,6 +95,8 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     LinkNodeTest.class,
     MainTest.class,
     NodeReaderWriterTest.class,
+    NodeListReaderWriterTest.class,
+    SearchReaderWriterTest.class,
     TransferReaderWriterTest.class,
     NodeResourceTest.class,
     VOSpaceAuthorizerTest.class,
