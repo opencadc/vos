@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -82,10 +82,10 @@ import org.apache.log4j.Logger;
 
 /**
  * Abstract class defining an object within VOSpace.
- *  
+ *
  * @see ca.nrc.cadc.vos.DataNode
  * @see ca.nrc.cadc.vos.ContainerNode
- * 
+ *
  * @author majorb
  *
  */
@@ -107,7 +107,7 @@ public abstract class Node implements Comparable<Object>
 
     // Flag indicating if the node is public
     protected boolean isPublic;
-    
+
     // Flag indicating if the node is locked
     protected boolean isLocked;
 
@@ -116,13 +116,13 @@ public abstract class Node implements Comparable<Object>
 
     // To be used by controlling applications as they wish
     public transient Object appData;
-    
+
     // List of views which this node accepts
     protected List<URI> accepts;
-    
+
     // List of views which this node provides
     protected List<URI> provides;
-    
+
 
     private Node() { }
 
@@ -158,17 +158,18 @@ public abstract class Node implements Comparable<Object>
             parentStr = parent.uri.toString() + " " + parent.appData;
         }
 
-        return this.getClass().getSimpleName() 
+        return this.getClass().getSimpleName()
                 + " [appData=" + appData
                 //+ ", markedForDeletion=" + markedForDeletion
                 + ", uri=" + uri.toString()
                 + ", parent=" + parentStr
                 + ", properties=" + properties + "]";
     }
-    
+
     /**
      * Return an integer denoting the display order for two nodes.
      */
+    @Override
     public int compareTo(Object o1)
     {
         if (o1 == null)
@@ -194,6 +195,24 @@ public abstract class Node implements Comparable<Object>
     }
 
     /**
+     * Checks if this node matches the search expression.  Asterisks (*) may be used
+     * in the expression to indicate a multiple character wildcard matching area.
+     *
+     * @param expression The search expression.
+     * @return true If this node matches the given search expression.
+     * @throws IllegalArgumentExpression If the syntax of the expression
+     * is incorrect.
+     */
+    public boolean matches(String expression)
+    {
+        NodeProperty search = NodeProperty.parseMatchingExpression(expression);
+        NodeProperty np = this.findProperty(search.getPropertyURI());
+        if (np == null)
+            return false;
+        return np.matches(search.getPropertyValue());
+    }
+
+    /**
      * @return true if the VOSpace understands the format of the data.
      */
     public abstract boolean isStructured();
@@ -213,7 +232,7 @@ public abstract class Node implements Comparable<Object>
     {
         return provides;
     }
-    
+
     /**
      * Set the accepts list.
      * @param accepts
@@ -222,7 +241,7 @@ public abstract class Node implements Comparable<Object>
     {
         this.accepts = accepts;
     }
-    
+
     /**
      * Set the provides list.
      * @param provides
@@ -245,7 +264,7 @@ public abstract class Node implements Comparable<Object>
     {
         return name;
     }
-    
+
     public void setName(String name)
     {
         this.name = name;
@@ -284,7 +303,7 @@ public abstract class Node implements Comparable<Object>
         this.markedForDeletion = markedForDeletion;
     }
     */
-    
+
     /**
      * Convenience method. This just calls
      * <pre>
@@ -298,7 +317,7 @@ public abstract class Node implements Comparable<Object>
         String val = getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC);
         return "true".equals(val);
     }
-    
+
     /**
      * Convenience method. This just calls
      * <pre>
@@ -316,7 +335,7 @@ public abstract class Node implements Comparable<Object>
     /**
      * Find a property by its key (propertyUri).
      * TODO: this should return a List<NodeProperty>
-     * 
+     *
      * @param propertyURI
      * @return the node property object or null if not found
      */
