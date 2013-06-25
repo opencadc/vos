@@ -134,7 +134,7 @@ public class NodeReader
 
             if (vospaceSchemaUrl == null)
                 throw new RuntimeException("failed to load " + VOSPACE_SCHEMA_RESOURCE + " from classpath");
-            if (vospaceSchemaUrl == null)
+            if (xlinkSchemaUrl == null)
                 throw new RuntimeException("failed to load " + XLINK_SCHEMA_RESOURCE + " from classpath");
 
             schemaMap = new HashMap<String, String>();
@@ -225,47 +225,60 @@ public class NodeReader
         log.debug("node namespace prefix: " + namespace.getPrefix());
 
         /* Node base elements */
-        // uri attribute of the node element
-        String uri = root.getAttributeValue("uri");
-        if (uri == null)
-        {
-            String error = "uri attribute not found in root element";
-            throw new NodeParsingException(error);
-        }
-        log.debug("node uri: " + uri);
+        return read(root, namespace);
+    }
 
-        // Get the xsi:type attribute which defines the Node class
-        String xsiType = root.getAttributeValue("type", xsiNamespace);
-        if (xsiType == null)
-        {
-            String error = "xsi:type attribute not found in node element " + uri;
-            throw new NodeParsingException(error);
-        }
-
-        // Split the type attribute into namespace and Node type
-        String[] types = xsiType.split(":");
-        String type = types[1];
-        log.debug("node type: " + type);
-
-        try
-        {
-            if (type.equals(ContainerNode.class.getSimpleName()))
-                return buildContainerNode(root, namespace, uri);
-            else if (type.equals(DataNode.class.getSimpleName()))
-                return buildDataNode(root, namespace, uri);
-            else if (type.equals(UnstructuredDataNode.class.getSimpleName()))
-            	return buildUnstructuredDataNode(root, namespace, uri);
-            else if (type.equals(LinkNode.class.getSimpleName()))
-                return buildLinkNode(root, namespace, uri);
-            else if (type.equals(StructuredDataNode.class.getSimpleName()))
-            	return buildStructuredDataNode(root, namespace, uri);
-            else
-                throw new NodeParsingException("unsupported node type " + type);
-        }
-        catch (URISyntaxException e)
-        {
-            throw new NodeParsingException("invalid uri in xml: " + e.getMessage());
-        }
+    /**
+     *  Construct a Node from an element.
+     *
+     * @param element Element.
+     * @return Node Node.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    public Node read(Element element, Namespace namespace) 
+    		throws NodeParsingException 
+    {
+	    // uri attribute of the node element
+	    String uri = element.getAttributeValue("uri");
+	    if (uri == null)
+	    {
+	        String error = "uri attribute not found in root element";
+	        throw new NodeParsingException(error);
+	    }
+	    log.debug("node uri: " + uri);
+	
+	    // Get the xsi:type attribute which defines the Node class
+	    String xsiType = element.getAttributeValue("type", xsiNamespace);
+	    if (xsiType == null)
+	    {
+	        String error = "xsi:type attribute not found in node element " + uri;
+	        throw new NodeParsingException(error);
+	    }
+	
+	    // Split the type attribute into namespace and Node type
+	    String[] types = xsiType.split(":");
+	    String type = types[1];
+	    log.debug("node type: " + type);
+	
+	    try
+	    {
+	        if (type.equals(ContainerNode.class.getSimpleName()))
+	            return buildContainerNode(element, namespace, uri);
+	        else if (type.equals(DataNode.class.getSimpleName()))
+	            return buildDataNode(element, namespace, uri);
+	        else if (type.equals(UnstructuredDataNode.class.getSimpleName()))
+	        	return buildUnstructuredDataNode(element, namespace, uri);
+	        else if (type.equals(LinkNode.class.getSimpleName()))
+	            return buildLinkNode(element, namespace, uri);
+	        else if (type.equals(StructuredDataNode.class.getSimpleName()))
+	        	return buildStructuredDataNode(element, namespace, uri);
+	        else
+	            throw new NodeParsingException("unsupported node type " + type);
+	    }
+	    catch (URISyntaxException e)
+	    {
+	        throw new NodeParsingException("invalid uri in xml: " + e.getMessage());
+	    }
     }
 
     /**

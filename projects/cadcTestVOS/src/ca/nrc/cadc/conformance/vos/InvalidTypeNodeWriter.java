@@ -71,6 +71,7 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 import org.jdom2.Element;
 
 /**
@@ -97,11 +98,11 @@ public class InvalidTypeNodeWriter extends NodeWriter
     protected Element getRootElement(Node node)
     {
         // Create the root element (node).
-        Element root = new Element("node", NodeWriter.vosNamespace);
-        root.addNamespaceDeclaration(NodeWriter.vosNamespace);
-        root.addNamespaceDeclaration(NodeWriter.xsiNamespace);
+        Element root = new Element("node", VOS.NS);
+        root.addNamespaceDeclaration(VOS.NS);
+        root.addNamespaceDeclaration(VOS.XSI);
         root.setAttribute("uri", node.getUri().toString());
-        root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
+        root.setAttribute("type", "vos:invalid_type" + "Type", VOS.XSI);
         return root;
     }
 

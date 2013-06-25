@@ -95,6 +95,8 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     LinkNodeTest.class,
     MainTest.class,
     NodeReaderWriterTest.class,
+    NodeListReaderWriterTest.class,
+    SearchReaderWriterTest.class,
     TransferReaderWriterTest.class,
     NodeResourceTest.class,
     VOSpaceAuthorizerTest.class,
@@ -108,6 +110,7 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     RssViewTest.class,
     RssFeedTest.class,
     TransferInlineContentHandlerTest.class,
+    NodeTest.class,
     NodePropertyTest.class,
 
     // Upload Manager UI testing.
