@@ -135,6 +135,7 @@ public class UpdatePropertiesAction extends NodeAction
         // filter out any non-modifiable properties
         filterPropertiesForUpdate(clientNode);
 
+        nodePersistence.getProperties(serverNode);
         Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
         
         // return the node in xml format
