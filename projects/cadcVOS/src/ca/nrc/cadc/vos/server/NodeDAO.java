@@ -1244,7 +1244,7 @@ public class NodeDAO
                     }
                 }
             }
-            else
+            else if ( !prop.isMarkedForDeletion() )
             {
                 if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
                     throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());

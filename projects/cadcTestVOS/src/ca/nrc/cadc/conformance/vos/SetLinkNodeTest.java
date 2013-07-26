@@ -75,6 +75,7 @@ import org.junit.Ignore;
 import org.junit.Assert;
 import java.util.List;
 import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOS;
@@ -112,9 +113,9 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("updateLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
-                log.debug("LinkNodes not supported, skipping test.");
+                log.info("LinkNodes not supported, skipping test.");
                 return;
             }
 
@@ -133,9 +134,10 @@ public class SetLinkNodeTest extends VOSNodeTest
             int numDefaultProps = persistedNode.getProperties().size();
 
             // Update the node by adding new Property.
+            Node update = new LinkNode(node.getUri(), node.getTarget());
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            node.getProperties().add(nodeProperty);
-            response = post(node);
+            update.getProperties().add(nodeProperty);
+            response = post(update);
             assertEquals("updateLinkNode: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -149,9 +151,6 @@ public class SetLinkNodeTest extends VOSNodeTest
             Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
             Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
             
-            // Updated node should have X + 1 properties.
-            assertEquals("", (numDefaultProps + 1), updatedNode.getProperties().size());
-
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -175,9 +174,9 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("updateLinkNodeDeleteProperty");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
-                log.debug("LinkNodes not supported, skipping test.");
+                log.info("LinkNodes not supported, skipping test.");
                 return;
             }
 
@@ -196,26 +195,32 @@ public class SetLinkNodeTest extends VOSNodeTest
             NodeReader reader = new NodeReader();
             LinkNode updatedNode = (LinkNode) reader.read(xml);
             
-            int expectedNumProps = updatedNode.getProperties().size() - 1;
-
-            List<NodeProperty> del = new ArrayList<NodeProperty>();
+            LinkNode update = new LinkNode(node.getUri(),node.getTarget());
             NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, new ArrayList<String>());
             np.setMarkedForDeletion(true);
-            node.setProperties(del);
+            update.getProperties().add(np);
 
-            response = post(node);
+            response = post(update);
             assertEquals("updateLinkNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             xml = response.getText();
             log.debug("updateLinkNodeDeleteProperty: response from POST:\r\n" + xml);
 
-            // Validate against the VOSPace schema.
+            // Validate against the VOSpace schema.
             updatedNode = (LinkNode) reader.read(xml);
 
             np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
             assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
-            assertEquals(expectedNumProps, updatedNode.getProperties().size());
+            
+            // get the node and verify that prop is really deleted server-side
+            response = get(updatedNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            xml = response.getText();
+            log.debug("updateDataNodeDeleteProperty: response from GET:\r\n" + xml);
+            Node savedNode = reader.read(xml);
+            np = savedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
+            Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
 
             // Delete the node
             response = delete(updatedNode);
@@ -242,9 +247,9 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
-                log.debug("LinkNodes not supported, skipping test.");
+                log.info("LinkNodes not supported, skipping test.");
                 return;
             }
 
@@ -354,7 +359,7 @@ public class SetLinkNodeTest extends VOSNodeTest
 
             if (supportLinkNodes)
             {
-                log.debug("LinkNodes not supported, skipping test.");
+                log.info("LinkNodes not supported, skipping test.");
                 return;
             }
 
