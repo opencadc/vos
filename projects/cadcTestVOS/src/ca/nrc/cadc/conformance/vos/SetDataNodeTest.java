@@ -86,8 +86,10 @@ import org.junit.matchers.JUnitMatchers;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 
 import com.meterware.httpunit.WebResponse;
@@ -130,7 +132,6 @@ public class SetDataNodeTest extends VOSNodeTest
             log.debug("updateDataNode: response from PUT:\r\n" + xml);
             NodeReader reader = new NodeReader();
             DataNode persistedNode = (DataNode) reader.read(xml);
-            int numDefaultProps = persistedNode.getProperties().size();
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -144,19 +145,9 @@ public class SetDataNodeTest extends VOSNodeTest
 
             // Validate against the VOSpace schema.
             DataNode updatedNode = (DataNode) reader.read(xml);
-
-            // Ensure the new property exists
-            boolean propFound = false;
-            for (NodeProperty np : updatedNode.getProperties())
-            {
-                if (np.getPropertyURI().equals(VOS.PROPERTY_URI_LANGUAGE) &&
-                    np.getPropertyValue().equals("English"))
-                {
-                    propFound = true;
-                }
-            }
-            assertTrue("", propFound);
-
+            NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            
             // Delete the node
             response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -194,16 +185,26 @@ public class SetDataNodeTest extends VOSNodeTest
             // Validate against the VOSpace schema.
             NodeReader reader = new NodeReader();
             DataNode updatedNode = (DataNode) reader.read(xml);
+            // verify the response contains the property we are testing
+            NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
+            Assert.assertNotNull(VOS.PROPERTY_URI_DESCRIPTION, np);
 
-            // Mark the property as deleted.
-            int expectedNumProps = updatedNode.getProperties().size() - 1;
-
-            List<NodeProperty> del = new ArrayList<NodeProperty>();
-            NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, new ArrayList<String>());
+            // get the node and verify that prop is really stored server-side
+            response = get(updatedNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            xml = response.getText();
+            log.debug("updateDataNodeDeleteProperty: response from GET:\r\n" + xml);
+            updatedNode = (DataNode) reader.read(xml);
+            np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
+            Assert.assertNotNull(VOS.PROPERTY_URI_DESCRIPTION, np);
+            
+            // OK: test setup verified
+            
+            DataNode update = new DataNode(node.sampleNode.getUri());
+            np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, new ArrayList<String>());
             np.setMarkedForDeletion(true);
-            node.sampleNode.setProperties(del);
-
-            response = post(node.sampleNode);
+            update.getProperties().add(np);
+            response = post(update);
             assertEquals("updateDataNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -214,6 +215,15 @@ public class SetDataNodeTest extends VOSNodeTest
             updatedNode = (DataNode) reader.read(xml);
 
             np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
+            Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
+            
+            // get the node and verify that prop is really deleted server-side
+            response = get(updatedNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            xml = response.getText();
+            log.debug("updateDataNodeDeleteProperty: response from GET:\r\n" + xml);
+            Node savedNode = reader.read(xml);
+            np = savedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
             Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
 
             // Delete the node

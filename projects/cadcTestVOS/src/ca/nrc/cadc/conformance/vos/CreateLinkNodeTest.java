@@ -109,7 +109,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("createLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -162,7 +162,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("duplicateNodeFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -221,7 +221,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("invalidURI");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -261,7 +261,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("typeNotSupportedFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -302,7 +302,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -345,7 +345,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("containerNotFoundFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -387,7 +387,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("linkFoundFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
