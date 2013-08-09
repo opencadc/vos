@@ -114,7 +114,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -217,7 +217,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getMinLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -279,7 +279,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getMaxLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -338,7 +338,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getPropertiesLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -398,7 +398,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getUriOffsetNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -460,7 +460,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getLimitLinkNode");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -519,7 +519,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
@@ -559,7 +559,7 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("nodeNotFoundFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;

@@ -351,7 +351,7 @@ public class CreateDataNodeTest extends VOSNodeTest
         {
             log.debug("linkFoundFault");
             
-            if (supportLinkNodes)
+            if (!supportLinkNodes)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
