@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -72,34 +72,41 @@ package ca.nrc.cadc.vos;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.regex.PatternSyntaxException;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.util.StringUtil;
 
 /**
  * A VOSpace property representing metadata for a node.
- * 
+ *
  * @author majorb
  *
  */
 public class NodeProperty
 {
-    
+
+    private static Logger log = Logger.getLogger(NodeProperty.class);
+
     // Maximum number of groups allowed
     static final int MAX_GROUPS = 4;
-    
+
     // The property identifier
-    private String propertyURI;
-    
+    private final String propertyURI;
+
     // The value of the property
     private String propertyValue;
-    
+
     // true if the property cannot be modified.
     private boolean readOnly;
-    
+
     // true if this property is marked for deletion
     private boolean markedForDeletion;
 
     /**
      * Property constructor.
-     * 
+     *
      * @param uri The property identifier.
      * @param value The property value.
      */
@@ -110,10 +117,10 @@ public class NodeProperty
         this.markedForDeletion = false;
         validateProperty();
     }
-    
+
     /**
      * Property constructor.
-     * 
+     *
      * @param uri The property identifier.
      * @param values The list of values for the property.
      */
@@ -121,10 +128,11 @@ public class NodeProperty
     {
         this(uri, serializePropertyValueList(uri, values));
     }
-    
+
     /**
      * Return true iff the property URIs are equal.
      */
+    @Override
     public boolean equals(Object o)
     {
         if (o instanceof NodeProperty)
@@ -138,7 +146,66 @@ public class NodeProperty
         }
         return false;
     }
-    
+
+
+    /**
+     * Turn the matching expression into a NodeProperty object that can
+     * can be used for searching.  The syntax for the expression is:
+     *
+     * nodePropertyURI=searchExpression
+     *
+     * where searchExpression is a string that may contain wildcard (*)
+     * characters.
+     *
+     * @param expression The expression to parse
+     * @return A NodeProperty representing the expression.
+     * @throws IllegalArgumentExpression If the syntax of the expression
+     * is incorrect.
+     */
+    public static NodeProperty parseMatchingExpression(String expression)
+    {
+        String parseException = "Invalid matching expression.";
+        if (!StringUtil.hasText(expression))
+            throw new IllegalArgumentException(parseException);
+        String[] parts = expression.split("=");
+        if (parts.length != 2)
+            throw new IllegalArgumentException(parseException);
+        String uri = parts[0];
+        String value = parts[1];
+        NodeProperty np = new NodeProperty(uri, value);
+        return np;
+    }
+
+    /**
+     * Checks if the value of this node property matches the search expression.
+     * Asterisks (*) may be used in the expression to indicate an abribrary number
+     * of any character.  Periods (.) match on a single character.
+     *
+     * @param expression The search expression.
+     * @return true If this node matches the given search expression.
+     * @throws IllegalArgumentExpression If the syntax of the expression
+     * is incorrect.
+     */
+    public boolean matches(String expression)
+    {
+        try
+        {
+            // replace wildcards with '.*?'
+            String regex = expression.replaceAll("\\*", ".*?");
+            // put anchors around the expression
+            regex = "^" + regex + "$";
+            boolean result = StringUtil.matches(propertyValue, regex, false);
+            log.debug(propertyValue + " matches " + regex + ": " + result);
+            return result;
+        }
+        catch (PatternSyntaxException e)
+        {
+            log.debug(e);
+            throw new IllegalArgumentException("Invalid matching expression: " + e.getMessage());
+        }
+    }
+
+    @Override
     public String toString()
     {
         return propertyURI + ": " + propertyValue;
@@ -190,10 +257,10 @@ public class NodeProperty
     {
         this.markedForDeletion = markedForDeletion;
     }
-    
+
     /**
-     * Perform validation on the property.  
-     * 
+     * Perform validation on the property.
+     *
      * @throws IllegalArgumentException If validation fails.
      */
     private void validateProperty() throws IllegalArgumentException
@@ -209,7 +276,7 @@ public class NodeProperty
                     + " groups allowed for property " + propertyURI);
             }
         }
-        
+
         // group write
         if (VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(propertyURI))
         {
@@ -221,7 +288,7 @@ public class NodeProperty
                     + " groups allowed for property " + propertyURI);
             }
         }
-        
+
         // is public
         if (VOS.PROPERTY_URI_ISPUBLIC.equalsIgnoreCase(propertyURI))
         {
@@ -232,14 +299,14 @@ public class NodeProperty
                     "Only one values allowed for property " + propertyURI);
             }
         }
-        
+
     }
-    
+
     /**
      * Given multiple values for a certain property specified by uri, return
      * the string representing the list of values with the correct delimiter(s)
      * in place.
-     * 
+     *
      * @param uri
      * @param values
      * @return
@@ -248,7 +315,7 @@ public class NodeProperty
     {
         if (uri == null || values == null)
             return null;
-        
+
         String delim = getPropertyValueDelimiter(uri);
         StringBuilder sb = new StringBuilder();
         for (int index=0; index<values.size(); index++)
@@ -259,11 +326,11 @@ public class NodeProperty
         }
         return sb.toString();
     }
-    
+
     /**
      * Given a string representing multiple values of a property specified by uri,
      * return the values as an array.
-     * 
+     *
      * @param uri
      * @param values
      * @return
@@ -272,7 +339,7 @@ public class NodeProperty
     {
         if (propertyURI == null || propertyValue == null)
             return null;
-        
+
         String delim = getPropertyValueDelimiter(propertyURI);
         StringTokenizer st = new StringTokenizer(propertyValue, delim);
         List<String> ret = new ArrayList<String>(st.countTokens());
@@ -282,11 +349,11 @@ public class NodeProperty
         }
         return ret;
     }
-    
+
     /**
      * Given a property URI, return the delimiter used for separating multiple
      * values.
-     * 
+     *
      * @param uri
      * @return
      */
@@ -295,11 +362,11 @@ public class NodeProperty
         // For now, new delimiters for properties must be added manually to this method.
         if (VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(uri))
             return VOS.PROPERTY_DELIM_GROUPREAD;
-        
+
         if (VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(uri))
             return VOS.PROPERTY_DELIM_GROUPWRITE;
-        
+
         return VOS.DEFAULT_PROPERTY_VALUE_DELIM;
     }
-    
+
 }
