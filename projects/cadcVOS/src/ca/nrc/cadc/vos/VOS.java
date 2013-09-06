@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import org.jdom2.Namespace;
-
 
 /**
  * Holder of commonly used constants.
@@ -82,8 +80,6 @@ public class VOS
 {
     //public static String XSD_FILE_NAME = "VOSpace-2.0.xsd"; // local xsd file name
     //public static String XSD_KEY = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    public static Namespace NS = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
-    public static Namespace XSI = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 
     public static final String GMS_PROTOCOL = "https";
     

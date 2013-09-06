@@ -247,9 +247,7 @@
           </classpath>
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
-          <test name="ca.nrc.cadc.vos.SearchReaderWriterTest"/>
           <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
-          <test name="ca.nrc.cadc.vos.NodeListReaderWriterTest"/>
         </junit>
     </target>
 

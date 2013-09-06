@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *
+ *                                       
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *
+ *                                       
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *
+ *                                       
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *
+ *                                       
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *
+ *                                       
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -111,7 +111,7 @@ public class NodePropertyTest
         {
             // expected
         }
-
+        
         try
         {
             StringBuilder sb = new StringBuilder();
@@ -218,97 +218,6 @@ public class NodePropertyTest
                 values);
         Assert.assertEquals("bad constructor", expected,
                 prop.getPropertyValue());
-    }
-
-    @Test
-    public void testParseMatchingExpression()
-    {
-        try
-        {
-            NodeProperty.parseMatchingExpression(null);
-            Assert.fail("Should be an illegal argument.");
-        }
-        catch (IllegalArgumentException e)
-        {
-            // expected
-        }
-
-        try
-        {
-            NodeProperty.parseMatchingExpression("");
-            Assert.fail("Should be an illegal argument.");
-        }
-        catch (IllegalArgumentException e)
-        {
-            // expected
-        }
-
-        try
-        {
-            // no equals sign
-            NodeProperty.parseMatchingExpression("keyvalue");
-            Assert.fail("Should be an illegal argument.");
-        }
-        catch (IllegalArgumentException e)
-        {
-            // expected
-        }
-
-        try
-        {
-            // too many equals signs
-            NodeProperty.parseMatchingExpression("key=value=value");
-            Assert.fail("Should be an illegal argument.");
-        }
-        catch (IllegalArgumentException e)
-        {
-            // expected
-        }
-
-        try
-        {
-            // adjacent equals signs
-            NodeProperty.parseMatchingExpression("key==value");
-            Assert.fail("Should be an illegal argument.");
-        }
-        catch (IllegalArgumentException e)
-        {
-            // expected
-        }
-
-        NodeProperty result = NodeProperty.parseMatchingExpression("key=value");
-        Assert.assertEquals("wrong key", "key", result.getPropertyURI());
-        Assert.assertEquals("wrong value", "value", result.getPropertyValue());
-    }
-
-    @Test
-    public void testMatches()
-    {
-        NodeProperty test = new NodeProperty("uri", "NodeProperty");
-
-        Assert.assertTrue("should have matched", test.matches("NodeProperty"));
-        Assert.assertTrue("should have matched", test.matches("Node*Property"));
-        Assert.assertTrue("should have matched", test.matches("*NodeProperty"));
-        Assert.assertTrue("should have matched", test.matches("NodeProperty*"));
-        Assert.assertTrue("should have matched", test.matches("*NodeProperty*"));
-        Assert.assertTrue("should have matched", test.matches("No*P*y"));
-        Assert.assertTrue("should have matched", test.matches("*roper*"));
-        Assert.assertTrue("should have matched", test.matches("N**Property"));
-
-        Assert.assertTrue("should have matched", test.matches("N.deProperty"));
-        Assert.assertTrue("should have matched", test.matches(".odeProperty"));
-        Assert.assertTrue("should have matched", test.matches("NodePropert."));
-        Assert.assertTrue("should have matched", test.matches("N.de......ty"));
-
-        Assert.assertTrue("should have matched", test.matches("N.*Property"));
-        Assert.assertTrue("should have matched", test.matches(".ode*"));
-
-        Assert.assertFalse("should not have matched", test.matches("NodeProperty2"));
-        Assert.assertFalse("should not have matched", test.matches("Noe*Property"));
-        Assert.assertFalse("should not have matched", test.matches("Property*"));
-        Assert.assertFalse("should not have matched", test.matches("Node"));
-        Assert.assertFalse("should not have matched", test.matches("*Node"));
-        Assert.assertFalse("should not have matched", test.matches("Node* Property"));
     }
 
 }
