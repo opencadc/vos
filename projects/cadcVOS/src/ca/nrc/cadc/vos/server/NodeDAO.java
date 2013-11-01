@@ -1522,7 +1522,7 @@ public class NodeDAO
 
     private int deleteNode(Node node, int batchSize, int count, boolean dryrun)
     {
-        log.info("deleteNode: " + node.getClass().getSimpleName() + " " + node.getUri().getPath());
+        log.debug("deleteNode: " + node.getClass().getSimpleName() + " " + node.getUri().getPath());
         // delete children: depth first so we don't leave orphans
         if (node instanceof ContainerNode)
         {
@@ -1553,6 +1553,7 @@ public class NodeDAO
     private int deleteChildren(ContainerNode container, int batchSize, int count, boolean dryrun)
     {
         String sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
+        log.debug(sql);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
         List<Node> children = jdbc.query(sql, new Object[0], mapper);
         Object[] args = new Object[1];
@@ -1569,6 +1570,7 @@ public class NodeDAO
                 count = commitBatch("delete", batchSize, count, dryrun);
             }
             sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, true);
+            log.debug(sql);
             args[0] = cur.getName();
             children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
@@ -1576,7 +1578,7 @@ public class NodeDAO
         
         // always force commit before going back up to parent to avoid deadlocks with nodePropagation
         if (foundChildren)
-            count = commitBatch(sql, batchSize, count, dryrun, true);
+            count = commitBatch("delete", batchSize, count, dryrun, true);
         
         return count;
     }
@@ -1796,7 +1798,7 @@ public class NodeDAO
     
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
-     * processsed with a NodeMapper.
+     * processed with a NodeMapper.
      *
      * @param parent The node to query for.
      * @param limit
@@ -1844,7 +1846,7 @@ public class NodeDAO
     
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
-     * processsed with a NodePropertyMapper.
+     * processed with a NodePropertyMapper.
      * 
      * @param node the node for which properties are queried
      * @return simple SQL string
