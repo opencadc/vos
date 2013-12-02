@@ -269,7 +269,11 @@ public class TransferReaderWriterTest
         {
             List<Protocol> pe = new ArrayList<Protocol>();
             pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/123", null));
+            pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/124", null));
+            pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/125", null));
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
+            pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
+            pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, pe);
             log.debug("testTransferWithProtocolEndpoints: " + transfer);
