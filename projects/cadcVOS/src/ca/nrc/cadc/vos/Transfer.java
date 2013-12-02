@@ -69,8 +69,9 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -204,6 +205,28 @@ public class Transfer
                 if (p.getUri().equalsIgnoreCase(strProtocol)) {
                     rtn = p.getEndpoint();
                     break;
+                }
+            }
+        }
+        return rtn;
+    }
+    
+    /**
+     * Returns a list of endpoints matching the protocol. Order in the list is 
+     * as recommended by the server: clients should try the end points
+     * in the given order.
+     * @param strProtocol
+     * @return
+     */
+    public List<String> getAllEndpoints(String strProtocol) 
+    {
+        List<String> rtn = new ArrayList<String>();
+        if (this.protocols != null)
+        {
+            for (Protocol p : this.protocols)
+            {
+                if (p.getUri().equalsIgnoreCase(strProtocol)) {
+                    rtn.add(p.getEndpoint());
                 }
             }
         }
