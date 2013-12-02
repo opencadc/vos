@@ -424,15 +424,21 @@ public class ClientTransfer implements Runnable
     }
    
     // pick one of the endpoints
-    private URL findGetEndpoint()
+    private List<URL> findGetEndpoint()
         throws MalformedURLException
     {
-        String ret = transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET);
-        if (ret == null)
-            ret = transfer.getEndpoint(VOS.PROTOCOL_HTTPS_GET);
-        if (ret == null)
+        List<String> ret = transfer.getAllEndpoints(VOS.PROTOCOL_HTTP_GET);
+        if (ret.size() == 0)
+            ret = transfer.getAllEndpoints(VOS.PROTOCOL_HTTPS_GET);
+        if (ret.size() == 0)
             throw new RuntimeException("failed to find a usable endpoint URL");
-        return new URL(ret);
+        
+        List<URL> urls = new ArrayList<URL>();
+        for (String urlStr : ret)
+        {
+            urls.add(new URL(urlStr));
+        }
+        return urls;
     }
     // pick one of the endpoints
     private URL findPutEndpoint()
@@ -495,26 +501,42 @@ public class ClientTransfer implements Runnable
     private void doDownload()
         throws IOException, MalformedURLException
     {
-        URL url = findGetEndpoint();
-        log.debug(url);
-        if (localFile == null)
-            throw new IllegalStateException("cannot perform download without a local File");
-        
-        HttpDownload download = new HttpDownload(url, localFile);
-        download.setOverwrite(true);
-        download.setRequestProperties(httpRequestProperties);
-        download.setMaxRetries(maxRetries);
-        if (transListener != null)
-            download.setTransferListener(transListener);
-        
-        runHttpTransfer(download);
-        
-        if (download.getThrowable() != null)
+        List<URL> urls = findGetEndpoint();
+        if (urls.size() == 0)
         {
-            throw new IOException("failed to download file", download.getThrowable());
+            throw new IllegalArgumentException("No endpoint found");
         }
-        // the actual resulting file
-        this.localFile = download.getFile();
+        HttpDownload firstDownload = null;
+        if (localFile == null)
+            throw new IllegalStateException(
+                    "cannot perform download without a local File");
+        for (URL url : urls)
+        {
+            log.debug(url);
+
+            HttpDownload download = new HttpDownload(url, localFile);
+            if (firstDownload == null)
+            {
+                firstDownload = download;
+            }
+            download.setOverwrite(true);
+            download.setRequestProperties(httpRequestProperties);
+            download.setMaxRetries(maxRetries);
+            if (transListener != null)
+                download.setTransferListener(transListener);
+
+            runHttpTransfer(download);
+            if (download.getThrowable() == null)
+            {
+                // the actual resulting file
+                this.localFile = download.getFile();
+                return;
+            }
+        }
+
+        // got here so none of the urls worked
+        throw new IOException("failed to download file", firstDownload.getThrowable());
+        
     }
 
     // run and monitor an async server side transfer
@@ -581,7 +603,7 @@ public class ClientTransfer implements Runnable
         }
     }
     
-    private void runHttpTransfer(HttpTransfer transfer)
+    protected void runHttpTransfer(HttpTransfer transfer)
     {
         if (sslSocketFactory != null)
             transfer.setSSLSocketFactory(sslSocketFactory);
