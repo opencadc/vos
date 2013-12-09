@@ -66,6 +66,7 @@
  */
 package ca.nrc.cadc.vos.auth;
 
+import ca.nrc.cadc.util.Log4jInit;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
@@ -79,7 +80,6 @@ import javax.security.auth.x500.X500Principal;
 
 import junit.framework.Assert;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import ca.nrc.cadc.vos.ContainerNode;
@@ -90,6 +90,7 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import org.apache.log4j.Level;
 
 /**
  * Test class for the VOSpaceAuthorizer.
@@ -98,9 +99,9 @@ public class VOSpaceAuthorizerTest
 {
     private String NODE_OWNER = "cn=cadc authtest1 10627,ou=cadc,o=hia";
     
-    @Before
-    public void setup() throws Exception
+    static
     {
+        Log4jInit.setLevel(VOSpaceAuthorizerTest.class.getPackage().getName(), Level.INFO);
     }
             
     @Test

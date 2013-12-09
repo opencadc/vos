@@ -79,18 +79,16 @@ import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import org.apache.log4j.Level;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
@@ -107,41 +105,13 @@ public class ClientTransferTest
     static final String URL2 = "http://example.com/someplace/124";
     static final String URL3 = "http://example.com/someplace/125";
 
+    static
+    {
+        Log4jInit.setLevel(ClientTransferTest.class.getPackage().getName(), Level.INFO);
+    }
+    
     String endpoint;
     VOSpaceClient client;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception
-    {
-
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception
-    {
-    }
 
     @Test
     public void testDownloadFirstEndpoint() throws Exception

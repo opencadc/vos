@@ -34,6 +34,7 @@
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
@@ -49,7 +50,7 @@ import org.restlet.Context;
 import org.restlet.data.Form;
 
 
-public class NodeResourceTest extends BaseResourceTest<NodeResource>
+public class NodeResourceTest extends AbstractCADCVOSTest<NodeResource>
 {
     private Context mockContext = createMock(Context.class);
     private Application mockApplication = createMock(Application.class);

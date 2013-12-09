@@ -80,7 +80,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 
-public abstract class VOSpaceFileMetadataSourceTest
+public class VOSpaceFileMetadataSourceTest
 {
     private static Logger log = Logger.getLogger(VOSpaceFileMetadataSourceTest.class);
     static
