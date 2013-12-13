@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.client;
+package ca.nrc.cadc.vos.client.integration;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -101,6 +101,9 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.client.ClientTransfer;
+import ca.nrc.cadc.vos.client.VOSClientUtil;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
@@ -132,11 +135,9 @@ public class VOSpaceClientTest
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust",
                            "true");
 
-        File cert = FileUtil.getFileFromResource(TEST_CERT,
-                                                 VOSpaceClientTest.class);
-        File key = FileUtil.getFileFromResource(TEST_KEY,
-                                                VOSpaceClientTest.class);
-        SSLUtil.initSSL(cert, key);
+        //File cert = FileUtil.getFileFromResource(TEST_CERT, VOSpaceClientTest.class);
+        //File key = FileUtil.getFileFromResource(TEST_KEY, VOSpaceClientTest.class);
+        //SSLUtil.initSSL(cert, key);
 
         ROOT_NODE = System.getProperty("user.name") + "/";
     }
@@ -264,7 +265,7 @@ public class VOSpaceClientTest
     }
 
 
-    @Test
+    //@Test
     public void testCreateContainerNode() throws Exception
     {
         final String slashPath1 = "/" + ROOT_NODE
