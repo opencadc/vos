@@ -239,7 +239,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
     protected File createTempDirectory() throws IOException
     {
         final File temp =
-                File.createTempFile(UploadManagerImplTest.class.getCanonicalName(),
+                File.createTempFile(UploadManagerImplTestBase.class.getCanonicalName(),
                                     Long.toString(System.nanoTime()));
 
         if (!temp.delete())

@@ -79,7 +79,7 @@ import java.util.List;
 import ca.nrc.cadc.vos.Node;
 
 
-public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
+public class DeleteNodeActionTest extends AbstractNodeActionTest<DeleteNodeAction>
 {
     
 

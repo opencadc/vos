@@ -70,6 +70,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
+import ca.nrc.cadc.vos.client.ClientTransferTest;
 import ca.nrc.cadc.vos.client.FileSizeTypeTest;
 import ca.nrc.cadc.vos.client.MainTest;
 import ca.nrc.cadc.vos.client.ui.CommandExecutorTest;
@@ -109,6 +110,7 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     RssFeedTest.class,
     TransferInlineContentHandlerTest.class,
     NodePropertyTest.class,
+    ClientTransferTest.class,
 
     // Upload Manager UI testing.
     UploadFileTest.class,
