@@ -2,11 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package ca.nrc.cadc.vos.client;
+package ca.nrc.cadc.vos.client.integration;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.client.ClientAbortThread;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.util.HashMap;
