@@ -51,7 +51,7 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 
-public abstract class NodeActionTest<N extends NodeAction>
+public abstract class AbstractNodeActionTest<N extends NodeAction>
         extends AbstractCADCVOSTest<N>
 {
     private Node mockNodeC = createMock(Node.class);

@@ -46,7 +46,7 @@ import org.restlet.data.MediaType;
 import ca.nrc.cadc.vos.server.AbstractView;
 
 
-public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
+public class GetNodeActionTest extends AbstractNodeActionTest<GetNodeAction>
 {
     private AbstractView mockAbstractView = createMock(AbstractView.class);
 

@@ -33,18 +33,16 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import static org.easymock.EasyMock.createMock;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-
 import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import static org.easymock.EasyMock.createMock;
 
 
-public class UploadManagerImplTest
+public class UploadManagerImplTestBase
         extends AbstractCADCVOSTest<UploadManagerImpl>
 {
     private final File sourceDirectory;
@@ -53,7 +51,7 @@ public class UploadManagerImplTest
             createMock(VOSpaceClient.class);
 
 
-    public UploadManagerImplTest() throws Exception
+    public UploadManagerImplTestBase() throws Exception
     {
         sourceDirectory = createTempDirectory();
         targetVOSpaceURI =
@@ -112,7 +110,7 @@ public class UploadManagerImplTest
     protected File createTempDirectory() throws IOException
     {
         final File temp =
-                File.createTempFile(UploadManagerImplTest.class.getCanonicalName(),
+                File.createTempFile(UploadManagerImplTestBase.class.getCanonicalName(),
                                     Long.toString(System.nanoTime()));
 
         if (!temp.delete())
