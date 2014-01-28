@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -138,7 +138,7 @@ public class NodeDAO
     static final String NODE_TYPE_DATA = "D";
     static final String NODE_TYPE_CONTAINER = "C";
     static final String NODE_TYPE_LINK = "L";
-    
+
     private static final int NODE_NAME_COLUMN_SIZE = 256;
     private static final int NODE_PROPERTY_COLUMN_SIZE = 700;
 
@@ -157,7 +157,7 @@ public class NodeDAO
 
     // reusable object for recursive admin methods
     private NodePutStatementCreator adminStatementCreator;
-    
+
     // instrument for unit tests of admin methods
     int numTxnStarted = 0;
     int numTxnCommitted = 0;
@@ -166,7 +166,7 @@ public class NodeDAO
     private Calendar cal;
 
     private Map<Object,Subject> identityCache = new HashMap<Object,Subject>();
-    
+
     private Profiler prof = new Profiler(NodeDAO.class);
 
     public static class NodeSchema
@@ -193,7 +193,7 @@ public class NodeDAO
             this.propertyTable = propertyTable;
             this.limitWithTop = limitWithTop;
         }
-        
+
     }
     private static String[] NODE_COLUMNS = new String[]
     {
@@ -225,9 +225,9 @@ public class NodeDAO
      * @param dataSource
      * @param nodeSchema
      * @param authority
-     * @param identManager 
+     * @param identManager
      */
-    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, 
+    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema,
             String authority, IdentityManager identManager, String deletedNodePath)
     {
         this.dataSource = dataSource;
@@ -258,7 +258,7 @@ public class NodeDAO
     {
         return nodeSchema.propertyTable;
     }
-    
+
     /**
      * Start a transaction to the data source.
      */
@@ -318,7 +318,7 @@ public class NodeDAO
      * list of children; other children are not included. Nodes returned from
      * this method will have some but not all properties set. Specifically, any
      * properties that are inherently single-valued and stored in the Node table
-     * are included, as are the access-control properties (isPublic, group-read, 
+     * are included, as are the access-control properties (isPublic, group-read,
      * and group-write). The remaining properties for a node can be obtained by
      * calling getProperties(Node).
      *
@@ -330,14 +330,14 @@ public class NodeDAO
     {
     	return this.getPath(path, false);
     }
-    
+
     /**
      * Get a complete path from the root container. For the container nodes in
      * the returned node, only child nodes on the path will be included in the
      * list of children; other children are not included. Nodes returned from
      * this method will have some but not all properties set. Specifically, any
      * properties that are inherently single-valued and stored in the Node table
-     * are included, as are the access-control properties (isPublic, group-read, 
+     * are included, as are the access-control properties (isPublic, group-read,
      * and group-write). The remaining properties for a node can be obtained by
      * calling getProperties(Node).
      *
@@ -360,22 +360,22 @@ public class NodeDAO
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
             prof.checkpoint("TransactionManager.getTransaction");
-            
+
             // execute query with NodePathExtractor
             Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
             prof.checkpoint("NodePathStatementCreator");
-            
+
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
             prof.checkpoint("commit.NodePathStatementCreator");
-            
-            // for non-LinkNode, 
+
+            // for non-LinkNode,
             //if ((ret != null) && !(ret.getUri().getPath().equals("/" + path)))
             //{
             //	if (!(ret instanceof LinkNode))
             //		ret = null;
             //}
-            
+
             loadSubjects(ret);
             return ret;
         }
@@ -391,14 +391,14 @@ public class NodeDAO
         catch(Throwable t)
         {
             log.error("rollback dirtyRead for node: " + path, t);
-            try 
+            try
             {
                 transactionManager.rollback(dirtyRead);
                 dirtyRead = null;
                 prof.checkpoint("rollback.NodePathStatementCreator");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node " + path, t);
             else
@@ -418,7 +418,7 @@ public class NodeDAO
 
     /**
      * Load all the properties for the specified Node.
-     * 
+     *
      * @param node
      */
     public void getProperties(Node node) throws TransientException
@@ -435,7 +435,7 @@ public class NodeDAO
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
             prof.checkpoint("TransactionManager.getTransaction");
-            
+
             List<NodeProperty> props = jdbc.query(sql, new NodePropertyMapper());
             node.getProperties().addAll(props);
             prof.checkpoint("getProperties");
@@ -462,7 +462,7 @@ public class NodeDAO
                 prof.checkpoint("rollback.getProperties");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + node.getUri().getPath(), t);
             else
@@ -482,7 +482,7 @@ public class NodeDAO
 
     /**
      * Load a single child node of the specified container.
-     * 
+     *
      * @param parent
      * @param name
      */
@@ -499,11 +499,11 @@ public class NodeDAO
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
             prof.checkpoint("TransactionManager.getTransaction");
-            
+
             List<Node> nodes = jdbc.query(sql, new Object[] { name },
                 new NodeMapper(authority, parent.getUri().getPath()));
             prof.checkpoint("getSelectChildNodeSQL");
-            
+
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
             prof.checkpoint("commit.getSelectChildNodeSQL");
@@ -511,7 +511,7 @@ public class NodeDAO
             if (nodes.size() > 1)
                 throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
-            
+
             loadSubjects(nodes);
             addChildNodes(parent, nodes);
         }
@@ -533,7 +533,7 @@ public class NodeDAO
                 prof.checkpoint("rollback.getSelectChildNodeSQL");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
             else
@@ -561,7 +561,7 @@ public class NodeDAO
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         getChildren(parent, null, null);
     }
-    
+
     /**
      * Loads some of the child nodes of the specified container.
      * @param parent
@@ -578,7 +578,7 @@ public class NodeDAO
             args = new Object[] { start.getName() };
         else
             args = new Object[0];
-        
+
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
         String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));
@@ -589,11 +589,11 @@ public class NodeDAO
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
             prof.checkpoint("TransactionManager.getTransaction");
-            
+
             List<Node> nodes = jdbc.query(sql,  args,
                 new NodeMapper(authority, parent.getUri().getPath()));
             prof.checkpoint("getSelectNodesByParentSQL");
-            
+
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
             prof.checkpoint("commit.getSelectNodesByParentSQL");
@@ -619,7 +619,7 @@ public class NodeDAO
                 prof.checkpoint("rollback.getSelectNodesByParentSQL");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
             else
@@ -670,7 +670,7 @@ public class NodeDAO
             }
         }
     }
-    
+
     private void loadSubjects(List<Node> nodes)
     {
         for (Node n : nodes)
@@ -678,7 +678,7 @@ public class NodeDAO
             loadSubjects(n);
         }
     }
-    
+
     private void loadSubjects(Node node)
     {
         if (node == null || node.appData == null)
@@ -713,7 +713,7 @@ public class NodeDAO
     /**
      * Store the specified node. The node must be attached to a parent container and
      * the parent container must have already been persisted.
-     * 
+     *
      * @param node
      * @param creator
      * @return the same node but with generated internal ID set in the appData field
@@ -748,15 +748,15 @@ public class NodeDAO
             jdbc.update(npsc, keyHolder);
             nodeID.id = new Long(keyHolder.getKey().longValue());
             prof.checkpoint("NodePutStatementCreator");
-            
+
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
             while (propertyIterator.hasNext())
             {
                 NodeProperty prop = propertyIterator.next();
-                
+
                 if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
                     throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
-                
+
                 if ( usePropertyTable(prop.getPropertyURI()) )
                 {
                     PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, false);
@@ -787,13 +787,13 @@ public class NodeDAO
         catch(Throwable t)
         {
             log.error("rollback for node: " + node.getUri().getPath(), t);
-            try 
-            { 
-                rollbackTransaction(); 
+            try
+            {
+                rollbackTransaction();
                 prof.checkpoint("rollback.NodePutStatementCreator");
             }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to persist node: " + node.getUri(), t);
             else
@@ -814,7 +814,7 @@ public class NodeDAO
     /**
      * Recursive delete of a node. This method irrevocably deletes a node and all
      * the child nodes below it.
-     * 
+     *
      * @param node
      */
     public void delete(Node node) throws TransientException
@@ -842,20 +842,20 @@ public class NodeDAO
                 String sql = getUpdateLockSQL(node);
                 jdbc.update(sql);
                 prof.checkpoint("getUpdateLockSQL");
-                
+
                 if (node instanceof DataNode)
                 {
                     // get the contentLength value
                     sql = getSelectContentLengthSQL(node);
-                    
+
                     // Note: if node size is null, the jdbc template
                     // will return zero.
                     Long contentLength = jdbc.queryForLong(sql);
                     prof.checkpoint("getSelectContentLengthSQL");
-	                    
+
                     // delete the node only if it is not busy
-                    deleteNode(node, true); 
-	
+                    deleteNode(node, true);
+
                     // apply the negative size difference to the parent
                     sql = this.getApplySizeDiffSQL(node.getParent(), contentLength, false);
                     log.debug(sql);
@@ -887,9 +887,9 @@ public class NodeDAO
         {
             log.debug(ex.toString());
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.delete");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -899,13 +899,13 @@ public class NodeDAO
         {
             log.error("delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.delete");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to delete " + node.getUri().getPath(), t);
             else
@@ -930,7 +930,7 @@ public class NodeDAO
         log.debug(sql);
         jdbc.update(sql);
         prof.checkpoint("getDeleteNodePropertiesSQL");
-        
+
         // delete the node
         sql = getDeleteNodeSQL(node, notBusyOnly); // only delete if non-busy
         log.debug(sql);
@@ -942,7 +942,7 @@ public class NodeDAO
 
     /**
      * Change the busy stateof a node from a known state to another.
-     * 
+     *
      * @param node
      * @param state
      */
@@ -976,9 +976,9 @@ public class NodeDAO
         {
             log.debug(ex.toString());
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.getSetBusyStateSQL");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -988,13 +988,13 @@ public class NodeDAO
         {
             log.error("Delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.getSetBusyStateSQL");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
@@ -1024,12 +1024,12 @@ public class NodeDAO
         log.debug("updateNodeMetadata: " + node.getUri().getPath());
 
         expectPersistentNode(node);
-        
+
         try
         {
             startTransaction();
             prof.checkpoint("start.DataNodeUpdateStatementCreator");
-            
+
             // get the last modified date object if matching on the update
             Date lastModified = null;
             if (strict)
@@ -1037,7 +1037,7 @@ public class NodeDAO
                 String lastModStr = node.getPropertyValue(VOS.PROPERTY_URI_DATE);
                 lastModified = dateFormat.parse(lastModStr);
             }
-            
+
             // update contentLength and md5
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
                     getNodeID(node), meta.getContentLength(), meta.getMd5Sum(), lastModified);
@@ -1046,7 +1046,7 @@ public class NodeDAO
             log.debug("updateMetadata, rows updated: " + num);
             if (strict && num != 1)
                 throw new IllegalStateException("Node has different lastModified value.");
-            
+
             // last, update the busy state of the target node
             String trans = getSetBusyStateSQL(node, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
             log.debug(trans);
@@ -1067,7 +1067,7 @@ public class NodeDAO
                 props.add(np);
 
             doUpdateProperties(node, props);
-           
+
             commitTransaction();
             prof.checkpoint("commit.DataNodeUpdateStatementCreator");
         }
@@ -1075,9 +1075,9 @@ public class NodeDAO
         {
             log.debug(ex.toString());
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.DataNodeUpdateStatementCreator");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -1087,18 +1087,18 @@ public class NodeDAO
         {
             log.error("updateNodeMetadata rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.DataNodeUpdateStatementCreator");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
-            
+
         }
         finally
         {
@@ -1129,7 +1129,7 @@ public class NodeDAO
 
         return np;
     }
-    
+
     /**
      * Update the properties associated with this node.  New properties are added,
      * changed property values are updated, and properties marked for deletion are
@@ -1160,13 +1160,13 @@ public class NodeDAO
         {
             log.error("Update rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.updateProperties");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to update properties:  " + node.getUri().getPath(), t);
             else
@@ -1220,10 +1220,10 @@ public class NodeDAO
                     String currentValue = cur.getPropertyValue();
                     if (!currentValue.equals(prop.getPropertyValue()))
                     {
-                        
+
                         if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
                             throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
-                        
+
                         log.debug("doUpdateNode " + prop.getPropertyURI() + ": "
                                 + currentValue + " != " + prop.getPropertyValue());
                         if (propTable)
@@ -1248,7 +1248,7 @@ public class NodeDAO
             {
                 if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
                     throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
-                
+
                 if (propTable)
                 {
                     log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted into NodeProperty");
@@ -1289,14 +1289,14 @@ public class NodeDAO
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         expectPersistentNode(src);
         expectPersistentNode(dest);
-        
+
         // move rule checking
         if (src instanceof ContainerNode)
         {
             // check that we are not moving root or a root container
             if (src.getParent() == null || src.getParent().getUri().isRoot())
                 throw new IllegalArgumentException("Cannot move a root container.");
-            
+
             // check that 'src' is not in the path of 'dest' so that
             // circular paths are not created
             Node target = dest;
@@ -1310,9 +1310,9 @@ public class NodeDAO
                 target = target.getParent();
             }
         }
-        
+
         try
-        {    
+        {
             startTransaction();
             prof.checkpoint("start.move");
 
@@ -1320,18 +1320,18 @@ public class NodeDAO
             String sql = this.getUpdateLockSQL(src);
             jdbc.update(sql);
             prof.checkpoint("getUpdateLockSQL");
-            
+
             Long contentLength = new Long(0);
             if (!(src instanceof LinkNode))
             {
                 // get the contentLength
                 sql = this.getSelectContentLengthSQL(src);
-                
+
                 // Note: if contentLength is null, jdbc template will return zero.
                 contentLength = jdbc.queryForLong(sql);
                 prof.checkpoint("getSelectContentLengthSQL");
             }
-            
+
             // re-parent the node
             ContainerNode srcParent = src.getParent();
             src.setParent(dest);
@@ -1346,14 +1346,14 @@ public class NodeDAO
                 // tried to move a busy data node
                 throw new IllegalStateException("src node busy: "+src.getUri());
             }
-            
+
             if (!(src instanceof LinkNode))
             {
                 // apply the size difference
                 String sql1 = getApplySizeDiffSQL(srcParent, contentLength, false);
                 String sql2 = getApplySizeDiffSQL(dest, contentLength, true);
-	            
-                // these operations should happen in either child-parent or nodeID order 
+
+                // these operations should happen in either child-parent or nodeID order
                 // for consistency to avoid deadlocks
                 if ( srcParent.getParent() != null && src.getParent().equals(dest) )
                 {
@@ -1372,7 +1372,7 @@ public class NodeDAO
                     sql1 = sql2;
                     sql2 = swap;
                 }
-	            
+
                 log.debug(sql1);
                 jdbc.update(sql1);
                 prof.checkpoint("getApplySizeDiffSQL");
@@ -1380,9 +1380,9 @@ public class NodeDAO
                 jdbc.update(sql2);
                 prof.checkpoint("getApplySizeDiffSQL");
             }
-            
+
             // recursive chown removed since it is costly and nominally incorrect
-            
+
             commitTransaction();
             prof.checkpoint("commit.move");
         }
@@ -1390,9 +1390,9 @@ public class NodeDAO
         {
             log.debug(ex.toString());
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.move");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -1402,13 +1402,13 @@ public class NodeDAO
         {
             log.error("move rollback for node: " + src.getUri().getPath(), t);
             if (transactionStatus != null)
-                try 
-                { 
-                    rollbackTransaction(); 
+                try
+                {
+                    rollbackTransaction();
                     prof.checkpoint("rollback.move");
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (t instanceof IllegalStateException)
                 throw (IllegalStateException) t;
             else if (DBUtil.isTransientDBException(t))
@@ -1429,7 +1429,7 @@ public class NodeDAO
             }
         }
     }
-    
+
 
     /**
      * Copy the node to the new path.
@@ -1443,7 +1443,7 @@ public class NodeDAO
         log.debug("copy: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         throw new UnsupportedOperationException("Copy not implemented.");
     }
-    
+
     // admin functions
 
     private int commitBatch(String name, int batchSize, int count, boolean dryrun)
@@ -1472,7 +1472,7 @@ public class NodeDAO
      * fail at some point and have committed some deletions due to the batching;
      * the caller should resolve the issue and then call it again to continue
      * (delete is bottom up so there are never any orphans).
-     * 
+     *
      * @param node
      * @param batchSize
      */
@@ -1500,7 +1500,7 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to delete:  " + node.getUri().getPath(), t);
             else
@@ -1549,7 +1549,7 @@ public class NodeDAO
         count = commitBatch("delete", batchSize, count, dryrun);
         return count;
     }
-    
+
     private int deleteChildren(ContainerNode container, int batchSize, int count, boolean dryrun)
     {
         String sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
@@ -1575,18 +1575,18 @@ public class NodeDAO
             children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
         }
-        
+
         // always force commit before going back up to parent to avoid deadlocks with nodePropagation
         if (foundChildren)
             count = commitBatch("delete", batchSize, count, dryrun, true);
-        
+
         return count;
     }
 
     /**
      * Change ownership of a Node (optionally recursive) in one or more
      * batchSize-d transactions.
-     * 
+     *
      * @param node
      * @param newOwner
      * @param recursive
@@ -1616,7 +1616,7 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to chown:  " + node.getUri().getPath(), t);
             else
@@ -1636,7 +1636,7 @@ public class NodeDAO
         }
     }
 
-    
+
     private int chownNode(Node node, Object newOwnerObject, boolean recursive, int batchSize, int count, boolean dryrun)
     {
         // update the node with the specfied owner.
@@ -1672,7 +1672,7 @@ public class NodeDAO
         }
         return count;
     }
-    
+
     /**
      * Admin function.
      * @param limit The maximum to return
@@ -1695,7 +1695,7 @@ public class NodeDAO
             throw new RuntimeException(message, t);
         }
     }
-    
+
     /**
      * Admin function.
      * @param propagation
@@ -1706,14 +1706,14 @@ public class NodeDAO
         try
         {
             startTransaction();
-            
+
             // apply progagation updates
             String[] propagationSQL = getApplyDeltaSQL(propagation);
             for (String sql : propagationSQL)
             {
                 log.debug(sql);
                 int rowsUpdated = jdbc.update(sql);
-                
+
                 // each statement should update exactly one row
                 if (rowsUpdated != 1)
                     throw new RuntimeException("node structure changed, aborting on transation: " + sql);
@@ -1728,7 +1728,7 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            
+
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to apply propagation.", t);
             else
@@ -1795,7 +1795,7 @@ public class NodeDAO
         sb.append(" AND name = ?");
         return sb.toString();
     }
-    
+
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
      * processed with a NodeMapper.
@@ -1843,11 +1843,11 @@ public class NodeDAO
         }
         return sb.toString();
     }
-    
+
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
      * processed with a NodePropertyMapper.
-     * 
+     *
      * @param node the node for which properties are queried
      * @return simple SQL string
      */
@@ -1860,7 +1860,7 @@ public class NodeDAO
         sb.append(getNodeID(node));
         return sb.toString();
     }
-    
+
     /**
      * @param node The node to delete
      * @return The SQL string for deleting the node from the database.
@@ -1882,7 +1882,7 @@ public class NodeDAO
         }
         return sb.toString();
     }
-    
+
     /**
      * @param node Delete the properties of this node.
      * @return The SQL string for performing property deletion.
@@ -1899,14 +1899,6 @@ public class NodeDAO
 
     protected String getSetBusyStateSQL(DataNode node, NodeBusyState curState, NodeBusyState newState)
     {
-        // set the contentLength and contentMD5 to null if moving from
-        //   NodeBusyState.notBusy --> NodeBusyState.busyWithWrite
-        boolean nullifyMetadata = false;
-        if (curState.equals(NodeBusyState.notBusy) && newState.equals(NodeBusyState.busyWithWrite))
-        {
-            nullifyMetadata = true;
-        }
-        
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
@@ -1918,12 +1910,6 @@ public class NodeDAO
         setPropertyValue(node, VOS.PROPERTY_URI_DATE, dateFormat.format(now), true);
         sb.append(dateFormat.format(now));
         sb.append("'");
-        
-        if (nullifyMetadata)
-        {
-            sb.append(", contentLength=NULL, contentMD5=NULL");
-        }
-        
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
         sb.append(" AND busyState='");
@@ -1931,7 +1917,7 @@ public class NodeDAO
         sb.append("'");
         return sb.toString();
     }
-    
+
     /**
      * @param node The node to delete
      * @return The SQL string for applying a negative or positive
@@ -1952,18 +1938,18 @@ public class NodeDAO
         sb.append(getNodeID(dest));
         return sb.toString();
     }
-    
+
     protected String[] getApplyDeltaSQL(NodeSizePropagation propagation)
     {
         List<String> sql = new ArrayList<String>();
         Date now = new Date();
-        
+
         // update 1 adjusts the conentLength and date.  for data nodes, the
         // child is only locked.
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        
+
         if (NODE_TYPE_DATA.equals(propagation.getChildType()))
         {
             // set the type equal to the existing type (no-op lock)
@@ -1984,7 +1970,7 @@ public class NodeDAO
         {
             throw new IllegalStateException("Wrong node type for delta application.");
         }
-        
+
         sb.append(" WHERE nodeID = ");
         sb.append(propagation.getChildID());
         if (propagation.getParentID() == null)
@@ -1997,7 +1983,7 @@ public class NodeDAO
             sb.append(propagation.getParentID());
         }
         sql.add(sb.toString());
-        
+
         // update 2 adjusts the parent delta
         if (propagation.getParentID() != null)
         {
@@ -2016,7 +2002,7 @@ public class NodeDAO
             sb.append(propagation.getParentID());
             sql.add(sb.toString());
         }
-        
+
         // update 3 resets the child delta
         sb = new StringBuilder();
         sb.append("UPDATE ");
@@ -2034,7 +2020,7 @@ public class NodeDAO
             sb.append(propagation.getParentID());
         }
         sql.add(sb.toString());
-        
+
         return sql.toArray(new String[0]);
     }
 
@@ -2054,10 +2040,10 @@ public class NodeDAO
                 root2 = root2.getParent();
             }
         }
-        
+
         return getUpdateLockSQL(root1, root2);
     }
-    
+
     protected String[] getUpdateLockSQL(Node n1, Node n2)
     {
         Node[] nodes = null;
@@ -2065,14 +2051,14 @@ public class NodeDAO
         Long id2 = null;
         if (n2 != null)
             id2 = getNodeID(n2);
-        
+
         if ( n2 == null || id1.compareTo(id2) == 0 ) // same node
             nodes = new Node[] { n1 };
         else if (id1.compareTo(id2) < 0)
             nodes = new Node[] { n1, n2 };
         else
             nodes = new Node[] { n2, n1 };
-        
+
         String[] ret = new String[nodes.length];
         for (int i=0; i<nodes.length; i++)
         {
@@ -2080,7 +2066,7 @@ public class NodeDAO
         }
         return ret;
     }
-    
+
     protected String getUpdateLockSQL(Node node)
     {
         Long id = getNodeID(node);
@@ -2095,7 +2081,7 @@ public class NodeDAO
         sb.append(id);
         return sb.toString();
     }
-    
+
     protected String getMoveNodeSQL(Node src, ContainerNode dest, String name)
     {
         StringBuilder sb = new StringBuilder();
@@ -2109,7 +2095,7 @@ public class NodeDAO
         sb.append(getNodeID(src));
         return sb.toString();
     }
-    
+
     protected String getFindOutstandingPropagationsSQL(int limit)
     {
         StringBuilder sb = new StringBuilder();
@@ -2128,7 +2114,7 @@ public class NodeDAO
         sb.append("', '");
         sb.append(NODE_TYPE_CONTAINER);
         sb.append("')");
-        
+
         if (nodeSchema.limitWithTop) // TOP, eg sybase
             sb.replace(0, 6, "SELECT TOP " + limit);
         else // LIMIT, eg postgresql
@@ -2136,10 +2122,10 @@ public class NodeDAO
             sb.append(" LIMIT ");
             sb.append(limit);
         }
-        
+
         return sb.toString();
     }
-    
+
     protected String getSelectContentLengthSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
@@ -2171,7 +2157,7 @@ public class NodeDAO
         }
         return VOS.NodeBusyState.notBusy.getValue();
     }
-   
+
     private static void setPropertyValue(Node node, String uri, String value, boolean readOnly)
     {
         NodeProperty cur = node.findProperty(uri);
@@ -2227,6 +2213,7 @@ public class NodeDAO
             this.md5 = md5;
             this.lastModified = lastModified;
         }
+        @Override
         public PreparedStatement createPreparedStatement(Connection conn)
             throws SQLException
         {
@@ -2234,16 +2221,16 @@ public class NodeDAO
             sb.append("UPDATE ");
             sb.append(getNodeTableName());
             sb.append(" SET ");
-            
+
             sb.append("lastModified = ?, ");
             sb.append("delta = (? - coalesce(contentLength, 0)), contentLength = ?, contentMD5 = ?");
             sb.append(" WHERE nodeID = ?");
-            
+
             if (lastModified != null)
             {
                 sb.append(" AND lastModified = ?");
             }
-            
+
             String sql = sb.toString();
             log.debug(sql);
 
@@ -2251,7 +2238,7 @@ public class NodeDAO
             PreparedStatement prep = conn.prepareStatement(sql);
 
             int col = 1;
-            
+
             Date now = new Date();
             Timestamp ts = new Timestamp(now.getTime());
             prep.setTimestamp(col++, ts, cal);
@@ -2279,7 +2266,7 @@ public class NodeDAO
 
             prep.setLong(col++, nodeID);
             sb.append(nodeID);
-            
+
             if (lastModified != null)
             {
                 Timestamp lastModTs = new Timestamp(lastModified.getTime());
@@ -2287,7 +2274,7 @@ public class NodeDAO
                 sb.append(",");
                 sb.append(lastModTs);
             }
-            
+
             log.debug(sb.toString());
             return prep;
         }
@@ -2305,7 +2292,7 @@ public class NodeDAO
         {
             this(ns, nodeID, prop, false);
         }
-        
+
         public PropertyStatementCreator(NodeSchema ns, NodeID nodeID, NodeProperty prop, boolean update)
         {
             this.ns = ns;
@@ -2314,7 +2301,7 @@ public class NodeDAO
             this.update = update;
         }
 
-        // if we care about caching the statement, we should look into prepared 
+        // if we care about caching the statement, we should look into prepared
         // statement caching by the driver
         @Override
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
@@ -2357,7 +2344,7 @@ public class NodeDAO
                 ps.setString(col++, prop.getPropertyValue());
                 ps.setLong(col++, nodeID.getID());
                 ps.setString(col++, prop.getPropertyURI());
-                log.debug("setValues: " + nodeID.getID() + "," 
+                log.debug("setValues: " + nodeID.getID() + ","
                         + prop.getPropertyURI() + "," + prop.getPropertyValue() + ","
                         + nodeID.getID() + ","
                         + prop.getPropertyURI());
@@ -2444,7 +2431,7 @@ public class NodeDAO
             this.node = node;
             this.differentOwner = differentOwner;
         }
-        
+
         void setValues(PreparedStatement ps)
             throws SQLException
         {
@@ -2465,7 +2452,7 @@ public class NodeDAO
             }
             col++;
             sb.append(",");
-            
+
             String name = node.getName();
             ps.setString(col++, name);
             sb.append(name);
@@ -2483,7 +2470,7 @@ public class NodeDAO
             setPropertyValue(node, VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic()), false);
             sb.append(node.isPublic());
             sb.append(",");
-            
+
             ps.setBoolean(col++, node.isLocked());
             if (node.isLocked())
                 setPropertyValue(node, VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(node.isLocked()), false);
@@ -2491,7 +2478,7 @@ public class NodeDAO
             sb.append(",");
 
             String pval;
-            
+
             // ownerID and creatorID data type
             int ownerDataType = identManager.getOwnerType();
 
@@ -2502,12 +2489,12 @@ public class NodeDAO
                 ownerObject = differentOwner;
             if (ownerObject == null)
                 throw new IllegalStateException("cannot update a node without an owner.");
-            
+
             // ownerID
             ps.setObject(col++, ownerObject, ownerDataType);
             sb.append(ownerObject);
             sb.append(",");
-            
+
             // always use the value in nodeID.ownerObject
             ps.setObject(col++, nodeID.ownerObject, ownerDataType);
             sb.append(nodeID.ownerObject);
@@ -2534,7 +2521,7 @@ public class NodeDAO
             col++;
             sb.append(pval);
             sb.append(",");
-            
+
             //log.debug("setValues: " + sb);
 
             // always tweak the date
@@ -2566,9 +2553,9 @@ public class NodeDAO
             col++;
             sb.append(pval);
             sb.append(",");
-	    
+
             log.debug("setValues:" + sb.toString());
-            
+
             pval = null;
             if (node instanceof LinkNode)
             {
@@ -2587,7 +2574,7 @@ public class NodeDAO
                 sb.append(",");
                 sb.append(getNodeID(node));
             }
-            
+
             log.debug("setValues: " + sb);
         }
 
@@ -2600,7 +2587,7 @@ public class NodeDAO
 
             // we never insert or update physical file (DataNode) metadata here
             int numCols = NODE_COLUMNS.length - 2;
-            
+
             for (int c=0; c<numCols; c++)
             {
                 if (c > 0)
@@ -2637,7 +2624,7 @@ public class NodeDAO
             sb.append(" WHERE nodeID = ? AND busyState = '");
             sb.append(NodeBusyState.notBusy.getValue());
             sb.append("'");
-            
+
             return sb.toString();
         }
     }
@@ -2656,7 +2643,8 @@ public class NodeDAO
             this.propTableName = propTableName;
             this.allowPartialPath = allowPartialPath;
         }
-        
+
+        @Override
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             String sql = getSQL();
@@ -2750,6 +2738,7 @@ public class NodeDAO
             this.columnsPerNode = NODE_COLUMNS.length + 1;
         }
 
+        @Override
         public Object extractData(ResultSet rs)
             throws SQLException, DataAccessException
         {
@@ -2770,7 +2759,7 @@ public class NodeDAO
                     {
                         log.debug("readNode at " + col + ", path="+curPath);
                         Node n = readNode(rs, col, curPath);
-                        
+
                         if (n == null)
                         {
                         	done = true;
@@ -2786,7 +2775,7 @@ public class NodeDAO
 	                            cur = n;
 	                            root = cur;
 	                        }
-	                        else 
+	                        else
 	                        {
 	                            ((ContainerNode) cur).getNodes().add(n);
 	                            n.setParent((ContainerNode) cur);
@@ -2821,7 +2810,7 @@ public class NodeDAO
             String owner = null;
 
             Object creatorObject = rs.getObject(col++); // unused
-            
+
             String groupRead = getString(rs, col++);
             String groupWrite = getString(rs, col++);
 
@@ -2849,7 +2838,7 @@ public class NodeDAO
                 Number n = (Number) o;
                 nodeID = new Long(n.longValue());
             }
-            
+
             String path = basePath + "/" + name;
             VOSURI vos;
             try { vos = new VOSURI(new URI("vos", authority, path, null, null)); }
@@ -2858,13 +2847,13 @@ public class NodeDAO
                 throw new RuntimeException("BUG - failed to create vos URI", bug);
             }
 
-            Node node = null;            
-            // Since we support partial paths, a node not in the Node table is 
-            // returned with all columns having null values. Instead of 
+            Node node = null;
+            // Since we support partial paths, a node not in the Node table is
+            // returned with all columns having null values. Instead of
             // checking all columns, if we do not have the following condition,
             // return a null node.
             //if (!((parentID == null) && (nodeID == null) && (name == null) && (type == null)))
-            if (nodeID != null) // found another node    
+            if (nodeID != null) // found another node
             {
 	            if (NODE_TYPE_CONTAINER.equals(type))
 	            {
@@ -2878,35 +2867,35 @@ public class NodeDAO
 	            else if (NODE_TYPE_LINK.equals(type))
 	            {
 	                URI link;
-	               
+
 	                try { link = new URI(linkStr); }
 	                catch(URISyntaxException bug)
 	                {
 	                    throw new RuntimeException("BUG - failed to create link URI", bug);
 	                }
-	                 
+
 	                node = new LinkNode(vos, link);
 	            }
 	            else
 	            {
 	                throw new IllegalStateException("Unknown node database type: " + type);
 	            }
-	
+
 	            NodeID nid = new NodeID();
 	            nid.id = nodeID;
 	            nid.ownerObject = ownerObject;
 	            node.appData = nid;
-	
+
 	            if (contentType != null)
 	            {
 	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
 	            }
-	
+
 	            if (contentEncoding != null)
 	            {
 	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
 	            }
-	            
+
                 if (contentLength != null)
                     node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
                 else
@@ -2941,12 +2930,12 @@ public class NodeDAO
 	            {
 	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
 	            }
-	            
+
 	            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
-	            
+
 	            if (isLocked)
 	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(isLocked)));
-	
+
 	            // set the read-only flag on the properties
 	            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
 	            {
@@ -2974,7 +2963,7 @@ public class NodeDAO
             return ret;
         }
     }
-    
+
     private class NodeSizePropagationExtractor implements ResultSetExtractor
     {
         @Override
@@ -2989,7 +2978,7 @@ public class NodeDAO
             Number parentNumber;
             NodeSizePropagation propagation = null;
             int col;
-            
+
             while (rs.next())
             {
                 col = 1;
@@ -3007,6 +2996,6 @@ public class NodeDAO
             }
             return propagations;
         }
-        
+
     }
 }
