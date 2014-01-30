@@ -2223,7 +2223,7 @@ public class NodeDAO
             sb.append(" SET ");
 
             sb.append("lastModified = ?, ");
-            sb.append("delta = (? - coalesce(contentLength, 0)), contentLength = ?, contentMD5 = ?");
+            sb.append("delta = ? - coalesce(contentLength, 0) + coalesce(delta, 0), contentLength = ?, contentMD5 = ?");
             sb.append(" WHERE nodeID = ?");
 
             if (lastModified != null)
@@ -2242,6 +2242,8 @@ public class NodeDAO
             Date now = new Date();
             Timestamp ts = new Timestamp(now.getTime());
             prep.setTimestamp(col++, ts, cal);
+            sb.append(now);
+            sb.append(",");
 
             if (len == null)
             {

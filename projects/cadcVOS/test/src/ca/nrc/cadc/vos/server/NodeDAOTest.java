@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -113,12 +113,12 @@ import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
 
 /**
  * Test class for the NodeDAO class in cadcVOS.
- * 
+ *
  * @author pdowler
  *
  */
 public class NodeDAOTest
-{   
+{
     private static Logger log = Logger.getLogger(NodeDAOTest.class);
 
     static final String SERVER = "VOSPACE_WS_TEST";
@@ -141,7 +141,7 @@ public class NodeDAOTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
-    
+
     DataSource dataSource;
     NodeDAO nodeDAO;
     NodeSchema nodeSchema;
@@ -190,7 +190,7 @@ public class NodeDAOTest
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.update("delete from " + nodeSchema.propertyTable);
         jdbc.update("delete from " + nodeSchema.nodeTable);
-        
+
         ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
         if (root == null)
         {
@@ -317,7 +317,7 @@ public class NodeDAOTest
             Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assert4", putNode4, afile);
             compareProperties("assert4", putNode4.getProperties(), afile.getProperties());
-			            
+
             // create a link node: /adir1/adir2/alink
             String nodePathL = nodePath2 + "/" + getNodeName("alink");
             String linkStr = nodePath3;
@@ -334,7 +334,7 @@ public class NodeDAOTest
             Assert.assertNull(alink.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assertNodeL", putNodeL, alink);
             compareProperties("assertPropL", putNodeL.getProperties(), alink.getProperties());
-            
+
             // test path to LinkNode
             String linkNodePath = nodePath2 + "/" + linkNode.getName();
             Node actualLinkNode = nodeDAO.getPath(linkNodePath, true);
@@ -342,7 +342,7 @@ public class NodeDAOTest
             Assert.assertEquals("failed to get the complete path", linkNodePath, nodePathStr);
 
             // test path to linked resource
-            String dataNodePath = nodePath2 + "/" + linkNode.getName() + "/" + 
+            String dataNodePath = nodePath2 + "/" + linkNode.getName() + "/" +
                                   cNode3.getName() + "/" + dataNode.getName();
             String expectedNodePath = nodePath2 + "/" + linkNode.getName();
             Node actualDataNode = nodeDAO.getPath(dataNodePath, true);
@@ -353,11 +353,11 @@ public class NodeDAOTest
             // test path to invalid DataNode
             dataNodePath = nodePath4 + "/noSuchNode";
             actualDataNode = nodeDAO.getPath(dataNodePath, false);
-            Assert.assertNull("expected a null node", actualDataNode);            
+            Assert.assertNull("expected a null node", actualDataNode);
             expectedNodePath = nodePath4;
             actualDataNode = nodeDAO.getPath(dataNodePath, true);
             Assert.assertNotNull("expected a node", actualDataNode);
-            
+
             // test path not found
             dataNodePath = "/" + HOME_CONTAINER + "/nonsense";
             Node ret = nodeDAO.getPath(dataNodePath, true);
@@ -379,7 +379,7 @@ public class NodeDAOTest
         finally
         {
             log.debug("testGetPath - DONE");
-        }    
+        }
     }
 
     @Test
@@ -445,7 +445,7 @@ public class NodeDAOTest
             Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assert7", putNode, afile);
             compareProperties("assert8", putNode.getProperties(), afile.getProperties());
-            
+
             // /adir/alink
             String nodePath5 = basePath + getNodeName("adir") + "/" + getNodeName("alink");
             linkNode = getCommonLinkNode(nodePath5, getLinkNodeProperties());
@@ -494,7 +494,7 @@ public class NodeDAOTest
             ContainerNode testNode = getCommonContainerNode(path);
             testNode.setParent(rootContainer);
             ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
-            
+
             ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
 
@@ -646,12 +646,12 @@ public class NodeDAOTest
             cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
             Assert.assertEquals("empty child list", 0, cur.getNodes().size());
-            
+
             // load the child nodes one at a time
             nodeDAO.getChild(cur, n1.getName());
             Assert.assertEquals("contains 1", 1, cur.getNodes().size());
             Assert.assertTrue("contains n1", cur.getNodes().contains(n1));
-            
+
             nodeDAO.getChild(cur, n4.getName());
             Assert.assertEquals("contains 2", 2, cur.getNodes().size());
             Assert.assertTrue("contains n4", cur.getNodes().contains(n4));
@@ -746,7 +746,7 @@ public class NodeDAOTest
             props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})));
             // do not add to testNode since these props cannot be updated by user
-            
+
             // check that return value is right
             pNode = nodeDAO.updateProperties(pNode, props);
             Assert.assertNotNull(pNode);
@@ -793,7 +793,7 @@ public class NodeDAOTest
 
             // expect the last one to win since we use List
             testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc2"));
-            
+
             // check that return value is right
             pNode = nodeDAO.updateProperties(pNode, props);
             Assert.assertNotNull(pNode);
@@ -825,7 +825,7 @@ public class NodeDAOTest
             Node pNode1 = nodeDAO.getPath(path);
             Assert.assertNotNull(pNode1);
             nodeDAO.getProperties(pNode1);
-            
+
             Node pNode2 = nodeDAO.getPath(path);
             Assert.assertNotNull(pNode2);
             nodeDAO.getProperties(pNode2);
@@ -834,7 +834,7 @@ public class NodeDAOTest
             pNode1 = nodeDAO.updateProperties(pNode1, props);
             Assert.assertNotNull(pNode1);
             compareProperties("assert14", testNode.getProperties(), pNode1.getProperties());
-            
+
             pNode2 = nodeDAO.updateProperties(pNode2, props);
             Assert.assertNotNull(pNode2);
             compareProperties("assert15", testNode.getProperties(), pNode2.getProperties());
@@ -844,7 +844,7 @@ public class NodeDAOTest
             Assert.assertNotNull(pNode);
             nodeDAO.getProperties(pNode);
             compareProperties("assert16", testNode.getProperties(), pNode.getProperties());
-            
+
             nodeDAO.delete(pNode, 10, false); // cleanup
             assertRecursiveDelete();
         }
@@ -987,15 +987,15 @@ public class NodeDAOTest
             np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
             Assert.assertNotNull("contentLength NP", np);
             Assert.assertEquals(2048, Long.parseLong(np.getPropertyValue()));
-            
+
             np = n.findProperty(VOS.PROPERTY_URI_TYPE);
             Assert.assertNotNull("contentType NP", np);
             Assert.assertEquals(meta.getContentType(), np.getPropertyValue());
-            
+
             np = n.findProperty(VOS.PROPERTY_URI_CONTENTENCODING);
             Assert.assertNotNull("contentEncoding NP", np);
             Assert.assertEquals(meta.getContentEncoding(), np.getPropertyValue());
-            
+
             np = n.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
             Assert.assertNotNull("contentMD5 NP", np);
             Assert.assertEquals(meta.getMd5Sum(), np.getPropertyValue());
@@ -1030,7 +1030,7 @@ public class NodeDAOTest
             Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // alter path but leave dNode object alone
-            Node srcNode = (DataNode) nodeDAO.getPath(dPath);
+            Node srcNode = nodeDAO.getPath(dPath);
             nodeDAO.move(srcNode, oNode);
             Node movedNode = nodeDAO.getPath(oNode.getUri().getPath() + "/" + dNode.getName());
             Assert.assertNotNull(movedNode);
@@ -1038,7 +1038,7 @@ public class NodeDAOTest
 
             // set busy state
             nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            
+
             //try
             //{
             //    nodeDAO.updateNodeMetadata(dNode, meta);
@@ -1084,7 +1084,7 @@ public class NodeDAOTest
             nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
 
             // alter path but leave dNode object alone
-            srcNode = (DataNode) nodeDAO.getPath(dPath);
+            srcNode = nodeDAO.getPath(dPath);
             try
             {
                 nodeDAO.move(srcNode, oNode);
@@ -1144,7 +1144,7 @@ public class NodeDAOTest
             log.debug("testGetRoot - DONE");
         }
     }
-    
+
     @Test
     public void testMove()
     {
@@ -1167,7 +1167,7 @@ public class NodeDAOTest
             String moveData3Path = moveCont2Path + "/" + getNodeName("movedata3");
             String moveLink1Path = moveCont2Path + "/" + getNodeName("movelink1");
             String moveData4Path = moveCont3Path + "/" + getNodeName("movedata4");
-            
+
             ContainerNode moveRoot = getCommonContainerNode(moveRootPath);
             ContainerNode moveCont1 = getCommonContainerNode(moveCont1Path);
             ContainerNode moveCont2 = getCommonContainerNode(moveCont2Path);
@@ -1177,7 +1177,7 @@ public class NodeDAOTest
             DataNode moveData3 = getCommonDataNode(moveData3Path);
             LinkNode moveLink1 = getCommonLinkNode(moveLink1Path);
             DataNode moveData4 = getCommonDataNode(moveData4Path);
-            
+
             moveRoot.setParent(rootContainer);
             moveRoot = (ContainerNode) nodeDAO.put(moveRoot, owner);
             moveCont1.setParent(moveRoot);
@@ -1196,10 +1196,10 @@ public class NodeDAOTest
             moveLink1 = (LinkNode) nodeDAO.put(moveLink1, owner);
             moveData4.setParent(moveCont3);
             moveData4 = (DataNode) nodeDAO.put(moveData4, owner);
-            
+
             // move cont2 to cont3
             nodeDAO.move(moveCont2, moveCont3);
-            
+
             // check that cont2 no longer under moveRoot
             moveRoot = (ContainerNode) nodeDAO.getPath(moveRootPath);
             Assert.assertNotNull(moveRoot);
@@ -1212,7 +1212,7 @@ public class NodeDAOTest
                     Assert.fail("Failed to move container 2: still in old location.");
                 }
             }
-            
+
             // check that cont2 under cont3
             moveCont3 = (ContainerNode) nodeDAO.getPath(moveCont3Path);
             Assert.assertNotNull(moveCont3);
@@ -1228,7 +1228,7 @@ public class NodeDAOTest
             }
             if (!found)
                 Assert.fail("Failed to move container 2: not in new location.");
-            
+
             // check that cont2 has parent cont3 and child data3
             moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
             Assert.assertNotNull(moveCont2);
@@ -1248,11 +1248,11 @@ public class NodeDAOTest
                         ((NodeID) child.appData).getID().equals(((NodeID) moveLink1.appData).getID()))
                 {
                     foundLink = true;
-                }            
+                }
             }
             if (!found)
                 Assert.fail("Lost child movedata3 on move.");
-            
+
             if (!foundLink)
                 Assert.fail("Lost child moveLink1 on move.");
 
@@ -1270,7 +1270,7 @@ public class NodeDAOTest
             {
                 // expected
             }
-            
+
             // try to move root (not allowed)
             try
             {
@@ -1282,7 +1282,7 @@ public class NodeDAOTest
             {
                 // expected
             }
-            
+
             // try to move root container (not allowed)
             try
             {
@@ -1293,14 +1293,14 @@ public class NodeDAOTest
             {
                 // expected
             }
-            
+
             // move with new owner, new name
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
             moveData3 = (DataNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName() + "/" + moveData3.getName());
             String newName = getNodeName("newName");
             moveData3.setName(newName);
             nodeDAO.move(moveData3, moveCont1);
-            
+
             // check that moveRoot now has moveData3
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
             nodeDAO.getChildren(moveCont1);
@@ -1567,7 +1567,7 @@ public class NodeDAOTest
 
             numS = nodeDAO.numTxnStarted;
             numC = nodeDAO.numTxnCommitted;
-            
+
             nodeDAO.chown(chownRoot, owner2, true, 2, false);
             // 8 nodes = 4 batches in total, plus one extra empty txn at the end
             Assert.assertEquals("batch start", numS+5, nodeDAO.numTxnStarted);
@@ -1776,11 +1776,11 @@ public class NodeDAOTest
             // 4 nodes = 4 batches + 1 empty txn
             Assert.assertEquals("batch start", numS+5, nodeDAO.numTxnStarted);
             Assert.assertEquals("batch commit", numC+5, nodeDAO.numTxnCommitted);
-            
+
 
             Node notFound = nodeDAO.getPath(cPath);
             Assert.assertNull(notFound);
-            
+
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1864,11 +1864,11 @@ public class NodeDAOTest
             log.debug("testBatchDeleteDryrun - DONE");
         }
     }
-    
+
     @Test
     public void testUpdateMetadataDelta()
     {
-        
+
         log.debug("testUpdateMetadataDelta - START");
         try
         {
@@ -1883,30 +1883,30 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("delta-test");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the content length & nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set contentLength=4, busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            
+
             FileMetadata meta = new FileMetadata();
             meta.setContentLength(10L);
-            
+
             // perform the metadata update
             nodeDAO.updateNodeMetadata(dataNode, meta, true);
-            
+
             int delta = jdbc.queryForInt("select delta from Node where name='" + dataNode.getName() + "'");
             Assert.assertEquals("Wrong delta", 6, delta);
         }
@@ -1920,11 +1920,11 @@ public class NodeDAOTest
             log.debug("testUpdateMetadataDelta - DONE");
         }
     }
-    
+
     @Test
     public void testDeleteDelta()
     {
-        
+
         log.debug("testDeleteDelta - START");
         try
         {
@@ -1939,30 +1939,30 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("delta-test2");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set contentLength=2 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            
+
             // manually set the delta
             sql = "update Node set delta=7 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
-            
+
             nodeDAO.delete(dataNode);
-            
+
             int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
             // delta should now be 7-2
             Assert.assertEquals("Wrong delta", 5, delta);
@@ -1981,7 +1981,7 @@ public class NodeDAOTest
     @Test
     public void testMoveDelta()
     {
-        
+
         log.debug("testMoveDelta - START");
         try
         {
@@ -1996,41 +1996,41 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("delta-test3");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create another container node
             String containerPath2 = basePath + getNodeName("delta-test4");
             ContainerNode containerNode2 = this.getCommonContainerNode(containerPath2);
             containerNode2.setParent(rootContainer);
             containerNode2 = (ContainerNode) nodeDAO.put(containerNode2, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set contentLength=9 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            
+
             // manually set the deltas
             sql = "update Node set delta=11 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
             sql = "update Node set delta=13 where name='" + containerNode2.getName() + "'";
             jdbc.update(sql);
-            
+
             nodeDAO.move(dataNode, containerNode2);
-            
+
             int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
             Assert.assertEquals("Wrong delta", 2, delta);
-            
+
             delta = jdbc.queryForInt("select delta from Node where name='" + containerNode2.getName() + "'");
             Assert.assertEquals("Wrong delta", 22, delta);
         }
@@ -2044,7 +2044,7 @@ public class NodeDAOTest
             log.debug("testMoveDelta - DONE");
         }
     }
-    
+
     @Test
     public void testGetOutstandingSizePropagations()
     {
@@ -2062,26 +2062,26 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("trickle-test1");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the deltas
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
             sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
-            
+
             // grab the nodeIDs for assertion
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
             Long dataNodeID = jdbc.queryForLong(sql);
@@ -2089,22 +2089,23 @@ public class NodeDAOTest
             Long containerNodeID = jdbc.queryForLong(sql);
             sql = "select nodeID from Node where name='" + rootContainer.getName() + "'";
             Long rootNodeID = jdbc.queryForLong(sql);
-            
+
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
             Assert.assertTrue("Wrong number of oustanding propagations", propagations.size() == 2);
-            
+
             // sort them for assertion
             Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
+                @Override
                 public int compare(NodeSizePropagation n1, NodeSizePropagation n2)
                 {
                     return -1 * n1.getChildType().compareTo(n2.getChildType());
                 }
             });
-            
+
             Assert.assertEquals("Wrong data node ID", dataNodeID, (Long) propagations.get(0).getChildID());
-            Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(0).getParentID());
+            Assert.assertEquals("Wrong data node ID", containerNodeID, propagations.get(0).getParentID());
             Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(1).getChildID());
-            Assert.assertEquals("Wrong data node ID", rootNodeID, (Long) propagations.get(1).getParentID());
+            Assert.assertEquals("Wrong data node ID", rootNodeID, propagations.get(1).getParentID());
 
         }
         catch(Exception unexpected)
@@ -2117,7 +2118,7 @@ public class NodeDAOTest
             log.debug("testGetOutstandingSizePropagations - DONE");
         }
     }
-    
+
     @Test
     public void testApplyNodeSizePropagation()
     {
@@ -2135,30 +2136,31 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("trickle-test2");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the deltas
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
             sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
-            
+
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
-            
+
             // sort them
             Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
+                @Override
                 public int compare(NodeSizePropagation n1, NodeSizePropagation n2)
                 {
                     return -1 * n1.getChildType().compareTo(n2.getChildType());
@@ -2166,15 +2168,15 @@ public class NodeDAOTest
             });
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 2);
             nodeDAO.applyPropagation(propagations.get(0));
-            
+
             propagations = nodeDAO.getOutstandingPropagations(100);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
             nodeDAO.applyPropagation(propagations.get(0));
-            
+
             propagations = nodeDAO.getOutstandingPropagations(100);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
             nodeDAO.applyPropagation(propagations.get(0));
-            
+
             propagations = nodeDAO.getOutstandingPropagations(100);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 0);
         }
@@ -2189,7 +2191,285 @@ public class NodeDAOTest
             log.debug("testApplyNodeSizePropagation - DONE");
         }
     }
-    
+
+    @Test
+    public void testPropagationNewThenApply()
+    {
+        log.debug("testPropagationNewThenApply - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a container node
+            String containerName = getNodeName("trickle-test3");
+            String containerPath = basePath + containerName;
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+
+            // create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+            // ensure the contentLength is zero to start
+            String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            Long contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+
+            // ensure the data node delta is zero to start
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            Long delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+
+            // manually set the busy state
+            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+
+            // update the metadata, using the strict option
+            FileMetadata metadata = new FileMetadata();
+            metadata.setContentLength(10L);
+            metadata.setMd5Sum("a94fc20c049422af7c591e2984f1f82d");
+            nodeDAO.updateNodeMetadata(dataNode, metadata, true);
+
+            // ensure the state is back to normal
+            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            String curState = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong busy state", "N", curState);
+
+            // ensure the contentLength is correct
+            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
+
+            // ensure the data node delta is correct
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+
+            // ensure the md5sum is correct
+            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            String md5sum = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong md5 sum", "a94fc20c049422af7c591e2984f1f82d".toUpperCase(), md5sum.toUpperCase());
+
+            // get the nodeID
+            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            long nodeID = jdbc.queryForLong(sql);
+            log.debug("nodeID is " + nodeID);
+
+            // get the propagation
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            NodeSizePropagation propagation = null;
+            for (NodeSizePropagation next : propagations)
+            {
+                log.debug("Looking at propgation with nodeID: " + next.getChildID());
+                if (next.getChildID() == nodeID)
+                    propagation = next;
+            }
+            Assert.assertNotNull("Null propagation", propagation);
+
+            // apply the propagation
+            nodeDAO.applyPropagation(propagation);
+
+            // ensure the data node content length is correct
+            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
+
+            // ensure the data node delta is correct
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+
+            // ensure the container node content length is correct
+            sql = "select contentLength from Node where name='" + containerName + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+
+            // ensure the container node delta is correct
+            sql = "select delta from Node where name='" + containerName + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", Long.valueOf(10L), delta);
+
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testPropagationNewThenApply - DONE");
+        }
+    }
+
+    @Test
+    public void testPropagationNewReplaceThenApply()
+    {
+        log.debug("testPropagationNewReplaceThenApply - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a container node
+            String containerName = getNodeName("trickle-test4");
+            String containerPath = basePath + containerName;
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+
+            // create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+            // ensure the contentLength is zero to start
+            String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            Long contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+
+            // ensure the data node delta is zero to start
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            Long delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+
+            // manually set the busy state
+            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+
+            // update the metadata, using the strict option
+            FileMetadata metadata = new FileMetadata();
+            metadata.setContentLength(10L);
+            metadata.setMd5Sum("a94fc20c049422af7c591e2984f1f82d");
+            nodeDAO.updateNodeMetadata(dataNode, metadata, true);
+
+            // ensure the state is back to normal
+            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            String curState = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong busy state", "N", curState);
+
+            // ensure the contentLength is correct
+            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
+
+            // ensure the md5sum is correct
+            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            String md5sum = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong md5 sum", "a94fc20c049422af7c591e2984f1f82d".toUpperCase(), md5sum.toUpperCase());
+
+            // ensure the data node delta is correct
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+
+            // start the replace--manually set the busy state
+            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+
+            // update the metadata, using the strict option
+            metadata = new FileMetadata();
+            metadata.setContentLength(15L);
+            metadata.setMd5Sum("c2831384aae9c2e175c255797c2cfca5");
+            nodeDAO.updateNodeMetadata(dataNode, metadata, true);
+
+            // ensure the state is back to normal
+            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            curState = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong busy state", "N", curState);
+
+            // ensure the contentLength is correct
+            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
+
+            // ensure the md5sum is correct
+            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            md5sum = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong md5 sum", "c2831384aae9c2e175c255797c2cfca5".toUpperCase(), md5sum.toUpperCase());
+
+            // ensure the data node delta is correct
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(15L), delta);
+
+            // get the nodeID
+            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            long nodeID = jdbc.queryForLong(sql);
+
+            // get the propagation
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            NodeSizePropagation propagation = null;
+            for (NodeSizePropagation next : propagations)
+            {
+                if (next.getChildID() == nodeID)
+                    propagation = next;
+            }
+            Assert.assertNotNull("Null propagation", propagation);
+
+            // apply the propagation
+            nodeDAO.applyPropagation(propagation);
+
+            // ensure the data node content length is correct
+            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
+
+            // ensure the data node delta is correct
+            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+
+            // ensure the container node content length is correct
+            sql = "select contentLength from Node where name='" + containerName + "'";
+            contentLength = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+
+            // ensure the container node delta is correct
+            sql = "select delta from Node where name='" + containerName + "'";
+            delta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", Long.valueOf(15L), delta);
+
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testPropagationNewReplaceThenApply - DONE");
+        }
+    }
+
     @Test
     public void testDatabaseDateRoundTrip()
     {
@@ -2207,41 +2487,41 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
-            
+
             // Create a container node
             String containerPath = basePath + getNodeName("trickle-test2");
             ContainerNode containerNode = this.getCommonContainerNode(containerPath);
             containerNode.setParent(rootContainer);
             containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
-            
+
             // Create a data node
             String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
             DataNode dataNode = getCommonDataNode(dataPath);
             dataNode.setParent(containerNode);
             nodeDAO.put(dataNode, owner);
-            
+
             // manually set the busy state
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             String sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            
+
             // update the metadata, using the strict option
             nodeDAO.updateNodeMetadata(dataNode, new FileMetadata(), true);
-            
+
             // ensure the state is back to normal
             sql = "select busyState from Node where name='" + dataNode.getName() + "'";
             String curState = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong busy state", "N", curState);
-            
+
             // manually reset the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            
+
             // modify some metadata (this will tweak the date)
             List<NodeProperty> properties = new ArrayList<NodeProperty>();
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, "true"));
             nodeDAO.updateProperties(dataNode, properties);
-            
+
             // update the metadata again (should get illegal argument exception)
             try
             {
@@ -2272,29 +2552,29 @@ public class NodeDAOTest
             return Long.parseLong(str);
         return 0;
     }
-    
+
     private LinkNode getCommonLinkNode(String path, List<NodeProperty> properties) throws Exception
     {
         LinkNode linkNode = getCommonLinkNode(path);
         linkNode.getProperties().addAll(properties);
         return linkNode;
     }
-				        
+
     private LinkNode getCommonLinkNode(String path) throws Exception
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
         URI link = new URI("/" + HOME_CONTAINER + "/linkResource");
         LinkNode linkNode = new LinkNode(vosuri, link);
         return linkNode;
-    }										              
-									
+    }
+
     private DataNode getCommonDataNode(String path, List<NodeProperty> properties) throws Exception
     {
         DataNode dataNode = getCommonDataNode(path);
         dataNode.getProperties().addAll(properties);
         return dataNode;
     }
-    
+
     private DataNode getCommonDataNode(String path) throws Exception
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
@@ -2302,14 +2582,14 @@ public class NodeDAOTest
         //dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         return dataNode;
     }
-    
+
     private ContainerNode getCommonContainerNode(String path, List<NodeProperty> properties) throws Exception
     {
         ContainerNode containerNode = getCommonContainerNode(path);
         containerNode.getProperties().addAll(properties);
         return containerNode;
     }
-    
+
     private ContainerNode getCommonContainerNode(String path) throws Exception
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
