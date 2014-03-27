@@ -850,14 +850,14 @@ public class NodeDAO
 
                     // Note: if node size is null, the jdbc template
                     // will return zero.
-                    Long contentLength = jdbc.queryForLong(sql);
+                    Long sizeDifference = jdbc.queryForLong(sql);
                     prof.checkpoint("getSelectContentLengthSQL");
 
                     // delete the node only if it is not busy
                     deleteNode(node, true);
 
                     // apply the negative size difference to the parent
-                    sql = this.getApplySizeDiffSQL(node.getParent(), contentLength, false);
+                    sql = this.getApplySizeDiffSQL(node.getParent(), sizeDifference, false);
                     log.debug(sql);
                     jdbc.update(sql);
                     prof.checkpoint("getApplySizeDiffSQL");
@@ -2129,7 +2129,7 @@ public class NodeDAO
     protected String getSelectContentLengthSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT contentLength FROM ");
+        sb.append("SELECT coalesce(contentLength, 0) - coalesce(delta, 0) FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
