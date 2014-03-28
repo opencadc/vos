@@ -2471,6 +2471,145 @@ public class NodeDAOTest
     }
 
     @Test
+    public void testPropagateThenDelete()
+    {
+        log.debug("testPropagateThenDelete - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+
+            // Create a container
+            String containerName = getNodeName("trickle-test4");
+            String containerPath = basePath + containerName;
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+
+            // Create a child data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+            // update data node metadata (simulate a put)
+            nodeDAO.setBusyState(dataNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            FileMetadata metadata = new FileMetadata();
+            metadata.setContentLength(5L);
+            metadata.setMd5Sum("a94fc20c049422af7c591e2984f1f82d");
+            nodeDAO.updateNodeMetadata(dataNode, metadata, false);
+
+            // propagate data node
+            String sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
+            long parentNodeID = jdbc.queryForLong(sql);
+
+            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            long dataNodeID = jdbc.queryForLong(sql);
+
+            NodeSizePropagation np = new NodeSizePropagation(dataNodeID, NodeDAO.NODE_TYPE_DATA, parentNodeID);
+            nodeDAO.applyPropagation(np);
+
+            sql = "select delta from Node where name='" + containerNode.getName() + "'";
+            long actualDelta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", 5L, actualDelta);
+
+            // delete data node
+            nodeDAO.delete(dataNode);
+
+            // assert right container size
+            actualDelta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testPropagateThenDelete - DONE");
+        }
+    }
+
+    @Test
+    public void testDeltaOnDelete()
+    {
+        log.debug("testDeltaOnDelete - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a container
+            String containerName = getNodeName("trickle-test4");
+            String containerPath = basePath + containerName;
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+
+            // Create a child data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+            // update data node metadata (simulate a put)
+            nodeDAO.setBusyState(dataNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            FileMetadata metadata = new FileMetadata();
+            metadata.setContentLength(5L);
+            metadata.setMd5Sum("a94fc20c049422af7c591e2984f1f82d");
+            nodeDAO.updateNodeMetadata(dataNode, metadata, false);
+
+            String sql = "select delta from Node where name='" + containerNode.getName() + "'";
+            long actualDelta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+
+            // delete data node
+            nodeDAO.delete(dataNode);
+
+            // assert right delta size
+            actualDelta = jdbc.queryForLong(sql);
+            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testDeltaOnDelete - DONE");
+        }
+    }
+
+    @Test
     public void testDatabaseDateRoundTrip()
     {
         log.debug("testDatabaseDateRoundTrip - START");
