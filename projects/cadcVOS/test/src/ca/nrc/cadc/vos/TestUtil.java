@@ -76,7 +76,7 @@ import java.util.Date;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa

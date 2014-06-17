@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.vos.View.Parameter;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -80,15 +82,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
-
-import ca.nrc.cadc.uws.util.XmlUtil;
-import ca.nrc.cadc.vos.View.Parameter;
 
 /**
  * Constructs a Transfer from an XML source. This class is not thread safe but it is
@@ -141,7 +139,7 @@ public class TransferReader
         {
             // TODO: investigate creating a SAXBuilder once and re-using it
             // as long as we can detect concurrent access (a la java collections)
-            Document doc = XmlUtil.validateXml(reader, schemaMap);
+            Document doc = XmlUtil.buildDocument(reader, schemaMap);
             return parseTransfer(doc);
         }
         catch(JDOMException ex)
