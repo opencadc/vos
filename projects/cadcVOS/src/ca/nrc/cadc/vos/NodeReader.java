@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -81,15 +83,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
-
-import ca.nrc.cadc.uws.util.XmlUtil;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Constructs a Node from an XML source. This class is not thread safe but it is
@@ -210,7 +208,7 @@ public class NodeReader
         {
             // TODO: investigate creating a SAXBuilder once and re-using it
             // as long as we can detect concurrent access (a la java collections)
-            document = XmlUtil.validateXml(reader, schemaMap);
+            document = XmlUtil.buildDocument(reader, schemaMap);
         }
         catch (JDOMException jde)
         {

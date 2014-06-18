@@ -93,7 +93,7 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.TransferReader;
 
@@ -183,7 +183,6 @@ public class ClientRecursiveSetNode implements Runnable
         return ep;
                 
     }
-
     public ErrorSummary getServerError()
         throws IOException
     {
@@ -215,11 +214,11 @@ public class ClientRecursiveSetNode implements Runnable
             JobReader jobReader = null;
             if (schemaValidation)
             {
-                Map<String, String> extreaSchemas = new HashMap<String, String>();
+                Map<String, String> extraSchemas = new HashMap<String, String>();
                 String xsdFile = XmlUtil.getResourceUrlString(
                         TransferReader.VOSPACE_SCHEMA_RESOURCE, ClientRecursiveSetNode.class);
-                extreaSchemas.put(TransferReader.VOSPACE_SCHEMA_URL, xsdFile);
-                jobReader = new JobReader(extreaSchemas);
+                extraSchemas.put(TransferReader.VOSPACE_SCHEMA_URL, xsdFile);
+                jobReader = new JobReader(extraSchemas);
             }
             else
             {
