@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.util.StringBuilderWriter;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -77,7 +79,6 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.jdom2.Attribute;
 import org.jdom2.Document;
@@ -86,9 +87,6 @@ import org.jdom2.Namespace;
 import org.jdom2.ProcessingInstruction;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
-
-import ca.nrc.cadc.util.StringBuilderWriter;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Writes a Node as XML to an output.
