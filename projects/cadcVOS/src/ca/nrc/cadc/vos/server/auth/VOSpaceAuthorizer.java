@@ -111,13 +111,13 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 
 
 /**
- * Authorization implementation for VO Space. 
- * 
+ * Authorization implementation for VO Space.
+ *
  * Important:  This class cannot be re-used between HTTP Requests--A new
  * instance must be created each time.
- * 
+ *
  * The nodePersistence object must be set for every instance.
- * 
+ *
  * @author majorb
  */
 public class VOSpaceAuthorizer implements Authorizer
@@ -127,6 +127,7 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
+    private static final String GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
     public static final String OFFLINE = "Offline";
@@ -141,26 +142,35 @@ public class VOSpaceAuthorizer implements Authorizer
 
     private SSLSocketFactory socketFactory;
     private int subjectHashCode;
-    
+
     // cache of groupURI to isMember
     private Map<String, Boolean> groupMembershipCache;
-    
+
     private NodePersistence nodePersistence;
-    private RegistryClient registryClient;
     private GmsClient gmsClient;
 
     public VOSpaceAuthorizer()
     {
         this(false);
     }
-    
+
     public VOSpaceAuthorizer(boolean allowPartialPaths)
     {
         groupMembershipCache = new HashMap<String, Boolean>();
         initState();
         this.allowPartialPaths = allowPartialPaths;
-        this.registryClient = new RegistryClient();
-        this.gmsClient = new GmsClient(registryClient);
+
+        try
+        {
+            RegistryClient registryClient = new RegistryClient();
+            URL gmsBaseURL = registryClient.getServiceURL(new URI(GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            this.gmsClient = new GmsClient(gmsBaseURL.toString());
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("BUG: Error creating GMS Client", e);
+        }
+
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -189,6 +199,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
      */
+    @Override
     public Object getReadPermission(URI uri)
         throws AccessControlException, FileNotFoundException, TransientException
     {
@@ -204,13 +215,13 @@ public class VOSpaceAuthorizer implements Authorizer
             VOSURI vos = new VOSURI(uri);
             Node node = nodePersistence.get(vos, allowPartialPaths);
             return getReadPermission(node);
-        } 
+        }
         catch(NodeNotFoundException ex)
         {
             throw new FileNotFoundException("not found: " + uri);
         }
     }
-    
+
     /**
      * Obtain the Read Permission for the given Node.
      *
@@ -232,9 +243,9 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
+
         LinkedList<Node> nodes = Node.getNodeList(node);
-        
+
         // check for root ownership
         Node rootNode = nodes.getLast();
         if (isOwner(rootNode, subject))
@@ -242,7 +253,7 @@ public class VOSpaceAuthorizer implements Authorizer
             LOG.debug("Read permission granted to root user.");
             return node;
         }
-        
+
         Iterator<Node> iter = nodes.descendingIterator(); // root at end
         while (iter.hasNext())
         {
@@ -262,6 +273,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws FileNotFoundException If the node could not be found
      * @throws NodeLockedException    If the node is locked
      */
+    @Override
     public Object getWritePermission(URI uri)
         throws AccessControlException, FileNotFoundException,
             TransientException, NodeLockedException
@@ -273,7 +285,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 throw new IllegalStateException(READ_ONLY_MSG);
             throw new IllegalStateException(OFFLINE_MSG);
         }
-            
+
         try
         {
             VOSURI vos = new VOSURI(uri);
@@ -304,14 +316,14 @@ public class VOSpaceAuthorizer implements Authorizer
                 throw new IllegalStateException(READ_ONLY_MSG);
             throw new IllegalStateException(OFFLINE_MSG);
         }
-        
+
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
+
         // check if the node is locked
         if (!disregardLocks && node.isLocked())
             throw new NodeLockedException(node.getUri().toString());
-        
+
         // check for root ownership
         LinkedList<Node> nodes = Node.getNodeList(node);
         Node rootNode = nodes.getLast();
@@ -320,7 +332,7 @@ public class VOSpaceAuthorizer implements Authorizer
             LOG.debug("Write permission granted to root user.");
             return node;
         }
-        
+
         Iterator<Node> iter = nodes.descendingIterator(); // root at end
         while (iter.hasNext())
         {
@@ -334,17 +346,17 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         return node;
     }
-    
+
     /**
-     * Recursively checks if a node can be deleted by the current subject. 
-     * The caller must have write permission on the parent container and all 
-     * non-empty containers. The argument and all child nodes must not 
+     * Recursively checks if a node can be deleted by the current subject.
+     * The caller must have write permission on the parent container and all
+     * non-empty containers. The argument and all child nodes must not
      * be locked (unless locks are being ignored).
-     * 
+     *
      * @param node
      * @throws AccessControlException
      * @throws NodeLockedException
-     * @throws TransientException 
+     * @throws TransientException
      */
     public void getDeletePermission(Node node)
         throws AccessControlException, NodeLockedException, TransientException
@@ -356,20 +368,20 @@ public class VOSpaceAuthorizer implements Authorizer
                 throw new IllegalStateException(READ_ONLY_MSG);
             throw new IllegalStateException(OFFLINE_MSG);
         }
-        
+
         // check parent
         ContainerNode parent = node.getParent();
         getWritePermission(parent); // checks lock and rw permission
-        
+
         // check if the node is locked
         if (!disregardLocks && node.isLocked())
             throw new NodeLockedException(node.getUri().toString());
-        
+
         if (node instanceof ContainerNode)
         {
             ContainerNode container = (ContainerNode) node;
             getWritePermission(container); // checks lock and rw permission
-                
+
             Integer batchSize = new Integer(1000); // TODO: any value in not hard-coding this?
             VOSURI startURI = null;
             nodePersistence.getChildren(container, startURI, batchSize);
@@ -382,7 +394,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 }
                 // clear the children for garbage collection
                 container.getNodes().clear();
-                
+
                 // get next batch
                 nodePersistence.getChildren(container, startURI, batchSize);
                 if ( !container.getNodes().isEmpty() )
@@ -394,7 +406,7 @@ public class VOSpaceAuthorizer implements Authorizer
             }
         }
     }
-    
+
     /**
      * Given the groupURI, determine if the user identified by the subject
      * has membership.
@@ -415,11 +427,11 @@ public class VOSpaceAuthorizer implements Authorizer
                 LOG.debug("Using cached groupMembership results.");
                 return cachedMembership;
             }
-            
+
             // require identification for group membership: create a private key chain
             if (subject.getPrincipals().isEmpty())
                 return false;
-            
+
             // check for a cached socket factory
             if (socketFactory == null)
             {
@@ -429,12 +441,13 @@ public class VOSpaceAuthorizer implements Authorizer
                 {
                     X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
                             subject.getPublicCredentials());
-                    
+
                     // If we don't have the private key chain, get it from the credential
                     // delegation service and add it to the subject's public credentials
                     // for use later.
                     if (privateKeyChain == null)
                     {
+                        RegistryClient registryClient = new RegistryClient();
                         URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
                         CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
                         privateKeyChain = credentialPrivateClient.getCertificate();
@@ -446,15 +459,16 @@ public class VOSpaceAuthorizer implements Authorizer
                             //       for the false
                             return false;
                         }
-                        
+
                         privateKeyChain.getChain()[0].checkValidity();
-                        
+
                         subject.getPublicCredentials().add(privateKeyChain);
                     }
-                    
+
                     socketFactory = SSLUtil.getSocketFactory(privateKeyChain);
+                    gmsClient.setSslSocketFactory(socketFactory);
                     subjectHashCode = subject.hashCode();
-                    
+
                 }
                 catch (URISyntaxException e)
                 {
@@ -498,7 +512,7 @@ public class VOSpaceAuthorizer implements Authorizer
                             "Illegal use of VOSpaceAuthorizer: Different subject detected.");
                 }
             }
-            
+
             // make gms calls to see if the user has group membership
             for (String groupURI : groupURIs)
             {
@@ -518,42 +532,29 @@ public class VOSpaceAuthorizer implements Authorizer
                     else
                     {
                         LOG.debug("Checking GMS on groupURI: " + groupURI);
-                        
+
                         URI guri = new URI(groupURI);
                         if (guri.getFragment() == null)
                         {
                             throw new URISyntaxException(groupURI, "Missing fragment");
                         }
-                        URI serviceURI = new URI(guri.getScheme(), guri.getSchemeSpecificPart(), null); // drop fragment
-                        URL gmsBaseURL = registryClient.getServiceURL(serviceURI, VOS.GMS_PROTOCOL);
-            
-                        LOG.debug("GmsClient baseURL: " + gmsBaseURL);
-                        if (gmsBaseURL == null)
+
+                        // check group membership for each x500 principal that exists
+                        Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
+                        for (X500Principal x500Principal : x500Principals)
                         {
-                            LOG.warn("failed to find base URL for GMS service: " + serviceURI);
-                        }
-                        else
-                        {
-                            GmsClient gms = new GmsClient();
-                            gms.setSslSocketFactory(socketFactory);
-                            
-                            // check group membership for each x500 principal that exists
-                            Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
-                            for (X500Principal x500Principal : x500Principals)
-                            {
-                                boolean isMember = gms.isMember(guri, x500Principal);
-                                LOG.debug("GmsClient.isMember(" + guri.getFragment() + ","
-                                        + x500Principal.getName() + ") returned " + isMember);
-                                
-                                // cache this result for future queries
-                                LOG.debug(String.format(
-                                        "Caching groupMembership: Group: %s isMember: %s",
-                                                groupURI, isMember));
-                                groupMembershipCache.put(groupURI, isMember);
-                                
-                                if (isMember)
-                                    return true;
-                            }
+                            boolean isMember = gmsClient.isMember(guri.getFragment(), x500Principal);
+                            LOG.debug("GmsClient.isMember(" + guri.getFragment() + ","
+                                    + x500Principal.getName() + ") returned " + isMember);
+
+                            // cache this result for future queries
+                            LOG.debug(String.format(
+                                    "Caching groupMembership: Group: %s isMember: %s",
+                                            groupURI, isMember));
+                            groupMembershipCache.put(groupURI, isMember);
+
+                            if (isMember)
+                                return true;
                         }
                     }
                 }
@@ -572,7 +573,7 @@ public class VOSpaceAuthorizer implements Authorizer
                     }
                 }
             }
-            
+
             return false;
         }
         catch (MalformedURLException e)
@@ -585,16 +586,16 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         return false;
     }
-    
+
     /**
      * Return true if a cached membership result for any one of the
      * provided group URIs is true.
-     * 
+     *
      * Return false if there is a cached version of each provided group URI
      * and each version is false.
-     * 
+     *
      * Return null (unknown) otherwise.
-     * 
+     *
      * @param groupURIs
      * @return
      */
@@ -615,13 +616,13 @@ public class VOSpaceAuthorizer implements Authorizer
                 allURIsChecked = false;
             }
         }
-        
+
         if (allURIsChecked)
             return false;
         else
             return null;
     }
-    
+
     /**
      * Return true if there is a cached version of the groupURI set to true.
      * Return false if there is a cached version of the groupURI set to false.
@@ -641,7 +642,7 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         return null;
     }
-    
+
     /**
      * Check if the specified subject is the owner of the node.
      *
@@ -664,10 +665,10 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             throw new IllegalStateException("BUG: no owner found for node: " + node);
         }
-        
+
         Set<Principal> ownerPrincipals = owner.getPrincipals();
         Set<Principal> callerPrincipals = subject.getPrincipals();
-        
+
         for (Principal oPrin : ownerPrincipals)
         {
             for (Principal cPrin : callerPrincipals)
@@ -687,9 +688,9 @@ public class VOSpaceAuthorizer implements Authorizer
 
     /**
      * Check the read permission on a single node.
-     * 
+     *
      * For full node authorization, use getReadPermission(Node).
-     * 
+     *
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
@@ -698,7 +699,7 @@ public class VOSpaceAuthorizer implements Authorizer
         LOG.debug("checkSingleNodeReadPermission: " + node.getUri());
         if (node.isPublic())
             return true; // OK
-        
+
         // return true if this is the owner of the node or if a member
         // of the groupRead or groupWrite property
         if (subject != null)
@@ -723,7 +724,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 if (hasMembership(groupRead, subject))
                     return true; // OK
             }
-            
+
             // the GROUPWRITE property means the user has read+write permission
             // so check that too
             NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
@@ -740,15 +741,15 @@ public class VOSpaceAuthorizer implements Authorizer
                     return true; // OK
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Check the write permission on a single node.
-     * 
+     *
      * For full node authorization, use getWritePermission(Node).
-     * 
+     *
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
@@ -763,7 +764,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 LOG.debug("Node owner granted write permission.");
                 return true; // OK
             }
-            
+
             NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             if (LOG.isDebugEnabled())
             {
@@ -805,5 +806,5 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         this.nodePersistence = nodePersistence;
     }
-    
+
 }
