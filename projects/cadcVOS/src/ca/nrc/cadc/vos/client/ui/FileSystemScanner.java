@@ -236,7 +236,11 @@ public class FileSystemScanner implements Runnable
         String path = getRelativePath(file);
 
         // Create a DataNode.
-        final URI uri = new URI(targetURI.toString() + path);
+        String uriString = targetURI.toString() + path;
+        // HACK: replace windows backslashes with forward slashes
+        // (rt ticket 62652)
+        uriString = uriString.replace("\\", "/");
+        final URI uri = new URI(uriString);
         final ContainerNode node = new ContainerNode(new VOSURI(uri));
 
         // Add node and InputStream from file.
@@ -259,7 +263,11 @@ public class FileSystemScanner implements Runnable
         String path = getRelativePath(file);
 
         // Create a DataNode.
-        URI uri = new URI(targetURI.toString() + path);
+        String uriString = targetURI.toString() + path;
+        // HACK: replace windows backslashes with forward slashes
+        // (rt ticket 62652)
+        uriString = uriString.replace("\\", "/");
+        URI uri = new URI(uriString);
         DataNode node = new DataNode(new VOSURI(uri));
 
         // Add node and InputStream from file.
