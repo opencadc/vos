@@ -122,10 +122,9 @@ public class VOSTestSuite
         {
             Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
 
-            File crt = FileUtil.getFileFromResource("proxy.crt", VOSTestSuite.class);
-            File key = FileUtil.getFileFromResource("proxy.key", VOSTestSuite.class);
-            SSLUtil.initSSL(crt, key);
-            log.debug("initSSL: " + crt + "," + key);
+            File crt = FileUtil.getFileFromResource("proxy.pem", VOSTestSuite.class);
+            SSLUtil.initSSL(crt);
+            log.debug("initSSL: " + crt);
         }
         catch(Throwable t)
         {
