@@ -72,6 +72,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -97,11 +98,11 @@ import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.auth.CookiePrincipal;
 import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -836,21 +837,26 @@ public class VOSpaceAuthorizer implements Authorizer
                     String sessionID = cp.getName().substring(
                             SSOCookieManager.DELEGATION_COOKIE_NAME.length() + 
                             1);
+                    // urldecode
+                    sessionID = URLDecoder.decode(sessionID, "UTF-8");
                     DelegationToken dt = 
                             DelegationToken.parseText(sessionID, true);
-                    URI scope = dt.getScope();
-                    if (scope == null)
+
+                    LOG.debug("Authorize with delegation cookie: " + dt.toString());
+                    if (dt.getScope() == null)
                     {
                         return;
                     }
+                    VOSURI scope = new VOSURI(dt.getScope());
                     Date now = new Date();
                     if ((now.getTime() - dt.getTimestamp().getTime()) > 
                         (dt.getDuration()*60*60*1000))
                     {
                         String msg = "Expired scoped search (timestamp="
                                 + new SimpleDateFormat(
-                                        DelegationToken.DATE_FORMAT).format(dt
-                                        .getTimestamp()) + ", duration="
+                                        DateUtil.getDateFormat(
+                                        DateUtil.ISO8601_DATE_FORMAT_Z, null).format(dt
+                                        .getTimestamp())) + ", duration="
                                 + dt.getDuration() + "h) on node ("
                                 + node.getUri() + ") - accessed denied";
                         LOG.debug(msg);
@@ -859,7 +865,7 @@ public class VOSpaceAuthorizer implements Authorizer
                     VOSURI tmp = node.getUri();
                     while (tmp != null)
                     {
-                        if (scope.equals(tmp.getURIObject()))
+                        if (scope.equals(tmp))
                         {
                             return;
                         }
