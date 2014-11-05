@@ -128,7 +128,7 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
+    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gmsdep";
     private static final String CANFAR_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/canfargms";
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
@@ -143,6 +143,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean disregardLocks = false;
 
     private NodePersistence nodePersistence;
+    private RegistryClient registryClient;
     private GmsClient cadcGMS;
     private GMSClient canfarGMS;
     
@@ -160,13 +161,15 @@ public class VOSpaceAuthorizer implements Authorizer
 
         try
         {
-            RegistryClient registryClient = new RegistryClient();
+            this.registryClient = new RegistryClient();
             
             // TODO: allow configuration of known/trusted GMS services
             URL url = registryClient.getServiceURL(new URI(CADC_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            LOG.debug(CADC_GMS_SERVICE_ID + " -> " + url);
             this.cadcGMS = new GmsClient(url.toExternalForm());
             
             url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
             this.canfarGMS = new GMSClient(url.toExternalForm());
         }
         catch (IllegalArgumentException e)
@@ -516,7 +519,6 @@ public class VOSpaceAuthorizer implements Authorizer
             // for use later.
             if (privateKeyChain == null)
             {
-                RegistryClient registryClient = new RegistryClient();
                 URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
                 CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
                 privateKeyChain = credentialPrivateClient.getCertificate();
