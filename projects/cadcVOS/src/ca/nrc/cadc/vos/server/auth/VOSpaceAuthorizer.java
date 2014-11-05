@@ -162,6 +162,7 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             RegistryClient registryClient = new RegistryClient();
             
+            // TODO: allow configuration of known/trusted GMS services
             URL url = registryClient.getServiceURL(new URI(CADC_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
             this.cadcGMS = new GmsClient(url.toExternalForm());
             
@@ -459,13 +460,16 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
                     for (X500Principal x500Principal : x500Principals)
                     {
+                        // TODO: we should be using the base group URI to decide which GMS service to
+                        // call, but CANFAR and CADC grouops both have the same authority/base... doh!
+                        
                         // call CANFAR GMS
-                        //isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
-                        //profiler.checkpoint("canfarGMS.ismember");
-                        //LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
-                        //        + x500Principal.getName() + ") returned " + isMember);
-                        //if (isMember)
-                        //    return true;
+                        isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
+                        profiler.checkpoint("canfarGMS.ismember");
+                        LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
+                                + x500Principal.getName() + ") returned " + isMember);
+                        if (isMember)
+                            return true;
                         
                         // call CADC GMS
                         isMember = cadcGMS.isMember(guri.getFragment(), x500Principal);
