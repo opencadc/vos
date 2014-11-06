@@ -66,22 +66,34 @@
  */
 package ca.nrc.cadc.vos.auth;
 
-import ca.nrc.cadc.util.Log4jInit;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
+import java.io.File;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
 import junit.framework.Assert;
 
+import org.apache.log4j.Level;
 import org.junit.Test;
 
+import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.SSOCookieManager;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -90,7 +102,6 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import org.apache.log4j.Level;
 
 /**
  * Test class for the VOSpaceAuthorizer.
@@ -98,6 +109,7 @@ import org.apache.log4j.Level;
 public class VOSpaceAuthorizerTest
 {
     private String NODE_OWNER = "cn=cadc authtest1 10627,ou=cadc,o=hia";
+    private String NODE_OWNER_ID = "cadcauthtest1";
     
     static
     {
@@ -170,6 +182,153 @@ public class VOSpaceAuthorizerTest
         verify(np);
     }
     
+    
+    @Test
+    public void testCheckDelegation() throws Exception
+    {
+        // create keys
+        RsaSignatureGenerator.main(new String[]{getCompleteKeysDirName()});
+        
+        VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
+        ContainerNode node = new ContainerNode(vos);
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+
+        NodePersistence np = createMock(NodePersistence.class);
+        expect(np.get(vos, false)).andReturn(node).once();
+        replay(np);
+        
+        VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(np);
+        
+        // create the delegation cookie
+        DelegationToken dt = new DelegationToken(
+                new HttpPrincipal(NODE_OWNER_ID), 10, vos.getURIObject(), new Date());
+        CookiePrincipal cp = new CookiePrincipal(
+                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
+        DelegationToken.parse(dt.format(true), true);
+        Subject subject = new Subject();
+        subject.getPrincipals().add(cp);
+        subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
+        
+        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        Subject.doAs(subject, action);
+        
+        verify(np);
+               
+        
+        // do the same with a subnode
+        vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1/testnode"));
+        node = new ContainerNode(vos);
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+
+        np = createMock(NodePersistence.class);
+        expect(np.get(vos, false)).andReturn(node).once();
+        replay(np);
+        
+        voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(np);
+        
+        // create the delegation cookie
+        dt = new DelegationToken(
+                new HttpPrincipal(NODE_OWNER_ID), 10, 
+                vos.getParentURI().getURIObject(), new Date());
+        cp = new CookiePrincipal(
+                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
+        subject = new Subject();
+        subject.getPrincipals().add(cp);
+        subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
+        
+        action = new WritePermissionAction( voSpaceAuthorizer, vos.getURIObject());
+        Subject.doAs(subject, action);
+        
+        verify(np);
+        
+        // check scope missmatch        
+        np = createMock(NodePersistence.class);
+        expect(np.get(vos, false)).andReturn(node).once();
+        replay(np);
+        
+        voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(np);
+        
+        dt = new DelegationToken(
+                new HttpPrincipal(NODE_OWNER_ID), 10, 
+                new URI("vos://cadc.nrc.ca~vospace/otherspace"), new Date());
+        cp = new CookiePrincipal(
+                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
+        subject = new Subject();
+        subject.getPrincipals().add(cp);
+        subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
+        
+        action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        try
+        {
+            Subject.doAs(subject, action);
+            Assert.fail("Should have received AccessControlException");
+        }
+        catch (Exception e)
+        {
+            if (!(e instanceof AccessControlException))
+            {
+                Assert.fail("Should have received AccessControlException");
+            }
+        }
+        
+        verify(np);
+        
+        // expired cookie
+        np = createMock(NodePersistence.class);
+        expect(np.get(vos, false)).andReturn(node).once();
+        replay(np);
+        
+        voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(np);
+        Calendar cal = Calendar.getInstance(); // creates calendar
+        cal.setTime(new Date()); // sets calendar time/date
+        cal.add(Calendar.HOUR_OF_DAY, -10); // remove 10 hours
+        dt = new DelegationToken(
+                new HttpPrincipal(NODE_OWNER_ID), 1, 
+                node.getUri().getURIObject(), cal.getTime());
+        cp = new CookiePrincipal(
+                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
+        subject = new Subject();
+        subject.getPrincipals().add(cp);
+        subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
+        
+        action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        try
+        {
+            Subject.doAs(subject, action);
+            Assert.fail("Should have received AccessControlException");
+        }
+        catch (Exception e)
+        {
+            if (!(e instanceof AccessControlException))
+            {
+                Assert.fail("Should have received AccessControlException");
+            }
+        }
+        
+        verify(np);
+    }
+    
+    
     private class ReadPermissionAction implements PrivilegedExceptionAction<Object>
     {
         private VOSpaceAuthorizer authorizer;
@@ -204,6 +363,36 @@ public class VOSpaceAuthorizerTest
             return authorizer.getWritePermission(uri);
         }
         
+    }
+    
+    
+    /**
+     * Return the complete name of the keys file to be created so that
+     * the SignatureUtil class can find it. Do this by getting the path
+     * of the class directory.
+     * @return
+     */
+    public static String getCompleteKeysDirName()
+    {
+        URL classLocation = 
+                VOSpaceAuthorizer.class.getResource("VOSpaceAuthorizer.class");
+        if (!"file".equalsIgnoreCase(classLocation.getProtocol()))
+        {
+            throw new 
+            IllegalStateException("SignatureUtil class is not stored in a file.");
+        }
+        File classPath = new File(classLocation.getPath()).getParentFile();
+        String packageName = VOSpaceAuthorizer.class.getPackage().getName();
+        String packageRelPath = packageName.replace('.', File.separatorChar);
+        
+        String dir = classPath.getAbsolutePath().
+                substring(0, classPath.getAbsolutePath().indexOf(packageRelPath));
+        
+        if (dir == null)
+        {
+            throw new RuntimeException("Cannot find the class directory");
+        }
+        return dir;
     }
 
 }
