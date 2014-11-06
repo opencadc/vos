@@ -78,7 +78,6 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
 import java.security.cert.CertificateException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -97,12 +96,12 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.auth.CookiePrincipal;
 import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.InvalidDelegationTokenException;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -839,8 +838,18 @@ public class VOSpaceAuthorizer implements Authorizer
                             1);
                     // urldecode
                     sessionID = URLDecoder.decode(sessionID, "UTF-8");
-                    DelegationToken dt = 
-                            DelegationToken.parseText(sessionID, true);
+                    
+                    DelegationToken dt = null;
+                    try
+                    {
+                        dt = 
+                            DelegationToken.parse(sessionID, true);
+                    }
+                    catch (InvalidDelegationTokenException ex)
+                    {
+                        throw new AccessControlException(
+                                "Cannot parse delegation cookie: " + ex.getMessage());
+                    }
 
                     LOG.debug("Authorize with delegation cookie: " + dt.toString());
                     if (dt.getScope() == null)
@@ -848,20 +857,6 @@ public class VOSpaceAuthorizer implements Authorizer
                         return;
                     }
                     VOSURI scope = new VOSURI(dt.getScope());
-                    Date now = new Date();
-                    if ((now.getTime() - dt.getTimestamp().getTime()) > 
-                        (dt.getDuration()*60*60*1000))
-                    {
-                        String msg = "Expired scoped search (timestamp="
-                                + new SimpleDateFormat(
-                                        DateUtil.getDateFormat(
-                                        DateUtil.ISO8601_DATE_FORMAT_Z, null).format(dt
-                                        .getTimestamp())) + ", duration="
-                                + dt.getDuration() + "h) on node ("
-                                + node.getUri() + ") - accessed denied";
-                        LOG.debug(msg);
-                        throw new AccessControlException(msg);
-                    }
                     VOSURI tmp = node.getUri();
                     while (tmp != null)
                     {
