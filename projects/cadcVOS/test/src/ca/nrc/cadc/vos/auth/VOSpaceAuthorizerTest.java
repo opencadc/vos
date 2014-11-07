@@ -74,8 +74,11 @@ import static org.easymock.EasyMock.verify;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -90,7 +93,7 @@ import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.util.SignatureUtil;
+import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -184,7 +187,7 @@ public class VOSpaceAuthorizerTest
     public void testCheckDelegation() throws Exception
     {
         // create keys
-        SignatureUtil.main(new String[]{getCompleteKeysFileName()});
+        RsaSignatureGenerator.main(new String[]{getCompleteKeysDirName()});
         
         VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
         ContainerNode node = new ContainerNode(vos);
@@ -199,10 +202,11 @@ public class VOSpaceAuthorizerTest
         
         // create the delegation cookie
         DelegationToken dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, vos.getURIObject());
+                new HttpPrincipal(NODE_OWNER_ID), 10, vos.getURIObject(), new Date());
         CookiePrincipal cp = new CookiePrincipal(
                 SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        dt.toText(true));
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
+        DelegationToken.parse(dt.format(true), true);
         Subject subject = new Subject();
         subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -230,10 +234,11 @@ public class VOSpaceAuthorizerTest
         
         // create the delegation cookie
         dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, vos.getParentURI().getURIObject());
+                new HttpPrincipal(NODE_OWNER_ID), 10, 
+                vos.getParentURI().getURIObject(), new Date());
         cp = new CookiePrincipal(
                 SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        dt.toText(true));
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
         subject = new Subject();
         subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -255,10 +260,11 @@ public class VOSpaceAuthorizerTest
         voSpaceAuthorizer.setNodePersistence(np);
         
         dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, new URI("vos://cadc.nrc.ca~vospace/otherspace"));
+                new HttpPrincipal(NODE_OWNER_ID), 10, 
+                new URI("vos://cadc.nrc.ca~vospace/otherspace"), new Date());
         cp = new CookiePrincipal(
                 SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        dt.toText(true));
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
         subject = new Subject();
         subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -289,14 +295,15 @@ public class VOSpaceAuthorizerTest
         
         voSpaceAuthorizer = new VOSpaceAuthorizer();
         voSpaceAuthorizer.setNodePersistence(np);
-        
+        Calendar cal = Calendar.getInstance(); // creates calendar
+        cal.setTime(new Date()); // sets calendar time/date
+        cal.add(Calendar.HOUR_OF_DAY, -10); // remove 10 hours
         dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 1, node.getUri().getURIObject());
-        // this is the easiest way to expire a cookie - sorry for the deprecated methdo
-        dt.getTimestamp().setHours(dt.getTimestamp().getHours() - 10);
+                new HttpPrincipal(NODE_OWNER_ID), 1, 
+                node.getUri().getURIObject(), cal.getTime());
         cp = new CookiePrincipal(
                 SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        dt.toText(true));
+                        URLEncoder.encode(dt.format(true), "UTF-8"));
         subject = new Subject();
         subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -365,7 +372,7 @@ public class VOSpaceAuthorizerTest
      * of the class directory.
      * @return
      */
-    public static String getCompleteKeysFileName()
+    public static String getCompleteKeysDirName()
     {
         URL classLocation = 
                 VOSpaceAuthorizer.class.getResource("VOSpaceAuthorizer.class");
@@ -385,8 +392,7 @@ public class VOSpaceAuthorizerTest
         {
             throw new RuntimeException("Cannot find the class directory");
         }
-        String keysFile = dir + "SignatureUtil.keys";
-        return keysFile;
+        return dir;
     }
 
 }
