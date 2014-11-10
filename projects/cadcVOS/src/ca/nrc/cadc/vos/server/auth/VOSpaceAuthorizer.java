@@ -825,67 +825,23 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private void checkDelegation(Node node, Subject subject) throws AccessControlException
     {        
-        Set<CookiePrincipal> cps = subject.getPrincipals(CookiePrincipal.class);
-        for (CookiePrincipal cp : cps)
+        Set<DelegationToken> tokens = subject.getPublicCredentials(DelegationToken.class);
+        for (DelegationToken token : tokens)
         {
-            if (cp.getName().startsWith(
-                    SSOCookieManager.DELEGATION_COOKIE_NAME + "-"))
+            VOSURI scope = new VOSURI(token.getScope());
+            VOSURI tmp = node.getUri();
+            while (tmp != null)
             {
-                try
+                if (scope.equals(tmp))
                 {
-                    String sessionID = cp.getName().substring(
-                            SSOCookieManager.DELEGATION_COOKIE_NAME.length() + 
-                            1);
-                    // urldecode
-                    sessionID = URLDecoder.decode(sessionID, "UTF-8");
-                    
-                    DelegationToken dt = null;
-                    try
-                    {
-                        dt = 
-                            DelegationToken.parse(sessionID, true);
-                    }
-                    catch (InvalidDelegationTokenException ex)
-                    {
-                        throw new AccessControlException(
-                                "Cannot parse delegation cookie: " + ex.getMessage());
-                    }
-
-                    LOG.debug("Authorize with delegation cookie: " + dt.toString());
-                    if (dt.getScope() == null)
-                    {
-                        return;
-                    }
-                    VOSURI scope = new VOSURI(dt.getScope());
-                    VOSURI tmp = node.getUri();
-                    while (tmp != null)
-                    {
-                        if (scope.equals(tmp))
-                        {
-                            return;
-                        }
-                        tmp = tmp.getParentURI();
-                    }
-                    String msg = "Scoped search (" + scope + ") on node (" + 
-                            node.getUri() + ")- accessed denied";
-                    LOG.debug(msg);
-                    throw new AccessControlException(msg);
-                    
+                    return;
                 }
-                catch (AccessControlException passon)
-                {
-                    throw passon;
-                }
-                catch (Exception e)
-                {
-                    // Request sent with delegation cookie but cannot figure
-                    // out the scope. Better err on the conservative side...
-                    String msg = "Not authorized due to problems decoding " +
-                        "the delegation cookie";
-                    LOG.error(msg, e);
-                    throw new AccessControlException(msg);
-                }
+                tmp = tmp.getParentURI();
             }
+            String msg = "Scoped search (" + scope + ") on node (" + 
+                    node.getUri() + ")- accessed denied";
+            LOG.debug(msg);
+            throw new AccessControlException(msg);
         }
     }
 
