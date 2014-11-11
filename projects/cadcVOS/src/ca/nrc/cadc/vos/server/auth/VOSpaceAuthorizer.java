@@ -66,7 +66,6 @@
  */
 package ca.nrc.cadc.vos.server.auth;
 
-import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.client.GMSClient;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -74,6 +73,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -91,7 +91,10 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.InvalidDelegationTokenException;
+import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
@@ -108,7 +111,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import javax.net.ssl.SSLSocketFactory;
 
 
 /**
@@ -253,6 +255,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
+        
+        checkDelegation(node, subject);
 
         LinkedList<Node> nodes = Node.getNodeList(node);
 
@@ -331,6 +335,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
+        
+        checkDelegation(node, subject);
 
         // check if the node is locked
         if (!disregardLocks && node.isLocked())
@@ -731,6 +737,78 @@ public class VOSpaceAuthorizer implements Authorizer
     public void setNodePersistence(final NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+    
+    /** check for delegation cookie and, if present, does an authorization
+     * against it.
+     * @param node - node authorization is performed against
+     * @param subject - user
+     * @throws AccessControlException - unauthorized access
+     */
+    private void checkDelegation(Node node, Subject subject) throws AccessControlException
+    {        
+        Set<CookiePrincipal> cps = subject.getPrincipals(CookiePrincipal.class);
+        for (CookiePrincipal cp : cps)
+        {
+            if (cp.getName().startsWith(
+                    SSOCookieManager.DELEGATION_COOKIE_NAME + "-"))
+            {
+                try
+                {
+                    String sessionID = cp.getName().substring(
+                            SSOCookieManager.DELEGATION_COOKIE_NAME.length() + 
+                            1);
+                    // urldecode
+                    sessionID = URLDecoder.decode(sessionID, "UTF-8");
+                    
+                    DelegationToken dt = null;
+                    try
+                    {
+                        dt = 
+                            DelegationToken.parse(sessionID, true);
+                    }
+                    catch (InvalidDelegationTokenException ex)
+                    {
+                        throw new AccessControlException(
+                                "Cannot parse delegation cookie: " + ex.getMessage());
+                    }
+
+                    LOG.debug("Authorize with delegation cookie: " + dt.toString());
+                    if (dt.getScope() == null)
+                    {
+                        return;
+                    }
+                    VOSURI scope = new VOSURI(dt.getScope());
+                    VOSURI tmp = node.getUri();
+                    while (tmp != null)
+                    {
+                        if (scope.equals(tmp))
+                        {
+                            return;
+                        }
+                        tmp = tmp.getParentURI();
+                    }
+                    String msg = "Scoped search (" + scope + ") on node (" + 
+                            node.getUri() + ")- accessed denied";
+                    LOG.debug(msg);
+                    throw new AccessControlException(msg);
+                    
+                }
+                catch (AccessControlException passon)
+                {
+                    throw passon;
+                }
+                catch (Exception e)
+                {
+                    // Request sent with delegation cookie but cannot figure
+                    // out the scope. Better err on the conservative side...
+                    String msg = "Not authorized due to problems decoding " +
+                        "the delegation cookie";
+                    LOG.error(msg, e);
+                    throw new AccessControlException(msg);
+                }
+            }
+        }
     }
 
 }
