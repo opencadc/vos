@@ -265,7 +265,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         }
         catch (Throwable t)
         {
-            LOGGER.debug(t);
+            LOGGER.debug("OOPS", t);
             setStatus(NodeFault.InternalFault.getStatus());
             logInfo.setSuccess(false);
             message = getErrorMessage(NodeFault.InternalFault);
