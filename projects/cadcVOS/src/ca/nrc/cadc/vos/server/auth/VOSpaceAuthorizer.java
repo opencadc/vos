@@ -66,6 +66,7 @@
  */
 package ca.nrc.cadc.vos.server.auth;
 
+import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.client.GMSClient;
 import java.io.FileNotFoundException;
 import java.io.IOException;
