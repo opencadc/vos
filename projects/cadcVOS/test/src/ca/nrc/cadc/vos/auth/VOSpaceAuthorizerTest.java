@@ -203,13 +203,10 @@ public class VOSpaceAuthorizerTest
         // create the delegation cookie
         DelegationToken dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID), 10, vos.getURIObject(), new Date());
-        CookiePrincipal cp = new CookiePrincipal(
-                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        URLEncoder.encode(dt.format(true), "UTF-8"));
-        DelegationToken.parse(dt.format(true), true);
+        
         Subject subject = new Subject();
-        subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+        subject.getPublicCredentials().add(dt);
 
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
@@ -236,13 +233,10 @@ public class VOSpaceAuthorizerTest
         dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID), 10, 
                 vos.getParentURI().getURIObject(), new Date());
-        cp = new CookiePrincipal(
-                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        URLEncoder.encode(dt.format(true), "UTF-8"));
         subject = new Subject();
-        subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
-
+        subject.getPublicCredentials().add(dt);
+        
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
@@ -262,51 +256,9 @@ public class VOSpaceAuthorizerTest
         dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID), 10, 
                 new URI("vos://cadc.nrc.ca~vospace/otherspace"), new Date());
-        cp = new CookiePrincipal(
-                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        URLEncoder.encode(dt.format(true), "UTF-8"));
         subject = new Subject();
-        subject.getPrincipals().add(cp);
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
-
-        // fake persistent node
-        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
-        
-        action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
-        try
-        {
-            Subject.doAs(subject, action);
-            Assert.fail("Should have received AccessControlException");
-        }
-        catch (Exception e)
-        {
-            if (!(e instanceof AccessControlException))
-            {
-                Assert.fail("Should have received AccessControlException");
-            }
-        }
-        
-        verify(np);
-        
-        // expired cookie
-        np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
-        replay(np);
-        
-        voSpaceAuthorizer = new VOSpaceAuthorizer();
-        voSpaceAuthorizer.setNodePersistence(np);
-        Calendar cal = Calendar.getInstance(); // creates calendar
-        cal.setTime(new Date()); // sets calendar time/date
-        cal.add(Calendar.HOUR_OF_DAY, -10); // remove 10 hours
-        dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 1, 
-                node.getUri().getURIObject(), cal.getTime());
-        cp = new CookiePrincipal(
-                SSOCookieManager.DELEGATION_COOKIE_NAME + "-" + 
-                        URLEncoder.encode(dt.format(true), "UTF-8"));
-        subject = new Subject();
-        subject.getPrincipals().add(cp);
-        subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
+        subject.getPublicCredentials().add(dt);
 
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
