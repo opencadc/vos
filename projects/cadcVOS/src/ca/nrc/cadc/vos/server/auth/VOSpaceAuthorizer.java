@@ -66,6 +66,7 @@
  */
 package ca.nrc.cadc.vos.server.auth;
 
+import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.client.GMSClient;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -73,7 +74,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -91,10 +91,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.auth.CookiePrincipal;
 import ca.nrc.cadc.auth.DelegationToken;
-import ca.nrc.cadc.auth.InvalidDelegationTokenException;
-import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
@@ -130,7 +127,7 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gmsdep";
+    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
     private static final String CANFAR_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/canfargms";
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
