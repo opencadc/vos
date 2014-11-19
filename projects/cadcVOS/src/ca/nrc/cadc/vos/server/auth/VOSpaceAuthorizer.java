@@ -66,6 +66,8 @@
  */
 package ca.nrc.cadc.vos.server.auth;
 
+import ca.nrc.cadc.ac.Role;
+import ca.nrc.cadc.ac.client.GMSClient;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -77,14 +79,11 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
 import java.security.cert.CertificateException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
@@ -98,6 +97,7 @@ import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
@@ -108,6 +108,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import javax.net.ssl.SSLSocketFactory;
 
 
 /**
@@ -127,7 +128,8 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
+    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
+    private static final String CANFAR_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/canfargms";
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
     public static final String OFFLINE = "Offline";
@@ -140,14 +142,11 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean allowPartialPaths = false;
     private boolean disregardLocks = false;
 
-    private SSLSocketFactory socketFactory;
-    private int subjectHashCode;
-
-    // cache of groupURI to isMember
-    private Map<String, Boolean> groupMembershipCache;
-
     private NodePersistence nodePersistence;
-    private GmsClient gmsClient;
+    private GmsClient cadcGMS;
+    private GMSClient canfarGMS;
+    
+    private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
     public VOSpaceAuthorizer()
     {
@@ -156,17 +155,28 @@ public class VOSpaceAuthorizer implements Authorizer
 
     public VOSpaceAuthorizer(boolean allowPartialPaths)
     {
-        groupMembershipCache = new HashMap<String, Boolean>();
         initState();
         this.allowPartialPaths = allowPartialPaths;
 
         try
         {
             RegistryClient registryClient = new RegistryClient();
-            URL gmsBaseURL = registryClient.getServiceURL(new URI(GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
-            this.gmsClient = new GmsClient(gmsBaseURL.toString());
+            
+            URL url = registryClient.getServiceURL(new URI(CADC_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            this.cadcGMS = new GmsClient(url.toExternalForm());
+            
+            url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            this.canfarGMS = new GMSClient(url.toExternalForm());
         }
-        catch (Exception e)
+        catch (IllegalArgumentException e)
+        {
+            throw new RuntimeException("BUG: Error creating GMS Client", e);
+        } 
+        catch (MalformedURLException e) 
+        {
+            throw new RuntimeException("BUG: Error creating GMS Client", e);
+        } 
+        catch (URISyntaxException e) 
         {
             throw new RuntimeException("BUG: Error creating GMS Client", e);
         }
@@ -194,8 +204,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * Obtain the Read Permission for the given URI.
      *
      * @param uri       The URI to check.
-     * @return          The Read Permission objectual representation, such as
-     *                  a Group, or User.
+     * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
      */
@@ -212,8 +221,10 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         try
         {
+            
             VOSURI vos = new VOSURI(uri);
             Node node = nodePersistence.get(vos, allowPartialPaths);
+            profiler.checkpoint("nodePersistence.get");
             return getReadPermission(node);
         }
         catch(NodeNotFoundException ex)
@@ -228,7 +239,6 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node      The Node to check.
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have read permission
-     * @throws FileNotFoundException If the node could not be found
      */
     public Object getReadPermission(Node node)
             throws AccessControlException
@@ -268,10 +278,11 @@ public class VOSpaceAuthorizer implements Authorizer
      * Obtain the Write Permission for the given URI.
      *
      * @param uri       The URI to check.
-     * @return          The resource object for the argument URI (if any)
+     * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
      * @throws NodeLockedException    If the node is locked
+     * @throws TransientException
      */
     @Override
     public Object getWritePermission(URI uri)
@@ -290,6 +301,7 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             VOSURI vos = new VOSURI(uri);
             Node node = nodePersistence.get(vos, allowPartialPaths);
+            profiler.checkpoint("nodePersistence.get");
             return getWritePermission(node);
         }
         catch(NodeNotFoundException ex)
@@ -416,146 +428,52 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private boolean hasMembership(NodeProperty groupProp, Subject subject)
     {
+        if (subject.getPrincipals().isEmpty())
+            return false;
+        
         List<String> groupURIs = groupProp.extractPropertyValueList();
-
+        if (groupURIs == null || groupURIs.isEmpty())
+            return false;
+        
         try
         {
-            // check the group membership cache first
-            Boolean cachedMembership = checkCachedMembership(groupURIs);
-            if (cachedMembership != null)
-            {
-                LOG.debug("Using cached groupMembership results.");
-                return cachedMembership;
-            }
-
-            // require identification for group membership: create a private key chain
-            if (subject.getPrincipals().isEmpty())
+            // need credentials in the subject to call GMS
+            boolean creds = hasCredentials(subject);
+            if (!creds)
                 return false;
-
-            // check for a cached socket factory
-            if (socketFactory == null)
-            {
-                // init the socket factory using a proxy certificate from credPrivateClient or from
-                // the private key chain
-                try
-                {
-                    X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
-                            subject.getPublicCredentials());
-
-                    // If we don't have the private key chain, get it from the credential
-                    // delegation service and add it to the subject's public credentials
-                    // for use later.
-                    if (privateKeyChain == null)
-                    {
-                        RegistryClient registryClient = new RegistryClient();
-                        URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
-                        CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
-                        privateKeyChain = credentialPrivateClient.getCertificate();
-                        if (privateKeyChain == null)
-                        {
-                            // no delegated credentials == cannot check membership == not a member
-                            // TODO: we could throw an exception with a useful message if that
-                            //       could be added to the response message, essentially a reason
-                            //       for the false
-                            return false;
-                        }
-
-                        privateKeyChain.getChain()[0].checkValidity();
-
-                        subject.getPublicCredentials().add(privateKeyChain);
-                    }
-
-                    socketFactory = SSLUtil.getSocketFactory(privateKeyChain);
-                    gmsClient.setSslSocketFactory(socketFactory);
-                    subjectHashCode = subject.hashCode();
-
-                }
-                catch (URISyntaxException e)
-                {
-                    LOG.error("credPrivateClient invalid URL", e);
-                    return false;
-                }
-                catch (CertificateException e)
-                {
-                    LOG.error("Error getting private certificate", e);
-                    return false;
-                }
-                catch (AuthorizationException e)
-                {
-                    LOG.debug("Could't make credPrivateClientCall", e);
-                    return false;
-                }
-                catch (InstantiationException e)
-                {
-                    LOG.error("Could't construct CredentialPrivateClient", e);
-                    return false;
-                }
-                catch (IllegalAccessException e)
-                {
-                    LOG.error("Could't construct CredentialPrivateClient", e);
-                    return false;
-                }
-                catch (ClassNotFoundException e)
-                {
-                    LOG.error("No implementing CredentialPrivateClients", e);
-                    return false;
-                }
-            }
-            else
-            {
-                // Ensure the subject hash code hasn't changed.  If it has, throw
-                // an exception indicating that the VOSpaceAuthorizer cannot be reused
-                // between HTTP requests.
-                if (subject.hashCode() != subjectHashCode)
-                {
-                    throw new IllegalStateException(
-                            "Illegal use of VOSpaceAuthorizer: Different subject detected.");
-                }
-            }
 
             // make gms calls to see if the user has group membership
             for (String groupURI : groupURIs)
             {
                 try
                 {
-                    // check cache again in case the result was stored in an earlier iteration
-                    // of this loop (duplicate groupsURIs in same property value)
-                    cachedMembership = checkCachedMembership(groupURI);
-                    if (cachedMembership != null)
+                    LOG.debug("Checking GMS on groupURI: " + groupURI);
+                    URI guri = new URI(groupURI);
+                    if (guri.getFragment() == null)
                     {
-                        LOG.debug(String.format(
-                                "Using cached groupMembership: Group: %s isMember: %s",
-                                groupURI, cachedMembership));
-                        if (cachedMembership)
-                            return true;
+                        throw new URISyntaxException(groupURI, "Missing fragment");
                     }
-                    else
+
+                    // check group membership for each x500 principal that exists
+                    boolean isMember;
+                    Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
+                    for (X500Principal x500Principal : x500Principals)
                     {
-                        LOG.debug("Checking GMS on groupURI: " + groupURI);
-
-                        URI guri = new URI(groupURI);
-                        if (guri.getFragment() == null)
-                        {
-                            throw new URISyntaxException(groupURI, "Missing fragment");
-                        }
-
-                        // check group membership for each x500 principal that exists
-                        Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
-                        for (X500Principal x500Principal : x500Principals)
-                        {
-                            boolean isMember = gmsClient.isMember(guri.getFragment(), x500Principal);
-                            LOG.debug("GmsClient.isMember(" + guri.getFragment() + ","
-                                    + x500Principal.getName() + ") returned " + isMember);
-
-                            // cache this result for future queries
-                            LOG.debug(String.format(
-                                    "Caching groupMembership: Group: %s isMember: %s",
-                                            groupURI, isMember));
-                            groupMembershipCache.put(groupURI, isMember);
-
-                            if (isMember)
-                                return true;
-                        }
+                        // call CANFAR GMS
+                        //isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
+                        //profiler.checkpoint("canfarGMS.ismember");
+                        //LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
+                        //        + x500Principal.getName() + ") returned " + isMember);
+                        //if (isMember)
+                        //    return true;
+                        
+                        // call CADC GMS
+                        isMember = cadcGMS.isMember(guri.getFragment(), x500Principal);
+                        profiler.checkpoint("cadcGMS.ismember");
+                        LOG.debug("cadcGMS.isMember(" + guri.getFragment() + "," 
+                                + x500Principal.getName() + ") returned " + isMember);
+                        if (isMember)
+                            return true;
                     }
                 }
                 catch (URISyntaxException e)
@@ -573,12 +491,6 @@ public class VOSpaceAuthorizer implements Authorizer
                     }
                 }
             }
-
-            return false;
-        }
-        catch (MalformedURLException e)
-        {
-            LOG.error("GMSClient invalid URL", e);
         }
         catch (Throwable t)
         {
@@ -586,61 +498,75 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         return false;
     }
-
-    /**
-     * Return true if a cached membership result for any one of the
-     * provided group URIs is true.
-     *
-     * Return false if there is a cached version of each provided group URI
-     * and each version is false.
-     *
-     * Return null (unknown) otherwise.
-     *
-     * @param groupURIs
-     * @return
-     */
-    private Boolean checkCachedMembership(List<String> groupURIs)
+    
+    private boolean hasCredentials(Subject subject)
     {
-        boolean allURIsChecked = true;
-        for (String groupURI : groupURIs)
+        // lazy init of credentials
+        try
         {
-            LOG.debug("Checking cache for groupURI: " + groupURI);
-            Boolean isMember = checkCachedMembership(groupURI);
-            if (isMember != null)
-            {
-                if (isMember)
-                    return true;
-            }
-            else
-            {
-                allURIsChecked = false;
-            }
-        }
+            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
+                    subject.getPublicCredentials());
 
-        if (allURIsChecked)
+            // If we don't have the private key chain, get it from the credential
+            // delegation service and add it to the subject's public credentials
+            // for use later.
+            if (privateKeyChain == null)
+            {
+                RegistryClient registryClient = new RegistryClient();
+                URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
+                CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
+                privateKeyChain = credentialPrivateClient.getCertificate();
+                profiler.checkpoint("credentialPrivateClient.getCertificate");
+                if (privateKeyChain == null)
+                {
+                    // no delegated credentials == cannot check membership == not a member
+                    // TODO: we could throw an exception with a useful message if that
+                    //       could be added to the response message, essentially a reason
+                    //       for the false
+                    return false;
+                }
+
+                privateKeyChain.getChain()[0].checkValidity();
+
+                subject.getPublicCredentials().add(privateKeyChain);
+            }
+            return true;
+        }
+        catch(MalformedURLException e)
+        {
+            LOG.error("credPrivateClient invalid URL", e);
             return false;
-        else
-            return null;
-    }
-
-    /**
-     * Return true if there is a cached version of the groupURI set to true.
-     * Return false if there is a cached version of the groupURI set to false.
-     * Return null (unknown) otherwise.
-     * @param groupURI
-     * @return
-     */
-    private Boolean checkCachedMembership(String groupURI)
-    {
-        if (groupMembershipCache.containsKey(groupURI))
-        {
-            boolean isMember = groupMembershipCache.get(groupURI);
-            LOG.debug(String.format(
-                    "Found cached groupMembership: Group: %s isMember: %s",
-                            groupURI, isMember));
-            return isMember;
         }
-        return null;
+        catch (URISyntaxException e)
+        {
+            LOG.error("credPrivateClient invalid URI", e);
+            return false;
+        }
+        catch (CertificateException e)
+        {
+            LOG.error("Error: got an invalid certificate", e);
+            return false;
+        }
+        catch (AuthorizationException e)
+        {
+            LOG.debug("CredentialPrivateClient.getCertficate failed", e);
+            return false;
+        }
+        catch (InstantiationException e)
+        {
+            LOG.error("Failed to create CredentialPrivateClient", e);
+            return false;
+        }
+        catch (IllegalAccessException e)
+        {
+            LOG.error("Failed to create CredentialPrivateClient", e);
+            return false;
+        }
+        catch (ClassNotFoundException e)
+        {
+            LOG.error("Failed to find implementation of CredentialPrivateClient", e);
+            return false;
+        }
     }
 
     /**
