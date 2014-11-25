@@ -91,7 +91,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
@@ -108,7 +108,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import javax.net.ssl.SSLSocketFactory;
 
 
 /**
@@ -143,6 +142,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean disregardLocks = false;
 
     private NodePersistence nodePersistence;
+    private RegistryClient registryClient;
     private GmsClient cadcGMS;
     private GMSClient canfarGMS;
     
@@ -160,12 +160,15 @@ public class VOSpaceAuthorizer implements Authorizer
 
         try
         {
-            RegistryClient registryClient = new RegistryClient();
+            this.registryClient = new RegistryClient();
             
+            // TODO: allow configuration of known/trusted GMS services
             URL url = registryClient.getServiceURL(new URI(CADC_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            LOG.debug(CADC_GMS_SERVICE_ID + " -> " + url);
             this.cadcGMS = new GmsClient(url.toExternalForm());
             
             url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
             this.canfarGMS = new GMSClient(url.toExternalForm());
         }
         catch (IllegalArgumentException e)
@@ -253,6 +256,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
+        
+        checkDelegation(node, subject);
 
         LinkedList<Node> nodes = Node.getNodeList(node);
 
@@ -331,6 +336,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
+        
+        checkDelegation(node, subject);
 
         // check if the node is locked
         if (!disregardLocks && node.isLocked())
@@ -459,13 +466,16 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
                     for (X500Principal x500Principal : x500Principals)
                     {
+                        // TODO: we should be using the base group URI to decide which GMS service to
+                        // call, but CANFAR and CADC grouops both have the same authority/base... doh!
+                        
                         // call CANFAR GMS
-                        //isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
-                        //profiler.checkpoint("canfarGMS.ismember");
-                        //LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
-                        //        + x500Principal.getName() + ") returned " + isMember);
-                        //if (isMember)
-                        //    return true;
+                        isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
+                        profiler.checkpoint("canfarGMS.ismember");
+                        LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
+                                + x500Principal.getName() + ") returned " + isMember);
+                        if (isMember)
+                            return true;
                         
                         // call CADC GMS
                         isMember = cadcGMS.isMember(guri.getFragment(), x500Principal);
@@ -512,7 +522,6 @@ public class VOSpaceAuthorizer implements Authorizer
             // for use later.
             if (privateKeyChain == null)
             {
-                RegistryClient registryClient = new RegistryClient();
                 URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
                 CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
                 privateKeyChain = credentialPrivateClient.getCertificate();
@@ -731,6 +740,34 @@ public class VOSpaceAuthorizer implements Authorizer
     public void setNodePersistence(final NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+    
+    /** check for delegation cookie and, if present, does an authorization
+     * against it.
+     * @param node - node authorization is performed against
+     * @param subject - user
+     * @throws AccessControlException - unauthorized access
+     */
+    private void checkDelegation(Node node, Subject subject) throws AccessControlException
+    {        
+        Set<DelegationToken> tokens = subject.getPublicCredentials(DelegationToken.class);
+        for (DelegationToken token : tokens)
+        {
+            VOSURI scope = new VOSURI(token.getScope());
+            VOSURI tmp = node.getUri();
+            while (tmp != null)
+            {
+                if (scope.equals(tmp))
+                {
+                    return;
+                }
+                tmp = tmp.getParentURI();
+            }
+            String msg = "Scoped search (" + scope + ") on node (" + 
+                    node.getUri() + ")- accessed denied";
+            LOG.debug(msg);
+            throw new AccessControlException(msg);
+        }
     }
 
 }
