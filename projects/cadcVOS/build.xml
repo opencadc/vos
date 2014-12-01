@@ -89,6 +89,7 @@
     <property name="project" value="cadcVOS" />
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="cadcAccessControl" value="${lib}/cadcAccessControl.jar" />
     <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
     <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
@@ -104,7 +105,7 @@
     <property name="resources.dir" value="test/resources/" />    
     
 
-    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcAccessControl}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
 
     <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
     <property name="client.external.jars" value="${ext.jdom2}:${ext.xerces}:${ext.log4j}" />
