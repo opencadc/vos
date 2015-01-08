@@ -79,6 +79,8 @@ import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -200,9 +202,12 @@ public class VOSpaceAuthorizerTest
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
         voSpaceAuthorizer.setNodePersistence(np);
         
+        Calendar expiry = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        expiry.add(Calendar.HOUR, 10);
+        
         // create the delegation cookie
         DelegationToken dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, vos.getURIObject(), new Date());
+                new HttpPrincipal(NODE_OWNER_ID), vos.getURIObject(), expiry.getTime());
         
         Subject subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -231,8 +236,8 @@ public class VOSpaceAuthorizerTest
         
         // create the delegation cookie
         dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, 
-                vos.getParentURI().getURIObject(), new Date());
+                new HttpPrincipal(NODE_OWNER_ID), 
+                vos.getParentURI().getURIObject(), expiry.getTime());
         subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
         subject.getPublicCredentials().add(dt);
@@ -254,8 +259,8 @@ public class VOSpaceAuthorizerTest
         voSpaceAuthorizer.setNodePersistence(np);
         
         dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), 10, 
-                new URI("vos://cadc.nrc.ca~vospace/otherspace"), new Date());
+                new HttpPrincipal(NODE_OWNER_ID),
+                new URI("vos://cadc.nrc.ca~vospace/otherspace"), expiry.getTime());
         subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
         subject.getPublicCredentials().add(dt);

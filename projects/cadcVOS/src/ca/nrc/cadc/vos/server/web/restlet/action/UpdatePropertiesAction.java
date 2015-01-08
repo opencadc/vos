@@ -121,16 +121,18 @@ public class UpdatePropertiesAction extends NodeAction
         // TODO: check if client and server node types match?
 
         // check for a busy node
-        if (serverNode instanceof DataNode)
-        {
-            if (((DataNode) serverNode).isBusy())
-            {
-                log.debug("Node is busy: " + serverNode.getUri().getPath());
-                NodeFault nodeFault = NodeFault.InternalFault;
-                nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
-                return new NodeActionResult(nodeFault);
-            }
-        }
+        
+// BM: Metadata updates should be allowed when the node is busy
+//        if (serverNode instanceof DataNode)
+//        {
+//            if (((DataNode) serverNode).isBusy())
+//            {
+//                log.debug("Node is busy: " + serverNode.getUri().getPath());
+//                NodeFault nodeFault = NodeFault.InternalFault;
+//                nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
+//                return new NodeActionResult(nodeFault);
+//            }
+//        }
 
         // filter out any non-modifiable properties
         filterPropertiesForUpdate(clientNode);
