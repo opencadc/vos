@@ -149,11 +149,12 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             // Invalid Protocol should not be returned.
             assertNotNull("protocols", result.transfer.getProtocols());
             assertTrue("has some protocols", !result.transfer.getProtocols().isEmpty());
-            assertTrue(result.transfer.getProtocols().size() < 3);
             
             // Get the endpoint.
             for (Protocol p : result.transfer.getProtocols())
             {
+                Assert.assertTrue("wrong protocol: " + p.getEndpoint(), p.getEndpoint().startsWith("http"));
+                
                 try
                 {
                     new URL(p.getEndpoint());
@@ -234,10 +235,10 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
 
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
             
-            // that bogus one should not be here, so only 0 to 2 protocols
-            assertTrue(result.transfer.getProtocols().size() < 3);
             for (Protocol p : result.transfer.getProtocols())
             {
+                Assert.assertTrue("wrong protocol: " + p.getEndpoint(), p.getEndpoint().startsWith("http"));
+                
                 try { 
                         URL actualURL = new URL(p.getEndpoint());
                         assertTrue("URL not resolved" , 
