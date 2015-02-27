@@ -390,14 +390,16 @@ public class NodeDAO
         }
         catch(Throwable t)
         {
-            log.error("rollback dirtyRead for node: " + path, t);
-            try
-            {
-                transactionManager.rollback(dirtyRead);
-                dirtyRead = null;
-                prof.checkpoint("rollback.NodePathStatementCreator");
-            }
-            catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
+            
+            if (dirtyRead != null)
+                try
+                {
+                    log.error("rollback dirtyRead for node: " + path, t);
+                    transactionManager.rollback(dirtyRead);
+                    dirtyRead = null;
+                    prof.checkpoint("rollback.NodePathStatementCreator");
+                }
+                catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
 
             if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node " + path, t);
