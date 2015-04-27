@@ -85,7 +85,6 @@ import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.util.RestletLogInfo;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.VOSURI;
@@ -97,6 +96,9 @@ import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.NodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.NodeActionResult;
 import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
+import java.util.List;
+import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 
 /**
  * Handles HTTP requests for Node resources.
@@ -306,6 +308,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         LOGGER.debug("Enter NodeResource.represent()");
         return runPrivilegedAction(new GetNodeAction());
     }
+    
 
     @Put
     public Representation create(final Representation entity)

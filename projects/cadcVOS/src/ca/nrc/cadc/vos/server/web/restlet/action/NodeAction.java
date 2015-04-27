@@ -80,17 +80,22 @@ import org.restlet.representation.Representation;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.JsonNodeWriter;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.util.List;
+import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 
 /**
  * Abstract class encapsulating the behaviour of an action on a Node.  Clients
@@ -194,6 +199,31 @@ public abstract class NodeAction
         this.stylesheetReference = stylesheetReference;
     }
  
+    protected MediaType getMediaType()
+    {
+        List<Preference<MediaType>> accepts = request.getCurrent().getClientInfo().getAcceptedMediaTypes();
+        MediaType med = MediaType.TEXT_XML; // default
+        for (Preference<MediaType> pmt : accepts)
+        {
+            if ( MediaType.TEXT_XML.equals(pmt.getMetadata())
+                    || MediaType.APPLICATION_JSON.equals(pmt.getMetadata()))
+            {
+                med = pmt.getMetadata(); // supported type
+                break; // pick first supported type and stop looking
+            }
+        }
+
+        return med;
+    }
+    
+    protected NodeWriter getNodeWriter()
+    {
+        MediaType mt = getMediaType();
+        if (MediaType.APPLICATION_JSON.equals(mt))
+            return new JsonNodeWriter();
+        return new NodeWriter();
+    }
+    
     /**
      * Return the view requested by the client, or null if none specified.
      *

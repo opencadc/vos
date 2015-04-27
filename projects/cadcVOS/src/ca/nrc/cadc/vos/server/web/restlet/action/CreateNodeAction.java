@@ -87,6 +87,7 @@ import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+import org.restlet.data.MediaType;
 
 /**
  * Class to perform the creation of a Node.
@@ -147,9 +148,8 @@ public class CreateNodeAction extends NodeAction
                 Node storedNode = nodePersistence.put(clientNode);
             
                 // return the node in xml format
-                NodeWriter nodeWriter = new NodeWriter();
                 NodeOutputRepresentation nodeOutputRepresentation =
-                    new NodeOutputRepresentation(storedNode, nodeWriter);
+                    new NodeOutputRepresentation(storedNode, getNodeWriter(), getMediaType());
                 return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_OK);
             }
             log.debug("parent is not a container: " + clientNode.getUri().getPath());

@@ -85,6 +85,7 @@ import org.restlet.representation.OutputRepresentation;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.JsonNodeWriter;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
@@ -110,9 +111,9 @@ public class NodeOutputRepresentation extends OutputRepresentation
     private StringBuilder buf;
 
 
-    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
+    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter, MediaType mediaType)
     {
-        super(MediaType.TEXT_XML);
+        super(mediaType);
         this.node = node;
         this.nodeWriter = nodeWriter;
         fillAcceptsAndProvides(node);
