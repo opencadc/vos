@@ -96,13 +96,8 @@ import org.jdom2.Namespace;
  *
  * @author jburke
  */
-public class NodeReader
+public class NodeReader implements XmlProcessor
 {
-    private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
-    private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
-    private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
-
     private static final Logger log = Logger.getLogger(NodeReader.class);
     
     protected Map<String, String> schemaMap;
@@ -124,20 +119,26 @@ public class NodeReader
     {
         if (enableSchemaValidation)
         {
-            String vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
-            log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
+            String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, NodeReader.class);
+            log.debug("vospaceSchemaUrl20: " + vospaceSchemaUrl20);
+            
+            String vospaceSchemaUrl21 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_21, NodeReader.class);
+            log.debug("vospaceSchemaUrl21: " + vospaceSchemaUrl21);
 
             String xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, NodeReader.class);
             log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
 
-            if (vospaceSchemaUrl == null)
-                throw new RuntimeException("failed to load " + VOSPACE_SCHEMA_RESOURCE + " from classpath");
-            if (vospaceSchemaUrl == null)
+            if (vospaceSchemaUrl20 == null)
+                throw new RuntimeException("failed to load " + VOSPACE_SCHEMA_RESOURCE_20 + " from classpath");
+            if (vospaceSchemaUrl21 == null)
+                throw new RuntimeException("failed to load " + VOSPACE_SCHEMA_RESOURCE_21 + " from classpath");
+            if (xlinkSchemaUrl == null)
                 throw new RuntimeException("failed to load " + XLINK_SCHEMA_RESOURCE + " from classpath");
 
             schemaMap = new HashMap<String, String>();
-            schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
-            schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
+            schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl20);
+            schemaMap.put(VOSPACE_NS_21, vospaceSchemaUrl21);
+            schemaMap.put(XLINK_NAMESPACE, xlinkSchemaUrl);
             log.debug("schema validation enabled");
         }
         else
@@ -219,6 +220,14 @@ public class NodeReader
         // Root element and namespace of the Document
         Element root = document.getRootElement();
         Namespace namespace = root.getNamespace();
+        int version;
+        if (VOSPACE_NS_20.equals(namespace.getURI()))
+            version = VOS.VOSPACE_20;
+        else if (VOSPACE_NS_21.equals(namespace.getURI()))
+            version = VOS.VOSPACE_21;
+        else
+            throw new IllegalArgumentException("unexpected VOSpace namespace: " + namespace.getURI());
+            
         log.debug("node namespace uri: " + namespace.getURI());
         log.debug("node namespace prefix: " + namespace.getPrefix());
 
@@ -245,18 +254,19 @@ public class NodeReader
         String type = types[1];
         log.debug("node type: " + type);
 
+        Node ret = null;
         try
         {
             if (type.equals(ContainerNode.class.getSimpleName()))
-                return buildContainerNode(root, namespace, uri);
+                ret = buildContainerNode(root, namespace, uri);
             else if (type.equals(DataNode.class.getSimpleName()))
-                return buildDataNode(root, namespace, uri);
+                ret = buildDataNode(root, namespace, uri);
             else if (type.equals(UnstructuredDataNode.class.getSimpleName()))
-            	return buildUnstructuredDataNode(root, namespace, uri);
+            	ret = buildUnstructuredDataNode(root, namespace, uri);
             else if (type.equals(LinkNode.class.getSimpleName()))
-                return buildLinkNode(root, namespace, uri);
+                ret = buildLinkNode(root, namespace, uri);
             else if (type.equals(StructuredDataNode.class.getSimpleName()))
-            	return buildStructuredDataNode(root, namespace, uri);
+            	ret = buildStructuredDataNode(root, namespace, uri);
             else
                 throw new NodeParsingException("unsupported node type " + type);
         }
@@ -264,6 +274,9 @@ public class NodeReader
         {
             throw new NodeParsingException("invalid uri in xml: " + e.getMessage());
         }
+        
+        ret.version = version;
+        return ret;
     }
 
     /**

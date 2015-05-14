@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -217,7 +218,7 @@ public class Main implements Runnable
         // Set debug mode
         if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
         {
-            Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
         }
         else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
@@ -711,14 +712,27 @@ public class Main implements Runnable
         }
 
         
-        List<Protocol> protocols = new ArrayList<Protocol>();
+        Protocol proto = null;
         if (subject != null)
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        {
+            proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+        }
         else
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-
+        {
+            proto = new Protocol(VOS.PROTOCOL_HTTP_PUT);
+        }
+        log.debug("copyToVOSpace: " + proto);
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(proto);
+        
+        log.debug("this.source: " + source);
+        File fileToUpload = new File(source);
+        
         Transfer transfer = new Transfer(dest, Direction.pushToVoSpace, view, protocols);
         transfer.setQuickTransfer(this.quickTransfer);
+        transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
+        transfer.setContentLength(fileToUpload.length());
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         // set http headers for put
@@ -732,9 +746,6 @@ public class Main implements Runnable
             log.debug("copyToVOSpaceFast: setting content-encoding = " + contentEncoding);
             clientTransfer.setRequestProperty("Content-Encoding", contentEncoding);
         }
-        
-        log.debug("this.source: " + source);
-        File fileToUpload = new File(source);
         
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
@@ -808,14 +819,23 @@ public class Main implements Runnable
         }
         VOSURI src = new VOSURI(source);
 
-        List<Protocol> protocols = new ArrayList<Protocol>();
+        Protocol proto = null;
         if (subject != null)
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+        {
+            proto = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            proto.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+        }
         else
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+        {
+            proto = new Protocol(VOS.PROTOCOL_HTTP_GET);
+        }
+        log.debug("copyFromVOSpace: " + proto);
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(proto);
 
         Transfer transfer = new Transfer(src, Direction.pullFromVoSpace, view, protocols);
         transfer.setQuickTransfer(this.quickTransfer);
+        transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         log.debug("this.source: " + source);

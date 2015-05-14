@@ -77,6 +77,7 @@ import java.io.Writer;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
@@ -85,7 +86,7 @@ import org.jdom2.output.XMLOutputter;
  * 
  * @author Sailor Zhang
  */
-public class TransferWriter
+public class TransferWriter implements XmlProcessor
 {
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TransferWriter.class);
@@ -126,26 +127,34 @@ public class TransferWriter
      */
     private Element buildRoot(Transfer transfer)
     {
-        Element root = new Element("transfer", TransferReader.VOS_NS);
-        root.addNamespaceDeclaration(TransferReader.VOS_NS);
+        Namespace vosNamespace = null;
+        if (transfer.version == VOS.VOSPACE_20)
+            vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
+        else if (transfer.version == VOS.VOSPACE_21)
+            vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_21);
+        else
+            throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
+        
+        Element root = new Element("transfer", vosNamespace);
+        //root.addNamespaceDeclaration(vosNamespace);
 
         Element e = null;
 
-        e = new Element("target", TransferReader.VOS_NS);
+        e = new Element("target", vosNamespace);
         e.addContent(transfer.getTarget().getURIObject().toASCIIString());
         root.addContent(e);
 
-        e = new Element("direction", TransferReader.VOS_NS);
+        e = new Element("direction", vosNamespace);
         e.addContent(transfer.getDirection().getValue());
         root.addContent(e);
 
-        e = new Element("view", TransferReader.VOS_NS);
+        e = new Element("view", vosNamespace);
         if (transfer.getView() != null)
         {
             e.setAttribute("uri", transfer.getView().getURI().toString());
             for (View.Parameter param : transfer.getView().getParameters())
             {
-                Element pm = new Element("param", TransferReader.VOS_NS);
+                Element pm = new Element("param", vosNamespace);
                 pm.setAttribute("uri", param.getUri().toString());
                 pm.setText(param.getValue());
                 e.addContent(pm);
@@ -157,21 +166,37 @@ public class TransferWriter
         {
             for (Protocol protocol : transfer.getProtocols())
             {
-                Element pr = new Element("protocol", TransferReader.VOS_NS);
+                Element pr = new Element("protocol", vosNamespace);
                 pr.setAttribute("uri", protocol.getUri());
                 if (protocol.getEndpoint() != null)
                 {
-                    Element ep = new Element("endpoint", TransferReader.VOS_NS);
+                    Element ep = new Element("endpoint", vosNamespace);
                     ep.addContent(protocol.getEndpoint());
                     pr.addContent(ep);
+                }
+                // added in VOSpace-2.1
+                if (transfer.version >= VOS.VOSPACE_21 && protocol.getSecurityMethod() != null)
+                {
+                    Element es = new Element("securityMethod", vosNamespace);
+                    es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
+                    pr.addContent(es);
                 }
                 root.addContent(pr);
             }
         }
             
-        e = new Element("keepBytes", TransferReader.VOS_NS);
-        e.addContent(new Boolean(transfer.isKeepBytes()).toString());
+        e = new Element("keepBytes", vosNamespace);
+        e.addContent(Boolean.toString(transfer.isKeepBytes()));
         root.addContent(e);
+        
+        // added in VOSpace-2.1
+        if (transfer.version >= VOS.VOSPACE_21 && transfer.getContentLength() != null)
+        {
+            e = new Element("param", vosNamespace);
+            e.setAttribute("uri", VOS.PROPERTY_URI_CONTENTLENGTH);
+            e.addContent(transfer.getContentLength().toString());
+            root.addContent(e);
+        }
 
         return root;
     }
