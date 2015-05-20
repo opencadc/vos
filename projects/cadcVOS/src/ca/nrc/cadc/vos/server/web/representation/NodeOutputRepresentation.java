@@ -85,6 +85,7 @@ import org.restlet.representation.OutputRepresentation;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.JsonNodeWriter;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
@@ -110,9 +111,9 @@ public class NodeOutputRepresentation extends OutputRepresentation
     private StringBuilder buf;
 
 
-    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
+    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter, MediaType mediaType)
     {
-        super(MediaType.TEXT_XML);
+        super(mediaType);
         this.node = node;
         this.nodeWriter = nodeWriter;
         fillAcceptsAndProvides(node);
@@ -163,24 +164,31 @@ public class NodeOutputRepresentation extends OutputRepresentation
     @Override
     public Date getModificationDate()
     {
-        final NodeProperty modificationDate =
-                node.findProperty(VOS.PROPERTY_URI_DATE);
 
-        if (modificationDate != null)
-        {
-            try
-            {
-                final DateFormat df =
-                        DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                               DateUtil.UTC);
-                return df.parse(modificationDate.getPropertyValue());
-            }
-            catch (ParseException e)
-            {
-                LOGGER.warn("Date " + modificationDate.getPropertyValue()
-                            + " could not be parsed.");
-            }
-        }
+        // BM: removed Last-Modified header because browsers can use
+        // for caching.  (story 1814).  This may need to be restored
+        // and change NodeDAO.put() to update the parent's last modified
+        // so that the addition of child nodes changes a container's
+        // Last-Modified
+
+        // final NodeProperty modificationDate =
+        //         node.findProperty(VOS.PROPERTY_URI_DATE);
+        //
+        // if (modificationDate != null)
+        // {
+        //     try
+        //     {
+        //         final DateFormat df =
+        //                 DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+        //                                        DateUtil.UTC);
+        //         return df.parse(modificationDate.getPropertyValue());
+        //     }
+        //     catch (ParseException e)
+        //     {
+        //         LOGGER.warn("Date " + modificationDate.getPropertyValue()
+        //                     + " could not be parsed.");
+        //     }
+        // }
 
         return null;
     }
