@@ -93,25 +93,30 @@ import org.jdom2.output.XMLOutputter;
  * 
  * @author jburke
  */
-public class NodeWriter
+public class NodeWriter implements XmlProcessor
 {
     /*
      * The VOSpace Namespaces.
      */
-    protected static Namespace vosNamespace;
     protected static Namespace xsiNamespace;
     
     static
     {
-        vosNamespace = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
-        xsiNamespace = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        xsiNamespace = Namespace.getNamespace("xsi", XSI_NAMESPACE);
     }
 
     private static Logger log = Logger.getLogger(NodeWriter.class);
     
     private String stylesheetURL = null;
+    
+    private Namespace vosNamespace;
 
-    public NodeWriter() { }
+    public NodeWriter() { this(VOSPACE_NS_20); }
+    
+    public NodeWriter(String vospaceNamespace)
+    {
+        this.vosNamespace = Namespace.getNamespace("vos", vospaceNamespace);
+    }
 
     public void setStylesheetURL(String stylesheetURL)
     {
@@ -178,7 +183,7 @@ public class NodeWriter
     {
         // Create the root element (node).
         Element root = getNodeElement(node);
-        root.addNamespaceDeclaration(vosNamespace);
+        //root.addNamespaceDeclaration(vosNamespace);
         root.addNamespaceDeclaration(xsiNamespace);
         return root;
     }

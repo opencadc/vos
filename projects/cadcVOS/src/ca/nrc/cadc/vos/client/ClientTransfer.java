@@ -110,6 +110,7 @@ import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.XmlProcessor;
 import ca.nrc.cadc.xml.XmlUtil;
 
 /**
@@ -239,9 +240,10 @@ public class ClientTransfer implements Runnable
             if (schemaValidation)
             {
                 Map<String, String> extraSchemas = new HashMap<String, String>();
-                String xsdFile = XmlUtil.getResourceUrlString(
-                        TransferReader.VOSPACE_SCHEMA_RESOURCE, ClientRecursiveSetNode.class);
-                extraSchemas.put(TransferReader.VOSPACE_SCHEMA_URL, xsdFile);
+                String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, ClientRecursiveSetNode.class);
+                extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
+                xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21, ClientRecursiveSetNode.class);
+                extraSchemas.put(XmlProcessor.VOSPACE_NS_21, xsdFile);
                 jobReader = new JobReader(extraSchemas);
             }
             else
@@ -427,10 +429,8 @@ public class ClientTransfer implements Runnable
     private List<URL> findGetEndpoint()
         throws MalformedURLException
     {
-        List<String> ret = transfer.getAllEndpoints(VOS.PROTOCOL_HTTP_GET);
-        if (ret.size() == 0)
-            ret = transfer.getAllEndpoints(VOS.PROTOCOL_HTTPS_GET);
-        if (ret.size() == 0)
+        List<String> ret = transfer.getAllEndpoints();
+        if (ret.isEmpty())
             throw new RuntimeException("failed to find a usable endpoint URL");
         
         List<URL> urls = new ArrayList<URL>();
@@ -444,9 +444,7 @@ public class ClientTransfer implements Runnable
     private URL findPutEndpoint()
         throws MalformedURLException
     {
-        String ret = transfer.getEndpoint(VOS.PROTOCOL_HTTP_PUT);
-        if (ret == null)
-            ret = transfer.getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
+        String ret = transfer.getEndpoint();
         if (ret == null)
             throw new RuntimeException("failed to find a usable endpoint URL");
         return new URL(ret);

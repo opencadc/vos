@@ -93,6 +93,13 @@ public abstract class Node implements Comparable<Object>
 {
     private static Logger log = Logger.getLogger(Node.class);
 
+    /**
+     * Keep track of the vospace version since some things differ. This field
+     * is here to facilitate reading and writing the same version of documents
+     * on the server side in order to maintain support for older clients.
+     */
+    public int version = VOS.VOSPACE_20;
+    
     // The node uri
     protected VOSURI uri;
 

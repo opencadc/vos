@@ -636,10 +636,11 @@ public class VOSpaceClient
 	                log.debug("Unable to run the job", get.getThrowable());
 	                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
 	            }
-	            
+	            String transDoc = new String(out.toByteArray(), "UTF-8");
+                    log.debug("transfer response: " + transDoc);
 	            TransferReader txfReader = new TransferReader(schemaValidation);
 	            log.debug("GET - reading content: " + redirectURL);
-	            Transfer trans = txfReader.read(new String(out.toByteArray(), "UTF-8"));
+	            Transfer trans = txfReader.read(transDoc);
 	            log.debug("GET - done: " + redirectURL);
 	            log.debug("negotiated transfer: " + trans);
 	

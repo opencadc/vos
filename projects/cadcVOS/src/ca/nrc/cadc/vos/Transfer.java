@@ -82,10 +82,18 @@ import org.apache.log4j.Logger;
 public class Transfer
 {
     private static Logger log = Logger.getLogger(Transfer.class);
+    
+    /**
+     * Keep track of the vospace version since some things differ. This field
+     * is here to facilitate reading and writing the same version of documents
+     * on the server side in order to maintain support for older clients.
+     */
+    public int version = VOS.VOSPACE_20;
 
     private VOSURI target;
     private Direction direction;
     private View view;
+    private Long contentLength;
     private List<Protocol> protocols;
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
@@ -171,30 +179,17 @@ public class Transfer
     	this.quickTransfer = quickTransfer;
     }
     
-    /**
-     * @return
-     * @deprecated
-     */
-    public String getUploadEndpoint() 
+    public String getEndpoint()
     {
-        String ret = getEndpoint(VOS.PROTOCOL_HTTP_PUT);
-        if (ret == null)
-            ret = getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
-        return ret;
+        if (this.protocols != null)
+        {
+            for (Protocol p : this.protocols)
+            {
+                return p.getEndpoint();
+            }
+        }
+        return null;
     }
-
-    /**
-     * @return
-     * @deprecated
-     */
-    public String getDownloadEndpoint() 
-    {
-        String rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
-        if (rtn == null)
-            rtn = getEndpoint(VOS.PROTOCOL_HTTPS_GET);
-        return rtn;
-    }
-
     public String getEndpoint(String strProtocol) 
     {
         String rtn = null;
@@ -209,6 +204,16 @@ public class Transfer
             }
         }
         return rtn;
+    }
+
+    public Long getContentLength()
+    {
+        return contentLength;
+    }
+
+    public void setContentLength(Long contentLength)
+    {
+        this.contentLength = contentLength;
     }
     
     /**
@@ -232,6 +237,27 @@ public class Transfer
         }
         return rtn;
     }
+    
+    /**
+     * Returns a list of endpoints matching the protocol. Order in the list is 
+     * as recommended by the server: clients should try the end points
+     * in the given order.
+     * @param strProtocol
+     * @return
+     */
+    public List<String> getAllEndpoints() 
+    {
+        List<String> rtn = new ArrayList<String>();
+        if (this.protocols != null)
+        {
+            for (Protocol p : this.protocols)
+            {
+                rtn.add(p.getEndpoint());
+            }
+        }
+        return rtn;
+    }
+    
 
     public Direction getDirection()
     {

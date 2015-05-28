@@ -72,6 +72,7 @@ package ca.nrc.cadc.conformance.vos;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;
 import org.jdom2.Element;
+import org.jdom2.Namespace;
 
 /**
  * Class extends NodeWriter to create a Node with an invalid xsi:type
@@ -96,10 +97,12 @@ public class InvalidTypeNodeWriter extends NodeWriter
     @Override
     protected Element getRootElement(Node node)
     {
+        Namespace vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
+        Namespace xsiNamespace = Namespace.getNamespace("xsi", XSI_NAMESPACE);
         // Create the root element (node).
-        Element root = new Element("node", NodeWriter.vosNamespace);
-        root.addNamespaceDeclaration(NodeWriter.vosNamespace);
-        root.addNamespaceDeclaration(NodeWriter.xsiNamespace);
+        Element root = new Element("node", vosNamespace);
+        root.addNamespaceDeclaration(vosNamespace);
+        root.addNamespaceDeclaration(xsiNamespace);
         root.setAttribute("uri", node.getUri().toString());
         root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
         return root;
