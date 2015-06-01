@@ -84,6 +84,7 @@ import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+import org.restlet.data.MediaType;
 
 /**
  * Class to perform the updating of a Node's properties.
@@ -141,8 +142,7 @@ public class UpdatePropertiesAction extends NodeAction
         Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
         
         // return the node in xml format
-        NodeWriter nodeWriter = new NodeWriter();
-        return new NodeActionResult(new NodeOutputRepresentation(out, nodeWriter));
+        return new NodeActionResult(new NodeOutputRepresentation(out, getNodeWriter(), getMediaType()));
     }
     
     /**

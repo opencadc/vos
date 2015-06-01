@@ -91,6 +91,7 @@ import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
+import org.restlet.data.MediaType;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -244,7 +245,7 @@ public class GetNodeAction extends NodeAction
         if (view == null)
         {
             // no view specified or found--return the xml representation
-            final NodeWriter nodeWriter = new NodeWriter();
+            final NodeWriter nodeWriter = getNodeWriter();
             nodeWriter.setStylesheetURL(getStylesheetURL());
             
             // clear the properties from server node if the detail
@@ -252,7 +253,7 @@ public class GetNodeAction extends NodeAction
             if (VOS.Detail.min.getValue().equals(detailLevel))
                 serverNode.getProperties().clear();
             
-            return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter));
+            return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter, getMediaType()));
         }
         else
         {

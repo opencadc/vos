@@ -85,7 +85,6 @@ import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.util.RestletLogInfo;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.VOSURI;
@@ -97,6 +96,9 @@ import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.NodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.NodeActionResult;
 import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
+import java.util.List;
+import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 
 /**
  * Handles HTTP requests for Node resources.
@@ -186,7 +188,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         
         long start = System.currentTimeMillis();
         long end = -1;
-        String message = null;
+        StringBuilder message = new StringBuilder();
         
         try
         {
@@ -224,7 +226,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             {
                 if (result.getNodeFault() != null)
                 {
-                    message = getErrorMessage(result.getNodeFault());
+                    message.append(getErrorMessage(result.getNodeFault()));
                     logInfo.setSuccess(!result.getNodeFault().isServiceFailure());
                 }
                 
@@ -232,11 +234,9 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
                 
                 if (result.getRedirectURL() != null)
                 {
-                    if (StringUtil.hasLength(message))
-                    {
-                        message = message + " ";
-                    }
-                    message = message + "Redirecting to: " + result.getRedirectURL().toExternalForm();
+                    if (message.length() > 0) 
+                        message.append(" ");
+                    message.append("Redirecting to: " + result.getRedirectURL().toExternalForm());
                     getResponse().redirectSeeOther(
                             result.getRedirectURL().toString());
                 }
@@ -252,7 +252,9 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         {
             LOGGER.debug(t);
             logInfo.setSuccess(false);
-            message = "Transient exception: " + t.getMessage();
+            if (message.length() > 0) 
+                message.append(" ");
+            message.append("Transient exception: " + t.getMessage());
             setStatus(NodeFault.ServiceBusy.getStatus());
             
             Calendar retryTime = new GregorianCalendar();
@@ -268,26 +270,18 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             LOGGER.debug("OOPS", t);
             setStatus(NodeFault.InternalFault.getStatus());
             logInfo.setSuccess(false);
-            message = getErrorMessage(NodeFault.InternalFault);
-            if (StringUtil.hasText(t.getMessage()))
-            {
-                message = message
-                    + ": " + t.getClass().getSimpleName()
-                    + ": " + t.getMessage();
-            }
-            else
-            {
-                message = message
-                    + ": "
-                    + t.getClass().getSimpleName();
-            }
+            if (message.length() > 0) 
+                message.append(" ");
+            message.append(getErrorMessage(NodeFault.InternalFault));
+            message.append(": ").append(t.getClass().getSimpleName());
+            message.append(": ").append(t.getMessage());
             return new NodeErrorRepresentation(NodeFault.InternalFault);
         }
         finally
         {
             end = System.currentTimeMillis();
             logInfo.setElapsedTime(end - start);
-            logInfo.setMessage(message);
+            logInfo.setMessage(message.toString());
             String endMessage = logInfo.end();
             LOGGER.info(endMessage);
         }
@@ -314,6 +308,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         LOGGER.debug("Enter NodeResource.represent()");
         return runPrivilegedAction(new GetNodeAction());
     }
+    
 
     @Put
     public Representation create(final Representation entity)

@@ -1,4 +1,6 @@
-/*
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,122 +67,60 @@
 *  $Revision: 4 $
 *
 ************************************************************************
-*/
+-->
 
-package ca.nrc.cadc.vos;
+<!--$Id: XLINK.xsd,v 1.2 2006/09/26 15:34:24 clq2 Exp $--><!-- Schema definition for Xlink for the SpaceTimeCoords --><!--Change Log:
+$Log: XLINK.xsd,v $
+Revision 1.2  2006/09/26 15:34:24  clq2
+SLI_KEA_1794 for slinger and PAL_KEA_1974 for pal and xml, deleted slinger jar from repo, merged with pal
 
-import java.net.URI;
-import java.util.Map;
+Revision 1.1.2.1  2006/07/13 10:13:55  KevinBenson
+Added several 1.0 xsd schemas related to vo-resource-types.  Also added these new namespaces to the SchemaMap to be used with Validation.  Errors were in the ContractsFilter for writing out schema's and wsdls via a filter.
 
-/**
- * @author zhangsa
- *
- */
-public class Protocol
-{
-    protected String uri; // the formal URI
-    protected String endpoint; 
-    protected URI securityMethod;
-    protected Map<String, String> param;
+Revision 1.2  2006/03/01 21:55:31  arots
+Fixed missing end-of-comment.
 
-    /**
-     * Constructor for use in transfer requests. In a transfer request, one only
-     * specifies the protocols.
-     *
-     * @param uri a VOSpace protocol URI
-     */
-    public Protocol(String uri)
-    {
-        this.uri = uri;
-    }
-    /**
-     * @param uri a VOSpace protocol URI
-     * @param endpoint
-     * @param param
-     */
-    public Protocol(String uri, String endpoint, Map<String, String> param)
-    {
-        super();
-        this.uri = uri;
-        this.endpoint = endpoint;
-        this.param = param;
-    }
-
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj.getClass() != this.getClass())
-            return false;
-        Protocol p = (Protocol) obj;
-
-        if (!this.uri.equals(p.uri))
-            return false;
-        
-        //if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
-        //        || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
-        //    return false;
-
-        if ( (this.securityMethod != null && !this.securityMethod.equals(p.securityMethod))
-                || (p.securityMethod != null && !p.securityMethod.equals(this.securityMethod)) )
-            return false;
-        
-        if (this.param == p.param) // both null or same object
-            return true;
-
-        if ( (this.param != null && p.param == null )
-                || (this.param == null && p.param != null ) )
-            return false;
-
-        // neither param map null, not sure if this compares
-        // keys and values or not
-        if ( !this.param.entrySet().containsAll(p.param.entrySet()) )
-            return false;
-        if ( !p.param.entrySet().containsAll(this.param.entrySet()) )
-            return false;
-        return true;
-    }
-
-    public String getUri()
-    {
-        return this.uri;
-    }
-
-    public URI getSecurityMethod()
-    {
-        return securityMethod;
-    }
-
-    public void setSecurityMethod(URI securityMethod)
-    {
-        this.securityMethod = securityMethod;
-    }
-    
-    public String getEndpoint()
-    {
-        return this.endpoint;
-    }
-
-    public void setEndpoint(String endpoint)
-    {
-        this.endpoint = endpoint;
-    }
-
-    public Map<String, String> getParam()
-    {
-        return this.param;
-    }
-
-    public void setParam(Map<String, String> param)
-    {
-        this.param = param;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Protocol[" + uri + "," + endpoint + "," + securityMethod + "," + param + "]";
-    }
-}
+Revision 1.1  2006/03/01 21:06:05  arots
+Initial revision
+ --><xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xlink="http://www.w3.org/1999/xlink" targetNamespace="http://www.w3.org/1999/xlink" elementFormDefault="qualified" attributeFormDefault="qualified">
+  <xs:attribute name="type">
+    <xs:simpleType>
+      <xs:restriction base="xs:NMTOKEN">
+        <xs:enumeration value="simple"/>
+        <xs:enumeration value="extended"/>
+        <xs:enumeration value="locator"/>
+        <xs:enumeration value="arc"/>
+        <xs:enumeration value="resource"/>
+        <xs:enumeration value="title"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+  <xs:attribute name="href" type="xs:anyURI"/>
+  <xs:attribute name="role" type="xs:anyURI"/>
+  <xs:attribute name="arcrole" type="xs:anyURI"/>
+  <xs:attribute name="title" type="xs:string"/>
+  <xs:attribute name="show">
+    <xs:simpleType>
+      <xs:restriction base="xs:NMTOKEN">
+        <xs:enumeration value="new"/>
+        <xs:enumeration value="replace"/>
+        <xs:enumeration value="embed"/>
+        <xs:enumeration value="other"/>
+        <xs:enumeration value="none"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+  <xs:attribute name="label" type="xs:NMTOKEN"/>
+  <xs:attribute name="actuate">
+    <xs:simpleType>
+      <xs:restriction base="xs:NMTOKEN">
+        <xs:enumeration value="onLoad"/>
+        <xs:enumeration value="onRequest"/>
+        <xs:enumeration value="other"/>
+        <xs:enumeration value="none"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+  <xs:attribute name="from" type="xs:NMTOKEN"/>
+  <xs:attribute name="to" type="xs:NMTOKEN"/>
+</xs:schema>

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
@@ -101,7 +102,7 @@ public class TransferReaderWriterTest
     public static void setUpBeforeClass() 
         throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
     }
 
     @AfterClass
@@ -134,6 +135,14 @@ public class TransferReaderWriterTest
         Assert.assertEquals("target", transfer1.getTarget(), transfer2.getTarget());
 
         Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
+        
+        Assert.assertEquals("keepBytes", transfer1.isKeepBytes(), transfer2.isKeepBytes());
+
+        if (transfer1.getContentLength() != null)
+            Assert.assertEquals("contentLength", transfer1.getContentLength(), transfer2.getContentLength());
+        else
+            Assert.assertNull("contentLength", transfer2.getContentLength());
+          
 
         if (transfer1.getView() != null)
         {
@@ -152,13 +161,56 @@ public class TransferReaderWriterTest
             Assert.assertEquals("protocols size", transfer1.getProtocols().size(), transfer2.getProtocols().size());
             Assert.assertTrue("protocols content", transfer1.getProtocols().containsAll(transfer2.getProtocols()));
             Assert.assertTrue("protocols content", transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+            // Transfer.equals(Object) compares all fields
         }
         else
             Assert.assertNull("protocols", transfer2.getProtocols());
     }
 
-    @Test
+    //@Test
     public void testPushPullTransfer()
+    {
+        try
+        {
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+            log.debug("testPushPullTransfer: " + transfer);
+
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+
+            log.debug("testPushPullTransfer\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+
+
+            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            log.debug("testPushPullTransfer: " + transfer);
+
+            dest = new StringWriter();
+            writer.write(transfer, dest);
+            xml = dest.toString();
+
+            log.debug("testPushPullTransfer\n" + xml);
+
+            transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testPushPullTransfer21() // test new schema compat with 2.0 content
     {
         try
         {
@@ -296,6 +348,111 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testPushPullTransferSecurityMethod() // VOSpace-2.1
+    {
+        try
+        {
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol get = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            get.setSecurityMethod(AuthMethod.ANON.getSecurityMethod());
+            proto21.add(get);
+            get = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            get.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            proto21.add(get);
+            
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
+            transfer.version = VOS.VOSPACE_21; // swugly test
+            log.debug("testPushPullTransferSecurityMethod: " + transfer);
+
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+            
+            Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
+            Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
+
+            log.debug("testPushPullTransfer\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+            
+            Assert.assertEquals(VOS.VOSPACE_21, transfer2.version);
+
+            compareTransfers(transfer, transfer2);
+
+            proto21.clear();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTP_PUT);
+            put.setSecurityMethod(AuthMethod.ANON.getSecurityMethod());
+            proto21.add(put);
+            put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            put.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            proto21.add(put);
+            
+            transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            transfer.version = VOS.VOSPACE_21; // swugly test
+            log.debug("testPushPullTransferSecurityMethod: " + transfer);
+
+            dest = new StringWriter();
+            writer.write(transfer, dest);
+            xml = dest.toString();
+
+            Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
+            Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
+            
+            log.debug("testPushPullTransfer\n" + xml);
+
+            transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testPushTransferContentLengthParam() // VOSpace-2.1
+    {
+        try
+        {
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTP_PUT);
+            proto21.add(put);
+            put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto21.add(put);
+            
+            Transfer transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            transfer.setContentLength(666L);
+            transfer.version = VOS.VOSPACE_21; // swugly test
+            log.debug("testPushTransferContentLengthParam: " + transfer);
+
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+            
+            Assert.assertTrue(xml.contains(VOS.PROPERTY_URI_CONTENTLENGTH));
+
+            log.debug("testPushTransferContentLengthParam\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+            
+            Assert.assertEquals(VOS.VOSPACE_21, transfer2.version);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     @Test
     public void testTransferMoveNode()
@@ -320,7 +477,6 @@ public class TransferReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            unexpected.printStackTrace();
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
@@ -353,7 +509,6 @@ public class TransferReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            unexpected.printStackTrace();
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }

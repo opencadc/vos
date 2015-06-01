@@ -3,12 +3,12 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,125 +62,41 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
 */
 
 package ca.nrc.cadc.vos;
 
-import java.net.URI;
-import java.util.Map;
+
+import ca.nrc.cadc.xml.JsonOutputter;
+import java.io.IOException;
+import java.io.Writer;
+import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
 
 /**
- * @author zhangsa
  *
+ * @author pdowler
  */
-public class Protocol
+public class JsonNodeWriter extends NodeWriter
 {
-    protected String uri; // the formal URI
-    protected String endpoint; 
-    protected URI securityMethod;
-    protected Map<String, String> param;
+    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
-    /**
-     * Constructor for use in transfer requests. In a transfer request, one only
-     * specifies the protocols.
-     *
-     * @param uri a VOSpace protocol URI
-     */
-    public Protocol(String uri)
+    protected void write(Element root, Writer writer) 
+        throws IOException
     {
-        this.uri = uri;
-    }
-    /**
-     * @param uri a VOSpace protocol URI
-     * @param endpoint
-     * @param param
-     */
-    public Protocol(String uri, String endpoint, Map<String, String> param)
-    {
-        super();
-        this.uri = uri;
-        this.endpoint = endpoint;
-        this.param = param;
-    }
-
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj.getClass() != this.getClass())
-            return false;
-        Protocol p = (Protocol) obj;
-
-        if (!this.uri.equals(p.uri))
-            return false;
+        JsonOutputter outputter = new JsonOutputter();
+        outputter.getListElementNames().add("nodes");
+        outputter.getListElementNames().add("properties");
+        outputter.getListElementNames().add("accepts");
+        outputter.getListElementNames().add("provides");
         
-        //if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
-        //        || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
-        //    return false;
-
-        if ( (this.securityMethod != null && !this.securityMethod.equals(p.securityMethod))
-                || (p.securityMethod != null && !p.securityMethod.equals(this.securityMethod)) )
-            return false;
-        
-        if (this.param == p.param) // both null or same object
-            return true;
-
-        if ( (this.param != null && p.param == null )
-                || (this.param == null && p.param != null ) )
-            return false;
-
-        // neither param map null, not sure if this compares
-        // keys and values or not
-        if ( !this.param.entrySet().containsAll(p.param.entrySet()) )
-            return false;
-        if ( !p.param.entrySet().containsAll(this.param.entrySet()) )
-            return false;
-        return true;
-    }
-
-    public String getUri()
-    {
-        return this.uri;
-    }
-
-    public URI getSecurityMethod()
-    {
-        return securityMethod;
-    }
-
-    public void setSecurityMethod(URI securityMethod)
-    {
-        this.securityMethod = securityMethod;
-    }
-    
-    public String getEndpoint()
-    {
-        return this.endpoint;
-    }
-
-    public void setEndpoint(String endpoint)
-    {
-        this.endpoint = endpoint;
-    }
-
-    public Map<String, String> getParam()
-    {
-        return this.param;
-    }
-
-    public void setParam(Map<String, String> param)
-    {
-        this.param = param;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Protocol[" + uri + "," + endpoint + "," + securityMethod + "," + param + "]";
+        outputter.setFormat(Format.getPrettyFormat());
+        Document document = new Document(root);
+        outputter.output(document, writer);
     }
 }

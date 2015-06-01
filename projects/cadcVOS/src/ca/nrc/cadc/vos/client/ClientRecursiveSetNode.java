@@ -96,6 +96,7 @@ import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.xml.XmlUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.XmlProcessor;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
@@ -215,9 +216,10 @@ public class ClientRecursiveSetNode implements Runnable
             if (schemaValidation)
             {
                 Map<String, String> extraSchemas = new HashMap<String, String>();
-                String xsdFile = XmlUtil.getResourceUrlString(
-                        TransferReader.VOSPACE_SCHEMA_RESOURCE, ClientRecursiveSetNode.class);
-                extraSchemas.put(TransferReader.VOSPACE_SCHEMA_URL, xsdFile);
+                String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, ClientRecursiveSetNode.class);
+                extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
+                xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21, ClientRecursiveSetNode.class);
+                extraSchemas.put(XmlProcessor.VOSPACE_NS_21, xsdFile);
                 jobReader = new JobReader(extraSchemas);
             }
             else
