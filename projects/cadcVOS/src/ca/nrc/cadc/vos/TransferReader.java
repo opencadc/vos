@@ -95,12 +95,8 @@ import org.jdom2.Namespace;
  *
  * @author pdowler
  */
-public class TransferReader
+public class TransferReader implements XmlProcessor
 {
-    public static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    public static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
-    static Namespace VOS_NS = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
-
     private static Logger log = Logger.getLogger(TransferReader.class);
 
     protected Map<String, String> schemaMap;
@@ -121,11 +117,18 @@ public class TransferReader
     {
         if (enableSchemaValidation)
         {
-            String vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, TransferReader.class);
-            if (vospaceSchemaUrl == null)
-                throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE + " in classpath");
+            String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
+            if (vospaceSchemaUrl20 == null)
+                throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_20 + " in classpath");
+            
+            String vospaceSchemaUrl21 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_21, TransferReader.class);
+            if (vospaceSchemaUrl21 == null)
+                throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_21 + " in classpath");
+            
             this.schemaMap = new HashMap<String, String>();
-            schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
+            schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl20);
+            schemaMap.put(VOSPACE_NS_21, vospaceSchemaUrl21);
+            
             log.debug("schema validation enabled");
         }
         else
@@ -170,20 +173,28 @@ public class TransferReader
         throws URISyntaxException
     {
         Element root = document.getRootElement();
-
-        Direction direction = parseDirection(root);
+        Namespace vosNS = root.getNamespace();
+        int version;
+        if (VOSPACE_NS_20.equals(vosNS.getURI()))
+            version = VOS.VOSPACE_20;
+        else if (VOSPACE_NS_21.equals(vosNS.getURI()))
+            version = VOS.VOSPACE_21;
+        else
+            throw new IllegalArgumentException("unexpected VOSpace namespace: " + vosNS.getURI());
+            
+        Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet
-        VOSURI target = new VOSURI(root.getChildText("target", VOS_NS));
+        VOSURI target = new VOSURI(root.getChildText("target", vosNS));
 
         // TODO: get view nodes and uri attribute
         View view = null;
         Parameter param = null;
-        List views = root.getChildren("view", VOS_NS);
+        List views = root.getChildren("view", vosNS);
         if (views != null && views.size() > 0)
         {
             Element v = (Element) views.get(0);
             view = new View(new URI(v.getAttributeValue("uri")));
-            List params = v.getChildren("param", VOS_NS);
+            List params = v.getChildren("param", vosNS);
             if (params != null)
             {
                 for (Object o : params)
@@ -194,23 +205,47 @@ public class TransferReader
                 }
             }
         }
-        List<Protocol> protocols = parseProtocols(root);
-        String keepBytesStr = root.getChildText("keepBytes", VOS_NS);
+        List<Protocol> protocols = parseProtocols(root, vosNS, version);
+        String keepBytesStr = root.getChildText("keepBytes", vosNS);
 
-        
+        boolean keepBytes = true;
         if (keepBytesStr != null)
-        {
-            boolean keepBytes = true;
             keepBytes = keepBytesStr.equalsIgnoreCase("true");
-            return new Transfer(target, direction, view, protocols, keepBytes);
+        
+        Transfer ret = new Transfer(target, direction, view, protocols, keepBytes);
+        ret.version = version;
+        
+        // optional param(s) added in VOSpace-2.1
+        if (version >= VOS.VOSPACE_21)
+        {
+            List<Element> params = root.getChildren("param", vosNS);
+            for (Element pe : params)
+            {
+                String uri = pe.getAttributeValue("uri");
+                if (VOS.PROPERTY_URI_CONTENTLENGTH.equals(uri))
+                {
+                    try
+                    {
+                        ret.setContentLength(new Long(pe.getText()));
+                    }
+                    catch(NumberFormatException ex)
+                    {
+                        throw new IllegalArgumentException("invalid " + VOS.PROPERTY_URI_CONTENTLENGTH
+                            + ": " + pe.getText());
+                    }
+                }
+                else
+                    log.debug("skip unknown param: " + uri);
+            }
         }
-        return new Transfer(target, direction, view, protocols);
+                
+        return ret;
     }
 
-    private Direction parseDirection(Element root)
+    private Direction parseDirection(Element root, Namespace vosNS)
     {
         Direction rtn = null;
-        String strDirection = root.getChildText("direction", VOS_NS);
+        String strDirection = root.getChildText("direction", vosNS);
         
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
@@ -228,11 +263,11 @@ public class TransferReader
         return rtn;
     }
 
-    private List<Protocol> parseProtocols(Element root)
+    private List<Protocol> parseProtocols(Element root, Namespace vosNS, int version)
     {
         List<Protocol> rtn = null;
         //Element e = root.getChild("protocols", NS);
-        List prots = root.getChildren("protocol", VOS_NS);
+        List prots = root.getChildren("protocol", vosNS);
         if (prots != null && prots.size() > 0)
         {
             rtn = new ArrayList<Protocol>(prots.size());
@@ -240,8 +275,31 @@ public class TransferReader
             {
                 Element eProtocol = (Element) obj;
                 String uri = eProtocol.getAttributeValue("uri");
-                String endpoint = eProtocol.getChildText("endpoint", VOS_NS);
-                rtn.add(new Protocol(uri, endpoint, null));
+                Protocol p = new Protocol(uri);
+                
+                // optional ndpoint
+                String endpoint = eProtocol.getChildText("endpoint", vosNS);
+                if (endpoint != null)
+                    p.setEndpoint(endpoint);
+                
+                // optional securityMethod added in VOSpace-2.1
+                if (version >= VOS.VOSPACE_21)
+                {
+                    Element eSec = eProtocol.getChild("securityMethod", vosNS);
+                    if (eSec != null)
+                    {
+                        String secVal = eSec.getAttributeValue("uri");
+                        try
+                        {
+                            p.setSecurityMethod(new URI(secVal));
+                        }
+                        catch(URISyntaxException ex)
+                        {
+                            throw new IllegalArgumentException("invalid securityMethod: " + secVal, ex);
+                        }
+                    }
+                }
+                rtn.add(p);
             }
         }
         return rtn;

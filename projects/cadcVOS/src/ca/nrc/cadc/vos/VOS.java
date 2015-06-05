@@ -78,10 +78,10 @@ package ca.nrc.cadc.vos;
  */
 public class VOS
 {
-    //public static String XSD_FILE_NAME = "VOSpace-2.0.xsd"; // local xsd file name
-    //public static String XSD_KEY = "http://www.ivoa.net/xml/VOSpace/v2.0";
-
     public static final String GMS_PROTOCOL = "https";
+
+    public static final int VOSPACE_20 = 20;
+    public static final int VOSPACE_21 = 21;
     
     // Enumeration for Node busy states
     public static enum NodeBusyState

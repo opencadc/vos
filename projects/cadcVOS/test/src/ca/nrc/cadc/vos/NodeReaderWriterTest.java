@@ -267,7 +267,7 @@ public class NodeReaderWriterTest
 
             compareNodes(containerNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -288,10 +288,39 @@ public class NodeReaderWriterTest
             // validate the XML
             NodeReader reader = new NodeReader();
             Node n2 = reader.read(sb.toString());
+            
+            // make sure default version is still 2.0
+            Assert.assertEquals(VOS.VOSPACE_20, n2.version);
 
             compareNodes(dataNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+    
+    @Test
+    public void writeValidDataNode21()
+    {
+        try
+        {
+            log.debug("writeValidDataNode21");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter(XmlProcessor.VOSPACE_NS_21);
+            instance.write(dataNode, sb);
+            log.debug(sb.toString());
+            
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+            
+            Assert.assertEquals(VOS.VOSPACE_21, n2.version);
+
+            compareNodes(dataNode, n2);
+        }
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -315,7 +344,7 @@ public class NodeReaderWriterTest
 
             compareNodes(unstructuredDataNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -339,7 +368,7 @@ public class NodeReaderWriterTest
 
             compareNodes(structuredDataNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -363,7 +392,7 @@ public class NodeReaderWriterTest
 
             compareNodes(linkNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -390,7 +419,7 @@ public class NodeReaderWriterTest
 
             compareNodes(dataNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -419,7 +448,7 @@ public class NodeReaderWriterTest
 
             compareNodes(dataNode, n2);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -449,7 +478,7 @@ public class NodeReaderWriterTest
             compareNodes(n, n2);
 
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             log.error(t);
             fail(t.getMessage());
@@ -490,7 +519,7 @@ public class NodeReaderWriterTest
             NodeReader reader = new NodeReader(false);
             Node n = reader.read(xml);
         }
-        catch (Throwable t)
+        catch (Exception t)
         {
             t.printStackTrace();
             log.error("unexpected exception", t);
