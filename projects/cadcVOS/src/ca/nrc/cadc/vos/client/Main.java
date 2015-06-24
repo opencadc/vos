@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -123,7 +123,7 @@ import ca.nrc.cadc.vos.View.Parameter;
 
 /**
  * Main method for the command-line VOSpace client.
- * 
+ *
  * @author pdowler, zhangsa
  */
 public class Main implements Runnable
@@ -162,9 +162,9 @@ public class Main implements Runnable
     private static Logger log = Logger.getLogger(Main.class);
     private static final int INIT_STATUS = 1; // exit code for initialisation failure
     private static final int NET_STATUS = 2;  // exit code for client-server failures
-    
+
     private static final int MAX_CHILD_SIZE = 1000;
-    
+
     /**
      * Supported node type
      */
@@ -186,7 +186,7 @@ public class Main implements Runnable
     private List<NodeProperty> properties;
     private String contentType;
     private String contentEncoding;
-    
+
     private URI source;
     private URI destination;
     private Direction transferDirection = null;
@@ -197,7 +197,7 @@ public class Main implements Runnable
     private boolean quickTransfer = false;
 
     private boolean recursiveMode = false;
-    
+
     // target of a LinkNode
     private URI link;
 
@@ -356,7 +356,7 @@ public class Main implements Runnable
         }
         catch(NodeLockedException nlex)
         {
-            msg("node locked: " + target);	
+            msg("node locked: " + target);
             System.exit(NET_STATUS);
         }
         catch(Throwable t)
@@ -420,7 +420,7 @@ public class Main implements Runnable
             System.exit(NET_STATUS);
         }
     }
-    
+
     private void doMove()
     {
         log.debug("doMove");
@@ -454,7 +454,7 @@ public class Main implements Runnable
                 msg("alinga-- failed to move: " + source + " -> " + transferDirection.getValue());
             else
                 msg("alinga-- failed to move: " + source + " -> " + destination);
-            msg("          reason: " + nlex.getMessage());    	
+            msg("          reason: " + nlex.getMessage());
             System.exit(NET_STATUS);
         }
         */
@@ -490,7 +490,7 @@ public class Main implements Runnable
         }
     }
 
-    
+
     private void doCreate()
     {
         try
@@ -513,7 +513,7 @@ public class Main implements Runnable
                 default:
                     throw new RuntimeException("BUG. Unsupported node type " + this.nodeType);
             }
-        	
+
             Node nodeRtn = client.createNode(node);
             log.info("created: " + nodeRtn.getUri());
         }
@@ -531,7 +531,7 @@ public class Main implements Runnable
     }
 
     private void doView()
-    {   
+    {
         // if the user isn't controlling paging, add a child
         // limit of MAX_CHILD_SIZE (1000)
         boolean explicitPaging = false;
@@ -549,7 +549,7 @@ public class Main implements Runnable
             queryString = "limit=" + MAX_CHILD_SIZE;
         log.debug("explicit paging control: " + explicitPaging);
         log.debug("view query string: " + queryString);
-        
+
         try
         {
             Node n = client.getNode(target.getPath(), queryString);
@@ -587,10 +587,10 @@ public class Main implements Runnable
                     sb.append("URI");
                     msg(sb.toString());
                 }
-                
+
                 log.debug("get container node returned : " + cn.getNodes().size() + " children.");
                 printChildList(n, cn.getNodes());
-                
+
                 // get remaining children if the user isn't explicitly controlling paging
                 if (!explicitPaging)
                 {
@@ -602,7 +602,7 @@ public class Main implements Runnable
                         uriQueryObj = cn.getNodes().get(cn.getNodes().size() - 1).getUri();
                         uriQueryParam = "uri=" + NetUtil.encode(uriQueryObj.toString());
                         cn = null;
-                        
+
                         if (StringUtil.hasText(queryString))
                             n = client.getNode(target.getPath(), queryString + "&" + uriQueryParam);
                         else
@@ -610,9 +610,9 @@ public class Main implements Runnable
                         if (!(n instanceof ContainerNode))
                             throw new IllegalStateException("inconsistent node state.");
                         cn = (ContainerNode) n;
-                        
+
                         log.debug("next set has : " + cn.getNodes().size() + " children.");
-                        
+
                         // remove the first child if it is the one matching the uri parameter
                         if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getUri().equals(uriQueryObj))
                         {
@@ -648,7 +648,7 @@ public class Main implements Runnable
             System.exit(NET_STATUS);
         }
     }
-    
+
     private void printChildList(Node n, List<Node> children)
     {
         StringBuilder sb = null;
@@ -688,7 +688,7 @@ public class Main implements Runnable
         return FileSizeType.getHumanReadableSize(Long.parseLong(contentLength))
                 + " (" + contentLength + " bytes)";
     }
-    
+
     private void copyToVOSpace()
         throws Throwable
     {
@@ -698,9 +698,7 @@ public class Main implements Runnable
             originalDestination = new URI(destination.toString());
             destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         }
-        //DataNode dnode = new DataNode(new VOSURI(destination));
-        VOSURI dest = new VOSURI(destination);
-        
+
         View view = null;
         if (originalDestination != null)
         {
@@ -711,7 +709,7 @@ public class Main implements Runnable
             view = new View(new URI(VOS.VIEW_DEFAULT));
         }
 
-        
+
         Protocol proto = null;
         if (subject != null)
         {
@@ -725,11 +723,11 @@ public class Main implements Runnable
         log.debug("copyToVOSpace: " + proto);
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(proto);
-        
+
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
-        
-        Transfer transfer = new Transfer(dest, Direction.pushToVoSpace, view, protocols);
+
+        Transfer transfer = new Transfer(destination, Direction.pushToVoSpace, view, protocols);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
         transfer.setContentLength(fileToUpload.length());
@@ -746,19 +744,19 @@ public class Main implements Runnable
             log.debug("copyToVOSpaceFast: setting content-encoding = " + contentEncoding);
             clientTransfer.setRequestProperty("Content-Encoding", contentEncoding);
         }
-        
+
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToUpload);
-        
+
         clientTransfer.runTransfer();
         if (!quickTransfer)
         {
         	checkPhase(clientTransfer);
         }
-        Node node = client.getNode(dest.getPath());
+        Node node = client.getNode(destination.getPath());
 
         boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
         if (checkProps || log.isDebugEnabled())
@@ -780,7 +778,7 @@ public class Main implements Runnable
             }
         }
     }
-    
+
     private boolean updateProperty(Node n, String propURI, String propValue)
     {
         log.debug("checking property: " + propURI + " vs " + propValue);
@@ -817,7 +815,6 @@ public class Main implements Runnable
         {
             view = new View(new URI(VOS.VIEW_DEFAULT));
         }
-        VOSURI src = new VOSURI(source);
 
         Protocol proto = null;
         if (subject != null)
@@ -833,7 +830,7 @@ public class Main implements Runnable
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(proto);
 
-        Transfer transfer = new Transfer(src, Direction.pullFromVoSpace, view, protocols);
+        Transfer transfer = new Transfer(source, Direction.pullFromVoSpace, view, protocols);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
         ClientTransfer clientTransfer = client.createTransfer(transfer);
@@ -842,20 +839,20 @@ public class Main implements Runnable
         File fileToSave = new File(destination);
         if (fileToSave.exists())
             log.info("overwriting existing file: " + destination);
-        
+
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(true));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToSave);
-        
+
         clientTransfer.runTransfer();
         if (!quickTransfer)
         {
         	checkPhase(clientTransfer);
         }
     }
-    
+
     private void moveToVOSpace()
         throws Throwable
     {
@@ -885,7 +882,7 @@ public class Main implements Runnable
         sourceFile.delete();
         log.debug("deleted local file: " + source);
     }
-    
+
     private void moveFromVOSpace()
         throws Throwable
     {
@@ -897,7 +894,7 @@ public class Main implements Runnable
         }
         copyFromVOSpace();
         log.debug("copied " + this.destination.getPath() + " to local file " + source);
-        
+
         NodeProperty downloadedSizeProp = sourceNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
         File destFile = new File(destination);
         long downloadedSize = Long.parseLong(downloadedSizeProp.getPropertyValue());
@@ -911,7 +908,7 @@ public class Main implements Runnable
         this.client.deleteNode(this.source.getPath());
         log.debug("deleted vos file: " + this.source);
     }
-    
+
     private void doRecursiveSet()
     {
         try
@@ -941,7 +938,7 @@ public class Main implements Runnable
             recSetNode.run();
             Runtime.getRuntime().removeShutdownHook(abortThread);
             checkPhase(recSetNode);
-            
+
             log.info("updated properties recursively: " + this.target);
         }
         catch(NodeNotFoundException ex)
@@ -962,13 +959,12 @@ public class Main implements Runnable
         }
 
     }
-    
+
     private void moveWithinVOSpace()
         throws Throwable
     {
-        VOSURI src = new VOSURI(source);
         VOSURI dest = new VOSURI(destination);
-        Transfer transfer = new Transfer(src, dest, false);
+        Transfer transfer = new Transfer(source, dest, false);
         ClientTransfer trans = client.createTransfer(transfer);
 
         Thread abortThread = new ClientAbortThread(trans.getJobURL());
@@ -978,7 +974,7 @@ public class Main implements Runnable
         Runtime.getRuntime().removeShutdownHook(abortThread);
         checkPhase(trans);
     }
-    
+
     private void checkPhase(ClientTransfer trans)
             throws IOException, RuntimeException
     {
@@ -1008,10 +1004,10 @@ public class Main implements Runnable
         else if ( !ExecutionPhase.COMPLETED.equals(ep) )
             throw new RuntimeException("unexpected job state: " + ep.name());
     }
-    
+
     /**
      * Create a view used in node.accepts based on the query string in the vosuri.
-     * 
+     *
      * @param vosuri
      * @param node The node object if available.
      * @return
@@ -1026,10 +1022,10 @@ public class Main implements Runnable
         };
         return createView(vosuri, nodeViewWrapper, node);
     }
-    
+
     /**
      * Create a view used in node.provides based on the query string in the vosuri.
-     * 
+     *
      * @param vosuri
      * @param node The node object if available.
      * @return
@@ -1044,10 +1040,10 @@ public class Main implements Runnable
         };
         return createView(vosuri, nodeViewWrapper, node);
     }
-    
+
     /**
      * Createa a view based on the query string in the vosuri.
-     * 
+     *
      * @param vosuri
      * @param acceptsOrProvides
      * @param node The node object if available.
@@ -1060,7 +1056,7 @@ public class Main implements Runnable
     {
         // parse the query string
         String queryString = vosuri.getQuery();
-        final String viewKey = "view="; 
+        final String viewKey = "view=";
         String[] queries = queryString.split("&");
         String viewRef = null;
         List<String> params = new ArrayList<String>();
@@ -1084,7 +1080,7 @@ public class Main implements Runnable
             log.debug("View not found in query string, using default view");
             return null;
         }
-        
+
         // get the node object if necessary
         if (node == null)
         {
@@ -1098,7 +1094,7 @@ public class Main implements Runnable
                         "Node " + vosuri.getPath() + " not found.");
             }
         }
-        
+
         // determine if the view is supported
         URI viewURI = null;
         for (URI uri : acceptsOrProvides.getViews(node))
@@ -1108,14 +1104,14 @@ public class Main implements Runnable
                 viewURI = uri;
             }
         }
-        
+
         if (viewURI == null)
         {
             throw new IllegalArgumentException(
                     "View '" + viewRef + "' not supported by node " +
                     node.getUri().toString());
         }
-        
+
         // add the view parameters
         View view = new View(viewURI);
         if (params.size() > 0)
@@ -1163,7 +1159,7 @@ public class Main implements Runnable
 
     /**
      * Initialize command member variables based on arguments passed in.
-     * 
+     *
      * @param argMap    The parsed arguments to this command.
      */
     private void init(ArgumentMap argMap)
@@ -1172,7 +1168,7 @@ public class Main implements Runnable
         try
         {
             this.subject = CertCmdArgUtil.initSubject(argMap, true);
-            
+
             // check that loaded certficate chain is valid right now
             // TODO: should this be moved into CertCmdArgUtil?
             if (subject != null)
@@ -1240,7 +1236,7 @@ public class Main implements Runnable
                     File f = new File(strSrc);
                     if (!f.exists() || !f.canRead())
                         throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
-                    
+
                     // Predetermine delete permission on file -- fail on attempt for now
                     // if (this.operation.equals(Operation.MOVE))
                     // {
@@ -1254,7 +1250,7 @@ public class Main implements Runnable
                     //         throw new IllegalArgumentException("Permission to remove source file " + strSrc + " denied.");
                     //     }
                     // }
-                    
+
                     try
                     {
                         this.source = new URI("file", f.getAbsolutePath(), null);
@@ -1306,13 +1302,13 @@ public class Main implements Runnable
                     throw new IllegalArgumentException("Local copy and move operations not yet supported.");
                 }
                 else
-                {   
+                {
                     // server to server copy/move
                     if (this.operation.equals(Operation.COPY))
                     {
                         throw new IllegalArgumentException("Copy within vospace is not yet supported.");
-                    }   
-                    
+                    }
+
                     URI destServerUri = null;
                     try
                     {
@@ -1332,7 +1328,7 @@ public class Main implements Runnable
                     {
                         throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
                     }
-                    
+
                     if (!serverUri.equals(destServerUri))
                     {
                         throw new IllegalArgumentException("Move between two vospace services is not yet supported.");
@@ -1471,7 +1467,7 @@ public class Main implements Runnable
         {
             String strTarget = argMap.getValue(ARG_TARGET);
             if (strTarget == null) throw new IllegalArgumentException("Argument target is required for " + this.operation);
-            
+
             if (this.operation.equals(Operation.CREATE))
             {
                 String strNodeType = argMap.getValue(ARG_CREATE);
@@ -1483,7 +1479,7 @@ public class Main implements Runnable
                 {
                     String strLink = argMap.getValue(ARG_LINK);
                     if (strLink == null) throw new IllegalArgumentException("Argument link is required for node type " + strNodeType);
-                    
+
                     try
                     {
                         this.link = new URI(strLink);
@@ -1491,20 +1487,20 @@ public class Main implements Runnable
                     catch (URISyntaxException e)
                     {
                         throw new IllegalArgumentException("Invalid URI: " + strLink);
-                    }  
-                    
+                    }
+
                     this.nodeType = NodeType.LINK_NODE;
                 }
                 else if ("StructuredDataNode".equalsIgnoreCase(strNodeType))
                     this.nodeType = NodeType.STRUCTURED_DATA_NODE;
-                else 
+                else
                     throw new IllegalArgumentException("Unsupported node type: " + strNodeType);
             }
         }
 
         // optional properties
         this.properties = new ArrayList<NodeProperty>();
-        
+
         String propFile = argMap.getValue(ARG_PROP);
         if (propFile != null)
         {
@@ -1594,7 +1590,7 @@ public class Main implements Runnable
 
         if (contentMD5 != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
-        
+
         if (groupRead != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
         if (groupWrite != null)
@@ -1614,12 +1610,12 @@ public class Main implements Runnable
         /*
          * Note: When using "Format" in Eclipse, shorter lines in this string array are squeezed into one line.
          * This makes it hard to read or edit.
-         * 
+         *
          * A workaround is, lines are purposely extended with blank spaces to a certain length,
          * where the EOL is at about column 120 (including leading indenting spaces).
-         * 
+         *
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
-         * 
+         *
          */
             "",
             "Usage: java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
@@ -1704,7 +1700,7 @@ public class Main implements Runnable
         for (String line : um)
             msg(line);
     }
-    
+
     /**
      * Interface to allow abstraction between accepts and provides views.
      */

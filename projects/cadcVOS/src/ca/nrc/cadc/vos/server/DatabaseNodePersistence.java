@@ -180,7 +180,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO( vos.getAuthority() );
         Node ret = dao.getPath(vos.getPath(), allowPartialPath);
         if (ret == null)
-            throw new NodeNotFoundException("not found: " + vos.getURIObject().toASCIIString());
+            throw new NodeNotFoundException("not found: " + vos.getURI().toASCIIString());
         return ret;
     }
 

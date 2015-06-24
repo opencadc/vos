@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,13 +77,13 @@ import org.apache.log4j.Logger;
 
 /**
  * Data structure for the VOSpace transfer job description.
- * 
+ *
  * @author pdowler
  */
 public class Transfer
 {
     private static Logger log = Logger.getLogger(Transfer.class);
-    
+
     /**
      * Keep track of the vospace version since some things differ. This field
      * is here to facilitate reading and writing the same version of documents
@@ -90,7 +91,7 @@ public class Transfer
      */
     public int version = VOS.VOSPACE_20;
 
-    private VOSURI target;
+    private URI target;
     private Direction direction;
     private View view;
     private Long contentLength;
@@ -101,12 +102,12 @@ public class Transfer
     protected Transfer() { }
 
     /**
-     * Constructor for copying a node. This is
+     * Constructor for copying a node.
      * @param target
      * @param direction
      * @param protocols
      */
-    public Transfer(VOSURI target, Direction direction, List<Protocol> protocols)
+    public Transfer(URI target, Direction direction, List<Protocol> protocols)
     {
         this.target = target;
         this.direction = direction;
@@ -117,28 +118,28 @@ public class Transfer
 
     /**
      * Constructor for internal vospace move and copy operations.
-     * 
+     *
      * @param target
      * @param destination
      * @param keepBytes true for copy, false for move
      */
-    public Transfer(VOSURI target, VOSURI destination, boolean keepBytes)
+    public Transfer(URI target, VOSURI destination, boolean keepBytes)
     {
         this.target = target;
-        this.direction = new Direction(destination.getURIObject().toASCIIString());
+        this.direction = new Direction(destination.getURI().toASCIIString());
         this.keepBytes = keepBytes;
         this.protocols = new ArrayList<Protocol>();
     }
 
     /**
      * Constructor for copying a node with a specific view.
-     * 
+     *
      * @param target
      * @param direction
      * @param view
      * @param protocols
      */
-    public Transfer(VOSURI target, Direction direction, View view, List<Protocol> protocols)
+    public Transfer(URI target, Direction direction, View view, List<Protocol> protocols)
     {
         this.target = target;
         this.direction = direction;
@@ -149,7 +150,7 @@ public class Transfer
     }
 
     // complete ctor for use by TransferReader
-    Transfer(VOSURI target, Direction direction, View view,
+    Transfer(URI target, Direction direction, View view,
             List<Protocol> protocols, boolean keepBytes)
     {
         this.target = target;
@@ -160,7 +161,7 @@ public class Transfer
         if (this.protocols == null)
             this.protocols = new ArrayList<Protocol>();
     }
-    
+
     /**
      * Transfer uses the CADC quick transfer feature
      * @return True if client uses CADC quick copy feature
@@ -169,7 +170,7 @@ public class Transfer
     {
     	return this.quickTransfer;
     }
-    
+
     /**
      * Enable/Disable CADC quick transfer feature
      * @param quickCopy True if enable quick transfer, false otherwise
@@ -178,7 +179,7 @@ public class Transfer
     {
     	this.quickTransfer = quickTransfer;
     }
-    
+
     public String getEndpoint()
     {
         if (this.protocols != null)
@@ -190,7 +191,7 @@ public class Transfer
         }
         return null;
     }
-    public String getEndpoint(String strProtocol) 
+    public String getEndpoint(String strProtocol)
     {
         String rtn = null;
         if (this.protocols != null)
@@ -215,15 +216,15 @@ public class Transfer
     {
         this.contentLength = contentLength;
     }
-    
+
     /**
-     * Returns a list of endpoints matching the protocol. Order in the list is 
+     * Returns a list of endpoints matching the protocol. Order in the list is
      * as recommended by the server: clients should try the end points
      * in the given order.
      * @param strProtocol
      * @return
      */
-    public List<String> getAllEndpoints(String strProtocol) 
+    public List<String> getAllEndpoints(String strProtocol)
     {
         List<String> rtn = new ArrayList<String>();
         if (this.protocols != null)
@@ -237,15 +238,15 @@ public class Transfer
         }
         return rtn;
     }
-    
+
     /**
-     * Returns a list of endpoints matching the protocol. Order in the list is 
+     * Returns a list of endpoints matching the protocol. Order in the list is
      * as recommended by the server: clients should try the end points
      * in the given order.
      * @param strProtocol
      * @return
      */
-    public List<String> getAllEndpoints() 
+    public List<String> getAllEndpoints()
     {
         List<String> rtn = new ArrayList<String>();
         if (this.protocols != null)
@@ -257,14 +258,14 @@ public class Transfer
         }
         return rtn;
     }
-    
+
 
     public Direction getDirection()
     {
         return direction;
     }
 
-    public VOSURI getTarget()
+    public URI getTarget()
     {
         return target;
     }

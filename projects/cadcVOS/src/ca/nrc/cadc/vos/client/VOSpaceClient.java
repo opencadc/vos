@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -117,14 +117,14 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
 /**
- * VOSpace client library. This implementation 
- * 
+ * VOSpace client library. This implementation
+ *
  * @author zhangsa
  */
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    
+
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     // TODO: get this from capabilites obtained via registry lookup
@@ -140,7 +140,7 @@ public class VOSpaceClient
 
     /**
      * Constructor. XML Schema validation is enabled by default.
-     * 
+     *
      * @param baseUrl
      */
     public VOSpaceClient(String baseUrl)
@@ -153,7 +153,7 @@ public class VOSpaceClient
      * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
      * invalid VOSpace (node or transfer) or UWS (job) documents. However, performance
      * may be improved.
-     * 
+     *
      * @param baseUrl
      * @param enableSchemaValidation
      */
@@ -178,7 +178,7 @@ public class VOSpaceClient
     /**
      * Create the specified node. If the parent (container) nodes do not exist, they
      * will also be created.
-     * 
+     *
      * @param node
      * @return the created node
      */
@@ -190,7 +190,7 @@ public class VOSpaceClient
     /**
      * Create the specified node. If the parent (container) nodes do not exist, they
      * will also be created.
-     * 
+     *
      * @param node
      * @param checkForDuplicate If true, throw duplicate node exception if node
      * already exists.
@@ -215,7 +215,7 @@ public class VOSpaceClient
                     p = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri=" + NetUtil.encode(node.getUri().toString()));
                 else
                     p = this.getNode(parentURI.getPath(), "detail=min&limit=0");
-                
+
                 log.debug("found parent: " + parentURI);
                 if (p instanceof ContainerNode)
                     parent = (ContainerNode) p;
@@ -234,7 +234,7 @@ public class VOSpaceClient
             if (checkForDuplicate)
                 for (Node n : parent.getNodes())
                     if (n.getName().equals(node.getName()))
-                        throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURIObject().toASCIIString());
+                        throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
 
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
@@ -242,7 +242,7 @@ public class VOSpaceClient
             NodeOutputStream out = new NodeOutputStream(node);
             HttpUpload put = new HttpUpload(out, url);
             put.setContentType("text/xml");
-            
+
             runHttpTransfer(put);
 
             VOSClientUtil.checkFailure(put.getThrowable());
@@ -271,7 +271,7 @@ public class VOSpaceClient
 
     /**
      * Get Node.
-     *  
+     *
      * @param path      The path to the Node.
      * @return          The Node instance.
      * @throws NodeNotFoundException when the requested node does not exist on the server
@@ -306,9 +306,9 @@ public class VOSpaceClient
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(url, out);
-            
+
             runHttpTransfer(get);
-            
+
             VOSClientUtil.checkFailure(get.getThrowable());
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
@@ -344,20 +344,20 @@ public class VOSpaceClient
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
-            
+
             NodeWriter nodeWriter = new NodeWriter();
             StringBuilder nodeXML = new StringBuilder();
             nodeWriter.write(node, nodeXML);
             HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
-            
+
             runHttpTransfer(httpPost);
-  
+
             VOSClientUtil.checkFailure(httpPost.getThrowable());
-            
+
             String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
             rtnNode = nodeReader.read(responseBody);
-            
+
         }
         catch (IOException e)
         {
@@ -373,7 +373,7 @@ public class VOSpaceClient
         }
         return rtnNode;
     }
-    
+
     // create an async transfer job
     public ClientRecursiveSetNode setNodeRecursive(Node node)
     {
@@ -384,13 +384,13 @@ public class VOSpaceClient
             Writer stringWriter = new StringWriter();
             nodeWriter.write(node, stringWriter);
             URL postUrl = new URL(asyncNodePropsUrl);
-            
+
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
-            
+
             runHttpTransfer(httpPost);
-            
+
             VOSClientUtil.checkFailure(httpPost.getThrowable());
-            
+
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
 
@@ -429,7 +429,7 @@ public class VOSpaceClient
 
         if (Direction.pullFromVoSpace.equals(trans.getDirection()))
             return createTransferSync(trans);
-        
+
         return createTransferASync(trans);
     }
 
@@ -476,7 +476,7 @@ public class VOSpaceClient
             {
                 responseMessage += ": " + errorBody;
             }
-            
+
             responseCode = connection.getResponseCode();
             switch (responseCode)
             {
@@ -484,17 +484,17 @@ public class VOSpaceClient
                 break;
 
             case 500:
-                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body 
+                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body
                 // if the operation fails
                 //
-                // If a parent node in the URI path does not exist then 
+                // If a parent node in the URI path does not exist then
                 // the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity-body
                 //
-                // If a parent node in the URI path is a LinkNode, 
+                // If a parent node in the URI path is a LinkNode,
                 // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity-body.
                 throw new RuntimeException(responseMessage);
             case 401:
-                /* The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
+                /* The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
                  * if the user does not have permissions to perform the operation
                  */
                 String msg = responseMessage;
@@ -503,11 +503,11 @@ public class VOSpaceClient
                 throw new AccessControlException(msg);
             case 404:
                 /*
-                 * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body 
+                 * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body
                  * if the target node does not exist
-                 * 
-                 * If the target node in the URI path does not exist, 
-                 * the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body. 
+                 *
+                 * If the target node in the URI path does not exist,
+                 * the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body.
                  */
                 throw new IllegalArgumentException(responseMessage);
             case 423:
@@ -539,9 +539,9 @@ public class VOSpaceClient
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
             URL postUrl = new URL(asyncTransUrl);
-            
+
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
-            
+
             runHttpTransfer(httpPost);
 
             if (httpPost.getThrowable() != null)
@@ -549,7 +549,7 @@ public class VOSpaceClient
                 log.debug("Unable to post transfer because ", httpPost.getThrowable());
                 throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
             }
-            
+
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
 
@@ -572,7 +572,7 @@ public class VOSpaceClient
     private ClientTransfer createTransferSync(Transfer transfer)
     {
         try
-        {   
+        {
             URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = null;
         	if (transfer.isQuickTransfer())
@@ -582,7 +582,7 @@ public class VOSpaceClient
         		form.put("DIRECTION", transfer.getDirection().getValue());
         		form.put("PROTOCOL", transfer.getProtocols().iterator().
         				next().getUri()); // try first protocol?
-        		httpPost = new HttpPost(postUrl, form, false);        		
+        		httpPost = new HttpPost(postUrl, form, false);
         	}
         	else
         	{
@@ -590,10 +590,10 @@ public class VOSpaceClient
 	            TransferWriter writer = new TransferWriter();
 	            StringWriter sw = new StringWriter();
 	            writer.write(transfer, sw);
-	            	
+
 	            httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
         	}
-            
+
             runHttpTransfer(httpPost);
 
             if (httpPost.getThrowable() != null)
@@ -601,10 +601,10 @@ public class VOSpaceClient
                 log.debug("Unable to post transfer because ", httpPost.getThrowable());
                 throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
             }
-            
-            
+
+
             URL redirectURL = httpPost.getRedirectURL();
-            
+
             if (redirectURL == null)
             {
                 throw new RuntimeException("Redirect not received from UWS.");
@@ -620,17 +620,17 @@ public class VOSpaceClient
             	return new ClientTransfer(null, trf, false);
             }
             else
-            {	            
+            {
 	            log.debug("POST: transfer jobURL: " + redirectURL);
-	
-	
+
+
 	            // follow the redirect to run the job
 	            log.debug("GET - opening connection: " + redirectURL.toString());
 	            ByteArrayOutputStream out = new ByteArrayOutputStream();
 	            HttpDownload get = new HttpDownload(redirectURL, out);
-	            
+
 	            runHttpTransfer(get);
-	
+
 	            if (get.getThrowable() != null)
 	            {
 	                log.debug("Unable to run the job", get.getThrowable());
@@ -640,10 +640,10 @@ public class VOSpaceClient
                     log.debug("transfer response: " + transDoc);
 	            TransferReader txfReader = new TransferReader(schemaValidation);
 	            log.debug("GET - reading content: " + redirectURL);
-	            Transfer trans = txfReader.read(transDoc);
+	            Transfer trans = txfReader.read(transDoc, VOSURI.SCHEME);
 	            log.debug("GET - done: " + redirectURL);
 	            log.debug("negotiated transfer: " + trans);
-	
+
 	            URL jobURL = extractJobURL(this.baseUrl, redirectURL);
 	            return new ClientTransfer(jobURL, trans, schemaValidation);
             }
@@ -718,14 +718,14 @@ public class VOSpaceClient
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
     }
-    
+
     private void runHttpTransfer(HttpTransfer transfer)
     {
         if (sslSocketFactory != null)
             transfer.setSSLSocketFactory(sslSocketFactory);
-        
+
         transfer.run();
-        
+
         if (transfer.getSSLSocketFactory() != null)
             this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
@@ -744,7 +744,7 @@ public class VOSpaceClient
             NodeWriter writer = new NodeWriter();
             writer.write(node, out);
         }
-        
+
     }
-  
+
 }
