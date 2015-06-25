@@ -964,7 +964,7 @@ public class Main implements Runnable
         throws Throwable
     {
         VOSURI dest = new VOSURI(destination);
-        Transfer transfer = new Transfer(source, dest, false);
+        Transfer transfer = new Transfer(source, dest.getURI(), false);
         ClientTransfer trans = client.createTransfer(transfer);
 
         Thread abortThread = new ClientAbortThread(trans.getJobURL());

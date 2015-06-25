@@ -123,10 +123,10 @@ public class Transfer
      * @param destination
      * @param keepBytes true for copy, false for move
      */
-    public Transfer(URI target, VOSURI destination, boolean keepBytes)
+    public Transfer(URI target, URI destination, boolean keepBytes)
     {
         this.target = target;
-        this.direction = new Direction(destination.getURI().toASCIIString());
+        this.direction = new Direction(destination.toASCIIString());
         this.keepBytes = keepBytes;
         this.protocols = new ArrayList<Protocol>();
     }
