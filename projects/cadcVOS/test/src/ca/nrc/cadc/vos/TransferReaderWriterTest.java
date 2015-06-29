@@ -460,7 +460,7 @@ public class TransferReaderWriterTest
         try
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
-            Transfer transfer = new Transfer(target, dest, false);
+            Transfer transfer = new Transfer(target, dest.getURI(), false);
             log.debug("testTransferMoveNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -492,7 +492,7 @@ public class TransferReaderWriterTest
         try
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
-            Transfer transfer = new Transfer(target, dest, true);
+            Transfer transfer = new Transfer(target, dest.getURI(), true);
             log.debug("testTransferCopyNode: " + transfer);
 
             StringWriter sw = new StringWriter();
