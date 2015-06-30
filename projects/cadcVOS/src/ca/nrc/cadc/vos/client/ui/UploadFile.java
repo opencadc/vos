@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -97,19 +97,19 @@ import ca.nrc.cadc.vos.client.VOSpaceTransferListener;
 
 /**
  * Class to upload the supplied file to vospace as the DataNode.
- * 
+ *
  * @author majorb
  *
  */
 public class UploadFile implements VOSpaceCommand
 {
-    
+
     protected static final Logger log = Logger.getLogger(UploadFile.class);
-    
+
     private DataNode dataNode;
     private File file;
     private DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-    
+
     public UploadFile(DataNode dataNode, File file)
     {
         if (dataNode == null)
@@ -136,17 +136,17 @@ public class UploadFile implements VOSpaceCommand
         catch (NodeNotFoundException e)
         {
             // create it if it doesn't exist
-        
+
             // create the data node (and any directories above that don't
             // exist.)
             log.debug("Creating data node: " + dataNode);
             vospaceClient.createNode(dataNode, false);
         }
-        
+
         // upload the file through a transfer
         log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
         List<Protocol> protocols = new ArrayList<Protocol>();
-        
+
         boolean ssl = false;
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
@@ -158,20 +158,20 @@ public class UploadFile implements VOSpaceCommand
                     ssl = true;
             }
         }
-        
+
         if (ssl)
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
         else
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
-        Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
+        Transfer transfer = new Transfer(dataNode.getUri().getURI(), Direction.pushToVoSpace, null, protocols);
         ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);
-        
+
         clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
         clientTransfer.setSSLSocketFactory(vospaceClient.getSslSocketFactory());
         clientTransfer.setFile(file);
-        
+
         clientTransfer.runTransfer();
 
         ExecutionPhase ep = clientTransfer.getPhase();
@@ -185,7 +185,7 @@ public class UploadFile implements VOSpaceCommand
         else if ( !ExecutionPhase.COMPLETED.equals(ep) )
             throw new RuntimeException("Unexpected upload state: " + ep.name());
     }
-    
+
     @Override
     public String toString()
     {

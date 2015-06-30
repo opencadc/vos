@@ -94,7 +94,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
-    
+
     public DeleteContainerNodeTest()
     {
         super();
@@ -121,7 +121,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             // Try and get the node from vospace
             response = get(node.sampleNode);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
-            
+
             log.info("deleteContainerNode passed.");
         }
         catch (Exception unexpected)
@@ -145,7 +145,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 
             // Get a ContainerNode.
             TestNode node = getSampleContainerNode();
-            
+
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
@@ -153,10 +153,10 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             // TODO: how do you delete a node without permissions?
             response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 401", 401, response.getResponseCode());
-        
+
             // Response entity body should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
-            
+
             // Check that the node wasn't created
             response = get(node.sampleNode);
             assertEquals("GET response code should be 404 for a deleted node", 404, response.getResponseCode());
@@ -190,7 +190,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 
             // Response entity body should contain 'NodeNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
-            
+
             log.info("nodeNotFoundFault passed.");
         }
         catch (Exception unexpected)
@@ -199,10 +199,10 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
-     * If a parent node in the URI path does not exist then the service 
-     * MUST throw a HTTP 404 status code including a ContainerNotFound 
+     * If a parent node in the URI path does not exist then the service
+     * MUST throw a HTTP 404 status code including a ContainerNotFound
      * fault in the entity-body
      */
     @Test
@@ -221,7 +221,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
-            
+
             log.info("containerNotFoundFault passed.");
         }
         catch (Exception unexpected)
@@ -232,7 +232,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
     }
 
     /**
-     * If a parent node in the URI path is a LinkNode, the service MUST 
+     * If a parent node in the URI path is a LinkNode, the service MUST
      * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
      */
 //    @Ignore("Currently not supported")
@@ -251,9 +251,9 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 
             // Get a ContainerNode.
             TestNode node = getSampleContainerNode();
-            
+
             // Add ContainerNode as target to a LinkNode.
-            LinkNode linkNode = getSampleLinkNode("", node.sampleNode.getUri().getURIObject());
+            LinkNode linkNode = getSampleLinkNode("", node.sampleNode.getUri().getURI());
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(node.sampleNode);
@@ -261,7 +261,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 
             // Response entity body should contain 'LinkFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("LinkFound"));
-            
+
             log.info("linkFoundFault passed.");
         }
         catch (Exception unexpected)
@@ -270,5 +270,5 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
 }

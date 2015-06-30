@@ -109,7 +109,7 @@ public class GetNodeActionTest extends AbstractNodeActionTest<GetNodeAction>
         
         expect(getMockNodeS().getUri()).andReturn(getTestSubject().vosURI).anyTimes();
         
-        expect(getTestSubject().vosURI.getURIObject()).andReturn(vosURIObject).anyTimes();
+        expect(getTestSubject().vosURI.getURI()).andReturn(vosURIObject).anyTimes();
         expect(getTestSubject().vosURI.getPath()).andReturn("/parent/" + nodeName).anyTimes();
         //expect(getTestSubject().vosURI.getQuery()).andReturn(null).atLeastOnce();
         

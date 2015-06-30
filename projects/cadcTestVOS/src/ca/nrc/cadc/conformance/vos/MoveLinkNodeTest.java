@@ -102,12 +102,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
-    
+
     public MoveLinkNodeTest()
     {
         super(ASYNC_TRANSFER_ENDPOINT);
     }
-    
+
     @Test
     public void moveLinkNodeToContainerNode()
     {
@@ -120,23 +120,23 @@ public class MoveLinkNodeTest extends VOSTransferTest
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
             }
-            
+
             // Add DataNode as target to a LinkNode.
             LinkNode targetNode = getSampleLinkNode();
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
             response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
-            
+
             // Phase should be COMPLETED
             assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
@@ -147,15 +147,15 @@ public class MoveLinkNodeTest extends VOSTransferTest
             // Get the moved nodes.
             response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
-            LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURIObject());
+
+            LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURI());
             response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            
+
             log.info("moveLinkNodeToContainerNode passed.");
         }
         catch (Exception unexpected)
@@ -191,7 +191,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.sampleNodeWithLink.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.getUri().getURI(), destinationNode.sampleNodeWithLink.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be COMPLETED
@@ -205,7 +205,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
-            LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURIObject());
+            LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURI());
             response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
@@ -221,7 +221,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
      * User does not have permissions to perform the operation.
      * errorSummary Permission Denied
@@ -254,12 +254,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.sampleNodeWithLink.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.getUri().getURI(), destinationNode.sampleNodeWithLink.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -268,14 +268,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Permission Denied", "Permission Denied", message);
             assertEquals("ErrorSummary message should be PermissionDenied", "PermissionDenied", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -290,7 +290,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
      * Source node does not exist
      * errorSummary Node Not Found
@@ -308,7 +308,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
             }
-            
+
             // Target LinkNode, don't persist.
             LinkNode targetNode = getSampleLinkNode();
 
@@ -318,12 +318,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
-            
+
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -332,14 +332,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Node Not Found", "Node Not Found", message);
             assertEquals("ErrorSummary message should be NodeNotFound", "NodeNotFound", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'NodeNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -384,12 +384,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.getUri().getURI(), destinationNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
-            
+
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -398,20 +398,20 @@ public class MoveLinkNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertThat(message, JUnitMatchers.containsString("Duplicate Node"));
             assertThat(message, JUnitMatchers.containsString("DuplicateNode"));
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'DuplicateNode'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
             response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            
+
             log.info("duplicateNodeFault passed.");
         }
         catch (Exception unexpected)
@@ -420,7 +420,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
      * A specified URI is invalid
      * errorSummary Invalid URI
@@ -453,12 +453,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -467,14 +467,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
             assertEquals("ErrorSummary message should be DuplicateNode", "DuplicateNode", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'DuplicateNode'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -489,5 +489,5 @@ public class MoveLinkNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
 }

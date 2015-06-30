@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -74,6 +74,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlException;
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ import org.apache.log4j.Level;
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
  * and (probably) valid X509 proxy certficates. TODO: provide this as an integration
  * test  or rewrite it using a mock http layer (sounds hard).
- * 
+ *
  * @author zhangsa
  */
 //@Ignore("Broken - Please fix soon.\n" +
@@ -109,7 +110,7 @@ public class ClientTransferTest
     {
         Log4jInit.setLevel(ClientTransferTest.class.getPackage().getName(), Level.INFO);
     }
-    
+
     String endpoint;
     VOSpaceClient client;
 
@@ -124,14 +125,14 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
-        VOSURI target = new VOSURI("vos://example.com!vospace/mydir/myfile");
+        URI target = new URI("vos://example.com!vospace/mydir/myfile");
         Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {
             @Override
             protected void runHttpTransfer(HttpTransfer transfer)
             {
-                
+
                 try
                 {
                     assertEquals("Use first endpoint", new URL(URL1), transfer.getURL());
@@ -145,7 +146,7 @@ public class ClientTransferTest
         ct.setFile(new File("/dev/null"));
         ct.runTransfer();
     }
-    
+
     @Test
     public void testDownloadSecondEndpoint() throws Exception
     {
@@ -157,7 +158,7 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
-        VOSURI target = new VOSURI("vos://example.com!vospace/mydir/myfile");
+        URI target = new URI("vos://example.com!vospace/mydir/myfile");
         Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {
@@ -182,8 +183,8 @@ public class ClientTransferTest
         ct.setFile(new File("/dev/null"));
         ct.runTransfer();
     }
-    
-    
+
+
     @Test(expected=IOException.class)
     public void testDownloadFailedEndpoints() throws Exception
     {
@@ -192,7 +193,7 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
-        VOSURI target = new VOSURI("vos://example.com!vospace/mydir/myfile");
+        URI target = new URI("vos://example.com!vospace/mydir/myfile");
         Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {

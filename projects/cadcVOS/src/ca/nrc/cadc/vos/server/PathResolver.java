@@ -256,7 +256,7 @@ public class PathResolver
         {
             try
             {
-                node = (Node) readAuthorizer.getReadPermission(vosuri.getURIObject());
+                node = (Node) readAuthorizer.getReadPermission(vosuri.getURI());
             }
             catch(FileNotFoundException ex)
             {

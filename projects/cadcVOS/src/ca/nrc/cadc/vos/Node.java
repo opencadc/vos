@@ -185,8 +185,8 @@ public abstract class Node implements Comparable<Object>
         if (! (o1 instanceof Node))
             throw new ClassCastException("compareTo requires a Node, got: " + o1.getClass().getName());
         Node rhs = (Node) o1;
-        String s1 = this.getUri().getURIObject().toASCIIString();
-        String s2 = rhs.getUri().getURIObject().toASCIIString();
+        String s1 = this.getUri().getURI().toASCIIString();
+        String s2 = rhs.getUri().getURI().toASCIIString();
 
         return s1.compareTo(s2);
     }
