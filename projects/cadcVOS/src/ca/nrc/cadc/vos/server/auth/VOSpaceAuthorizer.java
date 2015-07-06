@@ -95,7 +95,6 @@ import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
-import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -127,7 +126,6 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String CADC_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/gms";
     private static final String CANFAR_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/canfargms";
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
@@ -143,7 +141,6 @@ public class VOSpaceAuthorizer implements Authorizer
 
     private NodePersistence nodePersistence;
     private RegistryClient registryClient;
-    private GmsClient cadcGMS;
     private GMSClient canfarGMS;
     
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
@@ -162,12 +159,7 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             this.registryClient = new RegistryClient();
             
-            // TODO: allow configuration of known/trusted GMS services
-            URL url = registryClient.getServiceURL(new URI(CADC_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
-            LOG.debug(CADC_GMS_SERVICE_ID + " -> " + url);
-            this.cadcGMS = new GmsClient(url.toExternalForm());
-            
-            url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            URL url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
             LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
             this.canfarGMS = new GMSClient(url.toExternalForm());
         }
@@ -210,6 +202,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
+     * @throws TransientException
      */
     @Override
     public Object getReadPermission(URI uri)
@@ -473,14 +466,6 @@ public class VOSpaceAuthorizer implements Authorizer
                         isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
                         profiler.checkpoint("canfarGMS.ismember");
                         LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
-                                + x500Principal.getName() + ") returned " + isMember);
-                        if (isMember)
-                            return true;
-                        
-                        // call CADC GMS
-                        isMember = cadcGMS.isMember(guri.getFragment(), x500Principal);
-                        profiler.checkpoint("cadcGMS.ismember");
-                        LOG.debug("cadcGMS.isMember(" + guri.getFragment() + "," 
                                 + x500Principal.getName() + ") returned " + isMember);
                         if (isMember)
                             return true;
