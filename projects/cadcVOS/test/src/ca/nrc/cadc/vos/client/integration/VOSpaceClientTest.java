@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -109,7 +109,7 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
  * and (probably) valid X509 proxy certficates. TODO: provide this as an integration
  * test  or rewrite it using a mock http layer (sounds hard).
- * 
+ *
  * @author zhangsa
  */
 //@Ignore("Broken - Please fix soon.\n" +
@@ -337,7 +337,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
 
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_SUBJECT, "sz_subject"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "sz_description"));
@@ -347,11 +347,11 @@ public class VOSpaceClientTest
         properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "sz_type"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_FORMAT, "sz_format"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_IDENTIFIER, "sz_identifier"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_SOURCE, "sz_source")); 
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "sz_language")); 
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_RELATION, "sz_relation")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_SOURCE, "sz_source"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "sz_language"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_RELATION, "sz_relation"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_COVERAGE, "sz_coverage"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_RIGHTS, "sz_rights")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_RIGHTS, "sz_rights"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "sz_availableSpace"));
 
         nodeRtn2.setProperties(properties);
@@ -374,7 +374,7 @@ public class VOSpaceClientTest
         log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        VOSURI vosURI = new VOSURI(VOS_URI + slashPath1);
+        URI vosURI = new URI(VOS_URI + slashPath1);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
@@ -402,11 +402,11 @@ public class VOSpaceClientTest
         Assert.assertNotNull(origFile);
         log.debug(origFile.getAbsolutePath());
         log.debug(origFile.getCanonicalPath());
-        
+
         Assert.assertEquals(FileUtil.compare(origFile, file), true);
         // file.delete();
     }
-    
+
     //@Test
     public void testQuickPushPull() throws Exception
     {
@@ -417,7 +417,7 @@ public class VOSpaceClientTest
         log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        VOSURI vosURI = new VOSURI(VOS_URI + slashPath1);
+        URI vosURI = new URI(VOS_URI + slashPath1);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
@@ -464,7 +464,7 @@ public class VOSpaceClientTest
         Assert.assertNotNull(origFile);
         log.debug(origFile.getAbsolutePath());
         log.debug(origFile.getCanonicalPath());
-        
+
         Assert.assertEquals(FileUtil.compare(origFile, file), true);
         // file.delete();
     }

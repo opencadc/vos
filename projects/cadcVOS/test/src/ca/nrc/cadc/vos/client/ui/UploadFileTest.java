@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -98,7 +98,7 @@ import ca.nrc.cadc.vos.client.VOSpaceTransferListener;
 public class UploadFileTest
 {
     private static Logger log = Logger.getLogger(UploadFileTest.class);
-    
+
     private static String ROOT_URI = "vos://cadc.nrc.ca~vospace/uploadFileTest";
 
     /**
@@ -109,7 +109,7 @@ public class UploadFileTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
-    
+
     @Test
     public void testNullNodeArgument() throws Exception
     {
@@ -124,7 +124,7 @@ public class UploadFileTest
             Assert.assertTrue("wrong error", e.getMessage().contains("dataNode cannot be null"));
         }
     }
-    
+
     @Test
     public void testNullFileArgument() throws Exception
     {
@@ -140,7 +140,7 @@ public class UploadFileTest
             Assert.assertTrue("wrong error", e.getMessage().contains("file cannot be null"));
         }
     }
-    
+
     @Test
     public void testFileActuallyADirectory() throws Exception
     {
@@ -157,7 +157,7 @@ public class UploadFileTest
             Assert.assertTrue("wrong error", e.getMessage().contains("not a file"));
         }
     }
-    
+
     @Test
     public void testFileNotReadable() throws Exception
     {
@@ -181,36 +181,36 @@ public class UploadFileTest
                 testFile.setReadable(true);
         }
     }
-    
+
     @Test
     public void testNewNode() throws Exception
     {
         VOSURI uri = new VOSURI(ROOT_URI + "/newDataNode");
         DataNode dataNode = new DataNode(uri);
-        
+
         File testFile = new File("test/src/resources/testFile");
         UploadFile uploadFile = new UploadFile(dataNode, testFile);
-        
+
         VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        
+
         EasyMock.expect(mockClient.getNode("/uploadFileTest/newDataNode", "limit=0&detail=min")).andThrow(new NodeNotFoundException(uri.getPath())).once();
-        
+
         EasyMock.expect(mockClient.createNode(dataNode, false)).andReturn(dataNode).once();
-        
+
         setupSuccessfulFileUpload(dataNode, testFile, mockClient);
         EasyMock.replay(mockClient);
-        
+
         uploadFile.execute(mockClient);
-        
+
         EasyMock.verify(mockClient);
     }
-    
+
     private void setupSuccessfulFileUpload(DataNode dataNode, File testFile, VOSpaceClient mockClient)
             throws Exception
     {
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-        Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols)
+        Transfer transfer = new Transfer(dataNode.getUri().getURI(), Direction.pushToVoSpace, null, protocols)
         {
             @Override
             public boolean equals(Object t)
@@ -227,7 +227,7 @@ public class UploadFileTest
                 return true;
             }
         };
-        
+
         EasyMock.expect(mockClient.createTransfer(transfer)).andReturn(mockClientTransfer).once();
         EasyMock.expect(mockClient.getSslSocketFactory()).andReturn(null).once();
         mockClientTransfer.setMaxRetries(Integer.MAX_VALUE);

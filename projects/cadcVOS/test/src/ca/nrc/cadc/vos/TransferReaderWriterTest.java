@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -96,10 +96,10 @@ public class TransferReaderWriterTest
 
     private String baseURI = "vos://example.com!vospace";
     private List<Protocol> protocols;
-    private VOSURI target;
+    private URI target;
 
     @BeforeClass
-    public static void setUpBeforeClass() 
+    public static void setUpBeforeClass()
         throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
@@ -112,10 +112,10 @@ public class TransferReaderWriterTest
      * @throws java.lang.Exception
      */
     @Before
-    public void setUp() 
+    public void setUp()
         throws Exception
     {
-        target = new VOSURI(baseURI + "/mydir/myfile");
+        target = new URI(baseURI + "/mydir/myfile");
         protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
@@ -135,14 +135,14 @@ public class TransferReaderWriterTest
         Assert.assertEquals("target", transfer1.getTarget(), transfer2.getTarget());
 
         Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
-        
+
         Assert.assertEquals("keepBytes", transfer1.isKeepBytes(), transfer2.isKeepBytes());
 
         if (transfer1.getContentLength() != null)
             Assert.assertEquals("contentLength", transfer1.getContentLength(), transfer2.getContentLength());
         else
             Assert.assertNull("contentLength", transfer2.getContentLength());
-          
+
 
         if (transfer1.getView() != null)
         {
@@ -183,7 +183,7 @@ public class TransferReaderWriterTest
             log.debug("testPushPullTransfer\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
 
@@ -197,7 +197,7 @@ public class TransferReaderWriterTest
 
             log.debug("testPushPullTransfer\n" + xml);
 
-            transfer2 = reader.read(xml);
+            transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -208,7 +208,7 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
     public void testPushPullTransfer21() // test new schema compat with 2.0 content
     {
@@ -225,7 +225,7 @@ public class TransferReaderWriterTest
             log.debug("testPushPullTransfer\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
 
@@ -239,7 +239,7 @@ public class TransferReaderWriterTest
 
             log.debug("testPushPullTransfer\n" + xml);
 
-            transfer2 = reader.read(xml);
+            transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -250,7 +250,7 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
     public void testTransferWithViewAndNoParameters()
     {
@@ -259,7 +259,7 @@ public class TransferReaderWriterTest
             View view = new View(new URI(VOS.VIEW_ANY));
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
             log.debug("testTransferWithViewAndNoParameters: " + transfer);
-            
+
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
@@ -268,7 +268,7 @@ public class TransferReaderWriterTest
             log.debug("testTransferWithViewAndNoParameters\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -303,7 +303,7 @@ public class TransferReaderWriterTest
             log.debug("testTransferWithViewParameters\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -313,7 +313,7 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
     public void testTransferWithProtocolEndpoints()
     {
@@ -329,7 +329,7 @@ public class TransferReaderWriterTest
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, pe);
             log.debug("testTransferWithProtocolEndpoints: " + transfer);
-            
+
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
@@ -338,7 +338,7 @@ public class TransferReaderWriterTest
             log.debug("testTransferWithProtocolEndpoints\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -348,7 +348,7 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
     public void testPushPullTransferSecurityMethod() // VOSpace-2.1
     {
@@ -361,7 +361,7 @@ public class TransferReaderWriterTest
             get = new Protocol(VOS.PROTOCOL_HTTPS_GET);
             get.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
             proto21.add(get);
-            
+
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
@@ -370,15 +370,15 @@ public class TransferReaderWriterTest
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
-            
+
             Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
             Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
 
             log.debug("testPushPullTransfer\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
-            
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
+
             Assert.assertEquals(VOS.VOSPACE_21, transfer2.version);
 
             compareTransfers(transfer, transfer2);
@@ -390,7 +390,7 @@ public class TransferReaderWriterTest
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             put.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
             proto21.add(put);
-            
+
             transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
@@ -401,10 +401,10 @@ public class TransferReaderWriterTest
 
             Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
             Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
-            
+
             log.debug("testPushPullTransfer\n" + xml);
 
-            transfer2 = reader.read(xml);
+            transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -414,7 +414,7 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
     public void testPushTransferContentLengthParam() // VOSpace-2.1
     {
@@ -425,7 +425,7 @@ public class TransferReaderWriterTest
             proto21.add(put);
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto21.add(put);
-            
+
             Transfer transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
             transfer.setContentLength(666L);
             transfer.version = VOS.VOSPACE_21; // swugly test
@@ -435,14 +435,14 @@ public class TransferReaderWriterTest
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
-            
+
             Assert.assertTrue(xml.contains(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             log.debug("testPushTransferContentLengthParam\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
-            
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
+
             Assert.assertEquals(VOS.VOSPACE_21, transfer2.version);
 
             compareTransfers(transfer, transfer2);
@@ -460,7 +460,7 @@ public class TransferReaderWriterTest
         try
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
-            Transfer transfer = new Transfer(target, dest, false);
+            Transfer transfer = new Transfer(target, dest.getURI(), false);
             log.debug("testTransferMoveNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -471,7 +471,7 @@ public class TransferReaderWriterTest
             log.debug("testTransferMoveNode\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -485,14 +485,14 @@ public class TransferReaderWriterTest
             log.debug("testTransferMoveNode - DONE");
         }
     }
-    
+
     @Test
     public void testTransferCopyNode()
     {
         try
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
-            Transfer transfer = new Transfer(target, dest, true);
+            Transfer transfer = new Transfer(target, dest.getURI(), true);
             log.debug("testTransferCopyNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -503,7 +503,7 @@ public class TransferReaderWriterTest
             log.debug("testTransferCopyNode\n" + xml);
 
             TransferReader reader = new TransferReader();
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
 
             compareTransfers(transfer, transfer2);
         }
@@ -514,7 +514,7 @@ public class TransferReaderWriterTest
         }
     }
 
-    
+
     @Test
     public void testInvalidTransferXml()
     {
@@ -528,7 +528,7 @@ public class TransferReaderWriterTest
         TransferReader reader = new TransferReader();
         try
         {
-            Transfer transfer2 = reader.read(xml);
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
             Assert.fail("Did not handle invalid Transfer XML properly");
         }
         catch(Exception expected)
