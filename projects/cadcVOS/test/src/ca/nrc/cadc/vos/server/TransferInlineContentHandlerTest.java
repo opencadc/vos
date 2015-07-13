@@ -66,8 +66,7 @@ public class TransferInlineContentHandlerTest
         dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         baseDate = dateFormat.parse(TEST_DATE);
 
-        VOSURI target = new VOSURI("vos://cadc.nrc.ca!vospace/mydata");
-        View view = new View(new URI(VOS.VIEW_DEFAULT));
+        URI target = new URI("vos://cadc.nrc.ca!vospace/mydata");
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
@@ -100,7 +99,7 @@ public class TransferInlineContentHandlerTest
                 Assert.fail("Content-Type not set to text/xml should have thrown IllegalArgumentException");
             }
             catch (IllegalArgumentException ignore) {}
-            
+
             try
             {
                 handler.accept("filename", "text/xml", null);
@@ -115,7 +114,7 @@ public class TransferInlineContentHandlerTest
             Assert.assertEquals("text/xml", jobInfo.getContentType());
 
             TransferReader reader = new TransferReader();
-            Transfer newTransfer = reader.read(jobInfo.getContent());
+            Transfer newTransfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
 
             Assert.assertEquals("vos uri", transfer.getTarget(), newTransfer.getTarget());
             Assert.assertEquals("dirdction", transfer.getDirection(), newTransfer.getDirection());

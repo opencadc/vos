@@ -139,22 +139,22 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
-            
+
             // Invalid Protocol should not be returned.
             assertNotNull("protocols", result.transfer.getProtocols());
             assertTrue("has some protocols", !result.transfer.getProtocols().isEmpty());
-            
+
             // Get the endpoint.
             for (Protocol p : result.transfer.getProtocols())
             {
                 Assert.assertTrue("wrong protocol: " + p.getEndpoint(), p.getEndpoint().startsWith("http"));
-                
+
                 try
                 {
                     new URL(p.getEndpoint());
@@ -165,16 +165,16 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
                     fail("malformed endpoint URL: " + p.getEndpoint() + ", " + mex);
                 }
             }
-            
+
             // Get the Job.
             response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
-            
+
             // Job phase should be EXECUTING.
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
             assertEquals("Job phase should be EXECUTING", ExecutionPhase.EXECUTING, job.getExecutionPhase());
-            
+
             // Upload some data.
 //            String text = "This is my VOSpace upload";
 //            ByteArrayInputStream is = new ByteArrayInputStream(text.getBytes("UTF-8"));
@@ -185,11 +185,11 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
 //            {
 //                fail("failed to upload file: " + upload.getThrowable().getMessage());
 //            }
-            
+
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            
+
             log.info("testPushToVOSpace passed");
         }
         catch (Exception unexpected)
@@ -211,13 +211,13 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
                 log.debug("LinkNodes not supported, skipping test.");
                 return;
             }
-            
+
             // Get a DataNode.
             TestNode dataNode = getSampleDataNode();
             dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Create a LinkNode to the DataNode
             LinkNode linkNode = getSampleLinkNode(dataNode.sampleNode);
             response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
@@ -228,20 +228,20 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pushToVoSpace, null, protocols);
+            Transfer transfer = new Transfer(linkNode.getUri().getURI(), Direction.pushToVoSpace, null, protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
-            
+
             for (Protocol p : result.transfer.getProtocols())
             {
                 Assert.assertTrue("wrong protocol: " + p.getEndpoint(), p.getEndpoint().startsWith("http"));
-                
-                try { 
+
+                try {
                         URL actualURL = new URL(p.getEndpoint());
-                        assertTrue("URL not resolved" , 
+                        assertTrue("URL not resolved" ,
                                 actualURL.getPath().endsWith(dataNode.sampleNode.getName()));
                     }
                 catch(Exception unexpected)
@@ -263,7 +263,7 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Ignore("not implemented")
     @Test
     public void permissionDeniedFault()
@@ -300,25 +300,25 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
-            
+
             // Should be no Protocols if Job in ERROR phase.
             assertTrue("no protocols", result.transfer.getProtocols() == null || result.transfer.getProtocols().isEmpty());
-            
+
             // Get the Job.
             response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
-            
+
             // Job phase should be ERROR.
             assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
-            
+
             // ErrorSummary should be 'View Not Supported'.
             // TODO: change to 'View Not Supported' when UWS supports error representation text.
             //assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
@@ -354,25 +354,25 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             // Request the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol("http://localhost/path"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, null, protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
-            
+
             // Should be no Protocols if Job in ERROR phase.
             assertTrue(result.transfer.getProtocols().isEmpty());
-            
+
             // Get the Job.
             response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
-            
+
             // Job phase should be ERROR.
             assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
-            
+
             // ErrorSummary should be 'Protocol Not Supported'.
             assertEquals("Protocol Not Supported", job.getErrorSummary().getSummaryMessage());
 

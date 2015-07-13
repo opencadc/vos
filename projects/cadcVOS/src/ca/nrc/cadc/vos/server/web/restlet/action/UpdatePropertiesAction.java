@@ -111,7 +111,7 @@ public class UpdatePropertiesAction extends NodeAction
     {
         // locks don't apply to property updates
         voSpaceAuthorizer.setDisregardLocks(true);
-        Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURIObject());
+        Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURI());
         return node;
     }
 

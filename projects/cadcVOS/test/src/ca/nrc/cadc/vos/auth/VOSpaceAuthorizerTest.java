@@ -139,7 +139,7 @@ public class VOSpaceAuthorizerTest
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
-        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, vos.getURIObject());
+        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, vos.getURI());
         Subject.doAs(subject, action);
         
         verify(np);
@@ -167,7 +167,7 @@ public class VOSpaceAuthorizerTest
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
-        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURI());
         try
         {
             Subject.doAs(subject, action);
@@ -207,7 +207,7 @@ public class VOSpaceAuthorizerTest
         
         // create the delegation cookie
         DelegationToken dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), vos.getURIObject(), expiry.getTime());
+                new HttpPrincipal(NODE_OWNER_ID), vos.getURI(), expiry.getTime());
         
         Subject subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -216,7 +216,7 @@ public class VOSpaceAuthorizerTest
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
-        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURI());
         Subject.doAs(subject, action);
         
         verify(np);
@@ -237,7 +237,7 @@ public class VOSpaceAuthorizerTest
         // create the delegation cookie
         dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID), 
-                vos.getParentURI().getURIObject(), expiry.getTime());
+                vos.getParentURI().getURI(), expiry.getTime());
         subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
         subject.getPublicCredentials().add(dt);
@@ -245,7 +245,7 @@ public class VOSpaceAuthorizerTest
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
-        action = new WritePermissionAction( voSpaceAuthorizer, vos.getURIObject());
+        action = new WritePermissionAction( voSpaceAuthorizer, vos.getURI());
         Subject.doAs(subject, action);
         
         verify(np);
@@ -268,7 +268,7 @@ public class VOSpaceAuthorizerTest
         // fake persistent node
         node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
-        action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        action = new WritePermissionAction(voSpaceAuthorizer, vos.getURI());
         try
         {
             Subject.doAs(subject, action);
