@@ -87,21 +87,22 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.VOSURI;
 
 public class TransferInlineContentHandler implements InlineContentHandler
 {
     private static Logger log = Logger.getLogger(TransferInlineContentHandler.class);
-    
+
     // 6Kb XML Doc size limit
     private static final long DOCUMENT_SIZE_MAX = 6144L;
-    
+
     private static final String TEXT_XML = "text/xml";
 
     private List<Parameter> parameterList;
     private JobInfo jobInfo;
 
     public TransferInlineContentHandler() { }
-    
+
     public void setParameterList(List<Parameter> parameterList)
     {
         this.parameterList = parameterList;
@@ -118,7 +119,7 @@ public class TransferInlineContentHandler implements InlineContentHandler
     {
         return jobInfo;
     }
-    
+
     public URL accept(String name, String contentType, InputStream inputStream)
         throws InlineContentException, IOException
     {
@@ -127,7 +128,7 @@ public class TransferInlineContentHandler implements InlineContentHandler
 
         if (inputStream == null)
             throw new IOException("The InputStream is closed");
-        
+
         // wrap the input stream in a byte counter to limit bytes read
         ByteCountInputStream sizeLimitInputStream =
             new ByteCountInputStream(inputStream, DOCUMENT_SIZE_MAX);
@@ -135,7 +136,7 @@ public class TransferInlineContentHandler implements InlineContentHandler
         try
         {
             TransferReader reader = new TransferReader(true);
-            Transfer transfer = reader.read(sizeLimitInputStream);
+            Transfer transfer = reader.read(sizeLimitInputStream, VOSURI.SCHEME);
             log.debug("Transfer: read " + sizeLimitInputStream.getByteCount() + " bytes.");
             TransferWriter tw = new TransferWriter();
             StringWriter sw = new StringWriter();
@@ -148,5 +149,5 @@ public class TransferInlineContentHandler implements InlineContentHandler
         }
         return null;
     }
-    
+
 }

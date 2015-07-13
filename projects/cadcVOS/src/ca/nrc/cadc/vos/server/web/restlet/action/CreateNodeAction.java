@@ -123,7 +123,7 @@ public class CreateNodeAction extends NodeAction
         catch (NodeNotFoundException ex)
         {
             // parent does not exist: FAIL
-            throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
         }
     }
 
@@ -141,7 +141,7 @@ public class CreateNodeAction extends NodeAction
                 for (Node n : parent.getNodes())
                 {
                     if (n.getName().equals(clientNode.getName()))
-                        throw new NodeAlreadyExistsException(vosURI.getURIObject().toASCIIString());
+                        throw new NodeAlreadyExistsException(vosURI.getURI().toASCIIString());
                 }
                 
                 clientNode.setParent(parent);

@@ -103,7 +103,7 @@ import org.junit.Test;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
- * 
+ *
  * @author jburke
  */
 public class MoveVOSpaceInternalTest extends VOSTransferTest
@@ -152,8 +152,8 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(),
-                    containerNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(),
+                    containerNode.sampleNode.getUri().getURI(), false);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -298,8 +298,8 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri(),
-                    containerNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(linkNode.getUri().getURI(),
+                    containerNode.sampleNode.getUri().getURI(), false);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -440,7 +440,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
             log.debug("DEST ContainerNode created");
-            
+
             // create a link to the container node
             LinkNode linkNode = getSampleLinkNode(containerNode.sampleNode);
             response = put(VOSBaseTest.NODE_ENDPOINT, linkNode,
@@ -454,8 +454,8 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(),
-                    linkNode.getUri(), false);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(),
+                    linkNode.getUri().getURI(), false);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -561,7 +561,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
-            
+
             // Delete the link node
             response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
             assertEquals("DELETE response code should be 200", 200,
