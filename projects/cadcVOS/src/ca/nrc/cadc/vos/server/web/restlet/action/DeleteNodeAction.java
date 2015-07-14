@@ -120,7 +120,7 @@ public class DeleteNodeAction extends NodeAction
         }
         catch (NodeNotFoundException ex)
         {
-            throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
         }
     }
 

@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -83,7 +83,7 @@ import org.jdom2.output.XMLOutputter;
 
 /**
  * Writes a Transfer as XML to an output.
- * 
+ *
  * @author Sailor Zhang
  */
 public class TransferWriter implements XmlProcessor
@@ -134,14 +134,14 @@ public class TransferWriter implements XmlProcessor
             vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_21);
         else
             throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
-        
+
         Element root = new Element("transfer", vosNamespace);
         //root.addNamespaceDeclaration(vosNamespace);
 
         Element e = null;
 
         e = new Element("target", vosNamespace);
-        e.addContent(transfer.getTarget().getURIObject().toASCIIString());
+        e.addContent(transfer.getTarget().toASCIIString());
         root.addContent(e);
 
         e = new Element("direction", vosNamespace);
@@ -184,11 +184,11 @@ public class TransferWriter implements XmlProcessor
                 root.addContent(pr);
             }
         }
-            
+
         e = new Element("keepBytes", vosNamespace);
         e.addContent(Boolean.toString(transfer.isKeepBytes()));
         root.addContent(e);
-        
+
         // added in VOSpace-2.1
         if (transfer.version >= VOS.VOSPACE_21 && transfer.getContentLength() != null)
         {

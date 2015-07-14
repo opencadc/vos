@@ -79,6 +79,8 @@ import java.net.URISyntaxException;
  */
 public class VOSURI
 {
+    public static final String SCHEME = "vos";
+
     private URI vosURI;
 
     /**
@@ -96,7 +98,7 @@ public class VOSURI
         {
             path = path.substring(0, path.length() - 1);
         }
-        
+
         try
         {
             vosURI = new URI(uri.getScheme(), uri.getAuthority(),
@@ -108,7 +110,7 @@ public class VOSURI
         }
 
         // Check the scheme is vos
-        if (vosURI.getScheme() == null || !vosURI.getScheme().equalsIgnoreCase("vos")) 
+        if (vosURI.getScheme() == null || !vosURI.getScheme().equalsIgnoreCase(SCHEME))
             throw new IllegalArgumentException("URI scheme must be vos: " + uri.toString());
     }
 
@@ -117,7 +119,7 @@ public class VOSURI
      * is expected to be vos, else a URISyntaxException will be thrown.
      *
      * @param uri String representation of a URI to decode.
-     * @throws URISyntaxException if uri violates RFC 2396 
+     * @throws URISyntaxException if uri violates RFC 2396
      * @throws IllegalArgumentException if the URI scheme is not vos
      * @throws NullPointerException if uri is null
      */
@@ -158,10 +160,10 @@ public class VOSURI
 
     /**
      * Returns the underlying URI object.
-     * 
+     *
      * @return The URI object for this VOSURI.
      */
-    public URI getURIObject()
+    public URI getURI()
     {
         return vosURI;
     }
@@ -246,7 +248,7 @@ public class VOSURI
     {
         if ( isRoot() )
             return null;
-        
+
         try
         {
             String path = getParent();
@@ -289,7 +291,7 @@ public class VOSURI
      * for VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/nodeWithPropertiesA"),
      * it returns:
      * URI("ivo://cadc.nrc.ca/vospace")
-     * 
+     *
      * @throws URISyntaxException
      * @author Sailor Zhang, 2010-07-15
      */

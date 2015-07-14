@@ -94,7 +94,7 @@ public class DeleteLinkNodeTest extends VOSNodeTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
-    
+
     public DeleteLinkNodeTest()
     {
         super();
@@ -157,7 +157,7 @@ public class DeleteLinkNodeTest extends VOSNodeTest
 
             // Get a DataNode.
             LinkNode node = getSampleLinkNode();
-            
+
             // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
@@ -219,8 +219,8 @@ public class DeleteLinkNodeTest extends VOSNodeTest
     }
 
     /**
-     * If a parent node in the URI path does not exist then the service 
-     * MUST throw a HTTP 404 status code including a ContainerNotFound 
+     * If a parent node in the URI path does not exist then the service
+     * MUST throw a HTTP 404 status code including a ContainerNotFound
      * fault in the entity-body
      */
     @Test
@@ -256,7 +256,7 @@ public class DeleteLinkNodeTest extends VOSNodeTest
     }
 
     /**
-     * If a parent node in the URI path is a LinkNode, the service MUST 
+     * If a parent node in the URI path is a LinkNode, the service MUST
      * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
      */
 //    @Ignore("Currently not supported")
@@ -275,9 +275,9 @@ public class DeleteLinkNodeTest extends VOSNodeTest
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
-            
+
             // Add LinkNode as target to a LinkNode.
-            LinkNode linkNode = getSampleLinkNode("", node.getUri().getURIObject());
+            LinkNode linkNode = getSampleLinkNode("", node.getUri().getURI());
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(node);
@@ -285,7 +285,7 @@ public class DeleteLinkNodeTest extends VOSNodeTest
 
             // Response entity body should contain 'LinkFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("LinkFound"));
-            
+
             log.info("linkFoundFault passed.");
         }
         catch (Exception unexpected)
@@ -294,5 +294,5 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
 }
