@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -120,22 +120,22 @@ public class TransferReader implements XmlProcessor
             String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
             if (vospaceSchemaUrl20 == null)
                 throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_20 + " in classpath");
-            
+
             String vospaceSchemaUrl21 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_21, TransferReader.class);
             if (vospaceSchemaUrl21 == null)
                 throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_21 + " in classpath");
-            
+
             this.schemaMap = new HashMap<String, String>();
             schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl20);
             schemaMap.put(VOSPACE_NS_21, vospaceSchemaUrl21);
-            
+
             log.debug("schema validation enabled");
         }
         else
             log.debug("schema validation disabled");
     }
 
-    public Transfer read(Reader reader)
+    public Transfer read(Reader reader, String targetScheme)
         throws IOException, TransferParsingException
     {
         try
@@ -143,7 +143,7 @@ public class TransferReader implements XmlProcessor
             // TODO: investigate creating a SAXBuilder once and re-using it
             // as long as we can detect concurrent access (a la java collections)
             Document doc = XmlUtil.buildDocument(reader, schemaMap);
-            return parseTransfer(doc);
+            return parseTransfer(doc, targetScheme);
         }
         catch(JDOMException ex)
         {
@@ -155,21 +155,21 @@ public class TransferReader implements XmlProcessor
         }
     }
 
-    public Transfer read(InputStream in)
+    public Transfer read(InputStream in, String targetScheme)
         throws IOException, TransferParsingException
     {
         InputStreamReader reader = new InputStreamReader(in);
-        return read(reader);
+        return read(reader, targetScheme);
     }
 
-    public Transfer read(String string)
+    public Transfer read(String string, String targetScheme)
         throws IOException, TransferParsingException
     {
         StringReader reader = new StringReader(string);
-        return read(reader);
+        return read(reader, targetScheme);
     }
 
-    private Transfer parseTransfer(Document document)
+    private Transfer parseTransfer(Document document, String targetScheme)
         throws URISyntaxException
     {
         Element root = document.getRootElement();
@@ -181,10 +181,13 @@ public class TransferReader implements XmlProcessor
             version = VOS.VOSPACE_21;
         else
             throw new IllegalArgumentException("unexpected VOSpace namespace: " + vosNS.getURI());
-            
+
         Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet
-        VOSURI target = new VOSURI(root.getChildText("target", vosNS));
+        URI target = new URI(root.getChildText("target", vosNS));
+
+        if (targetScheme != null && !targetScheme.equalsIgnoreCase(target.getScheme()))
+            throw new IllegalArgumentException("Target scheme must be: " + targetScheme);
 
         // TODO: get view nodes and uri attribute
         View view = null;
@@ -211,10 +214,10 @@ public class TransferReader implements XmlProcessor
         boolean keepBytes = true;
         if (keepBytesStr != null)
             keepBytes = keepBytesStr.equalsIgnoreCase("true");
-        
+
         Transfer ret = new Transfer(target, direction, view, protocols, keepBytes);
         ret.version = version;
-        
+
         // optional param(s) added in VOSpace-2.1
         if (version >= VOS.VOSPACE_21)
         {
@@ -238,7 +241,7 @@ public class TransferReader implements XmlProcessor
                     log.debug("skip unknown param: " + uri);
             }
         }
-                
+
         return ret;
     }
 
@@ -246,10 +249,10 @@ public class TransferReader implements XmlProcessor
     {
         Direction rtn = null;
         String strDirection = root.getChildText("direction", vosNS);
-        
+
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
-        
+
         if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.getValue()))
             rtn = Direction.pullFromVoSpace;
         else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.getValue()))
@@ -276,12 +279,12 @@ public class TransferReader implements XmlProcessor
                 Element eProtocol = (Element) obj;
                 String uri = eProtocol.getAttributeValue("uri");
                 Protocol p = new Protocol(uri);
-                
+
                 // optional ndpoint
                 String endpoint = eProtocol.getChildText("endpoint", vosNS);
                 if (endpoint != null)
                     p.setEndpoint(endpoint);
-                
+
                 // optional securityMethod added in VOSpace-2.1
                 if (version >= VOS.VOSPACE_21)
                 {

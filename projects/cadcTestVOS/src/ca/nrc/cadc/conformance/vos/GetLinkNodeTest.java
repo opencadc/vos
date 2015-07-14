@@ -96,12 +96,12 @@ import org.junit.matchers.JUnitMatchers;
 public class GetLinkNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(GetLinkNodeTest.class);
-    
+
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
-    
+
     public GetLinkNodeTest()
     {
         super();
@@ -136,17 +136,17 @@ public class GetLinkNodeTest extends VOSNodeTest
             DataNode nodeC = new DataNode(new VOSURI(nodeB.getUri() + "/C"));
             response = put(VOSBaseTest.NODE_ENDPOINT, nodeC, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Child link node link2B
-            LinkNode link2B = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2B"), nodeB.getUri().getURIObject());
+            LinkNode link2B = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2B"), nodeB.getUri().getURI());
             response = put(VOSBaseTest.NODE_ENDPOINT, link2B, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Child link node link2C
-            LinkNode link2C = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2C"), nodeC.getUri().getURIObject());
+            LinkNode link2C = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2C"), nodeC.getUri().getURI());
             response = put(VOSBaseTest.NODE_ENDPOINT, link2C, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Child link node link2www
             LinkNode link2www = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2www"), new URI("http://localhost"));
             response = put(VOSBaseTest.NODE_ENDPOINT, link2www, new NodeWriter());
@@ -159,14 +159,14 @@ public class GetLinkNodeTest extends VOSNodeTest
             log.debug("GET XML:\r\n" + xml);
             NodeReader reader = new NodeReader();
             reader.read(xml);
-            
+
             // Get and validate link node link2B
             response = get(VOSBaseTest.NODE_ENDPOINT, link2B);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
             reader.read(xml);
-            
+
             // Get and validate link node link2C
             response = get(VOSBaseTest.NODE_ENDPOINT, link2C);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
@@ -181,7 +181,7 @@ public class GetLinkNodeTest extends VOSNodeTest
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
             reader.read(xml);
-            
+
             // Get and validate link node link2C
             response = get(VOSBaseTest.NODE_ENDPOINT, link2www);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
@@ -206,7 +206,7 @@ public class GetLinkNodeTest extends VOSNodeTest
      * min: the returned record for the node contains minimum detail with all
      * optional parts removed - the node type should be returned
      * e.g. <Node uri="vos://service/name" xsi:type="Node"/>
-     * 
+     *
      * Detail parameter not currently supported.
      */
     @Ignore("min detail parameter not currently implemented")
@@ -263,12 +263,12 @@ public class GetLinkNodeTest extends VOSNodeTest
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
-    } 
+    }
 
     /*
-     * max: the returned record for the node contains the maximum detail, 
+     * max: the returned record for the node contains the maximum detail,
      * including any xsi:type specific extensions
-     * 
+     *
      * Detail parameter not currently supported.
      */
     @Ignore("max detail parameter not currently implemented")
@@ -323,11 +323,11 @@ public class GetLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /*
-     * properties: the returned record for the node contains the basic node 
+     * properties: the returned record for the node contains the basic node
      * element with a list of properties but no xsi:type specific extensions
-     * 
+     *
      * Detail parameter not currently supported.
      */
     @Ignore("properties detail parameter not currently implemented")
@@ -445,11 +445,11 @@ public class GetLinkNodeTest extends VOSNodeTest
 
     /*
      * limit with an integer value indicating the maximum number of results in the response.
-     * 
-     * No limit indicates a request for an unpaged list. However the server 
-     * MAY still impose its own limit on the size of an individual response, 
+     *
+     * No limit indicates a request for an unpaged list. However the server
+     * MAY still impose its own limit on the size of an individual response,
      * splitting the results into more than one page if required.
-     * 
+     *
      * limit parameter not currently supported.
      */
     @Ignore("limit parameter not currently implemented")
@@ -493,7 +493,7 @@ public class GetLinkNodeTest extends VOSNodeTest
             assertEquals("Node properties should have a single property", 1, validatedNode.getProperties().size());
 
             // TODO validate that there are X number of child nodes in the target node.
-            
+
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -506,9 +506,9 @@ public class GetLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
-     * The service SHALL throw a HTTP 401 status code including a PermissionDenied 
+     * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
     @Ignore("Currently unable to test authorization")
@@ -527,7 +527,7 @@ public class GetLinkNodeTest extends VOSNodeTest
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
-            
+
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
@@ -547,9 +547,9 @@ public class GetLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
-     * The service SHALL throw a HTTP 404 status code including a NodeNotFound 
+     * The service SHALL throw a HTTP 404 status code including a NodeNotFound
      * fault in the entity-body if the target Node does not exist
      */
     @Test
@@ -583,5 +583,5 @@ public class GetLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
 }

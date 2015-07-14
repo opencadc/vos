@@ -359,11 +359,11 @@ public class VOSURITest
 
             VOSURI parentBang = vosBang.getParentURI();
             Assert.assertNotNull(parentBang);
-            Assert.assertEquals(bang + "/container", parentBang.getURIObject().toASCIIString());
+            Assert.assertEquals(bang + "/container", parentBang.getURI().toASCIIString());
 
             VOSURI parentTilde = vosTilde.getParentURI();
             Assert.assertNotNull(parentTilde);
-            Assert.assertEquals(tilde + "/container", parentTilde.getURIObject().toASCIIString());
+            Assert.assertEquals(tilde + "/container", parentTilde.getURI().toASCIIString());
         }
         catch(Exception unexpected)
         {
@@ -415,11 +415,11 @@ public class VOSURITest
 
             VOSURI parentBang = vosBang.getParentURI();
             Assert.assertNotNull(parentBang);
-            Assert.assertEquals(bang, parentBang.getURIObject().toASCIIString());
+            Assert.assertEquals(bang, parentBang.getURI().toASCIIString());
 
             VOSURI parentTilde = vosTilde.getParentURI();
             Assert.assertNotNull(parentTilde);
-            Assert.assertEquals(tilde, parentTilde.getURIObject().toASCIIString());
+            Assert.assertEquals(tilde, parentTilde.getURI().toASCIIString());
 
             VOSURI root = new VOSURI(new URI(tilde));
             VOSURI noParent = root.getParentURI();

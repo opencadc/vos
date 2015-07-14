@@ -116,7 +116,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
     }
 
     /**
-     * Test currently depends on the transferDetails being in the Job Results 
+     * Test currently depends on the transferDetails being in the Job Results
      * as soon as the Job is put in the EXECUTING phase. If the Job is set to
      * executing, and afterwards the Job Results are updated with the
      * transferDetails URI, the test may fail.
@@ -139,7 +139,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -166,7 +166,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            
+
             log.info("testPushToVOSpace passed.");
         }
         catch (Exception unexpected)
@@ -200,7 +200,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNodeWithLink.getUri(), Direction.pushToVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNodeWithLink.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -274,11 +274,11 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
-            
+
             // Job should be in ERROR phase.
             ExecutionPhase phase = result.job.getExecutionPhase();
             if (phase == ExecutionPhase.ERROR)
@@ -296,7 +296,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            
+
             log.info("viewNotSupportedFault passed.");
         }
         catch (Exception unexpected)
@@ -323,7 +323,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol("http://localhost/path"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);

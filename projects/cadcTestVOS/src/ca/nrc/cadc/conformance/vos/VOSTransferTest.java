@@ -77,6 +77,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.xml.XmlUtil;
 import com.meterware.httpunit.WebResponse;
 import java.io.IOException;
@@ -98,7 +99,7 @@ import org.xml.sax.SAXException;
 
 /**
  * Base class for testing Transfer resources.
- * 
+ *
  * @author jburke
  */
 public class VOSTransferTest extends VOSBaseTest
@@ -106,7 +107,7 @@ public class VOSTransferTest extends VOSBaseTest
     private static Logger log = Logger.getLogger(VOSTransferTest.class);
 
     protected static final String UWS_SCHEMA = "http://www.ivoa.net/xml/UWS/v1.0";
-    
+
     protected String uwsSchemaUrl;
     protected Namespace xlinkNamespace;
 
@@ -116,7 +117,7 @@ public class VOSTransferTest extends VOSBaseTest
     public VOSTransferTest(String jobResource)
     {
         super(jobResource);
-        
+
         uwsSchemaUrl = XmlUtil.getResourceUrlString("UWS-v1.0.xsd", VOSTransferTest.class);
         xlinkNamespace = Namespace.getNamespace("http://www.w3.org/1999/xlink");
     }
@@ -233,7 +234,7 @@ public class VOSTransferTest extends VOSBaseTest
 
         // Create a Transfer from Transfer XML.
         TransferReader reader = new TransferReader();
-        transfer = reader.read(xml);
+        transfer = reader.read(xml, VOSURI.SCHEME);
         return new TransferResult(transfer, null, jobPath);
     }
 
@@ -322,7 +323,7 @@ public class VOSTransferTest extends VOSBaseTest
 
                 // Create a Transfer from Transfer XML.
                 TransferReader transferReader = new TransferReader();
-                transfer = transferReader.read(xml);
+                transfer = transferReader.read(xml, VOSURI.SCHEME);
                 break;
             }
 
