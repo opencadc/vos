@@ -102,15 +102,15 @@ public class MoveContainerNodeTest extends VOSTransferTest
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
-    
+
     public MoveContainerNodeTest()
     {
         super(ASYNC_TRANSFER_ENDPOINT);
     }
-    
+
     /**
-     * When the source is a ContainerNode, all its children 
-     * (the full contents of the container) SHALL get copied, 
+     * When the source is a ContainerNode, all its children
+     * (the full contents of the container) SHALL get copied,
      * i.e. this is a deep recursive copy.
      */
     @Test
@@ -136,19 +136,19 @@ public class MoveContainerNodeTest extends VOSTransferTest
             DataNode nodeABC = new DataNode(new VOSURI(nodeAB.getUri() + "/C"));
             response = put(VOSBaseTest.NODE_ENDPOINT, nodeABC, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
+
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
             response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
-            
+
             // Wait for job to complete
             Thread.sleep(5000);
-            
+
             // Phase should be COMPLETED
             assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
@@ -158,19 +158,19 @@ public class MoveContainerNodeTest extends VOSTransferTest
 
             response = get(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("GET response code should be 200", 404, response.getResponseCode());
-            
+
             // Get the moved nodes.
             response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             ContainerNode nodeA = new ContainerNode(new VOSURI(destinationNode.sampleNode.getUri().toString() + "/" + targetNode.sampleNode.getName()));
             response = get(VOSBaseTest.NODE_ENDPOINT, nodeA);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             ContainerNode nodeB = new ContainerNode(new VOSURI(nodeA.getUri().toString() + "/B"));
             response = get(VOSBaseTest.NODE_ENDPOINT, nodeB);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             DataNode nodeC = new DataNode(new VOSURI(nodeB.getUri().toString() + "/C"));
             response = get(VOSBaseTest.NODE_ENDPOINT, nodeC);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
@@ -229,9 +229,9 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move without LinkNodes in the paths.
-            Transfer transfer = new Transfer(targetNode.sampleNodeWithLink.getUri(), destinationNode.sampleNodeWithLink.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNodeWithLink.getUri().getURI(), destinationNode.sampleNodeWithLink.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
-            
+
             // Wait for job to complete
             Thread.sleep(5000);
 
@@ -315,12 +315,12 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -329,14 +329,14 @@ public class MoveContainerNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Permission Denied", "Permission Denied", message);
             assertEquals("ErrorSummary message should be PermissionDenied", "PermissionDenied", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -351,7 +351,7 @@ public class MoveContainerNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
      * Source node does not exist
      * errorSummary Node Not Found
@@ -373,12 +373,12 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -387,14 +387,14 @@ public class MoveContainerNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Node Not Found", "Node Not Found", message);
             assertEquals("ErrorSummary message should be NodeNotFound", "NodeNotFound", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'NodeNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -407,7 +407,7 @@ public class MoveContainerNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     /**
      * A specified URI is invalid
      * errorSummary Invalid URI
@@ -434,12 +434,12 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
-            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri().getURI(), destinationNode.sampleNode.getUri().getURI(), false);
             TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-            
+
             // TODO: Modify UWS to allow separate error summary and text representation fields
             //       (summary with spaces, representation without)
             // This assertion is commented out until then.
@@ -448,14 +448,14 @@ public class MoveContainerNodeTest extends VOSTransferTest
             String message = errorSummary.getSummaryMessage();
             //assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
             assertEquals("ErrorSummary message should be DuplicateNode", "DuplicateNode", message);
-            
+
             // Get the error endpoint.
             response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
+
             // Error should contain 'DuplicateNode'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
-            
+
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -470,5 +470,5 @@ public class MoveContainerNodeTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
 }

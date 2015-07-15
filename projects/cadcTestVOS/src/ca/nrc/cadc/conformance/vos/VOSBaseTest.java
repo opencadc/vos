@@ -120,13 +120,13 @@ public abstract class VOSBaseTest
     protected VOSURI baseURI;
     protected URL resourceURL;
     protected URL serviceURL;
-    
+
     protected boolean supportLinkNodes;
     protected boolean resolvePathNodes;
     protected boolean resolveTargetNode;
-    
+
     public static final String NODE_ENDPOINT = "/nodes";
-    
+
     /**
      * Constructor takes a path argument, which is the path to the resource
      * being tested, i.e. /nodes or /transfers. A System property service.url
@@ -136,7 +136,7 @@ public abstract class VOSBaseTest
      * @param path to the resource to test.
      */
     public VOSBaseTest(String path)
-    {        
+    {
         try
         {
             // Base URI for the test nodes.
@@ -180,7 +180,7 @@ public abstract class VOSBaseTest
             {
                 resolvePathNodes = false;
             }
-            
+
             // Service resolves target node if it's a LinkNode.
             propertyName = VOSTestSuite.class.getName() + ".resolveTargetNode";
             propertyValue = System.getProperty(propertyName);
@@ -198,7 +198,7 @@ public abstract class VOSBaseTest
         {
             throw new RuntimeException("failed to init VOSpace URI and URL for tests", t);
         }
-        
+
         dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
         log.debug("serviceURL: " + serviceURL);
@@ -209,14 +209,14 @@ public abstract class VOSBaseTest
     }
 
     /**
-     * 
+     *
      * @return a ContainerNode.
      */
     private ContainerNode getBaseTestNode()
     {
         return getBaseTestNode(null);
     }
-    
+
     /**
      * @param service endpoint.
      * @return a ContainerNode.
@@ -256,7 +256,7 @@ public abstract class VOSBaseTest
         }
         return baseTestNode;
     }
-    
+
     /**
      * @param service endpoint.
      * @return a ContainerNode.
@@ -269,7 +269,7 @@ public abstract class VOSBaseTest
             LinkNode sampleLinkNode = null;
 
             // Create the root test suite container node.
-            String testSuiteNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() + 
+            String testSuiteNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() +
                                        "/" + VOSTestSuite.testSuiteNodeName;
             try
             {
@@ -307,7 +307,7 @@ public abstract class VOSBaseTest
                                                "/" + VOSTestSuite.testSuiteLinkNodeName;
                 try
                 {
-                    sampleLinkNode = new LinkNode(new VOSURI(testSuiteLinkNodeName), sampleNode.getUri().getURIObject());
+                    sampleLinkNode = new LinkNode(new VOSURI(testSuiteLinkNodeName), sampleNode.getUri().getURI());
                     String resourceUrl = getResourceUrl(endpoint) + sampleLinkNode.getUri().getPath();
                     log.debug("**************************************************");
                     log.debug("HTTP PUT: " + resourceUrl);
@@ -334,7 +334,7 @@ public abstract class VOSBaseTest
                     throw new RuntimeException("Cannot create test suite LinkNode " + testSuiteLinkNodeName, t);
                 }
             }
-            
+
             testSuiteNode = new TestNode(sampleNode, sampleLinkNode);
         }
         return testSuiteNode;
@@ -386,7 +386,7 @@ public abstract class VOSBaseTest
     {
         return getSampleDataNode("");
     }
-    
+
     /**
      * Builds and returns a sample DataNode for use in test cases.
      *
@@ -419,7 +419,7 @@ public abstract class VOSBaseTest
         }
         return new TestNode(node, nodeWithLink);
     }
-    
+
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
@@ -431,7 +431,7 @@ public abstract class VOSBaseTest
     {
         return getSampleLinkNode(new URI("http://www.google.com"));
     }
-    
+
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
@@ -442,10 +442,10 @@ public abstract class VOSBaseTest
     protected LinkNode getSampleLinkNode(Node target)
         throws URISyntaxException
     {
-        return getSampleLinkNode("", target.getUri().getURIObject());
+        return getSampleLinkNode("", target.getUri().getURI());
     }
-    
-    
+
+
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
@@ -459,7 +459,7 @@ public abstract class VOSBaseTest
         return getSampleLinkNode("", target);
     }
 
-    
+
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
@@ -472,7 +472,7 @@ public abstract class VOSBaseTest
         throws URISyntaxException
     {
         // List of NodeProperty
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", 
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description",
                 "Link to " + target.getPath());
         nodeProperty.setReadOnly(true);
 
@@ -484,13 +484,13 @@ public abstract class VOSBaseTest
         node.getProperties().add(nodeProperty);
         return node;
     }
-    
+
     /**
      * Delete a Node from the VOSpace.
      *
      * @param node to be deleted.
      * @return a HttpUnit WebResponse.
-     * @throws IOException 
+     * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
     protected WebResponse delete(Node node)
@@ -505,7 +505,7 @@ public abstract class VOSBaseTest
      * @param service endpoint.
      * @param node to be deleted.
      * @return a HttpUnit WebResponse.
-     * @throws IOException 
+     * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
     protected WebResponse delete(String endpoint, Node node)
@@ -537,7 +537,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-    
+
     /**
      * Gets a Node from the VOSpace.
      *
@@ -551,7 +551,7 @@ public abstract class VOSBaseTest
     {
         return get(node, null);
     }
-    
+
     /**
     * Gets a Node from the VOSpace.
     *
@@ -647,7 +647,7 @@ public abstract class VOSBaseTest
         StringBuilder sb = new StringBuilder();
         NodeWriter nodeWriter = new NodeWriter();
         nodeWriter.write(node, sb);
-        
+
         ByteArrayInputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
 
         WebRequest request = new PostMethodWebRequest(resourceUrl, in, "text/xml");
@@ -713,7 +713,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-    
+
     /**
      * Put a DataNode or LinkNode to the VOSpace.
      *
@@ -769,7 +769,7 @@ public abstract class VOSBaseTest
         }
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
-        
+
         StringBuilder sb = new StringBuilder();
         writer.write(node, sb);
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
@@ -825,7 +825,7 @@ public abstract class VOSBaseTest
     {
         return post(null, parameters);
     }
-    
+
     /**
      * Post parameters to the service url.
      *
@@ -882,7 +882,7 @@ public abstract class VOSBaseTest
     {
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceURL);
-        
+
         ByteArrayInputStream in = new ByteArrayInputStream(xml.getBytes("UTF-8"));
 
         WebRequest request = new PostMethodWebRequest(resourceURL.toExternalForm(), in, "text/xml");
@@ -953,5 +953,5 @@ public abstract class VOSBaseTest
         else
             return (new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + endpoint)).toExternalForm();
     }
-    
+
 }

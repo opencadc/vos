@@ -243,12 +243,12 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             Node persistentNode = nodePersistence.get(resource);
             if (! (persistentNode instanceof DataNode))
-                throw new IllegalArgumentException("not a data node: " + resource.getURIObject().toASCIIString());
+                throw new IllegalArgumentException("not a data node: " + resource.getURI().toASCIIString());
             return persistentNode;
         }
         catch(NodeNotFoundException ex)
         {
-            throw new FileNotFoundException(resource.getURIObject().toASCIIString());
+            throw new FileNotFoundException(resource.getURI().toASCIIString());
         }
     }
     
