@@ -162,7 +162,7 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             this.registryClient = new RegistryClient();
             
-            URL url = registryClient.getServiceURL(new URI(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
+            URL url = registryClient.getServiceURL(URI.create(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
             LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
             this.canfarGMS = new GMSClient(url.toExternalForm());
         }
@@ -174,11 +174,6 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             throw new RuntimeException("BUG: Error creating GMS Client", e);
         } 
-        catch (URISyntaxException e) 
-        {
-            throw new RuntimeException("BUG: Error creating GMS Client", e);
-        }
-
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -528,7 +523,7 @@ public class VOSpaceAuthorizer implements Authorizer
             // for use later.
             if (privateKeyChain == null)
             {
-                final CredClient cred = new CredClient(new URI(CRED_SERVICE_ID));
+                final CredClient cred = new CredClient(URI.create(CRED_SERVICE_ID));
                 Subject opsSubject = createOpsSubject();
                 try
                 {
@@ -558,10 +553,6 @@ public class VOSpaceAuthorizer implements Authorizer
         catch (AccessControlException e)
         {
             throw new RuntimeException("CredClient.getProxyCertficate failed", e);
-        }
-        catch (URISyntaxException e)
-        {
-            throw new RuntimeException("BUG: failed to call cred service", e);
         }
         catch (CertificateException e)
         {
