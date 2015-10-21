@@ -85,6 +85,7 @@ import java.util.TimeZone;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.util.FileUtil;
 import junit.framework.Assert;
 
 import org.apache.log4j.Level;
@@ -331,14 +332,14 @@ public class VOSpaceAuthorizerTest
      */
     public static String getCompleteKeysDirName()
     {
-        URL classLocation = 
+        URL classLocation =
                 VOSpaceAuthorizer.class.getResource("VOSpaceAuthorizer.class");
         if (!"file".equalsIgnoreCase(classLocation.getProtocol()))
         {
             throw new 
             IllegalStateException("SignatureUtil class is not stored in a file.");
         }
-        File classPath = new File(classLocation.getPath()).getParentFile();
+        final File classPath = FileUtil.getFileFromURL(classLocation).getParentFile();
         String packageName = VOSpaceAuthorizer.class.getPackage().getName();
         String packageRelPath = packageName.replace('.', File.separatorChar);
         
