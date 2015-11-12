@@ -265,11 +265,17 @@ public class FileSystemScannerTest
     @Test
     public void buildQueue() throws Exception
     {
+        // Accommodate Macs with the canonical path stuff!
         final String sourceDirectoryName = generateAlphaNumeric(16);
-        final File sourceDirectory = File.createTempFile(sourceDirectoryName,
-                                                         "");
-        assertTrue("Couldn't make temp directory", sourceDirectory.delete()
-                                                   && sourceDirectory.mkdir());
+        final File tmpDir = new File("/tmp/");
+        final File sourceDirectory = new File(tmpDir.getCanonicalPath()
+                                              + File.separator
+                                              + sourceDirectoryName);
+
+        sourceDirectory.mkdir();
+        sourceDirectory.deleteOnExit();
+
+        assertTrue("Couldn't make temp directory", sourceDirectory.exists());
 
         final File sourceDirectoryFile =
                 File.createTempFile("tempfile", generateAlphaNumeric(8),
