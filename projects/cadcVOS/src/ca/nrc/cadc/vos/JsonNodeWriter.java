@@ -73,11 +73,10 @@ package ca.nrc.cadc.vos;
 import ca.nrc.cadc.xml.JsonOutputter;
 import java.io.IOException;
 import java.io.Writer;
-
+import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.output.Format;
-import org.json.JSONException;
 
 /**
  *
@@ -85,20 +84,20 @@ import org.json.JSONException;
  */
 public class JsonNodeWriter extends NodeWriter
 {
-    protected void write(Element root, Writer writer)
+    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+
+    @Override
+    protected void write(Element root, Writer writer) 
         throws IOException
     {
         JsonOutputter outputter = new JsonOutputter();
+        outputter.getListElementNames().add("nodes");
+        outputter.getListElementNames().add("properties");
+        outputter.getListElementNames().add("accepts");
+        outputter.getListElementNames().add("provides");
+        
         outputter.setFormat(Format.getPrettyFormat());
         Document document = new Document(root);
-
-        try
-        {
-            outputter.output(document, writer);
-        }
-        catch (JSONException e)
-        {
-            throw new IOException(e);
-        }
+        outputter.output(document, writer);
     }
 }
