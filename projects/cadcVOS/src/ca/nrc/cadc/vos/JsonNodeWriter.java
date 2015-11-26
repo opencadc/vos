@@ -86,6 +86,7 @@ public class JsonNodeWriter extends NodeWriter
 {
     private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
+    @Override
     protected void write(Element root, Writer writer) 
         throws IOException
     {

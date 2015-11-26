@@ -390,7 +390,7 @@ public class NodeDAO
         }
         catch(Throwable t)
         {
-            
+
             if (dirtyRead != null)
                 try
                 {
@@ -689,6 +689,7 @@ public class NodeDAO
         NodeID nid = (NodeID) node.appData;
         if (nid.owner != null)
             return; // already loaded (parent loop below)
+
 
         Subject s = identityCache.get(nid.ownerObject);
         if (s == null)

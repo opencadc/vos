@@ -101,14 +101,15 @@
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.servlet" value="${ext.lib}/servlet-api.jar" />
     <property name="ext.jdom2" value="${ext.lib}/jdom2.jar" />
+    <property name="ext.json" value="${ext.lib}/json.jar" />
     <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
     <property name="resources.dir" value="test/resources/" />    
     
 
-    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcAccessControl}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.json}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcAccessControl}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
 
     <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
-    <property name="client.external.jars" value="${ext.jdom2}:${ext.xerces}:${ext.log4j}" />
+    <property name="client.external.jars" value="${ext.json}:${ext.jdom2}:${ext.xerces}:${ext.log4j}" />
     <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
     
     <target name="build" depends="compile,resources,manifest">
