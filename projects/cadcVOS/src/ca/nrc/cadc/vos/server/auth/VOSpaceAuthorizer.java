@@ -449,22 +449,14 @@ public class VOSpaceAuthorizer implements Authorizer
                     URI guri = new URI(groupURI);
                     if (guri.getFragment() != null)
                     {
-                        // check group membership for each x500 principal that exists
-                        boolean isMember;
-                        Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
-                        for (X500Principal x500Principal : x500Principals)
-                        {
-                            // TODO: we should be using the base group URI to decide which GMS service to
-                            // call, but CANFAR and CADC groups both have the same authority/base... doh!
+                        // TODO: we should be using the base group URI to decide which GMS service to
+                        // call, but CANFAR and CADC groups both have the same authority/base... doh!
 
-                            // call CANFAR GMS
-                            isMember = canfarGMS.isMember(x500Principal, guri.getFragment(), Role.MEMBER);
-                            profiler.checkpoint("canfarGMS.ismember");
-                            LOG.debug("canfarGMS.isMember(" + guri.getFragment() + "," 
-                                    + x500Principal.getName() + ") returned " + isMember);
-                            if (isMember)
-                                return true;
-                        }
+                        // call CANFAR GMS
+                        boolean isMember = canfarGMS.isMember(guri.getFragment(), Role.MEMBER);
+                        profiler.checkpoint("canfarGMS.ismember");
+                        if (isMember)
+                            return true;
                     }
                     else
                         LOG.warn("skipping invalid group URI (missing fragment): " + groupURI);
