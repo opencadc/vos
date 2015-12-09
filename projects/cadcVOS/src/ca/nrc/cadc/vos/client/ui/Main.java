@@ -117,8 +117,7 @@ public class Main
               for (String domain : domains)
               {   
                   SSOCookieCredential cred = new SSOCookieCredential(
-                      SSOCookieManager.DEFAULT_SSO_COOKIE_NAME + "=" +
-                              ssoCookieStr, domain.trim());
+                      ssoCookieStr, domain.trim());
                   subject.getPublicCredentials().add(cred);
               }
 
