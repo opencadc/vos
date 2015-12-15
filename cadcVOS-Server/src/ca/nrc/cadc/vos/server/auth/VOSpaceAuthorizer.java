@@ -89,11 +89,15 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.ac.Role;
+import ca.nrc.cadc.ac.UserNotFoundException;
+import ca.nrc.cadc.ac.client.GMSClient;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.cred.client.CredClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.reg.client.RegistryClient;
