@@ -1,0 +1,289 @@
+<!--
+************************************************************************
+*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+*
+*  (c) 2009.                            (c) 2009.
+*  Government of Canada                 Gouvernement du Canada
+*  National Research Council            Conseil national de recherches
+*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+*  All rights reserved                  Tous droits réservés
+*                                       
+*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+*  expressed, implied, or               énoncée, implicite ou légale,
+*  statutory, of any kind with          de quelque nature que ce
+*  respect to the software,             soit, concernant le logiciel,
+*  including without limitation         y compris sans restriction
+*  any warranty of merchantability      toute garantie de valeur
+*  or fitness for a particular          marchande ou de pertinence
+*  purpose. NRC shall not be            pour un usage particulier.
+*  liable in any event for any          Le CNRC ne pourra en aucun cas
+*  damages, whether direct or           être tenu responsable de tout
+*  indirect, special or general,        dommage, direct ou indirect,
+*  consequential or incidental,         particulier ou général,
+*  arising from the use of the          accessoire ou fortuit, résultant
+*  software.  Neither the name          de l'utilisation du logiciel. Ni
+*  of the National Research             le nom du Conseil National de
+*  Council of Canada nor the            Recherches du Canada ni les noms
+*  names of its contributors may        de ses  participants ne peuvent
+*  be used to endorse or promote        être utilisés pour approuver ou
+*  products derived from this           promouvoir les produits dérivés
+*  software without specific prior      de ce logiciel sans autorisation
+*  written permission.                  préalable et particulière
+*                                       par écrit.
+*                                       
+*  This file is part of the             Ce fichier fait partie du projet
+*  OpenCADC project.                    OpenCADC.
+*                                       
+*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+*  you can redistribute it and/or       vous pouvez le redistribuer ou le
+*  modify it under the terms of         modifier suivant les termes de
+*  the GNU Affero General Public        la “GNU Affero General Public
+*  License as published by the          License” telle que publiée
+*  Free Software Foundation,            par la Free Software Foundation
+*  either version 3 of the              : soit la version 3 de cette
+*  License, or (at your option)         licence, soit (à votre gré)
+*  any later version.                   toute version ultérieure.
+*                                       
+*  OpenCADC is distributed in the       OpenCADC est distribué
+*  hope that it will be useful,         dans l’espoir qu’il vous
+*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+*  without even the implied             GARANTIE : sans même la garantie
+*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+*  General Public License for           Générale Publique GNU Affero
+*  more details.                        pour plus de détails.
+*                                       
+*  You should have received             Vous devriez avoir reçu une
+*  a copy of the GNU Affero             copie de la Licence Générale
+*  General Public License along         Publique GNU Affero avec
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+*                                       <http://www.gnu.org/licenses/>.
+*
+*  $Revision: 4 $
+*
+************************************************************************
+-->
+
+	
+<project default="build" basedir=".">
+    <property environment="env"/>
+    <property file="local.build.properties" />
+
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+
+
+    <property name="project" value="cadcVOS" />
+
+    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="cadcAccessControl" value="${lib}/cadcAccessControl.jar" />
+    <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
+    <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
+    <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
+    <property name="cadcCDP" value="${lib}/cadcCDP.jar" />
+    <property name="cadcLog" value="${lib}/cadcLog.jar" />
+
+    <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
+    <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
+    <property name="ext.spring" value="${ext.lib}/spring.jar" />
+    <property name="ext.servlet" value="${ext.lib}/servlet-api.jar" />
+    <property name="ext.jdom2" value="${ext.lib}/jdom2.jar" />
+    <property name="ext.json" value="${ext.lib}/json.jar" />
+    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
+    <property name="resources.dir" value="test/resources/" />    
+    
+
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.json}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcAccessControl}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
+
+    <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
+    <property name="client.external.jars" value="${ext.json}:${ext.jdom2}:${ext.xerces}:${ext.log4j}" />
+    <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
+    
+    <target name="build" depends="compile,resources,manifest">
+
+        
+        
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
+            <include name="ca/nrc/cadc/**" />
+            <include name="**.xsd" />
+            <exclude name="**Test**" />
+        </jar>
+   
+        <jar jarfile="${client.jarfile}"
+            basedir="${build}/class"
+            update="no"
+            manifest="${build}/tmp/${project}Client.mf">
+            <include name="ca/nrc/cadc/vos/client/**" />
+            <include name="ca/onfire/ak/**" />
+            <include name="ca/nrc/cadc/vos/**.class" />
+            <include name="**.xsd" />
+            <exclude name="**Test**" />
+        </jar>
+
+    </target>
+
+    <target name="resources">
+        <copy todir="${build}/class">
+            <fileset dir="src/resources">
+                <include name="**.xsd" />
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="manifest">
+	<pathconvert property="client.flat.manifest" pathsep=" ">
+	    <mapper type="flatten"/>
+	    <path> <pathelement path="${client.cadc.jars}"/> </path>
+	    <path> <pathelement path="${client.external.jars}"/> </path>
+	</pathconvert>
+	<pathconvert property="client.non-flat.manifest" pathsep=" ">
+	    <path> <pathelement path="${client.external.jars}"/> </path>
+	</pathconvert>
+
+        <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
+            <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
+            <attribute name="Class-Path" value="${client.flat.manifest} ${client.non-flat.manifest}"/>
+
+        </manifest>
+    </target>
+
+    <!-- JAR files needed to run the test suite -->
+    <property name="cadcVOS" value="${build}/lib/${project}.jar" />
+    <property name="junit" value="${ext.lib}/junit.jar" />
+    <property name="xmlunit" value="${ext.lib}/xmlunit.jar" />
+    <property name="xerces" value="${ext.lib}/xerces.jar" />
+    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
+    <property name="dev.asm" value="${ext.dev}/asm.jar" />
+    <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
+    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
+    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
+    <property name="dev.uispec4j" value="${ext.dev}/uispec4j.jar" />
+    <property name="gson"               value="${ext.lib}/gson.jar" />
+    <property name="testingJars"
+            value="${test.jdbc.drivers}:${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${dev.uispec4j}:${gson}"/>
+
+    <!-- Run the test suite -->
+    <target name="setup-test" depends="resources">
+        <copy file="test/src/resources/Views.properties" todir="${build}/test/class"/>
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+        
+    </target>
+        
+    <!-- create the client distribution tar file -->
+    <target name="distribute" depends="build" >
+	<echo message="${ant.project.name}"/>
+	<antcall target="build_distribution">
+	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}:${client.external.jars}"/>
+	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
+	    <param name="distName" value="cadcVOSClient"/> 
+	</antcall>
+	<antcall target="build_distribution">
+	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}"/>
+	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
+	    <param name="distName" value="cadcVOSClient-minimal"/> 
+	</antcall>
+    </target>
+
+    <target name="create-tables">
+        <echo message="creating test tables..."/>
+        <exec executable="test/scripts/createTestTables.sh"/>
+    </target>
+    
+    <!-- convenience test targets when developing -->
+    <target name="client-test" depends="compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.client.ui.FileSystemScannerTest"/>
+          <test name="ca.nrc.cadc.vos.client.ui.CommandQueueTest" />
+          <test name="ca.nrc.cadc.vos.client.ui.integration.UploadApplicationTest" />
+        </junit>
+    </target>
+
+    <target name="xml-test" depends="compile-test">
+        
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
+          <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
+        </junit>
+    </target>
+
+    <target name="dao-test" depends="compile-test">
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.server.NodeDAOTest"/>
+        </junit>
+    </target>
+
+    <target name="rss-test" depends="compile-test">
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.server.RssViewTest"/>
+          <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>   
+          <test name="ca.nrc.cadc.vos.server.RssFeedItemTest"/>
+          <test name="ca.nrc.cadc.vos.server.util.FixedSizeTreeSetTest"/>
+        </junit>
+    </target>
+
+</project>
