@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -64,6 +64,7 @@
  *
  ************************************************************************
  */
+
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
@@ -81,7 +82,7 @@ import ca.nrc.cadc.vos.Node;
 
 public class DeleteNodeActionTest extends AbstractNodeActionTest<DeleteNodeAction>
 {
-    
+
 
     /**
      * Set and initialize the Test Subject.
@@ -105,7 +106,7 @@ public class DeleteNodeActionTest extends AbstractNodeActionTest<DeleteNodeActio
     @Override
     protected void prePerformNodeAction() throws Exception
     {
-        
+
         expect(getMockNodePersistence().get(mockVOS)).andReturn(getMockNodeS()).once();
         expect(mockVOS.isRoot()).andReturn(false).once();
         expect(mockVOS.getParentURI()).andReturn(mockParentVOS).once();
@@ -120,18 +121,18 @@ public class DeleteNodeActionTest extends AbstractNodeActionTest<DeleteNodeActio
 
         getMockAuth().getDeletePermission(getMockNodeS());
         expectLastCall().once();
-        
+
         // setup the children of the parent
-        
+
         List<Node> childList = new ArrayList<Node>();
         expect(mockParentNode.getNodes()).andReturn(childList).once();
         expect(mockParentNode.getName()).andReturn("parentName").once();
-        
+
         getMockNodePersistence().delete(getMockNodeS());
         expectLastCall().once();
 
         expect(mockVOS.getPath()).andReturn("/parent/child").anyTimes();
-        
+
         replay(getMockNodeS());
         replay(mockVOS);
         replay(mockParentVOS);

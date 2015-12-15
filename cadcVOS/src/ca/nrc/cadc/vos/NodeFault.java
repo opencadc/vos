@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -72,7 +72,7 @@ import org.restlet.data.Status;
 /**
  * Enumeration of type types of faults that can occur
  * with node processing.
- * 
+ *
  * @author majorb
  *
  */
@@ -80,10 +80,10 @@ public enum NodeFault
 {
     // IVOA Standard Faults
     InternalFault
-    ( 
-        new Status(500, 
-                   "InternalFault", 
-                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails", 
+    (
+        new Status(500,
+                   "InternalFault",
+                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     PermissionDenied
@@ -95,9 +95,9 @@ public enum NodeFault
     ),
     InvalidURI
     (
-        new Status(400, 
-                   "InvalidURI", 
-                   "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid", 
+        new Status(400,
+                   "InvalidURI",
+                   "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NodeNotFound
@@ -108,7 +108,7 @@ public enum NodeFault
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     DuplicateNode
-    ( 
+    (
         new Status(409,
                    "DuplicateNode",
                    "A HTTP 409 status code with a DuplicateFault fault in the body is thrown if the specified node already exists",
@@ -136,13 +136,13 @@ public enum NodeFault
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     ContainerNotFound
-    ( 
+    (
         new Status(404,
                    "ContainerNotFound",
                    "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
-    
+
     // Other Faults
     RequestEntityTooLarge
     (
@@ -179,7 +179,7 @@ public enum NodeFault
     private Status status;
     private String message;
     private boolean serviceFailure;
-    
+
     private NodeFault(Status status)
     {
         this.status = status;
@@ -190,7 +190,7 @@ public enum NodeFault
     {
         return status;
     }
-    
+
     public String toString()
     {
         return name();
@@ -205,12 +205,12 @@ public enum NodeFault
     {
         this.message = message;
     }
-    
+
     public boolean isServiceFailure()
     {
         return serviceFailure;
     }
-    
+
     public void setServiceFailure(boolean serviceFailure)
     {
         this.serviceFailure = serviceFailure;

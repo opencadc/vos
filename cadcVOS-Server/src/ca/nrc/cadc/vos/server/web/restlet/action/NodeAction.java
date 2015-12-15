@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -71,10 +71,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
@@ -93,22 +96,19 @@ import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import java.util.List;
-import org.restlet.data.MediaType;
-import org.restlet.data.Preference;
 
 /**
  * Abstract class encapsulating the behaviour of an action on a Node.  Clients
  * must ensure that setVosURI(), setNodeXML(), setVOSpaceAuthorizer(), and
  * setNodePersistence() are called before using any concrete implementations of
  * this class.
- * 
+ *
  * @author majorb
  */
 public abstract class NodeAction
 {
     protected static Logger log = Logger.getLogger(NodeAction.class);
-    
+
     // query form parameter names
     protected static final String QUERY_PARAM_VIEW = "view";
     protected static final String QUERY_PARAM_DETAIL = "detail";
@@ -124,7 +124,7 @@ public abstract class NodeAction
     protected VOSURI vosURI;
     protected Representation nodeXML;
     protected String stylesheetReference;
-    
+
     /**
      * Set the URI for this action.
      * @param vosURI
@@ -133,7 +133,7 @@ public abstract class NodeAction
     {
         this.vosURI = vosURI;
     }
-    
+
     /**
      * Set the node XML from the client for this action.
      * @param nodeXML
@@ -142,7 +142,7 @@ public abstract class NodeAction
     {
         this.nodeXML = nodeXML;
     }
-    
+
     /**
      * Set the authorizer to be used by this action.
      * @param voSpaceAuthorizer
@@ -151,7 +151,7 @@ public abstract class NodeAction
     {
         this.voSpaceAuthorizer = voSpaceAuthorizer;
     }
-    
+
     /**
      * Set the authorizer that allows partial paths.
      * @param partialPathVOSpaceAuthorizer
@@ -161,7 +161,7 @@ public abstract class NodeAction
     {
         this.partialPathVOSpaceAuthorizer = partialPathVOSpaceAuthorizer;
     }
-    
+
     /**
      * Set the persistence to be used by this action.
      * @param nodePersistence
@@ -170,7 +170,7 @@ public abstract class NodeAction
     {
         this.nodePersistence = nodePersistence;
     }
-    
+
     /**
      * Set the request object.
      * @param request
@@ -179,7 +179,7 @@ public abstract class NodeAction
     {
         this.request = request;
     }
-    
+
     /**
      * Set the form object.
      * @param form
@@ -188,7 +188,7 @@ public abstract class NodeAction
     {
         this.queryForm = form;
     }
-    
+
     /**
      * Set the stylesheet reference.
      * @param stylesheetReference  The URI reference string to the stylesheet
@@ -198,7 +198,7 @@ public abstract class NodeAction
     {
         this.stylesheetReference = stylesheetReference;
     }
- 
+
     protected MediaType getMediaType()
     {
         List<Preference<MediaType>> accepts = request.getCurrent().getClientInfo().getAcceptedMediaTypes();
@@ -215,7 +215,7 @@ public abstract class NodeAction
 
         return med;
     }
-    
+
     protected NodeWriter getNodeWriter()
     {
         MediaType mt = getMediaType();
@@ -223,7 +223,7 @@ public abstract class NodeAction
             return new JsonNodeWriter();
         return new NodeWriter();
     }
-    
+
     /**
      * Return the view requested by the client, or null if none specified.
      *
@@ -234,18 +234,18 @@ public abstract class NodeAction
     protected AbstractView getView() throws Exception
     {
         String viewReference = queryForm.getFirstValue(QUERY_PARAM_VIEW);
-        
+
         if (!StringUtil.hasText(viewReference))
         {
             return null;
         }
-        
+
         // the default view is the same as no view
         if (viewReference.equalsIgnoreCase(VOS.VIEW_DEFAULT))
         {
             return null;
         }
-        
+
         final Views views = new Views();
         AbstractView view = views.getView(viewReference);
 
@@ -256,23 +256,23 @@ public abstract class NodeAction
         }
         view.setNodePersistence(nodePersistence);
         view.setVOSpaceAuthorizer(voSpaceAuthorizer);
-        
+
         return view;
     }
-    
+
     /**
      * Perform the action for which the subclass was designed.
-     * 
+     *
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
-     * 
+     *
      * @param clientNode teh node supplied by the client (may be null)
      * @param serverNode the persistent node returned from doAuthorizationCheck
      * @return the appropriate NodeActionResult from which the response is constructed
      */
     protected abstract NodeActionResult performNodeAction(Node clientNode, Node serverNode)
         throws URISyntaxException, NodeParsingException, FileNotFoundException, TransientException;
-    
+
     /**
      * Given the node URI and XML, return the Node object specified
      * by the client.
@@ -284,7 +284,7 @@ public abstract class NodeAction
      */
     protected abstract Node getClientNode()
         throws URISyntaxException, NodeParsingException, IOException;
-    
+
     /**
      * Perform an authorization check for the given node and return (if applicable)
      * the persistent version of the Node.
@@ -296,20 +296,20 @@ public abstract class NodeAction
      */
     protected abstract Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, LinkingException, TransientException;
-    
+
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
-     * 
+     *
      * Calling abstract method getClientNode()
      * Calling abstract method doAuthorizationCheck()
      * Calling abstract method performNodeAction()
-     * 
+     *
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
      */
     public NodeActionResult run() throws TransientException
     {
-        
+
         try
         {
             // Create the client version of the node to be used for the operation
@@ -325,7 +325,7 @@ public abstract class NodeAction
             long end = System.currentTimeMillis();
             log.debug("doAuthorizationCheck() elapsed time: " + (end - start) + "ms");
             log.debug("doAuthorizationCheck() returned server node: " + serverNode.getUri());
-            
+
             // perform the node action
             start = System.currentTimeMillis();
             NodeActionResult result = performNodeAction(clientNode, serverNode);
@@ -419,7 +419,7 @@ public abstract class NodeAction
 
         return NodeFault.NodeNotFound;
     }
-    
+
     /**
      * Create a NodeActionResult from the given fault and message.
      * @param nodeFault The fault.

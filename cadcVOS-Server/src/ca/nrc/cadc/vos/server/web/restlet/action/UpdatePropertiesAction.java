@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -75,30 +75,26 @@ import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
-import org.restlet.data.MediaType;
 
 /**
  * Class to perform the updating of a Node's properties.
- * 
+ *
  * @author majorb
  */
 public class UpdatePropertiesAction extends NodeAction
 {
-    
+
     private static Logger log = Logger.getLogger(UpdatePropertiesAction.class);
-    
+
     @Override
     public Node getClientNode()
-            throws URISyntaxException, NodeParsingException, IOException 
+            throws URISyntaxException, NodeParsingException, IOException
     {
         NodeInputRepresentation nodeInputRepresentation =
             new NodeInputRepresentation(nodeXML, vosURI.getPath());
@@ -122,7 +118,7 @@ public class UpdatePropertiesAction extends NodeAction
         // TODO: check if client and server node types match?
 
         // check for a busy node
-        
+
 // BM: Metadata updates should be allowed when the node is busy
 //        if (serverNode instanceof DataNode)
 //        {
@@ -140,11 +136,11 @@ public class UpdatePropertiesAction extends NodeAction
 
         nodePersistence.getProperties(serverNode);
         Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
-        
+
         // return the node in xml format
         return new NodeActionResult(new NodeOutputRepresentation(out, getNodeWriter(), getMediaType()));
     }
-    
+
     /**
      * Remove any properties from the Node that cannot be updated.
      * @param node
