@@ -89,10 +89,11 @@
     <property name="project" value="cadcVOS-Server" />
 
     <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
-	<property name="cadcVOS"            value="${lib}/cadcVOS.jar" />
+    <property name="cadcVOS"            value="${lib}/cadcVOS.jar" />
     <property name="cadcAccessControl"  value="${lib}/cadcAccessControl.jar" />
     <property name="cadcRegistry"       value="${lib}/cadcRegistry.jar" />
     <property name="cadcUWS"            value="${lib}/cadcUWS.jar" />
+    <property name="cadcUWS-Server"     value="${lib}/cadcUWS-Server.jar" />
     <property name="cadcCDP"            value="${lib}/cadcCDP.jar" />
     <property name="cadcLog"            value="${lib}/cadcLog.jar" />
 
@@ -104,7 +105,7 @@
     <property name="ext.json"           value="${ext.lib}/json.jar" />
     <property name="ext.xerces"         value="${ext.lib}/xerces.jar" />
 	
-	<property name="cadcJars"           value="${cadcUtil}:${cadcVOS}:${cadcAccessControl}:${cadcRegistry}:${cadcUWS}:${cadcCDP}:${cadcLog}" />
+	<property name="cadcJars"           value="${cadcUtil}:${cadcVOS}:${cadcAccessControl}:${cadcRegistry}:${cadcUWS}:${cadcUWS-Server}:${cadcCDP}:${cadcLog}" />
 	<property name="extJars"            value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${ext.json}:${ext.xerces}" />
 	
 	<property name="jars"               value="${cadcJars}:${extJars}" />
