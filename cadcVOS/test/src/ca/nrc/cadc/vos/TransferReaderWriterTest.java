@@ -102,7 +102,7 @@ public class TransferReaderWriterTest
     public static void setUpBeforeClass()
         throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
     }
 
     @AfterClass
