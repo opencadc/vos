@@ -64,43 +64,110 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import org.junit.Assert;
-import org.junit.Before;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
 
+import org.apache.log4j.Logger;
+import org.restlet.data.Status;
 
-public abstract class AbstractCADCVOSTest<T>
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeAlreadyExistsException;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
+import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+
+/**
+ * Class to perform the creation of a Node.
+ *
+ * @author majorb
+ */
+public class CreateNodeAction extends NodeAction
 {
-    private T testSubject;
 
+    protected static Logger log = Logger.getLogger(CreateNodeAction.class);
 
-    @Before
-    public void setUp() throws Exception
+    @Override
+    public Node getClientNode()
+        throws URISyntaxException, NodeParsingException, IOException
     {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        NodeInputRepresentation nodeInputRepresentation =
+            new NodeInputRepresentation(nodeXML, vosURI.getPath());
+        return nodeInputRepresentation.getNode();
     }
 
-
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception    If anything goes awry.
-     */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
     {
-        return testSubject;
+        try
+        {
+            VOSURI parentURI = vosURI.getParentURI();
+            Node node = (Node) nodePersistence.get(parentURI);
+            voSpaceAuthorizer.getWritePermission(node);
+
+            return node;
+        }
+        catch (NodeNotFoundException ex)
+        {
+            // parent does not exist: FAIL
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
+        }
     }
 
-    public void setTestSubject(T testSubject)
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
     {
-        this.testSubject = testSubject;
+        try
+        {
+            if (serverNode instanceof ContainerNode)
+            {
+                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
+
+                nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
+                for (Node n : parent.getNodes())
+                {
+                    if (n.getName().equals(clientNode.getName()))
+                        throw new NodeAlreadyExistsException(vosURI.getURI().toASCIIString());
+                }
+
+                clientNode.setParent(parent);
+                Node storedNode = nodePersistence.put(clientNode);
+
+                // return the node in xml format
+                NodeOutputRepresentation nodeOutputRepresentation =
+                    new NodeOutputRepresentation(storedNode, getNodeWriter(), getMediaType());
+                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_OK);
+            }
+            log.debug("parent is not a container: " + clientNode.getUri().getPath());
+            NodeFault nodeFault = NodeFault.ContainerNotFound;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+        catch (NodeAlreadyExistsException e)
+        {
+            log.debug("Node already exists: " + clientNode.getUri().getPath(), e);
+            NodeFault nodeFault = NodeFault.DuplicateNode;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+        catch (NodeNotSupportedException e)
+        {
+            log.debug("Node type not supported: " + clientNode.getUri().getPath(), e);
+            NodeFault nodeFault = NodeFault.TypeNotSupported;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
     }
 }

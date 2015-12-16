@@ -64,8 +64,8 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos;
 
 import org.junit.Assert;
 import org.junit.Before;

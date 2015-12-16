@@ -64,43 +64,70 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import org.junit.Assert;
-import org.junit.Before;
+import java.net.URL;
 
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
 
-public abstract class AbstractCADCVOSTest<T>
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
+
+public class NodeActionResult
 {
-    private T testSubject;
 
+    private Status status = Status.SUCCESS_OK;
+    private NodeFault nodeFault;
+    private Representation representation;
+    private URL redirectURL;
 
-    @Before
-    public void setUp() throws Exception
+    public NodeActionResult(Representation representation)
     {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        this.representation = representation;
     }
 
-
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception    If anything goes awry.
-     */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    public NodeActionResult(Representation representation, Status status)
     {
-        return testSubject;
+        this.representation = representation;
+        this.status = status;
     }
 
-    public void setTestSubject(T testSubject)
+    public NodeActionResult(NodeFault nodeFault)
     {
-        this.testSubject = testSubject;
+        this.nodeFault = nodeFault;
+        this.status = nodeFault.getStatus();
     }
+
+    public NodeActionResult(URL redirectURL)
+    {
+        this.status = Status.REDIRECTION_SEE_OTHER;
+        this.redirectURL = redirectURL;
+    }
+
+    public Status getStatus()
+    {
+        return status;
+    }
+
+    public URL getRedirectURL()
+    {
+        return redirectURL;
+    }
+
+    public NodeFault getNodeFault()
+    {
+        return nodeFault;
+    }
+
+    public Representation getRepresentation()
+    {
+        if (nodeFault != null)
+        {
+            return new NodeErrorRepresentation(nodeFault);
+        }
+        return representation;
+    }
+
 }

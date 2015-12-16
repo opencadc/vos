@@ -64,43 +64,101 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
+
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
-import org.junit.Assert;
-import org.junit.Before;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+import ca.nrc.cadc.vos.Node;
 
 
-public abstract class AbstractCADCVOSTest<T>
+public class DeleteNodeActionTest extends AbstractNodeActionTest<DeleteNodeAction>
 {
-    private T testSubject;
-
-
-    @Before
-    public void setUp() throws Exception
-    {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
-    }
 
 
     /**
      * Set and initialize the Test Subject.
      *
-     * @throws Exception    If anything goes awry.
+     * @throws Exception If anything goes awry.
      */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    @Override
+    protected void initializeTestSubject() throws Exception
     {
-        return testSubject;
+        setTestSubject(new DeleteNodeAction());
     }
 
-    public void setTestSubject(T testSubject)
+
+    /**
+     * Any necessary preface action before the performNodeAction method is
+     * called to be tested.  This is a good place for Mock expectations and/or
+     * replays to be set.
+     *
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void prePerformNodeAction() throws Exception
     {
-        this.testSubject = testSubject;
+
+        expect(getMockNodePersistence().get(mockVOS)).andReturn(getMockNodeS()).once();
+        expect(mockVOS.isRoot()).andReturn(false).once();
+        expect(mockVOS.getParentURI()).andReturn(mockParentVOS).once();
+        expect(mockParentVOS.isRoot()).andReturn(false).once();
+        expect(getMockNodeS().getParent()).andReturn(mockParentNode).once();
+        expect(getMockNodeS().getUri()).andReturn(mockVOS).once();
+        expect(mockVOS.getURI()).andReturn(new URI(vosURI)).anyTimes();
+        expect(getMockNodeS().isLocked()).andReturn(false).once();
+        //
+        //expect(mockParentNode.getUri()).andReturn(mockParentVOS).anyTimes();
+        //expect(mockParentVOS.getURIObject()).andStubReturn(new URI("vos://something")).anyTimes();
+
+        getMockAuth().getDeletePermission(getMockNodeS());
+        expectLastCall().once();
+
+        // setup the children of the parent
+
+        List<Node> childList = new ArrayList<Node>();
+        expect(mockParentNode.getNodes()).andReturn(childList).once();
+        expect(mockParentNode.getName()).andReturn("parentName").once();
+
+        getMockNodePersistence().delete(getMockNodeS());
+        expectLastCall().once();
+
+        expect(mockVOS.getPath()).andReturn("/parent/child").anyTimes();
+
+        replay(getMockNodeS());
+        replay(mockVOS);
+        replay(mockParentVOS);
+        replay(getMockNodePersistence());
+        replay(getMockAuth());
+        replay(mockParentNode);
+
+    }
+
+    /**
+     * Any necessary post method call result checking.  This is a good place
+     * for any Mock verifications to take place as well.
+     *
+     * @param result The result of the performNodeAction call.
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void postPerformNodeAction(final NodeActionResult result)
+            throws Exception
+    {
+        verify(mockVOS);
+        verify(getMockAuth());
+        verify(getMockNodePersistence());
+        //verify(getMockNodeS());
+        //verify(mockParentNode);
+        //verify(mockNodeProperties);
+        //verify(mockLengthProperty);
     }
 }

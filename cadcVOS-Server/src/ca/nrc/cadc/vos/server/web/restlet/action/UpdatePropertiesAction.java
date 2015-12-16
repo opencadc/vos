@@ -64,43 +64,97 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import org.junit.Assert;
-import org.junit.Before;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
 
+import org.apache.log4j.Logger;
 
-public abstract class AbstractCADCVOSTest<T>
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
+import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+
+/**
+ * Class to perform the updating of a Node's properties.
+ *
+ * @author majorb
+ */
+public class UpdatePropertiesAction extends NodeAction
 {
-    private T testSubject;
 
+    private static Logger log = Logger.getLogger(UpdatePropertiesAction.class);
 
-    @Before
-    public void setUp() throws Exception
+    @Override
+    public Node getClientNode()
+            throws URISyntaxException, NodeParsingException, IOException
     {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        NodeInputRepresentation nodeInputRepresentation =
+            new NodeInputRepresentation(nodeXML, vosURI.getPath());
+        return nodeInputRepresentation.getNode();
     }
 
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
+    {
+        // locks don't apply to property updates
+        voSpaceAuthorizer.setDisregardLocks(true);
+        Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURI());
+        return node;
+    }
+
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        // TODO: check if client and server node types match?
+
+        // check for a busy node
+
+// BM: Metadata updates should be allowed when the node is busy
+//        if (serverNode instanceof DataNode)
+//        {
+//            if (((DataNode) serverNode).isBusy())
+//            {
+//                log.debug("Node is busy: " + serverNode.getUri().getPath());
+//                NodeFault nodeFault = NodeFault.InternalFault;
+//                nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
+//                return new NodeActionResult(nodeFault);
+//            }
+//        }
+
+        // filter out any non-modifiable properties
+        filterPropertiesForUpdate(clientNode);
+
+        nodePersistence.getProperties(serverNode);
+        Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
+
+        // return the node in xml format
+        return new NodeActionResult(new NodeOutputRepresentation(out, getNodeWriter(), getMediaType()));
+    }
 
     /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception    If anything goes awry.
+     * Remove any properties from the Node that cannot be updated.
+     * @param node
      */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    private void filterPropertiesForUpdate(Node node)
     {
-        return testSubject;
-    }
+        for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
+        {
+            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""));
+            if (propertyIndex != -1)
+            {
+                node.getProperties().remove(propertyIndex);
+            }
+        }
 
-    public void setTestSubject(T testSubject)
-    {
-        this.testSubject = testSubject;
     }
 }

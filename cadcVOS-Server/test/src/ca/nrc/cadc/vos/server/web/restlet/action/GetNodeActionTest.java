@@ -64,43 +64,123 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
+
+package ca.nrc.cadc.vos.server.web.restlet.action;
+
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+
+import org.easymock.EasyMock;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+
+import ca.nrc.cadc.vos.server.AbstractView;
 
 
-import org.junit.Assert;
-import org.junit.Before;
-
-
-public abstract class AbstractCADCVOSTest<T>
+public class GetNodeActionTest extends AbstractNodeActionTest<GetNodeAction>
 {
-    private T testSubject;
-
-
-    @Before
-    public void setUp() throws Exception
-    {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
-    }
-
+    private AbstractView mockAbstractView = createMock(AbstractView.class);
 
     /**
      * Set and initialize the Test Subject.
      *
-     * @throws Exception    If anything goes awry.
+     * @throws Exception If anything goes awry.
      */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    @Override
+    protected void initializeTestSubject() throws Exception
     {
-        return testSubject;
+        setTestSubject(new GetNodeAction()
+        {
+            /**
+             * Return the view requested by the client, or null if none specified.
+             *
+             * @return Instance of an AbstractView.
+             * @throws InstantiationException If the object could not be constructed.
+             * @throws IllegalAccessException If a constructor could not be found.
+             */
+            @Override
+            protected AbstractView getView() throws InstantiationException,
+                                                    IllegalAccessException
+            {
+                return getMockAbstractView();
+            }
+        });
     }
 
-    public void setTestSubject(T testSubject)
+
+    /**
+     * Any necessary preface action before the performNodeAction method is
+     * called to be tested.  This is a good place for Mock expectations and/or
+     * replays to be set.
+     *
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void prePerformNodeAction() throws Exception
     {
-        this.testSubject = testSubject;
+
+        Form queryForm = EasyMock.createMock(Form.class);
+        expect(queryForm.getFirstValue("view")).andReturn("VIEW/REFERENCE").once();
+        expect(queryForm.getFirstValue("detail")).andReturn("VIEW/REFERENCE").once();
+
+        getTestSubject().setQueryForm(queryForm);
+
+        expect(getMockRef().toUrl()).andReturn(getMockURL()).atLeastOnce();
+        expect(getMockRequest().getOriginalRef()).andReturn(getMockRef()).atLeastOnce();
+
+        getMockAbstractView().setNode(getMockNodeS(), "VIEW/REFERENCE", getMockURL());
+        expectLastCall().once();
+
+        expect(getMockAbstractView().getRedirectURL()).andReturn(null).once();
+        expect(getMockAbstractView().getMediaType()).andReturn(MediaType.TEXT_XML).
+                once();
+
+        getMockNodePersistence().getProperties(getMockNodeS());
+        expectLastCall().once();
+
+        expect(getMockNodeS().getUri()).andReturn(getTestSubject().vosURI).anyTimes();
+
+        expect(getTestSubject().vosURI.getURI()).andReturn(vosURIObject).anyTimes();
+        expect(getTestSubject().vosURI.getPath()).andReturn("/parent/" + nodeName).anyTimes();
+        //expect(getTestSubject().vosURI.getQuery()).andReturn(null).atLeastOnce();
+
+        expect(mockPartialPathAuth.getReadPermission(vosURIObject)).andReturn(getMockNodeS()).atLeastOnce();
+
+        replay(queryForm);
+        replay(getMockRef());
+        replay(getMockRequest());
+        replay(getMockAbstractView());
+        replay(getMockNodePersistence());
+        replay(getMockNodeS());
+        replay(getMockNodeS().getUri());
+        replay(mockPartialPathAuth);
+    }
+
+    /**
+     * Any necessary post method call result checking.  This is a good place
+     * for any Mock verifications to take place as well.
+     *
+     * @param result The result of the performNodeAction call.
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void postPerformNodeAction(final NodeActionResult result)
+            throws Exception
+    {
+        verify(getMockRef());
+        verify(getMockRequest());
+        verify(getMockAbstractView());
+        verify(getMockNodePersistence());
+        verify(getMockNodeS());
+        verify(getTestSubject().vosURI);
+    }
+
+
+    public AbstractView getMockAbstractView()
+    {
+        return mockAbstractView;
     }
 }

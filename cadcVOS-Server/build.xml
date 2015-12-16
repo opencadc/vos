@@ -86,69 +86,60 @@
     <import file="extras.xml" optional="true" />
 
 
-    <property name="project" value="cadcVOS" />
+    <property name="project" value="cadcVOS-Server" />
 
-    <property name="cadcUtil"     value="${lib}/cadcUtil.jar" />
-    <property name="cadcUWS"      value="${lib}/cadcUWS.jar" />
-    <property name="cadcRegistry" value="${lib}/cadcRegistry.jar" />
+    <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
+    <property name="cadcVOS"            value="${lib}/cadcVOS.jar" />
+    <property name="cadcAccessControl"  value="${lib}/cadcAccessControl.jar" />
+    <property name="cadcRegistry"       value="${lib}/cadcRegistry.jar" />
+    <property name="cadcUWS"            value="${lib}/cadcUWS.jar" />
+    <property name="cadcUWS-Server"     value="${lib}/cadcUWS-Server.jar" />
+    <property name="cadcCDP"            value="${lib}/cadcCDP.jar" />
+    <property name="cadcLog"            value="${lib}/cadcLog.jar" />
 
-    <property name="ext.log4j"    value="${ext.lib}/log4j.jar" />
-    <property name="ext.jdom2"    value="${ext.lib}/jdom2.jar" />
-    <property name="ext.xerces"   value="${ext.lib}/xerces.jar" />
-    <property name="ext.json"     value="${ext.lib}/json.jar" />
-    <property name="ext.restlet"  value="${ext.lib}/org.restlet.jar" />
-
-    <property name="cadcJars"     value="${cadcUtil}:${cadcUWS}:${cadcRegistry}" />
-    <property name="extJars"      value="${ext.log4j}:${ext.jdom2}:${ext.xerces}:${ext.json}:${ext.restlet}" />
+    <property name="ext.restlet"        value="${ext.lib}/org.restlet.jar" />
+    <property name="ext.log4j"          value="${ext.lib}/log4j.jar" />
+    <property name="ext.spring"         value="${ext.lib}/spring.jar" />
+    <property name="ext.servlet"        value="${ext.lib}/servlet-api.jar" />
+    <property name="ext.jdom2"          value="${ext.lib}/jdom2.jar" />
+    <property name="ext.json"           value="${ext.lib}/json.jar" />
+    <property name="ext.xerces"         value="${ext.lib}/xerces.jar" />
+	
+	<property name="cadcJars"           value="${cadcUtil}:${cadcVOS}:${cadcAccessControl}:${cadcRegistry}:${cadcUWS}:${cadcUWS-Server}:${cadcCDP}:${cadcLog}" />
+	<property name="extJars"            value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${ext.json}:${ext.xerces}" />
+	
+	<property name="jars"               value="${cadcJars}:${extJars}" />
     
-    <property name="jars"         value="${cadcJars}:${extJars}" />
-
-    <target name="build" depends="compile,resources,manifest">
-
+    <target name="build" depends="compile">
         <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no"
-            manifest="${build}/tmp/${project}.mf">
-
-            <include name="ca/nrc/cadc/**" />
-            <include name="**.xsd" />
-            <exclude name="**Test**" />
-        </jar>
-
-    </target>
-
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
-
-    <target name="manifest">
-	<pathconvert property="flat.manifest" pathsep=" ">
-	    <mapper type="flatten"/>
-	    <path> <pathelement path="${cadcJars}"/> </path>
-	    <path> <pathelement path="${extJars}"/> </path>
-	</pathconvert>
-	<pathconvert property="non-flat.manifest" pathsep=" ">
-	    <path> <pathelement path="${extJars}"/> </path>
-	</pathconvert>
-        <manifest file="${build}/tmp/${project}.mf" mode="replace">
-            <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
-            <attribute name="Class-Path" value="${flat.manifest} ${non-flat.manifest}"/>
-        </manifest>
+             basedir="${build}/class"
+             update="no" />
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="junit"           value="${ext.lib}/junit.jar" />
-    <property name="xmlunit"         value="${ext.lib}/xmlunit.jar" />
-    <property name="xerces"          value="${ext.lib}/xerces.jar" />
-    <property name="dev.easyMock"    value="${ext.dev}/easymock.jar" />
-    <property name="dev.asm"         value="${ext.dev}/asm.jar" />
-    <property name="dev.cglib"       value="${ext.dev}/cglib.jar" />
-    <property name="dev.objenesis"   value="${ext.dev}/objenesis.jar" />
-    <property name="commons-logging" value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars"     value="${cadcJars}:${extJars}::${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}"/>
+    <property name="junit"              value="${ext.lib}/junit.jar" />
+    <property name="xmlunit"            value="${ext.lib}/xmlunit.jar" />
+    <property name="xerces"             value="${ext.lib}/xerces.jar" />
+    <property name="dev.easyMock"       value="${ext.dev}/easymock.jar" />
+    <property name="dev.asm"            value="${ext.dev}/asm.jar" />
+    <property name="dev.cglib"          value="${ext.dev}/cglib.jar" />
+    <property name="dev.objenesis"      value="${ext.dev}/objenesis.jar" />
+    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
+    <property name="testingJars"        value="${test.jdbc.drivers}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${commons-logging}:"/>
+    	
+    <target name="create-tables">
+        <echo message="creating test tables..."/>
+        <exec executable="test/scripts/createTestTables.sh"/>
+    </target>
+
+    <!-- Run the test suite -->
+    <target name="setup-test" depends="create-tables">
+        <copy file="test/src/resources/Views.properties" todir="${build}/test/class"/>
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+    </target>
 
 </project>

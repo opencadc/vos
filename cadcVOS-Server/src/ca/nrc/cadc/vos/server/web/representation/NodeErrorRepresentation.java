@@ -64,43 +64,46 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos.server.web.representation;
 
-import org.junit.Assert;
-import org.junit.Before;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 
+import org.restlet.data.MediaType;
+import org.restlet.representation.OutputRepresentation;
 
-public abstract class AbstractCADCVOSTest<T>
+import ca.nrc.cadc.vos.NodeFault;
+
+/**
+ * Plain text representation of a NodeFault.
+ *
+ * @author majorb
+ *
+ */
+public class NodeErrorRepresentation extends OutputRepresentation
 {
-    private T testSubject;
 
+    private String message;
 
-    @Before
-    public void setUp() throws Exception
+    public NodeErrorRepresentation(NodeFault nodeFault)
     {
-        initializeTestSubject();
-
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        super(MediaType.TEXT_PLAIN);
+        this.message = nodeFault.toString();
+        if (nodeFault.getMessage() != null)
+        {
+            this.message += ": " + nodeFault.getMessage();
+        }
     }
 
-
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception    If anything goes awry.
-     */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
+    @Override
+    public void write(OutputStream arg0) throws IOException
     {
-        return testSubject;
+        PrintWriter pw = new PrintWriter(new OutputStreamWriter(arg0));
+        pw.println(message);
+        pw.flush();
     }
 
-    public void setTestSubject(T testSubject)
-    {
-        this.testSubject = testSubject;
-    }
 }

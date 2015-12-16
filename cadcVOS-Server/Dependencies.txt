@@ -9,8 +9,8 @@ org.restlet.jar              restlet-jee-2.0.2       http://www.restlet.org
 org.restlet.ext.servlet.jar  restlet-jee-2.0.2       http://www.restlet.org
 spring.jar                   spring-framework-2.5.6  http://www.springsource.org
 xerces.jar                   xerces-2_9_1            http://xerces.apache.org
-cadcCDP.jar                                          http://code.google.com/p/opencadc
-cadcAccessControl.jar                                http://code.google.com/p/opencadc
-cadcRegistry.jar                                     http://code.google.com/p/opencadc
+cadcCDP                                              http://code.google.com/p/opencadc
+cadcGMSClient.jar                                    http://code.google.com/p/opencadc
+cadcRegistryClient.jar                               http://code.google.com/p/opencadc
 cadcUtil.jar                                         http://code.google.com/p/opencadc
 cadcUWS.jar                                          http://code.google.com/p/opencadc

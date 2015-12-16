@@ -64,43 +64,115 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
+
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
-import org.junit.Assert;
-import org.junit.Before;
+import static org.easymock.EasyMock.createMock;
+
+import java.net.URI;
+import java.net.URL;
+
+import org.junit.Test;
+import org.restlet.Request;
+import org.restlet.data.Reference;
+
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 
-public abstract class AbstractCADCVOSTest<T>
+public abstract class AbstractNodeActionTest<N extends NodeAction>
+        extends AbstractCADCVOSTest<N>
 {
-    private T testSubject;
+    private Node mockNodeC = createMock(Node.class);
+    private Node mockNodeS = createMock(Node.class);
 
+    private NodePersistence mockNodePersistence =
+            createMock(NodePersistence.class);
+    private Request mockRequest = createMock(Request.class);
+    protected VOSpaceAuthorizer mockAuth = createMock(VOSpaceAuthorizer.class);
+    protected VOSpaceAuthorizer mockPartialPathAuth = createMock(VOSpaceAuthorizer.class);
+    private Reference mockRef = createMock(Reference.class);
+    protected ContainerNode mockParentNode = createMock(ContainerNode.class);
+    protected VOSURI mockVOS = createMock(VOSURI.class);
+    protected VOSURI mockParentVOS = createMock(VOSURI.class);
+    private URL fakeURL;
 
-    @Before
-    public void setUp() throws Exception
+    protected String nodeName = "child";
+    protected String vosURI = "vos://example.com!vopspace/parent/" + nodeName;
+    protected URI vosURIObject;
+
+    @Test
+    public void performNodeAction() throws Exception
     {
-        initializeTestSubject();
+        fakeURL = new URL("http://example/com/foo");
+        vosURIObject = new URI(vosURI);
+        getTestSubject().setNodePersistence(mockNodePersistence);
+        getTestSubject().setPartialPathVOSpaceAuthorizer(mockPartialPathAuth);
+        getTestSubject().setRequest(mockRequest);
+        getTestSubject().setVOSpaceAuthorizer(mockAuth);
+        getTestSubject().setVosURI(mockVOS);
 
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        prePerformNodeAction();
+        Node cnode = getTestSubject().doAuthorizationCheck();
+        NodeActionResult result =
+                getTestSubject().performNodeAction(cnode, getMockNodeS());
+        postPerformNodeAction(result);
     }
-
 
     /**
-     * Set and initialize the Test Subject.
+     * Any necessary preface action before the performNodeAction method is
+     * called to be tested.  This is a good place for Mock expectations and/or
+     * replays to be set.
      *
-     * @throws Exception    If anything goes awry.
+     * @throws Exception    If anything goes wrong, just pass it up.
      */
-    protected abstract void initializeTestSubject() throws Exception;
+    protected abstract void prePerformNodeAction() throws Exception;
 
+    /**
+     * Any necessary post method call result checking.  This is a good place
+     * for any Mock verifications to take place as well.
+     *
+     * @param result        The result of the performNodeAction call.
+     * @throws Exception    If anything goes wrong, just pass it up.
+     */
+    protected abstract void postPerformNodeAction(
+            final NodeActionResult result) throws Exception;
 
-    public T getTestSubject()
+    public VOSpaceAuthorizer getMockAuth()
     {
-        return testSubject;
+        return mockAuth;
     }
 
-    public void setTestSubject(T testSubject)
+    public Node getMockNodeC()
     {
-        this.testSubject = testSubject;
+        return mockNodeC;
+    }
+
+    public Node getMockNodeS()
+    {
+        return mockNodeS;
+    }
+
+    public NodePersistence getMockNodePersistence()
+    {
+        return mockNodePersistence;
+    }
+
+    public Request getMockRequest()
+    {
+        return mockRequest;
+    }
+    public Reference getMockRef()
+    {
+        return mockRef;
+    }
+    public URL getMockURL()
+    {
+        return fakeURL;
     }
 }

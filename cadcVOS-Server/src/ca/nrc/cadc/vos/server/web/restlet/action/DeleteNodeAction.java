@@ -64,43 +64,102 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import org.junit.Assert;
-import org.junit.Before;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
 
+import org.apache.log4j.Logger;
 
-public abstract class AbstractCADCVOSTest<T>
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+
+/**
+ * Class to perform the deletion of a Node.
+ *
+ * @author majorb
+ */
+public class DeleteNodeAction extends NodeAction
 {
-    private T testSubject;
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
-
-    @Before
-    public void setUp() throws Exception
+    @Override
+    public Node getClientNode()
+            throws URISyntaxException, NodeParsingException, IOException
     {
-        initializeTestSubject();
+        // No client node in a DELETE
+        return null;
+    }
 
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
+    {
+        try
+        {
+            // no one can delete the root or something in the root
+            VOSURI parentURI = vosURI.getParentURI();
+            if (vosURI.isRoot() || parentURI.isRoot())
+                throw new AccessControlException("permission denied");
+
+            Node target = nodePersistence.get(vosURI);
+
+            log.debug("Checking delete privilege on: " + target.getUri());
+            voSpaceAuthorizer.getDeletePermission(target);
+
+            return target;
+        }
+        catch (NodeNotFoundException ex)
+        {
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
+        }
+    }
+
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+        return null;
+    }
+
+    @Override
+    protected NodeFault handleException(FileNotFoundException fnf)
+        throws TransientException
+    {
+        // need to determine if the parent container exists
+        if (vosURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        VOSURI parentURI = vosURI.getParentURI();
+        if (parentURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        try
+        {
+            Node target = nodePersistence.get(parentURI);
+            // check read permission so we do not leak info about the existence
+            voSpaceAuthorizer.getReadPermission(target);
+        }
+        catch(NodeNotFoundException nnf)
+        {
+            return NodeFault.ContainerNotFound;
+        }
+        catch(AccessControlException ac)
+        {
+            return NodeFault.PermissionDenied;
+        }
+        finally { }
+
+        return NodeFault.NodeNotFound;
     }
 
 
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception    If anything goes awry.
-     */
-    protected abstract void initializeTestSubject() throws Exception;
-
-
-    public T getTestSubject()
-    {
-        return testSubject;
-    }
-
-    public void setTestSubject(T testSubject)
-    {
-        this.testSubject = testSubject;
-    }
 }
