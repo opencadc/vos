@@ -110,7 +110,11 @@
 	
 	<property name="jars"               value="${cadcJars}:${extJars}" />
     
-    <target name="build" depends="compile,simpleJar" />
+    <target name="build" depends="compile">
+        <jar jarfile="${build}/lib/${project}.jar"
+             basedir="${build}/class"
+             update="no" />
+    </target>
 
     <!-- JAR files needed to run the test suite -->
     <property name="junit"              value="${ext.lib}/junit.jar" />
