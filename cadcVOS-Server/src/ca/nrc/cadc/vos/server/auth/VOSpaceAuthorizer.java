@@ -142,7 +142,6 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean disregardLocks = false;
 
     private NodePersistence nodePersistence;
-    private RegistryClient registryClient;
     private GMSClient canfarGMS;
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
@@ -159,17 +158,9 @@ public class VOSpaceAuthorizer implements Authorizer
 
         try
         {
-            this.registryClient = new RegistryClient();
-
-            URL url = registryClient.getServiceURL(URI.create(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
-            LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
-            this.canfarGMS = new GMSClient(url.toExternalForm());
+            this.canfarGMS = new GMSClient(URI.create(CANFAR_GMS_SERVICE_ID));
         }
         catch (IllegalArgumentException e)
-        {
-            throw new RuntimeException("BUG: Error creating GMS Client", e);
-        }
-        catch (MalformedURLException e)
         {
             throw new RuntimeException("BUG: Error creating GMS Client", e);
         }
