@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -75,26 +75,24 @@ import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Class to perform the deletion of a Node.
- * 
+ *
  * @author majorb
  */
 public class DeleteNodeAction extends NodeAction
 {
     private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
-    
+
     @Override
     public Node getClientNode()
-            throws URISyntaxException, NodeParsingException, IOException 
+            throws URISyntaxException, NodeParsingException, IOException
     {
         // No client node in a DELETE
         return null;
@@ -110,12 +108,12 @@ public class DeleteNodeAction extends NodeAction
             VOSURI parentURI = vosURI.getParentURI();
             if (vosURI.isRoot() || parentURI.isRoot())
                 throw new AccessControlException("permission denied");
-            
+
             Node target = nodePersistence.get(vosURI);
-            
+
             log.debug("Checking delete privilege on: " + target.getUri());
             voSpaceAuthorizer.getDeletePermission(target);
-            
+
             return target;
         }
         catch (NodeNotFoundException ex)
@@ -162,6 +160,6 @@ public class DeleteNodeAction extends NodeAction
 
         return NodeFault.NodeNotFound;
     }
-    
-    
+
+
 }

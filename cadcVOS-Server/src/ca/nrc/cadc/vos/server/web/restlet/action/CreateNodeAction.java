@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -83,31 +83,29 @@ import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
-import org.restlet.data.MediaType;
 
 /**
  * Class to perform the creation of a Node.
- * 
+ *
  * @author majorb
  */
 public class CreateNodeAction extends NodeAction
 {
-    
+
     protected static Logger log = Logger.getLogger(CreateNodeAction.class);
-    
+
     @Override
     public Node getClientNode()
-        throws URISyntaxException, NodeParsingException, IOException 
+        throws URISyntaxException, NodeParsingException, IOException
     {
         NodeInputRepresentation nodeInputRepresentation =
             new NodeInputRepresentation(nodeXML, vosURI.getPath());
         return nodeInputRepresentation.getNode();
     }
-    
+
     @Override
     public Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, TransientException
@@ -117,7 +115,7 @@ public class CreateNodeAction extends NodeAction
             VOSURI parentURI = vosURI.getParentURI();
             Node node = (Node) nodePersistence.get(parentURI);
             voSpaceAuthorizer.getWritePermission(node);
-            
+
             return node;
         }
         catch (NodeNotFoundException ex)
@@ -136,17 +134,17 @@ public class CreateNodeAction extends NodeAction
             if (serverNode instanceof ContainerNode)
             {
                 ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
-                
+
                 nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
                 for (Node n : parent.getNodes())
                 {
                     if (n.getName().equals(clientNode.getName()))
                         throw new NodeAlreadyExistsException(vosURI.getURI().toASCIIString());
                 }
-                
+
                 clientNode.setParent(parent);
                 Node storedNode = nodePersistence.put(clientNode);
-            
+
                 // return the node in xml format
                 NodeOutputRepresentation nodeOutputRepresentation =
                     new NodeOutputRepresentation(storedNode, getNodeWriter(), getMediaType());

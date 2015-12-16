@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -69,25 +69,25 @@ package ca.nrc.cadc.vos.server.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 
 import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
 
 import ca.nrc.cadc.vos.NodeFault;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 
 /**
  * Plain text representation of a NodeFault.
- * 
+ *
  * @author majorb
  *
  */
 public class NodeErrorRepresentation extends OutputRepresentation
 {
-    
+
     private String message;
-    
+
     public NodeErrorRepresentation(NodeFault nodeFault)
     {
         super(MediaType.TEXT_PLAIN);

@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -66,9 +66,7 @@
  */
 package ca.nrc.cadc.vos.server.auth;
 
-import ca.nrc.cadc.ac.Role;
-import ca.nrc.cadc.ac.UserNotFoundException;
-import ca.nrc.cadc.ac.client.GMSClient;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -79,6 +77,8 @@ import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.security.cert.CertificateException;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -86,10 +86,12 @@ import java.util.List;
 import java.util.Set;
 
 import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.ac.Role;
+import ca.nrc.cadc.ac.UserNotFoundException;
+import ca.nrc.cadc.ac.client.GMSClient;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.auth.DelegationToken;
@@ -108,9 +110,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import java.io.File;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 
 
 /**
@@ -145,7 +144,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private NodePersistence nodePersistence;
     private RegistryClient registryClient;
     private GMSClient canfarGMS;
-    
+
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
     public VOSpaceAuthorizer()
@@ -161,7 +160,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             this.registryClient = new RegistryClient();
-            
+
             URL url = registryClient.getServiceURL(URI.create(CANFAR_GMS_SERVICE_ID), VOS.GMS_PROTOCOL);
             LOG.debug(CANFAR_GMS_SERVICE_ID + " -> " + url);
             this.canfarGMS = new GMSClient(url.toExternalForm());
@@ -169,11 +168,11 @@ public class VOSpaceAuthorizer implements Authorizer
         catch (IllegalArgumentException e)
         {
             throw new RuntimeException("BUG: Error creating GMS Client", e);
-        } 
-        catch (MalformedURLException e) 
+        }
+        catch (MalformedURLException e)
         {
             throw new RuntimeException("BUG: Error creating GMS Client", e);
-        } 
+        }
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -215,7 +214,7 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         try
         {
-            
+
             VOSURI vos = new VOSURI(uri);
             Node node = nodePersistence.get(vos, allowPartialPaths);
             profiler.checkpoint("nodePersistence.get");
@@ -247,7 +246,7 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
+
         checkDelegation(node, subject);
 
         LinkedList<Node> nodes = Node.getNodeList(node);
@@ -327,7 +326,7 @@ public class VOSpaceAuthorizer implements Authorizer
 
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
+
         checkDelegation(node, subject);
 
         // check if the node is locked
@@ -428,7 +427,7 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         if (subject.getPrincipals().isEmpty())
             return false;
-        
+
         List<String> groupURIs = groupProp.extractPropertyValueList();
         if (groupURIs == null || groupURIs.isEmpty())
             return false;
@@ -486,22 +485,22 @@ public class VOSpaceAuthorizer implements Authorizer
             }
         }
         finally { }
-        
+
         if (wrapException != null)
             throw wrapException;
-        
+
         return false;
     }
-    
+
     // HACK: need to create a privaledged subject for use with CredClient calls
-    // but this needs to be configurable somehow... 
+    // but this needs to be configurable somehow...
     // for now: compatibility with current system config
     private Subject createOpsSubject()
     {
         File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
         return SSLUtil.createSubject(pemFile);
     }
-    
+
     private void checkCredentials(final Subject subject)
     {
         // lazy init of credentials
@@ -715,7 +714,7 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         this.nodePersistence = nodePersistence;
     }
-    
+
     /** check for delegation cookie and, if present, does an authorization
      * against it.
      * @param node - node authorization is performed against
@@ -723,7 +722,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException - unauthorized access
      */
     private void checkDelegation(Node node, Subject subject) throws AccessControlException
-    {        
+    {
         Set<DelegationToken> tokens = subject.getPublicCredentials(DelegationToken.class);
         for (DelegationToken token : tokens)
         {
@@ -737,7 +736,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 }
                 tmp = tmp.getParentURI();
             }
-            String msg = "Scoped search (" + scope + ") on node (" + 
+            String msg = "Scoped search (" + scope + ") on node (" +
                     node.getUri() + ")- accessed denied";
             LOG.debug(msg);
             throw new AccessControlException(msg);

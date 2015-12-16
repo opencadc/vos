@@ -1,4 +1,4 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -91,16 +91,15 @@ import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
-import org.restlet.data.MediaType;
 
 /**
  * Class to perform the retrieval of a Node.
- * 
+ *
  * @author majorb
  */
 public class GetNodeAction extends NodeAction
 {
-    
+
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
 
     /**
@@ -109,7 +108,7 @@ public class GetNodeAction extends NodeAction
     public GetNodeAction()
     {
     }
-    
+
     @Override
     protected Node getClientNode() throws URISyntaxException,
             NodeParsingException, IOException
@@ -126,7 +125,7 @@ public class GetNodeAction extends NodeAction
         PathResolver pathResolver = new PathResolver(nodePersistence);
         try
         {
-            return pathResolver.resolveWithReadPermissionCheck(vosURI, 
+            return pathResolver.resolveWithReadPermissionCheck(vosURI,
                     partialPathVOSpaceAuthorizer, false);
         }
         catch (NodeNotFoundException e)
@@ -134,11 +133,11 @@ public class GetNodeAction extends NodeAction
             throw new FileNotFoundException(e.getMessage());
         }
     }
-    
+
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
         throws URISyntaxException, FileNotFoundException, TransientException
-    {        
+    {
         long start;
         long end;
         if (serverNode instanceof ContainerNode)
@@ -146,11 +145,11 @@ public class GetNodeAction extends NodeAction
             // Paging parameters
             String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
-            
+
             ContainerNode cn = (ContainerNode) serverNode;
             boolean paginate = false;
             VOSURI startURIObject = null;
-            
+
             // parse the pageLimit
             Integer pageLimit = null;
             if (pageLimitString != null)
@@ -165,7 +164,7 @@ public class GetNodeAction extends NodeAction
                     throw new IllegalArgumentException("value for limit must be an integer.");
                 }
             }
-            
+
             // validate startURI
             if (StringUtil.hasText(startURI))
             {
@@ -176,7 +175,7 @@ public class GetNodeAction extends NodeAction
                 }
                 paginate = true;
             }
-            
+
             // get the children as requested
             start = System.currentTimeMillis();
             if (cn.getUri().isRoot())
@@ -215,17 +214,17 @@ public class GetNodeAction extends NodeAction
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
             doFilterChildren(cn, pageLimit);
         }
-        
+
         // Detail level parameter
         String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
-        
+
         start = System.currentTimeMillis();
-        
+
         // get the properties if no detail level is specified (null) or if the
         // detail level is something other than 'min'.
         if (!VOS.Detail.min.getValue().equals(detailLevel))
             nodePersistence.getProperties(serverNode);
-        
+
         end = System.currentTimeMillis();
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
 
@@ -247,12 +246,12 @@ public class GetNodeAction extends NodeAction
             // no view specified or found--return the xml representation
             final NodeWriter nodeWriter = getNodeWriter();
             nodeWriter.setStylesheetURL(getStylesheetURL());
-            
+
             // clear the properties from server node if the detail
             // level is set to 'min'
             if (VOS.Detail.min.getValue().equals(detailLevel))
                 serverNode.getProperties().clear();
-            
+
             return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter, getMediaType()));
         }
         else
@@ -272,7 +271,7 @@ public class GetNodeAction extends NodeAction
             }
         }
     }
-    
+
     /**
      * Look for the stylesheet URL in the request context.
      * @return      The String URL of the stylesheet for this action.
@@ -300,13 +299,13 @@ public class GetNodeAction extends NodeAction
     /**
      * If this is the root node, we apply a privacy policy and filter out
      * child nodes the caller is not allowed to read
-     * 
+     *
      * TODO: The approach to manually trimming to the pageLimit size for
      * the root container will cease to work when the number of root
      * container nodes exceeds the upper limit of children returned as
      * defined in the node persistence.  Instead, a loop should be implemented,
      * as it is in the client, to manually retrieve more children if
-     * necessary if some have been filtered out due to lack of read permission. 
+     * necessary if some have been filtered out due to lack of read permission.
      */
     private void doFilterChildren(ContainerNode node, Integer pageLimit)
     {
@@ -323,7 +322,7 @@ public class GetNodeAction extends NodeAction
             {
                 voSpaceAuthorizer.getReadPermission(n);
                 nodeCount++;
-                
+
                 // stop iterating if we've met a specified limit
                 if (pageLimit != null && nodeCount >= pageLimit)
                     metLimit = true;
@@ -334,7 +333,7 @@ public class GetNodeAction extends NodeAction
                 iter.remove();
             }
         }
-        
+
         // since a limit isn't supplied to node persistence when getting
         // the children of the root node, apply the limit value now.
         if (pageLimit != null && node.getNodes().size() > pageLimit)
