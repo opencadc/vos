@@ -95,6 +95,11 @@ public class JsonNodeWriter extends NodeWriter
         outputter.getListElementNames().add("properties");
         outputter.getListElementNames().add("accepts");
         outputter.getListElementNames().add("provides");
+
+        // WebRT 72612
+        // Treat all property values as Strings.
+        // jenkinsd 2016.01.20
+        outputter.getStringElementNames().add("property");
         
         outputter.setFormat(Format.getPrettyFormat());
         Document document = new Document(root);
