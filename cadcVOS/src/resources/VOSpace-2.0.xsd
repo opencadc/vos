@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink" targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
-    <xs:import namespace="http://www.ivoa.net/xml/UWS/v1.0" schemaLocation="http://www.ivoa.net/xml/UWS/v1.0"/>
 
     <!-- ======== Node types ======== -->
 

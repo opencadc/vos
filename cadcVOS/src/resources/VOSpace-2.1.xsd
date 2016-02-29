@@ -4,7 +4,6 @@
     xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.1"
     xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0"
     xmlns:xlink="http://www.w3.org/1999/xlink">
-  <xs:import namespace="http://www.ivoa.net/xml/UWS/v1.0" schemaLocation="http://www.ivoa.net/xml/UWS/v1.0"/>
 
   <!-- ======== Node types ======== -->
 
