@@ -69,10 +69,8 @@ package ca.nrc.cadc.vos.server.auth;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -89,6 +87,7 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.ac.AC;
 import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.ac.client.GMSClient;
@@ -100,7 +99,6 @@ import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.client.CredClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.profiler.Profiler;
-import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeLockedException;
@@ -128,7 +126,7 @@ public class VOSpaceAuthorizer implements Authorizer
 
     // TODO: make these configurable or find from the VOSpace capabilities
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String CANFAR_GMS_SERVICE_ID = "ivo://cadc.nrc.ca/canfargms";
+    private static final String CANFAR_GMS_SERVICE_ID = AC.GMS_SERVICE_URI;
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
     public static final String OFFLINE = "Offline";
