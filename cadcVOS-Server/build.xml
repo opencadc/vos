@@ -125,7 +125,8 @@
     <property name="dev.cglib"          value="${ext.dev}/cglib.jar" />
     <property name="dev.objenesis"      value="${ext.dev}/objenesis.jar" />
     <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars"        value="${test.jdbc.drivers}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${commons-logging}:"/>
+	<property name="jconn3"             value="${ext.lib}/jconn3.jar" />
+    <property name="testingJars"        value="${test.jdbc.drivers}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${commons-logging}:${jconn3}"/>
     	
     <target name="create-tables">
         <echo message="creating test tables..."/>
