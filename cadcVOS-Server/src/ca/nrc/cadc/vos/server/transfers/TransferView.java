@@ -67,91 +67,26 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server.transfers;
 
+import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
+import ca.nrc.cadc.vos.VOSURI;
 
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
 
 /**
- * Application for handling Node routing and resources.
+ * Interface defining CADC views that use parameters to specify view
+ * opeation.
  *
  * @author majorb
  *
  */
-public class NodesApplication extends Application
+public interface TransferView
 {
 
-    private static final Logger log = Logger.getLogger(NodesApplication.class);
+    public Map<String,List<String>> getViewParams(VOSURI target, List<ca.nrc.cadc.uws.Parameter> additionalParameters);
 
-    public NodesApplication()
-    {
-    }
-
-    public NodesApplication(final Context context)
-    {
-        super(context);
-
-    }
-
-    private class NodesRouter extends Router
-    {
-        public NodesRouter(final Context context)
-        {
-            super(context);
-            attach("", NodeResource.class);
-            attach("/", NodeResource.class);
-
-            log.debug("attaching /{nodePath} -> NodeResource");
-            TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
-            Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
-            nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> NodeResource - DONE");
-        }
-    }
-
-    @Override
-    public Restlet createInboundRoot()
-    {
-
-        Context context = getContext();
-
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        // Create the configured NodePersistence bean
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, np);
-
-        return new NodesRouter(context);
-    }
-
+    public List<ca.nrc.cadc.uws.Parameter> cleanseParameters(List<ca.nrc.cadc.uws.Parameter> additionalParameters);
 
 }

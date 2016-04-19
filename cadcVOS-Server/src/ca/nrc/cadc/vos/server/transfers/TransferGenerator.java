@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2016.                            (c) 2016.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,91 +67,47 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server.transfers;
 
-import java.util.Map;
+import java.io.FileNotFoundException;
+import java.net.URL;
+import java.util.List;
 
-import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
-
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.View;
 
 /**
- * Application for handling Node routing and resources.
- *
- * @author majorb
- *
+ * An interface to vospace storage back-end for provided transfer details
+ * in the transfer negotiation process.
  */
-public class NodesApplication extends Application
+public interface TransferGenerator
 {
 
-    private static final Logger log = Logger.getLogger(NodesApplication.class);
-
-    public NodesApplication()
-    {
-    }
-
-    public NodesApplication(final Context context)
-    {
-        super(context);
-
-    }
-
-    private class NodesRouter extends Router
-    {
-        public NodesRouter(final Context context)
-        {
-            super(context);
-            attach("", NodeResource.class);
-            attach("/", NodeResource.class);
-
-            log.debug("attaching /{nodePath} -> NodeResource");
-            TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
-            Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
-            nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> NodeResource - DONE");
-        }
-    }
-
-    @Override
-    public Restlet createInboundRoot()
-    {
-
-        Context context = getContext();
-
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        // Create the configured NodePersistence bean
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, np);
-
-        return new NodesRouter(context);
-    }
-
+    /**
+     * Request a list of URLs for the given transfer request information.
+     *
+     * This method returns a list of URLs to handle the case where the
+     * storage system has multiple copies of a file or multiple locations
+     * in which a file can be saved.  Returning only one URL in the list
+     * is a perfectly normal response though.
+     *
+     * @param target The target data node.
+     * @param protocol The protocol object containing scheme, direction, and
+     *     authentication information.
+     * @param view The view being requested (may be null)
+     * @param job The UWS job associated with the transfer request.
+     * @param additionalParams Any additional parameters associated with the request.
+     *
+     * @throws FileNotFoundException If the storage system cannot find an
+     *     object for the target.
+     * @throws TransientException If an unexpected error occurs.
+     *
+     */
+    List<URL> getURLs(VOSURI target, Protocol protocol, View view, Job job, List<Parameter> additionalParams)
+        throws FileNotFoundException, TransientException;
 
 }
