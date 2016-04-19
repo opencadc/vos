@@ -67,91 +67,172 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+import java.net.URL;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
 
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.transfers.TransferUtil;
+import ca.nrc.cadc.vos.server.transfers.TransferView;
 
 /**
- * Application for handling Node routing and resources.
+ * View for getting the data of a DataNode.
  *
  * @author majorb
  *
  */
-public class NodesApplication extends Application
+public class DataView extends AbstractView implements TransferView
 {
 
-    private static final Logger log = Logger.getLogger(NodesApplication.class);
+    private static Logger log = Logger.getLogger(DataView.class);
 
-    public NodesApplication()
+    private String scheme;
+    private AuthMethod forceAuthMethod;
+
+    /**
+     * DataView constructor.
+     */
+    public DataView()
     {
+        super();
     }
 
-    public NodesApplication(final Context context)
+    /**
+     * DataView constructor.
+     * @param uri
+     */
+    public DataView(URI uri)
     {
-        super(context);
-
+        super(uri);
     }
 
-    private class NodesRouter extends Router
+    public static boolean isPublic(Node n)
     {
-        public NodesRouter(final Context context)
+        while (n != null)
         {
-            super(context);
-            attach("", NodeResource.class);
-            attach("/", NodeResource.class);
-
-            log.debug("attaching /{nodePath} -> NodeResource");
-            TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
-            Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
-            nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> NodeResource - DONE");
+            if ( !n.isPublic() )
+                return false;
+            n = n.getParent();
         }
+        return true;
+    }
+
+    /**
+     * Setup the URL for getting data for the node.
+     */
+    @Override
+    public void setNode(Node node, String viewReference, URL requestURL)
+        throws UnsupportedOperationException, TransientException
+    {
+        super.setNode(node, viewReference, requestURL);
+        if (!(node instanceof DataNode))
+        {
+            throw new UnsupportedOperationException("Node must be a DataNode");
+        }
+
+        this.scheme = requestURL.getProtocol();
+
+        // check to see if a auth was specified
+        String query = requestURL.getQuery();
+        log.debug("query: " + query);
+        String auth = getFirstValue("auth", query);
+        log.debug("auth="+auth);
+        if (auth != null)
+        {
+            try
+            {
+                this.forceAuthMethod = AuthMethod.getAuthMethod(auth);
+                // HACK: since all https is X509 client cert, auth also changes protocol
+                if (AuthMethod.CERT.equals(forceAuthMethod))
+                    scheme = "https";
+                else
+                    scheme = "http";
+            }
+            catch(IllegalArgumentException ex)
+            {
+                throw new UnsupportedOperationException("uknown auth method: " + auth);
+            }
+        }
+    }
+
+    private String getFirstValue(String key, String query)
+    {
+        if (query == null)
+        {
+            return null;
+        }
+
+        String[] parts = query.split("&");
+
+        for (String p : parts)
+        {
+            String[] kv = p.split("=");
+            if (kv.length == 2 && key.equalsIgnoreCase(kv[0]))
+                return kv[1];
+        }
+        return null;
+    }
+
+    /**
+     * Return the URL for getting data.
+     */
+    @Override
+    public URL getRedirectURL()
+    {
+        if (node == null)
+            throw new IllegalStateException("getRedirectURL called with node=null ");
+        if (requestURL == null)
+            throw new IllegalStateException("getRedirectURL called with requestURL=null ");
+
+        AuthMethod am = null;
+        if (forceAuthMethod != null)
+        {
+            if (DataView.isPublic(node))
+                am = AuthMethod.ANON;
+            else
+                am = forceAuthMethod;
+        }
+        return TransferUtil.getSynctransParamURL(scheme, node.getUri(), am, null);
+    }
+
+    /**
+     * DataView not accepted for any nodes.
+     */
+    @Override
+    public boolean canAccept(Node node)
+    {
+        return false;
+    }
+
+    /**
+     * DataView is provided for all data nodes.
+     */
+    @Override
+    public boolean canProvide(Node node)
+    {
+        return (node instanceof DataNode);
     }
 
     @Override
-    public Restlet createInboundRoot()
+    public Map<String,List<String>> getViewParams(VOSURI target, List<ca.nrc.cadc.uws.Parameter> additionalParameters)
     {
-
-        Context context = getContext();
-
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        // Create the configured NodePersistence bean
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, np);
-
-        return new NodesRouter(context);
+        // no parameters for DataView
+        return null;
     }
 
+    @Override
+    public List<ca.nrc.cadc.uws.Parameter> cleanseParameters(List<ca.nrc.cadc.uws.Parameter> additionalParameters)
+    {
+        return additionalParameters;
+    }
 
 }

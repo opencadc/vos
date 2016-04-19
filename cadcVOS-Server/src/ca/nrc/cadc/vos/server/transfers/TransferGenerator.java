@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2011.                            (c) 2011.
+*  (c) 2016.                            (c) 2016.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,47 +62,52 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
+*  $Revision: 4 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
 
+import java.io.FileNotFoundException;
+import java.net.URL;
+import java.util.List;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-import java.io.IOException;
-import java.io.Writer;
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.View;
 
 /**
- *
- * @author pdowler
+ * An interface to vospace storage back-end for provided transfer details
+ * in the transfer negotiation process.
  */
-public class JsonNodeWriter extends NodeWriter
+public interface TransferGenerator
 {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
-    @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException
-    {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+    /**
+     * Request a list of URLs for the given transfer request information.
+     *
+     * This method returns a list of URLs to handle the case where the
+     * storage system has multiple copies of a file or multiple locations
+     * in which a file can be saved.  Returning only one URL in the list
+     * is a perfectly normal response though.
+     *
+     * @param target The target data node.
+     * @param protocol The protocol object containing scheme, direction, and
+     *     authentication information.
+     * @param view The view being requested (may be null)
+     * @param job The UWS job associated with the transfer request.
+     * @param additionalParams Any additional parameters associated with the request.
+     *
+     * @throws FileNotFoundException If the storage system cannot find an
+     *     object for the target.
+     * @throws TransientException If an unexpected error occurs.
+     *
+     */
+    List<URL> getURLs(VOSURI target, Protocol protocol, View view, Job job, List<Parameter> additionalParams)
+        throws FileNotFoundException, TransientException;
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
 }
