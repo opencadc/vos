@@ -67,42 +67,36 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
 
-
-import ca.nrc.cadc.xml.JsonOutputter;
-import java.io.IOException;
-import java.io.Writer;
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import ca.nrc.cadc.vos.NodeFault;
 
 /**
  *
  * @author pdowler
  */
-public class JsonNodeWriter extends NodeWriter
+public class TransferException extends Exception
 {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+    private static final long serialVersionUID = 201304061030L;
+    
+    private NodeFault fault;
+    
+    public TransferException(String msg)
+    {
+        super(msg);
+    }
+    
+    public TransferException(NodeFault fault)
+    {
+        super(fault.getMessage());
+        this.fault = fault;
+    }
 
     @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException
+    public String getMessage()
     {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+        if (fault != null)
+            return fault.getStatus().getName() + " " + fault.getMessage();
+        return super.getMessage();
     }
 }

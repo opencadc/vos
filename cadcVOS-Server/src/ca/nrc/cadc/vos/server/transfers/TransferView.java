@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2011.                            (c) 2011.
+*  (c) 2009.                            (c) 2009.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,47 +62,31 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
+*  $Revision: 4 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
 
+import java.util.List;
+import java.util.Map;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-import java.io.IOException;
-import java.io.Writer;
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import ca.nrc.cadc.vos.VOSURI;
+
 
 /**
+ * Interface defining CADC views that use parameters to specify view
+ * opeation.
  *
- * @author pdowler
+ * @author majorb
+ *
  */
-public class JsonNodeWriter extends NodeWriter
+public interface TransferView
 {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
-    @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException
-    {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+    public Map<String,List<String>> getViewParams(VOSURI target, List<ca.nrc.cadc.uws.Parameter> additionalParameters);
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
+    public List<ca.nrc.cadc.uws.Parameter> cleanseParameters(List<ca.nrc.cadc.uws.Parameter> additionalParameters);
+
 }

@@ -67,42 +67,87 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
 
-
-import ca.nrc.cadc.xml.JsonOutputter;
 import java.io.IOException;
-import java.io.Writer;
+import java.net.URISyntaxException;
+
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
  *
  * @author pdowler
  */
-public class JsonNodeWriter extends NodeWriter
+public class PullFromVOSpaceNegotiation extends VOSpaceTransfer
 {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+    private static final Logger log = Logger.getLogger(PullFromVOSpaceNegotiation.class);
+
+    private VOSpaceAuthorizer authorizer;
+
+    public PullFromVOSpaceNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
+    {
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
+    }
 
     @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException
+    public void doAction()
+        throws TransferException, JobPersistenceException, JobNotFoundException,
+        LinkingException, NodeNotFoundException, TransferParsingException,
+        IOException, TransientException, URISyntaxException
     {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+        boolean updated = false;
+        try
+        {
+            VOSURI target = new VOSURI(transfer.getTarget());
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+            PathResolver resolver = new PathResolver(nodePersistence);
+
+            // careful to capture a link to data node so we can get the right filename in the transfer
+            Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
+            Node actualNode = apparentNode;
+            if (apparentNode instanceof LinkNode)
+            {
+                // TODO: override resolve to start at node
+                actualNode = resolver.resolveLeafNodeWithReadPermissionCheck(target, apparentNode, authorizer);
+            }
+            log.debug("Resolved path: " + target + " -> " + actualNode.getUri());
+
+
+            if ( !(actualNode instanceof DataNode) )
+            {
+                NodeFault f = NodeFault.InvalidArgument;
+                f.setMessage("target is not a data node");
+                throw new TransferException(f);
+            }
+
+            updateTransferJob(apparentNode, actualNode.getUri().getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
+        }
+        finally
+        {
+            if (!updated)
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
+        }
     }
 }

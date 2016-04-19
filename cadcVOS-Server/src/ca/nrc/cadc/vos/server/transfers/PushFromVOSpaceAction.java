@@ -67,42 +67,39 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
 
-
-import ca.nrc.cadc.xml.JsonOutputter;
 import java.io.IOException;
-import java.io.Writer;
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import java.net.URISyntaxException;
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
  *
  * @author pdowler
  */
-public class JsonNodeWriter extends NodeWriter
+public class PushFromVOSpaceAction   extends VOSpaceTransfer
 {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
-
-    @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException
+    public PushFromVOSpaceAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
     {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+        super(per, ju, job, transfer);
+    }
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public void doAction()
+        throws JobPersistenceException, JobNotFoundException,
+        LinkingException, NodeNotFoundException, TransferParsingException,
+        IOException, TransientException, URISyntaxException
+    {
+        throw new UnsupportedOperationException(Direction.pushFromVoSpaceValue + " not implemented");
     }
 }
