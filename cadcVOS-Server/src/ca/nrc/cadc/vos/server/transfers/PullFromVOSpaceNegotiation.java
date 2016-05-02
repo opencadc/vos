@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,96 +62,92 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server.transfers;
 
-import java.util.Map;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
 
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
+import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
- * Application for handling Node routing and resources.
  *
- * @author majorb
- *
+ * @author pdowler
  */
-public class NodesApplication extends Application
+public class PullFromVOSpaceNegotiation extends VOSpaceTransfer
 {
+    private static final Logger log = Logger.getLogger(PullFromVOSpaceNegotiation.class);
 
-    private static final Logger log = Logger.getLogger(NodesApplication.class);
+    private VOSpaceAuthorizer authorizer;
 
-    public NodesApplication()
+    public PullFromVOSpaceNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
     {
-    }
-
-    public NodesApplication(final Context context)
-    {
-        super(context);
-
-    }
-
-    private class NodesRouter extends Router
-    {
-        public NodesRouter(final Context context)
-        {
-            super(context);
-            attach("", NodeResource.class);
-            attach("/", NodeResource.class);
-
-            log.debug("attaching /{nodePath} -> NodeResource");
-            TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
-            Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
-            nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> NodeResource - DONE");
-        }
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
     }
 
     @Override
-    public Restlet createInboundRoot()
+    public void doAction()
+        throws TransferException, JobPersistenceException, JobNotFoundException,
+        LinkingException, NodeNotFoundException, TransferParsingException,
+        IOException, TransientException, URISyntaxException
     {
-
-        Context context = getContext();
-
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
+        boolean updated = false;
+        try
         {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
+            VOSURI target = new VOSURI(transfer.getTarget());
+
+            PathResolver resolver = new PathResolver(nodePersistence);
+
+            // careful to capture a link to data node so we can get the right filename in the transfer
+            Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
+            Node actualNode = apparentNode;
+            if (apparentNode instanceof LinkNode)
+            {
+                // TODO: override resolve to start at node
+                actualNode = resolver.resolveLeafNodeWithReadPermissionCheck(target, apparentNode, authorizer);
+            }
+            log.debug("Resolved path: " + target + " -> " + actualNode.getUri());
+
+
+            if ( !(actualNode instanceof DataNode) )
+            {
+                NodeFault f = NodeFault.InvalidArgument;
+                f.setMessage("target is not a data node");
+                throw new TransferException(f);
+            }
+
+            updateTransferJob(apparentNode, actualNode.getUri().getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
         }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        // Create the configured NodePersistence bean
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, np);
-
-        return new NodesRouter(context);
+        finally
+        {
+            if (!updated)
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
+        }
     }
-
-
 }

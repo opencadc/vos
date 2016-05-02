@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,96 +62,41 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server.transfers;
 
-import java.util.Map;
-
-import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
-
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
+import ca.nrc.cadc.vos.NodeFault;
 
 /**
- * Application for handling Node routing and resources.
  *
- * @author majorb
- *
+ * @author pdowler
  */
-public class NodesApplication extends Application
+public class TransferException extends Exception
 {
-
-    private static final Logger log = Logger.getLogger(NodesApplication.class);
-
-    public NodesApplication()
+    private static final long serialVersionUID = 201304061030L;
+    
+    private NodeFault fault;
+    
+    public TransferException(String msg)
     {
+        super(msg);
     }
-
-    public NodesApplication(final Context context)
+    
+    public TransferException(NodeFault fault)
     {
-        super(context);
-
-    }
-
-    private class NodesRouter extends Router
-    {
-        public NodesRouter(final Context context)
-        {
-            super(context);
-            attach("", NodeResource.class);
-            attach("/", NodeResource.class);
-
-            log.debug("attaching /{nodePath} -> NodeResource");
-            TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
-            Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
-            nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> NodeResource - DONE");
-        }
+        super(fault.getMessage());
+        this.fault = fault;
     }
 
     @Override
-    public Restlet createInboundRoot()
+    public String getMessage()
     {
-
-        Context context = getContext();
-
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        // Create the configured NodePersistence bean
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, np);
-
-        return new NodesRouter(context);
+        if (fault != null)
+            return fault.getStatus().getName() + " " + fault.getMessage();
+        return super.getMessage();
     }
-
-
 }
