@@ -87,7 +87,6 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.ac.AC;
 import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.ac.client.GMSClient;
@@ -126,7 +125,6 @@ public class VOSpaceAuthorizer implements Authorizer
 
     // TODO: make these configurable or find from the VOSpace capabilities
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    private static final String CANFAR_GMS_SERVICE_ID = AC.GMS_SERVICE_URI;
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
     public static final String OFFLINE = "Offline";
@@ -140,7 +138,6 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean disregardLocks = false;
 
     private NodePersistence nodePersistence;
-    private GMSClient canfarGMS;
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
@@ -153,15 +150,6 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         initState();
         this.allowPartialPaths = allowPartialPaths;
-
-        try
-        {
-            this.canfarGMS = new GMSClient(URI.create(CANFAR_GMS_SERVICE_ID));
-        }
-        catch (IllegalArgumentException e)
-        {
-            throw new RuntimeException("BUG: Error creating GMS Client", e);
-        }
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -435,19 +423,18 @@ public class VOSpaceAuthorizer implements Authorizer
                 {
                     LOG.debug("Checking GMS on groupURI: " + groupURI);
                     URI guri = new URI(groupURI);
-                    if (guri.getFragment() != null)
+                    if (guri.getFragment() != null && groupURI.endsWith(guri.getFragment()))
                     {
-                        // TODO: we should be using the base group URI to decide which GMS service to
-                        // call, but CANFAR and CADC groups both have the same authority/base... doh!
-
-                        // call CANFAR GMS
-                        boolean isMember = canfarGMS.isMember(guri.getFragment(), Role.MEMBER);
-                        profiler.checkpoint("canfarGMS.ismember");
+                        String serviceID = groupURI.substring(0, groupURI.length() - (guri.getFragment().length() + 1));
+                        LOG.debug("Using GMS service ID: " + serviceID);
+                        GMSClient gmsClient = new GMSClient(URI.create(serviceID));
+                        boolean isMember = gmsClient.isMember(guri.getFragment(), Role.MEMBER);
+                        profiler.checkpoint("gmsClient.ismember");
                         if (isMember)
                             return true;
                     }
                     else
-                        LOG.warn("skipping invalid group URI (missing fragment): " + groupURI);
+                        LOG.warn("skipping invalid group URI (missing or malformed fragment): " + groupURI);
                 }
                 catch (URISyntaxException e)
                 {
