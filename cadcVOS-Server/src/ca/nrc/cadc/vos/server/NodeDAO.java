@@ -849,7 +849,7 @@ public class NodeDAO
                 if (node instanceof DataNode)
                 {
                     // get the contentLength value
-                    sql = getSelectContentLengthSQL(node);
+                    sql = getSelectContentLengthForDeleteSQL(node);
 
                     // Note: if node size is null, the jdbc template
                     // will return zero.
@@ -935,7 +935,7 @@ public class NodeDAO
         prof.checkpoint("getDeleteNodePropertiesSQL");
 
         // delete the node
-        sql = getDeleteNodeSQL(node, notBusyOnly); // only delete if non-busy
+        sql = getDeleteNodeSQL(node, notBusyOnly);
         log.debug(sql);
         int count = jdbc.update(sql);
         prof.checkpoint("getDeleteNodeSQL");
@@ -1328,7 +1328,7 @@ public class NodeDAO
             if (!(src instanceof LinkNode))
             {
                 // get the contentLength
-                sql = this.getSelectContentLengthSQL(src);
+                sql = this.getSelectContentLengthForDeleteSQL(src);
 
                 // Note: if contentLength is null, jdbc template will return zero.
                 contentLength = jdbc.queryForLong(sql);
@@ -1533,8 +1533,23 @@ public class NodeDAO
             count = deleteChildren(cn, batchSize, count, dryrun);
         }
 
+        String sql = null;
+        Long sizeDifference = null;
+
+        // get the contentLength value
+        sql = getSelectContentLengthForDeleteSQL(node);
+        log.debug(sql);
+
+        if (!dryrun)
+        {
+            // Note: if node size is null, the jdbc template
+            // will return zero.
+            sizeDifference = jdbc.queryForLong(sql);
+            prof.checkpoint("getSelectContentLengthSQL");
+        }
+
         // delete properties: so we don't violate FK constraint -> node
-        String sql = getDeleteNodePropertiesSQL(node);
+        sql = getDeleteNodePropertiesSQL(node);
         log.debug(sql);
         if (!dryrun)
             count += jdbc.update(sql);
@@ -1550,6 +1565,19 @@ public class NodeDAO
             count += num;
         }
         count = commitBatch("delete", batchSize, count, dryrun);
+
+        // apply the negative size difference to the parent
+        if (node.getParent() != null && sizeDifference != null)
+        {
+            sql = getApplySizeDiffSQL(node.getParent(), sizeDifference, false);
+            log.debug(sql);
+            if (!dryrun)
+            {
+                jdbc.update(sql);
+                prof.checkpoint("getApplySizeDiffSQL");
+            }
+        }
+
         return count;
     }
 
@@ -2129,10 +2157,18 @@ public class NodeDAO
         return sb.toString();
     }
 
-    protected String getSelectContentLengthSQL(Node node)
+    protected String getSelectContentLengthForDeleteSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT coalesce(contentLength, 0) - coalesce(delta, 0) FROM ");
+        String nodeType = getNodeType(node);
+        if (nodeType.equals(NODE_TYPE_DATA))
+        {
+            sb.append("SELECT coalesce(contentLength, 0) - coalesce(delta, 0) FROM ");
+        }
+        else
+        {
+            sb.append("SELECT coalesce(contentLength, 0) FROM ");
+        }
         sb.append(getNodeTableName());
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
