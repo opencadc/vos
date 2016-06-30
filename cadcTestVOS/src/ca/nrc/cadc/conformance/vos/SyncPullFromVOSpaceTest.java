@@ -88,6 +88,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -119,7 +120,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
 
     public SyncPullFromVOSpaceTest()
     {
-        super(SYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_SYNC_20_URI, SYNC_TRANSFER_ENDPOINT);
     }
 
     @Test

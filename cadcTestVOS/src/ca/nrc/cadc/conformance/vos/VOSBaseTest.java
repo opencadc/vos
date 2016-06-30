@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -118,6 +119,7 @@ public abstract class VOSBaseTest
     protected static TestNode testSuiteNode;
 
     protected VOSURI baseURI;
+    protected URI resourceIdentifier;
     protected URL resourceURL;
     protected URL serviceURL;
 
@@ -135,19 +137,32 @@ public abstract class VOSBaseTest
      *
      * @param path to the resource to test.
      */
-    public VOSBaseTest(String path)
+    public VOSBaseTest(final URI standardID, final String path)
     {
         try
         {
-            // Base URI for the test nodes.
-            String propertyName = VOSTestSuite.class.getName() + ".baseURI";
+        	// resourceIdentifier for this test suite
+            String propertyName = VOSTestSuite.class.getName() + ".resourceidentifier";
             String propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
+                this.resourceIdentifier = new URI(propertyValue);
+            }
+            else
+            {
+                throw new IllegalStateException("system property " + propertyName + " not set to valid VOSpace URI");
+            }
+
+            // Base URI for the test nodes.
+            propertyName = VOSTestSuite.class.getName() + ".baseURI";
+            propertyValue = System.getProperty(propertyName);
             log.debug(propertyName + "=" + propertyValue);
             if (propertyValue != null)
             {
                 RegistryClient rc = new RegistryClient();
                 this.baseURI = new VOSURI(propertyValue);
-                this.serviceURL = rc.getServiceURL(baseURI.getServiceURI(), "https");
+                this.serviceURL = rc.getServiceURL(resourceIdentifier, standardID, AuthMethod.CERT);
                 this.resourceURL = new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + path);
             }
             else
@@ -201,6 +216,7 @@ public abstract class VOSBaseTest
 
         dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
+        log.debug("resourceIdentifier: " + resourceIdentifier);
         log.debug("serviceURL: " + serviceURL);
         log.debug("resourceURL: " + resourceURL);
         log.debug("supportLinkNodes: " + supportLinkNodes);
