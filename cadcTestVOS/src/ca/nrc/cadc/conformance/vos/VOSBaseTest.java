@@ -151,7 +151,8 @@ public abstract class VOSBaseTest
             }
             else
             {
-                throw new IllegalStateException("system property " + propertyName + " not set to valid VOSpace URI");
+            	String msg = "system property " + propertyName + " not set to valid VOSpace resourceIdentifier URI";
+                throw new IllegalStateException(msg);
             }
 
             // Base URI for the test nodes.
@@ -163,6 +164,12 @@ public abstract class VOSBaseTest
                 RegistryClient rc = new RegistryClient();
                 this.baseURI = new VOSURI(propertyValue);
                 this.serviceURL = rc.getServiceURL(resourceIdentifier, standardID, AuthMethod.CERT);
+                if (this.serviceURL == null)
+                {
+                    throw new RuntimeException("No service URL found for resourceIdentifier=" + 
+                        resourceIdentifier + ", standardID=" + standardID + ", AuthMethod=" + AuthMethod.CERT);
+                }
+                
                 this.resourceURL = new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + path);
             }
             else
