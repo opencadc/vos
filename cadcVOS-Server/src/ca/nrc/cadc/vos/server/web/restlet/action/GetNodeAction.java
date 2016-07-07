@@ -84,6 +84,7 @@ import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -140,6 +141,10 @@ public class GetNodeAction extends NodeAction
     {
         long start;
         long end;
+
+        // Detail level parameter
+        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+
         if (serverNode instanceof ContainerNode)
         {
             // Paging parameters
@@ -212,11 +217,17 @@ public class GetNodeAction extends NodeAction
 
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
-            doFilterChildren(cn, pageLimit);
-        }
 
-        // Detail level parameter
-        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+            // filter children at the root
+            doFilterChildren(cn, pageLimit);
+
+            if (VOS.Detail.max.getValue().equals(detailLevel))
+            {
+                // add a property to child nodes if they are visible to
+                // this request
+                doTagChildrenReadable(cn);
+            }
+        }
 
         start = System.currentTimeMillis();
 
@@ -341,6 +352,25 @@ public class GetNodeAction extends NodeAction
             log.debug("Reducing child list size from " + node.getNodes().size() +
                     " to " + pageLimit + " to meet limit request on root node.");
             node.setNodes(node.getNodes().subList(0, pageLimit));
+        }
+    }
+
+    private void doTagChildrenReadable(ContainerNode cn)
+    {
+        NodeProperty canReadProperty = new NodeProperty(
+                VOS.PROPERTY_URI_READABLE, Boolean.TRUE.toString());
+        canReadProperty.setReadOnly(true);
+        for (Node n : cn.getNodes())
+        {
+            try
+            {
+                voSpaceAuthorizer.getReadPermission(n);
+                n.getProperties().add(canReadProperty);
+            }
+            catch (AccessControlException e)
+            {
+                // no read access, continue
+            }
         }
     }
 
