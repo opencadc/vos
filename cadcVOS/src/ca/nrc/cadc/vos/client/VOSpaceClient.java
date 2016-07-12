@@ -76,6 +76,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
@@ -84,11 +85,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
@@ -127,25 +133,20 @@ public class VOSpaceClient
 
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
-    // TODO: get this from capabilites obtained via registry lookup
-    public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
-    public static final String VOSPACE_ASYNC_TRANSFER_ENDPOINT = "/transfers";
-    public static final String VOSPACE_ASYNC_NODEPROPS_ENDPONT = "/nodeprops";
-    public static final String VOSPACE_NODE_ENDPOINT = "/nodes";
-
-    protected String baseUrl;
+    private URI serviceID;
     boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
+    private AuthMethod authMethod;
 
 
     /**
      * Constructor. XML Schema validation is enabled by default.
      *
-     * @param baseUrl
+     * @param serviceID
      */
-    public VOSpaceClient(String baseUrl)
+    public VOSpaceClient(URI serviceID)
     {
-        this(baseUrl, true);
+        this(serviceID, true);
     }
 
     /**
@@ -154,13 +155,15 @@ public class VOSpaceClient
      * invalid VOSpace (node or transfer) or UWS (job) documents. However, performance
      * may be improved.
      *
-     * @param baseUrl
+     * @param serviceID
      * @param enableSchemaValidation
      */
-    public VOSpaceClient(String baseUrl, boolean enableSchemaValidation)
+    public VOSpaceClient(URI serviceID, boolean enableSchemaValidation)
     {
-        this.baseUrl = baseUrl;
         this.schemaValidation = enableSchemaValidation;
+        this.serviceID = serviceID;
+
+        authMethod = AuthenticationUtil.getCurrentSubjectAuthMethod();
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -236,7 +239,9 @@ public class VOSpaceClient
                     if (n.getName().equals(node.getName()))
                         throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
 
-            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+
+            URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
 
             NodeOutputStream out = new NodeOutputStream(node);
@@ -301,7 +306,8 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes" + path);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL url = new URL(vospaceURL.toExternalForm() + path);
             log.debug("getNode(), URL=" + url);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -341,7 +347,8 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
 
@@ -379,13 +386,15 @@ public class VOSpaceClient
     {
         try
         {
-            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_PROPERTIES_20_URI, authMethod);
+
+//            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
             Writer stringWriter = new StringWriter();
             nodeWriter.write(node, stringWriter);
-            URL postUrl = new URL(asyncNodePropsUrl);
+//            URL postUrl = new URL(asyncNodePropsUrl);
 
-            HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
+            HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
 
             runHttpTransfer(httpPost);
 
@@ -456,7 +465,8 @@ public class VOSpaceClient
         int responseCode;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes" + path);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL url = new URL(vospaceURL + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
@@ -524,9 +534,9 @@ public class VOSpaceClient
         }
     }
 
-    public String getBaseURL()
+    protected RegistryClient getRegistryClient()
     {
-        return baseUrl;
+        return new RegistryClient();
     }
 
     // create an async transfer job
@@ -534,13 +544,15 @@ public class VOSpaceClient
     {
         try
         {
-            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
+
+//            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
-            URL postUrl = new URL(asyncTransUrl);
+//            URL postUrl = new URL(asyncTransUrl);
 
-            HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
+            HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
 
             runHttpTransfer(httpPost);
 
@@ -573,7 +585,9 @@ public class VOSpaceClient
     {
         try
         {
-            URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
+
+//            URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = null;
         	if (transfer.isQuickTransfer())
         	{
@@ -582,7 +596,7 @@ public class VOSpaceClient
         		form.put("DIRECTION", transfer.getDirection().getValue());
         		form.put("PROTOCOL", transfer.getProtocols().iterator().
         				next().getUri()); // try first protocol?
-        		httpPost = new HttpPost(postUrl, form, false);
+        		httpPost = new HttpPost(vospaceURL, form, false);
         	}
         	else
         	{
@@ -591,7 +605,7 @@ public class VOSpaceClient
 	            StringWriter sw = new StringWriter();
 	            writer.write(transfer, sw);
 
-	            httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
+	            httpPost = new HttpPost(vospaceURL, sw.toString(), "text/xml", false);
         	}
 
             runHttpTransfer(httpPost);
@@ -637,14 +651,14 @@ public class VOSpaceClient
 	                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
 	            }
 	            String transDoc = new String(out.toByteArray(), "UTF-8");
-                    log.debug("transfer response: " + transDoc);
+                log.debug("transfer response: " + transDoc);
 	            TransferReader txfReader = new TransferReader(schemaValidation);
 	            log.debug("GET - reading content: " + redirectURL);
 	            Transfer trans = txfReader.read(transDoc, VOSURI.SCHEME);
 	            log.debug("GET - done: " + redirectURL);
 	            log.debug("negotiated transfer: " + trans);
 
-	            URL jobURL = extractJobURL(this.baseUrl, redirectURL);
+                URL jobURL = extractJobURL(vospaceURL.getProtocol() + vospaceURL.getHost(), redirectURL);
 	            return new ClientTransfer(jobURL, trans, schemaValidation);
             }
         }

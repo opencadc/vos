@@ -190,7 +190,6 @@ public class Main implements Runnable
     private URI source;
     private URI destination;
     private Direction transferDirection = null;
-    private String baseUrl = null;
     private VOSpaceClient client = null;
     private Subject subject;
     private boolean retryEnabled = false;
@@ -1360,27 +1359,6 @@ public class Main implements Runnable
             System.exit(INIT_STATUS);
         }
 
-        try
-        {
-            RegistryClient reg = new RegistryClient();
-            String protocol = "https";
-            if (this.subject == null)
-                protocol = "http";
-            URL baseURL = reg.getServiceURL(serverUri, protocol);
-            if (baseURL == null)
-            {
-                log.error("failed to find service URL for " + serverUri);
-                System.exit(INIT_STATUS);
-            }
-            this.baseUrl = baseURL.toString();
-        }
-        catch (MalformedURLException e)
-        {
-            log.error("failed to find service URL for " + serverUri);
-            log.error("reason: " + e.getMessage());
-            System.exit(INIT_STATUS);
-        }
-
         // check if schema validation should be disabled
         boolean doVal = true;
         String schemaVal = argMap.getValue(ARG_XSV);
@@ -1390,12 +1368,11 @@ public class Main implements Runnable
             log.info("XML schema validation: disabled");
         }
 
-        this.client = new VOSpaceClient(baseUrl, doVal);
+        this.client = new VOSpaceClient(serverUri, doVal);
 
         this.retryEnabled = !argMap.isSet(ARG_NO_RETRY);
 
         log.info("server uri: " + serverUri);
-        log.info("base url: " + this.baseUrl);
     }
 
     /**
