@@ -163,7 +163,7 @@ public class VOSpaceClient
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
 
-        authMethod = AuthenticationUtil.getCurrentSubjectAuthMethod();
+        authMethod = AuthenticationUtil.getAuthMethodForCurrentSubject();
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
