@@ -106,7 +106,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
 
     public MoveLinkNodeTest()
     {
-        super(Standards.VOSPACE_TRANSFERS_20_URI, ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, ASYNC_TRANSFER_ENDPOINT);
     }
 
     @Test

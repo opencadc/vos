@@ -105,7 +105,7 @@ public class MoveDataNodeTest extends VOSTransferTest
 
     public MoveDataNodeTest()
     {
-        super(Standards.VOSPACE_TRANSFERS_20_URI, ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, ASYNC_TRANSFER_ENDPOINT);
     }
 
     /**

@@ -119,7 +119,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
     public MoveVOSpaceInternalTest()
     {
-        super(Standards.VOSPACE_TRANSFERS_20_URI, ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, ASYNC_TRANSFER_ENDPOINT);
     }
 
     @Test

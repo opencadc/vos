@@ -113,7 +113,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
 
     public AsyncPullFromVOSpaceTest()
     {
-        super(Standards.VOSPACE_TRANSFERS_20_URI, ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, ASYNC_TRANSFER_ENDPOINT);
     }
 
     /**

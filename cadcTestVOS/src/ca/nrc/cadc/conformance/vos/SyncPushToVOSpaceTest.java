@@ -119,7 +119,7 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
 
     public SyncPushToVOSpaceTest()
     {
-        super(Standards.VOSPACE_SYNC_20_URI, SYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_SYNC_20, SYNC_TRANSFER_ENDPOINT);
     }
 
     @Test
