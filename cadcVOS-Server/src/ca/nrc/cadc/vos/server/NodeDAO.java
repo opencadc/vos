@@ -1709,11 +1709,11 @@ public class NodeDAO
      * @param limit The maximum to return
      * @return A list of outstanding node size propagations
      */
-    List<NodeSizePropagation> getOutstandingPropagations(int limit)
+    List<NodeSizePropagation> getOutstandingPropagations(int limit, boolean dataNodesOnly)
     {
         try
         {
-            String sql = this.getFindOutstandingPropagationsSQL(limit);
+            String sql = this.getFindOutstandingPropagationsSQL(limit, dataNodesOnly);
             log.debug("getOutstandingPropagations (limit " + limit + "): " + sql);
             NodeSizePropagationExtractor propagationExtractor = new NodeSizePropagationExtractor();
             List<NodeSizePropagation> propagations = (List<NodeSizePropagation>) jdbc.query(sql, propagationExtractor);
@@ -2127,7 +2127,7 @@ public class NodeDAO
         return sb.toString();
     }
 
-    protected String getFindOutstandingPropagationsSQL(int limit)
+    protected String getFindOutstandingPropagationsSQL(int limit, boolean dataNodesOnly)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT");
@@ -2140,11 +2140,21 @@ public class NodeDAO
             sb.append(")");
         }
         sb.append(" WHERE delta != 0");
-        sb.append(" AND type IN ('");
-        sb.append(NODE_TYPE_DATA);
-        sb.append("', '");
-        sb.append(NODE_TYPE_CONTAINER);
-        sb.append("')");
+        sb.append(" AND ");
+        if (dataNodesOnly)
+        {
+            sb.append("type = '");
+            sb.append(NODE_TYPE_DATA);
+            sb.append("'");
+        }
+        else
+        {
+            sb.append("type IN ('");
+            sb.append(NODE_TYPE_DATA);
+            sb.append("', '");
+            sb.append(NODE_TYPE_CONTAINER);
+            sb.append("')");
+        }
 
         if (nodeSchema.limitWithTop) // TOP, eg sybase
             sb.replace(0, 6, "SELECT TOP " + limit);

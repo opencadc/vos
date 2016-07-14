@@ -126,7 +126,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     /**
      * Constructor. This uses the default behaviour of deleting rows from the
      * node tables immediately.
-     * 
+     *
      * @param nodeSchema node schema config
      */
     protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema, String deletedNodePath)
@@ -144,7 +144,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
     /**
      * Get the IdentityManager implementation to use to store/retrieve node owner.
-     * 
+     *
      * @return
      */
     protected IdentityManager getIdentityManager()
@@ -155,7 +155,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     /**
      * Since the NodeDAO is not thread safe, this method returns a new NodeDAO
      * for every call.
-     * 
+     *
      * @param authority
      * @return a new NodeDAO
      */
@@ -226,7 +226,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
         dao.getChildren(parent, start, actualLimit);
     }
-    
+
     @Override
     public void getChild(ContainerNode node, String name) throws TransientException
     {
@@ -242,7 +242,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        
+
         // inherit the permissions of the parent if a new node
         if (node.appData == null ||
            ((NodeID) node.appData).getID() == null)
@@ -258,11 +258,11 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         return dao.updateProperties(node, properties);
     }
-    
+
     /**
      * Delete the node. For DataNodes, this <b>does not</b> do anything to delete
      * the stored file from any byte-storage location; it only removes the metadata
-     * from the database. Delete recursively calls updateContentLength for the 
+     * from the database. Delete recursively calls updateContentLength for the
      * parent, if necessary.
      *
      * @see NodeDAO.delete(Node)
@@ -311,10 +311,10 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.updateNodeMetadata(node, meta, strict);
     }
-    
+
     /**
      * Get the current contentLength. If the property is not set, 0 is returned.
-     * 
+     *
      * @param node
      * @return content length, or 0 if not set
      */
@@ -325,7 +325,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             return Long.parseLong(str);
         return 0;
     }
-    
+
     /**
      * Inherit the permissions of the parent if:
      * - the parent is not null
@@ -339,13 +339,13 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         {
             return;
         }
-        
+
         for (String propertyURI : permissionPropertyURIs)
         {
             NodeProperty parentProperty = node.getParent().findProperty(propertyURI);
             NodeProperty childProperty = null;
             boolean inherit;
-            
+
             if (parentProperty != null)
             {
                 childProperty = node.findProperty(propertyURI);
@@ -370,7 +370,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             }
         }
     }
-    
+
     /**
      * Return true if this property has been set on the node.  This is
      * true if the property has a value or if it has been marked for
@@ -416,7 +416,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.delete(node, batchSize, dryrun);
     }
-    
+
     /**
      * Admin method: Get the list of child-parent pairs whos size deltas
      * need to be pushed upwards.
@@ -424,13 +424,13 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @return The list of NodeSizePropagations sorted with data nodes first,
      * then last to most recently modified.
      */
-    public List<NodeSizePropagation> getOutstandingPropagations(int limit)
+    public List<NodeSizePropagation> getOutstandingPropagations(int limit, boolean dataNodesOnly)
         throws TransientException
     {
     	NodeDAO dao = getDAO(null);
-        return dao.getOutstandingPropagations(limit);
+        return dao.getOutstandingPropagations(limit, dataNodesOnly);
     }
-    
+
     /**
      * Admin method: Apply the delta value for this propagation object from
      * child to parent.  Reset the child delta to zero.
