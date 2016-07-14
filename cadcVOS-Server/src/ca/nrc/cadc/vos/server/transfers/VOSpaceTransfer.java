@@ -78,6 +78,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
@@ -163,9 +166,13 @@ public abstract class VOSpaceTransfer
         URI uri;
         try
         {
+//            URL url = regClient.getServiceURL(serviceURI, job.getProtocol(), path);
+            AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+            URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
             String path = "/xfer/" + job.getID();
-            URL url = regClient.getServiceURL(serviceURI, job.getProtocol(), path);
+            URL url = new URL(serviceURL.toExternalForm() + path);
             log.debug("transfer URL: " + url);
+
             uri = url.toURI();
         }
         catch (URISyntaxException e)

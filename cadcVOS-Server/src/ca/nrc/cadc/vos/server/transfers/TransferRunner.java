@@ -51,6 +51,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
@@ -433,7 +436,10 @@ public class TransferRunner implements JobRunner
             sb.append("/transfers/").append(job.getID()).append("/results/transferDetails");
             try
             {
-                URL location = regClient.getServiceURL(serviceURI, job.getProtocol(), sb.toString());
+//                URL location = regClient.getServiceURL(serviceURI, job.getProtocol(), sb.toString());
+                AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+                URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
+                URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);
                 syncOutput.setHeader("Location", loc);
