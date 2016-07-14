@@ -239,7 +239,7 @@ public class VOSpaceClient
                     if (n.getName().equals(node.getName()))
                         throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
 
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
 
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
@@ -306,7 +306,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
             URL url = new URL(vospaceURL.toExternalForm() + path);
             log.debug("getNode(), URL=" + url);
 
@@ -347,7 +347,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
@@ -386,7 +386,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_PROPERTIES_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_PROPERTIES_20, authMethod);
 
 //            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -465,7 +465,7 @@ public class VOSpaceClient
         int responseCode;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
             URL url = new URL(vospaceURL + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -544,7 +544,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, authMethod);
 
 //            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
@@ -585,7 +585,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20_URI, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, authMethod);
 
 //            URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = null;

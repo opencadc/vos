@@ -139,7 +139,7 @@ public class TransferUtil
             sb.append("&DIRECTION=").append(NetUtil.encode(Direction.pullFromVoSpaceValue));
             sb.append("&PROTOCOL=").append(NetUtil.encode(protocol.getUri()));
 
-            URL serviceURL = reg.getServiceURL(new URI(VOSPACE_RESOURCE_ID), Standards.VOSPACE_SYNC_21_URI, am);
+            URL serviceURL = reg.getServiceURL(new URI(VOSPACE_RESOURCE_ID), Standards.VOSPACE_SYNC_21, am);
             URL url = new URL(serviceURL.toExternalForm() + sb.toString());
 
             log.debug("DataView URL: " + am + " : " + url);
@@ -255,7 +255,7 @@ public class TransferUtil
         }
         else if (VOS.PROTOCOL_HTTPS_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTPS_PUT.equals(p.getUri()))
         {
-            if (AuthMethod.CERT.getSecurityMethod().equals(p.getSecurityMethod()))
+            if (Standards.getSecurityMethod(AuthMethod.CERT).equals(p.getSecurityMethod()))
                 return true;
         }
         return false;

@@ -90,6 +90,7 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -713,7 +714,7 @@ public class Main implements Runnable
         if (subject != null)
         {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            proto.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            proto.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
         }
         else
         {
@@ -819,7 +820,7 @@ public class Main implements Runnable
         if (subject != null)
         {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            proto.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            proto.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
         }
         else
         {

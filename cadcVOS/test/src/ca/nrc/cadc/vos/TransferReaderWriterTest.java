@@ -75,6 +75,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -356,10 +357,10 @@ public class TransferReaderWriterTest
         {
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol get = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            get.setSecurityMethod(AuthMethod.ANON.getSecurityMethod());
+            get.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.ANON));
             proto21.add(get);
             get = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            get.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            get.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
             proto21.add(get);
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
@@ -371,8 +372,8 @@ public class TransferReaderWriterTest
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
-            Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.ANON).toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.CERT).toASCIIString()));
 
             log.debug("testPushPullTransfer\n" + xml);
 
@@ -385,10 +386,10 @@ public class TransferReaderWriterTest
 
             proto21.clear();
             Protocol put = new Protocol(VOS.PROTOCOL_HTTP_PUT);
-            put.setSecurityMethod(AuthMethod.ANON.getSecurityMethod());
+            put.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.ANON));
             proto21.add(put);
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            put.setSecurityMethod(AuthMethod.CERT.getSecurityMethod());
+            put.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
             proto21.add(put);
 
             transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
@@ -399,8 +400,8 @@ public class TransferReaderWriterTest
             writer.write(transfer, dest);
             xml = dest.toString();
 
-            Assert.assertTrue(xml.contains(AuthMethod.ANON.getSecurityMethod().toASCIIString()));
-            Assert.assertTrue(xml.contains(AuthMethod.CERT.getSecurityMethod().toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.ANON).toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.CERT).toASCIIString()));
 
             log.debug("testPushPullTransfer\n" + xml);
 
