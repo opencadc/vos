@@ -69,14 +69,13 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOS;
+import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -84,15 +83,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Test case for updating DataNodes.

@@ -73,15 +73,19 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.NodeReader;
 import com.meterware.httpunit.WebResponse;
-import java.net.URI;
-import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import java.net.URI;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 /**
  * Test case for creating LinkNodes.

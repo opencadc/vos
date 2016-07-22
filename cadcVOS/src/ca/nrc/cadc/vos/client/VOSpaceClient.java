@@ -138,7 +138,6 @@ public class VOSpaceClient
     private SSLSocketFactory sslSocketFactory;
     private AuthMethod authMethod;
 
-
     /**
      * Constructor. XML Schema validation is enabled by default.
      *
@@ -162,13 +161,17 @@ public class VOSpaceClient
     {
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
-
-        authMethod = AuthenticationUtil.getAuthMethodForCurrentSubject();
+        this.authMethod = AuthMethod.CERT;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
     {
         this.sslSocketFactory = sslSocketFactory;
+    }
+
+    public void setAuthMethod(final AuthMethod authMethod)
+    {
+        this.authMethod = authMethod;
     }
 
     // temp hack to share SSL with ClientTransfer
@@ -386,7 +389,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_PROPERTIES_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODEPROPS_20, authMethod);
 
 //            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -585,9 +588,8 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_SYNC_21, authMethod);
 
-//            URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = null;
         	if (transfer.isQuickTransfer())
         	{
@@ -658,7 +660,7 @@ public class VOSpaceClient
 	            log.debug("GET - done: " + redirectURL);
 	            log.debug("negotiated transfer: " + trans);
 
-                URL jobURL = extractJobURL(vospaceURL.getProtocol() + vospaceURL.getHost(), redirectURL);
+                URL jobURL = extractJobURL(vospaceURL.getProtocol() + "://" + vospaceURL.getHost(), redirectURL);
 	            return new ClientTransfer(jobURL, trans, schemaValidation);
             }
         }

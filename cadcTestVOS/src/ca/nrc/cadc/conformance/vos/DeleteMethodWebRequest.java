@@ -70,6 +70,7 @@
 package ca.nrc.cadc.conformance.vos;
 
 import com.meterware.httpunit.HeaderOnlyWebRequest;
+
 import java.net.URL;
 
 /**

@@ -77,15 +77,19 @@ import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test case for creating ContainerNodes.
@@ -122,7 +126,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Add a child DataNode.
             DataNode nodeAB = new DataNode(new VOSURI(testNode.sampleNode.getUri() + "/B"));
-            response = put(VOSBaseTest.NODE_ENDPOINT, nodeAB, new NodeWriter());
+            response = put(getNodeStandardID(), nodeAB, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
             // Get the node from vospace

@@ -80,6 +80,11 @@ import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.xml.XmlUtil;
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Logger;
+import org.jdom2.JDOMException;
+import org.jdom2.Namespace;
+import org.xml.sax.SAXException;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -88,14 +93,11 @@ import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
-import org.jdom2.JDOMException;
-import org.jdom2.Namespace;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.xml.sax.SAXException;
 
 /**
  * Base class for testing Transfer resources.
@@ -106,17 +108,13 @@ public class VOSTransferTest extends VOSBaseTest
 {
     private static Logger log = Logger.getLogger(VOSTransferTest.class);
 
-    protected static final String UWS_SCHEMA = "http://www.ivoa.net/xml/UWS/v1.0";
-
     protected String uwsSchemaUrl;
     protected Namespace xlinkNamespace;
 
-    public static final String SYNC_TRANSFER_ENDPOINT = "/synctrans";
-    public static final String ASYNC_TRANSFER_ENDPOINT = "/transfers";
-
-    public VOSTransferTest(final URI standardID, String jobResource)
+    public VOSTransferTest(final URI transferStandardID, final URI nodeStandardID)
     {
-        super(standardID, jobResource);
+        super(transferStandardID);
+        setNodeStandardID(nodeStandardID);
 
         uwsSchemaUrl = XmlUtil.getResourceUrlString("UWS-v1.0.xsd", VOSTransferTest.class);
         xlinkNamespace = Namespace.getNamespace("http://www.w3.org/1999/xlink");

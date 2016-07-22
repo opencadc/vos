@@ -70,22 +70,21 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.net.URI;
-import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import java.net.URI;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 
 /**

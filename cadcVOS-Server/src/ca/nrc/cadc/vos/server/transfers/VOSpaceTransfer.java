@@ -166,10 +166,13 @@ public abstract class VOSpaceTransfer
         URI uri;
         try
         {
-//            URL url = regClient.getServiceURL(serviceURI, job.getProtocol(), path);
-            AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-            URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20, authMethod);
-            String path = "/xfer/" + job.getID();
+            AuthMethod authMethod = AuthMethod.ANON;
+            if (job.getProtocol().equals("https"))
+            {
+                authMethod = AuthMethod.CERT;
+            }
+            URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_XFER_20, authMethod);
+            String path = "/" + job.getID();
             URL url = new URL(serviceURL.toExternalForm() + path);
             log.debug("transfer URL: " + url);
 

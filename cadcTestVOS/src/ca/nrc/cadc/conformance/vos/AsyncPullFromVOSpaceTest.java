@@ -69,21 +69,6 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -94,8 +79,21 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
-
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -113,7 +111,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
 
     public AsyncPullFromVOSpaceTest()
     {
-        super(Standards.VOSPACE_TRANSFERS_20, ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, Standards.VOSPACE_NODES_20);
     }
 
     /**
@@ -132,7 +130,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Get a DataNode.
             TestNode testNode = getSampleDataNode();
             testNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,testNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), testNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request the Transfer.
@@ -165,7 +163,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, testNode.sampleNode);
+            response = delete(getNodeStandardID(), testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("testPullFromVOSpace passed.");
@@ -193,7 +191,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Get a DataNode.
             TestNode testNode = getSampleDataNode();
             testNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,testNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), testNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
@@ -226,7 +224,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, testNode.sampleNode);
+            response = delete(getNodeStandardID(), testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("testPullLinkNodeFromVOSpace passed.");
@@ -254,7 +252,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Get a DataNode.
             TestNode testNode = getSampleDataNode();
             testNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,testNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), testNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
@@ -287,7 +285,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, testNode.sampleNode);
+            response = delete(getNodeStandardID(), testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("testPullLinkNodeFromVOSpace passed.");
@@ -370,7 +368,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Get a DataNode.
             TestNode dataNode = getSampleDataNode();
             dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
@@ -395,7 +393,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
+            response = delete(getNodeStandardID(), dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("viewNotSupportedFault passed.");
@@ -418,7 +416,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Get a DataNode.
             TestNode dataNode = getSampleDataNode();
             dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
@@ -442,7 +440,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
+            response = delete(getNodeStandardID(), dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("protocolNotSupportedFault passed.");

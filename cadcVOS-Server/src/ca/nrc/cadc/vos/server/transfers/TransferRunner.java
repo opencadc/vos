@@ -433,10 +433,9 @@ public class TransferRunner implements JobRunner
 
             // standard redirect
             StringBuilder sb = new StringBuilder();
-            sb.append("/transfers/").append(job.getID()).append("/results/transferDetails");
+            sb.append("/").append(job.getID()).append("/results/transferDetails");
             try
             {
-//                URL location = regClient.getServiceURL(serviceURI, job.getProtocol(), sb.toString());
                 AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
                 URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20, authMethod);
                 URL location = new URL(serviceURL.toExternalForm() + sb.toString());

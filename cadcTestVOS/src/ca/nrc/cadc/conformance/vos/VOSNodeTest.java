@@ -80,7 +80,8 @@ public class VOSNodeTest extends VOSBaseTest
 {
     public VOSNodeTest()
     {
-        super(Standards.VOSPACE_NODES_20, VOSBaseTest.NODE_ENDPOINT);
+        super(Standards.VOSPACE_NODES_20);
+        setNodeStandardID(Standards.VOSPACE_NODES_20);
     }
     
 }
