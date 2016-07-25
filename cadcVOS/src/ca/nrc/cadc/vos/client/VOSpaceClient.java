@@ -85,18 +85,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.auth.AuthMethod;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.RegistryClient;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
@@ -104,6 +101,8 @@ import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
@@ -136,7 +135,6 @@ public class VOSpaceClient
     private URI serviceID;
     boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
-    private AuthMethod authMethod;
 
     /**
      * Constructor. XML Schema validation is enabled by default.
@@ -161,12 +159,6 @@ public class VOSpaceClient
     {
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
-
-        authMethod = AuthMethod.CERT;
-        if (AuthenticationUtil.getCurrentSubject() == null)
-        {
-            this.authMethod = AuthMethod.ANON;
-        }
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -242,7 +234,7 @@ public class VOSpaceClient
                     if (n.getName().equals(node.getName()))
                         throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
 
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
 
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
@@ -309,7 +301,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
             URL url = new URL(vospaceURL.toExternalForm() + path);
             log.debug("getNode(), URL=" + url);
 
@@ -350,7 +342,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
@@ -389,7 +381,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODEPROPS_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODEPROPS_20, getAuthMethod());
 
 //            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -468,7 +460,7 @@ public class VOSpaceClient
         int responseCode;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
             URL url = new URL(vospaceURL + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -553,7 +545,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, getAuthMethod());
 
 //            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
@@ -594,7 +586,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_SYNC_21, authMethod);
+            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_SYNC_21, getAuthMethod());
 
             HttpPost httpPost = null;
         	if (transfer.isQuickTransfer())
@@ -767,6 +759,17 @@ public class VOSpaceClient
             writer.write(node, out);
         }
 
+    }
+
+    private AuthMethod getAuthMethod()
+    {
+        AuthMethod authMethod = AuthMethod.CERT;
+        if (AuthenticationUtil.getCurrentSubject() == null)
+        {
+            authMethod = AuthMethod.ANON;
+        }
+        log.debug("Auth method: " + authMethod);
+        return authMethod;
     }
 
 }
