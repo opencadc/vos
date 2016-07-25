@@ -587,6 +587,7 @@ public class VOSpaceClient
         try
         {
             URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_SYNC_21, getAuthMethod());
+            log.debug("vospaceURL: " + vospaceURL);
 
             HttpPost httpPost = null;
         	if (transfer.isQuickTransfer())
@@ -658,7 +659,11 @@ public class VOSpaceClient
 	            log.debug("GET - done: " + redirectURL);
 	            log.debug("negotiated transfer: " + trans);
 
-                URL jobURL = extractJobURL(vospaceURL.getProtocol() + "://" + vospaceURL.getHost(), redirectURL);
+                //URL jobURL = extractJobURL(vospaceURL.toString(), redirectURL);
+	            // temporary hack:
+	            URL jobURL = new URL(redirectURL.toString().substring(0, redirectURL.toString().length() - "/results/transferDetails".length()));
+
+                log.debug("extracted job url: " + jobURL);
 	            return new ClientTransfer(jobURL, trans, schemaValidation);
             }
         }

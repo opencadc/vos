@@ -51,13 +51,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import ca.nrc.cadc.auth.AuthMethod;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -387,7 +387,7 @@ public class TransferRunner implements JobRunner
             }
             catch (Throwable t)
             {
-                log.debug("failed to do tranfer redirect", t);
+                log.error("failed to do tranfer redirect", t);
                 try
                 {
                     sendError(ExecutionPhase.EXECUTING, ErrorType.FATAL, t.getMessage(), HttpURLConnection.HTTP_INTERNAL_ERROR, false);
