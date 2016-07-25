@@ -161,17 +161,17 @@ public class VOSpaceClient
     {
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
-        this.authMethod = AuthMethod.CERT;
+
+        authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+        if (authMethod == null)
+        {
+            this.authMethod = AuthMethod.ANON;
+        }
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
     {
         this.sslSocketFactory = sslSocketFactory;
-    }
-
-    public void setAuthMethod(final AuthMethod authMethod)
-    {
-        this.authMethod = authMethod;
     }
 
     // temp hack to share SSL with ClientTransfer
@@ -540,6 +540,12 @@ public class VOSpaceClient
     protected RegistryClient getRegistryClient()
     {
         return new RegistryClient();
+    }
+
+    protected URL getServiceURL(URI serviceID, URI standard, AuthMethod authMethod)
+    {
+        RegistryClient registryClient = new RegistryClient();
+        return registryClient.getServiceURL(serviceID, standard, authMethod);
     }
 
     // create an async transfer job
