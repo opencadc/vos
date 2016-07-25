@@ -162,8 +162,8 @@ public class VOSpaceClient
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
 
-        authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-        if (authMethod == null)
+        authMethod = AuthMethod.CERT;
+        if (AuthenticationUtil.getCurrentSubject() == null)
         {
             this.authMethod = AuthMethod.ANON;
         }
