@@ -225,7 +225,7 @@ public class GetNodeAction extends NodeAction
             {
                 // add a property to child nodes if they are visible to
                 // this request
-                doTagChildrenReadable(cn);
+                doTagChildrenAccessRights(cn);
             }
         }
 
@@ -363,7 +363,7 @@ public class GetNodeAction extends NodeAction
         }
     }
 
-    private void doTagChildrenReadable(ContainerNode cn)
+    private void doTagChildrenAccessRights(ContainerNode cn)
     {
         for (final Node n : cn.getNodes())
         {
@@ -372,6 +372,11 @@ public class GetNodeAction extends NodeAction
         }
     }
 
+    /**
+     * Tag the given node with a 'readable' property to indicate that it is
+     * viewable (readable) by the requester.
+     * @param n     The Node to check.
+     */
     private void doTagReadable(final Node n)
     {
         final NodeProperty canReadProperty =
@@ -390,6 +395,11 @@ public class GetNodeAction extends NodeAction
         }
     }
 
+    /**
+     * Tag the given node with a 'writable' property to indicate that it is
+     * updatable (writable) by the requester.
+     * @param n     The Node to check.
+     */
     private void doTagWritable(final Node n)
     {
         final NodeProperty canWriteProperty =
@@ -404,7 +414,7 @@ public class GetNodeAction extends NodeAction
         }
         catch (AccessControlException e)
         {
-            // no read access, continue
+            // no write access, continue
         }
     }
 }
