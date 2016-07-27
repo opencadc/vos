@@ -262,6 +262,9 @@ public class VOS
     // Flag indicating that the Node passed a read-permission check
     public static final String PROPERTY_URI_READABLE = "ivo://cadc.nrc.ca/vospace/core#readable";
 
+    // Flag indicating that the Node passed a write-permission check
+    public static final String PROPERTY_URI_WRITABLE = "ivo://cadc.nrc.ca/vospace/core#writable";
+
     /*
      * List of properties that are read-only by the user
      */
@@ -271,7 +274,9 @@ public class VOS
         PROPERTY_URI_CREATOR,
         PROPERTY_URI_QUOTA,
         PROPERTY_URI_CONTENTLENGTH,
-        PROPERTY_URI_CONTENTMD5
+        PROPERTY_URI_CONTENTMD5,
+        PROPERTY_URI_READABLE,
+        PROPERTY_URI_WRITABLE
     };
 
 }
