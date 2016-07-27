@@ -88,6 +88,7 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
     final ContainerNode mockServerNode = createMock(ContainerNode.class);
     final VOSURI testVOSURI = new VOSURI(URI.create(VOS_URI_PREFIX
                                                     + "/user/"));
+    final List<NodeProperty> serverNodeProperties = new ArrayList<>();
     final List<Node> childNodes = new ArrayList<>();
     final ContainerNode childDir1 = new ContainerNode(
             new VOSURI(URI.create(VOS_URI_PREFIX + "/user/childdir1")));
@@ -129,6 +130,9 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(getMockRequest().getOriginalRef()).andReturn(
                 getMockRef()).atLeastOnce();
 
+        expect(mockServerNode.getProperties()).andReturn(
+                serverNodeProperties).times(2);
+
         getMockAbstractView().setNode(mockServerNode, "VIEW/REFERENCE",
                                       getMockURL());
         expectLastCall().once();
@@ -145,11 +149,23 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(mockServerNode.getUri()).andReturn(testVOSURI).anyTimes();
 
         expect(mockAuth.getReadPermission(childDir1)).andReturn(
-                childDir1).anyTimes();
+                childDir1).once();
         expect(mockAuth.getReadPermission(childDir2)).andThrow(
                 new AccessControlException("Unauthorized.")).once();
         expect(mockAuth.getReadPermission(childFile1)).andReturn(
                 childFile1).once();
+
+        expect(mockAuth.getWritePermission(childDir1)).andThrow(
+                new AccessControlException("Unauthorized write.")).once();
+        expect(mockAuth.getWritePermission(childDir2)).andReturn(
+                childDir2).once();
+        expect(mockAuth.getWritePermission(childFile1)).andThrow(
+                new AccessControlException("Unauthorized write.")).once();
+
+        expect(mockAuth.getReadPermission(mockServerNode)).andReturn(
+                mockServerNode).once();
+        expect(mockAuth.getWritePermission(mockServerNode)).andReturn(
+                mockServerNode).once();
 
         expect(mockPartialPathAuth.getReadPermission(testVOSURI.getURI())).
                 andReturn(mockServerNode).atLeastOnce();
@@ -202,5 +218,19 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         Assert.assertEquals("Should have readable property.",
                             "true", childDir2.getPropertyValue(
                         VOS.PROPERTY_URI_WRITABLE));
+
+        final NodeProperty writableProperty =
+                new NodeProperty(VOS.PROPERTY_URI_WRITABLE, "true");
+        final NodeProperty readableProperty =
+                new NodeProperty(VOS.PROPERTY_URI_READABLE, "true");
+
+        Assert.assertEquals("Should have writable property in server node.",
+                            "true", serverNodeProperties.get(
+                        serverNodeProperties.indexOf(writableProperty))
+                                    .getPropertyValue());
+        Assert.assertEquals("Should have readable property in server node.",
+                            "true", serverNodeProperties.get(
+                        serverNodeProperties.indexOf(readableProperty))
+                                    .getPropertyValue());
     }
 }
