@@ -225,7 +225,7 @@ public class GetNodeAction extends NodeAction
             {
                 // add a property to child nodes if they are visible to
                 // this request
-                doTagChildrenReadable(cn);
+                doTagChildrenAccessRights(cn);
             }
         }
 
@@ -234,7 +234,15 @@ public class GetNodeAction extends NodeAction
         // get the properties if no detail level is specified (null) or if the
         // detail level is something other than 'min'.
         if (!VOS.Detail.min.getValue().equals(detailLevel))
+        {
             nodePersistence.getProperties(serverNode);
+
+            if (VOS.Detail.max.getValue().equals(detailLevel))
+            {
+                doTagReadable(serverNode);
+                doTagWritable(serverNode);
+            }
+        }
 
         end = System.currentTimeMillis();
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
@@ -355,23 +363,58 @@ public class GetNodeAction extends NodeAction
         }
     }
 
-    private void doTagChildrenReadable(ContainerNode cn)
+    private void doTagChildrenAccessRights(ContainerNode cn)
     {
-        NodeProperty canReadProperty = new NodeProperty(
-                VOS.PROPERTY_URI_READABLE, Boolean.TRUE.toString());
-        canReadProperty.setReadOnly(true);
-        for (Node n : cn.getNodes())
+        for (final Node n : cn.getNodes())
         {
-            try
-            {
-                voSpaceAuthorizer.getReadPermission(n);
-                n.getProperties().add(canReadProperty);
-            }
-            catch (AccessControlException e)
-            {
-                // no read access, continue
-            }
+            doTagReadable(n);
+            doTagWritable(n);
         }
     }
 
+    /**
+     * Tag the given node with a 'readable' property to indicate that it is
+     * viewable (readable) by the requester.
+     * @param n     The Node to check.
+     */
+    private void doTagReadable(final Node n)
+    {
+        final NodeProperty canReadProperty =
+                new NodeProperty(VOS.PROPERTY_URI_READABLE,
+                                 Boolean.TRUE.toString());
+        canReadProperty.setReadOnly(true);
+
+        try
+        {
+            voSpaceAuthorizer.getReadPermission(n);
+            n.getProperties().add(canReadProperty);
+        }
+        catch (AccessControlException e)
+        {
+            // no read access, continue
+        }
+    }
+
+    /**
+     * Tag the given node with a 'writable' property to indicate that it is
+     * updatable (writable) by the requester.
+     * @param n     The Node to check.
+     */
+    private void doTagWritable(final Node n)
+    {
+        final NodeProperty canWriteProperty =
+                new NodeProperty(VOS.PROPERTY_URI_WRITABLE,
+                                 Boolean.TRUE.toString());
+        canWriteProperty.setReadOnly(true);
+
+        try
+        {
+            voSpaceAuthorizer.getWritePermission(n);
+            n.getProperties().add(canWriteProperty);
+        }
+        catch (AccessControlException e)
+        {
+            // no write access, continue
+        }
+    }
 }
