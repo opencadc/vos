@@ -88,8 +88,8 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
     final ContainerNode mockServerNode = createMock(ContainerNode.class);
     final VOSURI testVOSURI = new VOSURI(URI.create(VOS_URI_PREFIX
                                                     + "/user/"));
-    final List<NodeProperty> serverNodeProperties = new ArrayList<>();
-    final List<Node> childNodes = new ArrayList<>();
+    final List<NodeProperty> serverNodeProperties = new ArrayList<NodeProperty>();
+    final List<Node> childNodes = new ArrayList<Node>();
     final ContainerNode childDir1 = new ContainerNode(
             new VOSURI(URI.create(VOS_URI_PREFIX + "/user/childdir1")));
     final ContainerNode childDir2 = new ContainerNode(

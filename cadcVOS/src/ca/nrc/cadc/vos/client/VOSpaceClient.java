@@ -81,15 +81,20 @@ import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
@@ -768,10 +773,31 @@ public class VOSpaceClient
 
     private AuthMethod getAuthMethod()
     {
-        AuthMethod authMethod = AuthMethod.CERT;
-        if (AuthenticationUtil.getCurrentSubject() == null)
+        AuthMethod authMethod = AuthMethod.ANON;
+        Subject subject = AuthenticationUtil.getCurrentSubject();
+        if (subject != null && !subject.getPrincipals().isEmpty())
         {
-            authMethod = AuthMethod.ANON;
+            Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
+            if (!x500Principals.isEmpty())
+            {
+                authMethod = AuthMethod.CERT;
+            }
+            else
+            {
+                Set<HttpPrincipal> httpPrincipals = subject.getPrincipals(HttpPrincipal.class);
+                if(!httpPrincipals.isEmpty())
+                {
+                    authMethod = AuthMethod.PASSWORD;
+                }
+                else
+                {
+                    Set<CookiePrincipal> cookiePrincipals = subject.getPrincipals(CookiePrincipal.class);
+                    if(!cookiePrincipals.isEmpty())
+                    {
+                        authMethod = AuthMethod.COOKIE;
+                    }
+                }
+            }
         }
         log.debug("Auth method: " + authMethod);
         return authMethod;
