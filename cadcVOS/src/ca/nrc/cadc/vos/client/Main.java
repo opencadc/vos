@@ -69,14 +69,11 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.auth.AuthMethod;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.AccessControlException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -90,16 +87,16 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
@@ -220,10 +217,12 @@ public class Main implements Runnable
         {
             Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc.reg", Level.DEBUG);
         }
         else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
         {
             Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
+            Log4jInit.setLevel("ca.nrc.cadc.reg", Level.INFO);
         }
         else
             Log4jInit.setLevel("ca", Level.WARN);
