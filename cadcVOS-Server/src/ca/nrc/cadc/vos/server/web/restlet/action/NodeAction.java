@@ -395,7 +395,7 @@ public abstract class NodeAction
         catch(IllegalStateException e)
         {
             String faultMessage = e.getMessage();
-            log.debug(faultMessage);
+            log.error(faultMessage);
             return handleException(NodeFault.InternalFault, faultMessage, true);
         }
         catch (TransientException e)
@@ -406,7 +406,7 @@ public abstract class NodeAction
         catch (Throwable t)
         {
             String faultMessage = "Internal Error:" + t.getMessage();
-            log.debug("BUG: " + faultMessage, t);
+            log.error("BUG: " + faultMessage, t);
             return handleException(NodeFault.InternalFault, faultMessage, true);
         }
     }

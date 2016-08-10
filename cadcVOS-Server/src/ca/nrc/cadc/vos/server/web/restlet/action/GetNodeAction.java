@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
 
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.util.ObjectUtil;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.LinkingException;
@@ -271,6 +272,14 @@ public class GetNodeAction extends NodeAction
             if (VOS.Detail.min.getValue().equals(detailLevel))
                 serverNode.getProperties().clear();
 
+            // if the request has gone through a link, change the
+            // node paths back to be the 'unresolved path'
+            if (!vosURI.getPath().equals(serverNode.getUri().getPath()))
+            {
+                log.debug("returning node paths back to one that include a link");
+                unresolveNodePaths(vosURI, serverNode);
+            }
+
             return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter, getMediaType()));
         }
         else
@@ -313,6 +322,32 @@ public class GetNodeAction extends NodeAction
             return url.toString();
         }
         return null;
+    }
+
+    private void unresolveNodePaths(VOSURI vosURI, Node node) throws URISyntaxException
+    {
+        try
+        {
+            // change the target node
+            ObjectUtil.setField((Node) node, vosURI, "uri");
+
+            // change any children
+            if (node instanceof ContainerNode)
+            {
+                ContainerNode containerNode = (ContainerNode) node;
+                VOSURI childURI = null;
+                for (Node child : containerNode.getNodes())
+                {
+                    childURI = new VOSURI(vosURI.toString() + "/" + child.getName());
+                    ObjectUtil.setField(child, childURI, "uri");
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            log.debug("failed to unresolve node paths", e);
+            throw new RuntimeException(e);
+        }
     }
 
     /**
