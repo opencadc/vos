@@ -69,7 +69,9 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -118,14 +120,13 @@ public abstract class VOSBaseTest
     protected static TestNode testSuiteNode;
 
     protected VOSURI baseURI;
+    protected URI resourceIdentifier;
     protected URL resourceURL;
-    protected URL serviceURL;
+    protected URI nodeStandardID;
 
     protected boolean supportLinkNodes;
     protected boolean resolvePathNodes;
     protected boolean resolveTargetNode;
-
-    public static final String NODE_ENDPOINT = "/nodes";
 
     /**
      * Constructor takes a path argument, which is the path to the resource
@@ -133,22 +134,43 @@ public abstract class VOSBaseTest
      * is used to define the url to the base VOSpace service,
      * i.e. http://localhost/vospace.
      *
-     * @param path to the resource to test.
+     * @param standardID to the resource to test.
      */
-    public VOSBaseTest(String path)
+    public VOSBaseTest(final URI standardID)
     {
         try
         {
-            // Base URI for the test nodes.
-            String propertyName = VOSTestSuite.class.getName() + ".baseURI";
+        	// resourceIdentifier for this test suite
+            String propertyName = VOSTestSuite.class.getName() + ".resourceIdentifier";
             String propertyValue = System.getProperty(propertyName);
             log.debug(propertyName + "=" + propertyValue);
             if (propertyValue != null)
             {
-                RegistryClient rc = new RegistryClient();
+                this.resourceIdentifier = new URI(propertyValue);
+            }
+            else
+            {
+            	String msg = "system property " + propertyName + " not set to valid VOSpace resourceIdentifier URI";
+                throw new IllegalStateException(msg);
+            }
+
+            // Base URI for the test nodes.
+            propertyName = VOSTestSuite.class.getName() + ".baseURI";
+            propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
                 this.baseURI = new VOSURI(propertyValue);
-                this.serviceURL = rc.getServiceURL(baseURI.getServiceURI(), "https");
-                this.resourceURL = new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + path);
+                log.debug("baseURI: " + this.baseURI);
+
+                RegistryClient rc = new RegistryClient();
+                this.resourceURL = rc.getServiceURL(resourceIdentifier, standardID, AuthMethod.CERT);
+                log.debug("resourceURL: " + this.resourceURL.toExternalForm());
+                if (this.resourceURL == null)
+                {
+                    throw new RuntimeException("No service URL found for resourceIdentifier=" + 
+                        resourceIdentifier + ", standardID=" + standardID + ", AuthMethod=" + AuthMethod.CERT);
+                }
             }
             else
             {
@@ -201,7 +223,7 @@ public abstract class VOSBaseTest
 
         dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
-        log.debug("serviceURL: " + serviceURL);
+        log.debug("resourceIdentifier: " + resourceIdentifier);
         log.debug("resourceURL: " + resourceURL);
         log.debug("supportLinkNodes: " + supportLinkNodes);
         log.debug("resolvePathNodes: " + resolvePathNodes);
@@ -209,27 +231,21 @@ public abstract class VOSBaseTest
     }
 
     /**
-     *
      * @return a ContainerNode.
      */
     private ContainerNode getBaseTestNode()
     {
-        return getBaseTestNode(null);
-    }
-
-    /**
-     * @param service endpoint.
-     * @return a ContainerNode.
-     */
-    private ContainerNode getBaseTestNode(String endpoint)
-    {
         if (baseTestNode == null)
         {
             String baseNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName;
+
+            RegistryClient registryClient = new RegistryClient();
+            URL serviceURL = registryClient.getServiceURL(resourceIdentifier, getNodeStandardID(), AuthMethod.CERT);
+
             try
             {
                 baseTestNode = new ContainerNode(new VOSURI(baseNodeName));
-                String resourceUrl = getResourceUrl(endpoint) + baseTestNode.getUri().getPath();
+                String resourceUrl = serviceURL.toExternalForm() + baseTestNode.getUri().getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -258,10 +274,9 @@ public abstract class VOSBaseTest
     }
 
     /**
-     * @param service endpoint.
      * @return a ContainerNode.
      */
-    private TestNode getTestSuiteNode(String endpoint)
+    private TestNode getTestSuiteNode()
     {
         if (testSuiteNode == null)
         {
@@ -269,12 +284,16 @@ public abstract class VOSBaseTest
             LinkNode sampleLinkNode = null;
 
             // Create the root test suite container node.
-            String testSuiteNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() +
+            String testSuiteNodeName = baseURI + "/" + getBaseTestNode().getName() +
                                        "/" + VOSTestSuite.testSuiteNodeName;
+            RegistryClient registryClient = new RegistryClient();
+            URL serviceURL = registryClient.getServiceURL(resourceIdentifier, getNodeStandardID(), AuthMethod.CERT);
+
+            log.debug("testSuiteNodeName: " + testSuiteNodeName);
             try
             {
                 sampleNode = new ContainerNode(new VOSURI(testSuiteNodeName));
-                String resourceUrl = getResourceUrl(endpoint) + sampleNode.getUri().getPath();
+                String resourceUrl = serviceURL.toExternalForm() + sampleNode.getUri().getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -303,12 +322,12 @@ public abstract class VOSBaseTest
             if (supportLinkNodes)
             {
                 // Create sibling link node to test suite container node.
-                String testSuiteLinkNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() +
+                String testSuiteLinkNodeName = baseURI + "/" + getBaseTestNode().getName() +
                                                "/" + VOSTestSuite.testSuiteLinkNodeName;
                 try
                 {
                     sampleLinkNode = new LinkNode(new VOSURI(testSuiteLinkNodeName), sampleNode.getUri().getURI());
-                    String resourceUrl = getResourceUrl(endpoint) + sampleLinkNode.getUri().getPath();
+                    String resourceUrl = serviceURL.toExternalForm() + sampleLinkNode.getUri().getPath();
                     log.debug("**************************************************");
                     log.debug("HTTP PUT: " + resourceUrl);
 
@@ -340,6 +359,16 @@ public abstract class VOSBaseTest
         return testSuiteNode;
     }
 
+    protected void setNodeStandardID(final URI nodeStandardID)
+    {
+        this.nodeStandardID = nodeStandardID;
+    }
+
+    protected URI getNodeStandardID()
+    {
+        return this.nodeStandardID;
+    }
+
     protected TestNode getSampleContainerNode()
         throws URISyntaxException
     {
@@ -360,7 +389,7 @@ public abstract class VOSBaseTest
 
         // ContainerNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+        String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         ContainerNode node = new ContainerNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
 
@@ -368,7 +397,7 @@ public abstract class VOSBaseTest
         ContainerNode nodeWithLink = null;
         if (supportLinkNodes)
         {
-            nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+            nodeName = getTestSuiteNode().sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
             nodeWithLink = new ContainerNode(new VOSURI(nodeName));
             nodeWithLink.getProperties().add(nodeProperty);
         }
@@ -403,7 +432,7 @@ public abstract class VOSBaseTest
 
         // DataNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+        String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("data node name: " + nodeName);
         DataNode node = new DataNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
@@ -413,7 +442,7 @@ public abstract class VOSBaseTest
         DataNode nodeWithLink = null;
         if (supportLinkNodes)
         {
-            nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+            nodeName = getTestSuiteNode().sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
             nodeWithLink = new DataNode(new VOSURI(nodeName));
             nodeWithLink.setBusy(NodeBusyState.notBusy);
         }
@@ -478,7 +507,7 @@ public abstract class VOSBaseTest
 
         // LinkNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+        String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("link node name: " + nodeName);
         LinkNode node = new LinkNode(new VOSURI(nodeName), target);
         node.getProperties().add(nodeProperty);
@@ -502,23 +531,22 @@ public abstract class VOSBaseTest
     /**
      * Delete a Node from the VOSpace.
      *
-     * @param service endpoint.
      * @param node to be deleted.
      * @return a HttpUnit WebResponse.
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse delete(String endpoint, Node node)
+    protected WebResponse delete(URI standard, Node node)
         throws IOException, SAXException
     {
         String resourceUrl;
-        if (endpoint == null)
+        if (standard == null)
         {
             resourceUrl = resourceURL + "/" + node.getUri().getPath();
         }
         else
         {
-            resourceUrl = getResourceUrl(endpoint) + node.getUri().getPath();
+            resourceUrl = getResourceUrl(standard) + node.getUri().getPath();
         }
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
@@ -555,16 +583,16 @@ public abstract class VOSBaseTest
     /**
     * Gets a Node from the VOSpace.
     *
-    * @param service endpoint.
+    * @param standard node standardID
     * @param node to get.
     * @return a HttpUnit WebResponse.
     * @throws IOException
     * @throws SAXException if there is an error parsing the retrieved page.
     */
-   protected WebResponse get(String endPoint, Node node)
+   protected WebResponse get(URI standard, Node node)
        throws IOException, SAXException
    {
-       return get(endPoint, node, null);
+       return get(standard, node, null);
    }
 
     /**
@@ -587,21 +615,26 @@ public abstract class VOSBaseTest
      * Gets a Node from the VOSpace, appending the parameters to the GET
      * request of the Node URI.
      *
-     * @param service endpoint.
+     * @param standard node standardID
      * @param node to get.
      * @param parameters Map of HTTP request parameters.
      * @return a HttpUnit WebResponse.
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse get(String endpoint, Node node, Map<String, String> parameters)
+    protected WebResponse get(URI standard, Node node, Map<String, String> parameters)
         throws IOException, SAXException
     {
         String resourceUrl;
-        if (endpoint == null)
+        if (standard == null)
+        {
             resourceUrl = resourceURL + "/" + node.getUri().getPath();
+        }
         else
-            resourceUrl = getResourceUrl(endpoint) + node.getUri().getPath();
+        {
+            resourceUrl = getResourceUrl(standard) + node.getUri().getPath();
+        }
+
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest request = new GetMethodWebRequest(resourceUrl);
@@ -748,24 +781,24 @@ public abstract class VOSBaseTest
      * Put a DataNode or LinkNode to the VOSpace. Also takes a NodeWriter which
      * allows customization of the XML output to testing purposes.
      *
-     * @param service endpoint.
+     * @param standard override init standard.
      * @param node to put.
      * @param writer to write Node XML.
      * @return a HttpUnit WebResponse.
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse put(String endpoint, Node node, NodeWriter writer)
+    protected WebResponse put(URI standard, Node node, NodeWriter writer)
         throws IOException, SAXException
     {
         String resourceUrl;
-        if (endpoint == null)
+        if (standard == null)
         {
             resourceUrl = resourceURL + node.getUri().getPath();
         }
         else
         {
-            resourceUrl = getResourceUrl(endpoint)  + node.getUri().getPath();
+            resourceUrl = getResourceUrl(standard) + node.getUri().getPath();
         }
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
@@ -829,7 +862,7 @@ public abstract class VOSBaseTest
     /**
      * Post parameters to the service url.
      *
-     * @param  endpoint Endpoint to POST to.
+     * @param  url Endpoint to POST to.
      * @param  parameters Map of HTTP request parameters.
      * @return a HttpUnit WebResponse.
      * @throws IOException
@@ -946,12 +979,11 @@ public abstract class VOSBaseTest
         return sb.toString();
     }
 
-    private String getResourceUrl(String endpoint) throws MalformedURLException
+    private String getResourceUrl(URI standard) throws MalformedURLException
     {
-        if (endpoint == null)
-            return resourceURL.toExternalForm();
-        else
-            return (new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + endpoint)).toExternalForm();
+        RegistryClient rc = new RegistryClient();
+        URL serviceURL = rc.getServiceURL(resourceIdentifier, standard, AuthMethod.CERT);
+        return serviceURL.toExternalForm();
     }
 
 }

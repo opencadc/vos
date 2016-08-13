@@ -78,12 +78,14 @@ import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
 
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.util.ObjectUtil;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -140,6 +142,10 @@ public class GetNodeAction extends NodeAction
     {
         long start;
         long end;
+
+        // Detail level parameter
+        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+
         if (serverNode instanceof ContainerNode)
         {
             // Paging parameters
@@ -212,18 +218,32 @@ public class GetNodeAction extends NodeAction
 
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
-            doFilterChildren(cn, pageLimit);
-        }
 
-        // Detail level parameter
-        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+            // filter children at the root
+            doFilterChildren(cn, pageLimit);
+
+            if (VOS.Detail.max.getValue().equals(detailLevel))
+            {
+                // add a property to child nodes if they are visible to
+                // this request
+                doTagChildrenAccessRights(cn);
+            }
+        }
 
         start = System.currentTimeMillis();
 
         // get the properties if no detail level is specified (null) or if the
         // detail level is something other than 'min'.
         if (!VOS.Detail.min.getValue().equals(detailLevel))
+        {
             nodePersistence.getProperties(serverNode);
+
+            if (VOS.Detail.max.getValue().equals(detailLevel))
+            {
+                doTagReadable(serverNode);
+                doTagWritable(serverNode);
+            }
+        }
 
         end = System.currentTimeMillis();
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
@@ -251,6 +271,14 @@ public class GetNodeAction extends NodeAction
             // level is set to 'min'
             if (VOS.Detail.min.getValue().equals(detailLevel))
                 serverNode.getProperties().clear();
+
+            // if the request has gone through a link, change the
+            // node paths back to be the 'unresolved path'
+            if (!vosURI.getPath().equals(serverNode.getUri().getPath()))
+            {
+                log.debug("returning node paths back to one that include a link");
+                unresolveNodePaths(vosURI, serverNode);
+            }
 
             return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter, getMediaType()));
         }
@@ -294,6 +322,32 @@ public class GetNodeAction extends NodeAction
             return url.toString();
         }
         return null;
+    }
+
+    private void unresolveNodePaths(VOSURI vosURI, Node node) throws URISyntaxException
+    {
+        try
+        {
+            // change the target node
+            ObjectUtil.setField((Node) node, vosURI, "uri");
+
+            // change any children
+            if (node instanceof ContainerNode)
+            {
+                ContainerNode containerNode = (ContainerNode) node;
+                VOSURI childURI = null;
+                for (Node child : containerNode.getNodes())
+                {
+                    childURI = new VOSURI(vosURI.toString() + "/" + child.getName());
+                    ObjectUtil.setField(child, childURI, "uri");
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            log.debug("failed to unresolve node paths", e);
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -344,4 +398,58 @@ public class GetNodeAction extends NodeAction
         }
     }
 
+    private void doTagChildrenAccessRights(ContainerNode cn)
+    {
+        for (final Node n : cn.getNodes())
+        {
+            doTagReadable(n);
+            doTagWritable(n);
+        }
+    }
+
+    /**
+     * Tag the given node with a 'readable' property to indicate that it is
+     * viewable (readable) by the requester.
+     * @param n     The Node to check.
+     */
+    private void doTagReadable(final Node n)
+    {
+        final NodeProperty canReadProperty =
+                new NodeProperty(VOS.PROPERTY_URI_READABLE,
+                                 Boolean.TRUE.toString());
+        canReadProperty.setReadOnly(true);
+
+        try
+        {
+            voSpaceAuthorizer.getReadPermission(n);
+            n.getProperties().add(canReadProperty);
+        }
+        catch (AccessControlException e)
+        {
+            // no read access, continue
+        }
+    }
+
+    /**
+     * Tag the given node with a 'writable' property to indicate that it is
+     * updatable (writable) by the requester.
+     * @param n     The Node to check.
+     */
+    private void doTagWritable(final Node n)
+    {
+        final NodeProperty canWriteProperty =
+                new NodeProperty(VOS.PROPERTY_URI_WRITABLE,
+                                 Boolean.TRUE.toString());
+        canWriteProperty.setReadOnly(true);
+
+        try
+        {
+            voSpaceAuthorizer.getWritePermission(n);
+            n.getProperties().add(canWriteProperty);
+        }
+        catch (AccessControlException e)
+        {
+            // no write access, continue
+        }
+    }
 }

@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -72,7 +72,7 @@ package ca.nrc.cadc.vos;
 
 /**
  * Holder of commonly used constants.
- * 
+ *
  * @author zhangsa
  *
  */
@@ -82,25 +82,25 @@ public class VOS
 
     public static final int VOSPACE_20 = 20;
     public static final int VOSPACE_21 = 21;
-    
+
     // Enumeration for Node busy states
     public static enum NodeBusyState
     {
         notBusy ("N"),
         busyWithWrite ("W");
-        
+
         private String value;
-        
+
         private NodeBusyState(String value)
         {
             this.value = value;
         }
-        
+
         public String getValue()
         {
             return value;
         }
-        
+
         public static NodeBusyState getStateFromValue(String value)
         {
             if (value.equals(notBusy.getValue()))
@@ -144,67 +144,67 @@ public class VOS
             return null;
         }
     }
-    
+
     /*
      * Default property delimiter for multi-valued properties
      */
     public static final String DEFAULT_PROPERTY_VALUE_DELIM = ",";
-    
+
     /*
      * Standard Node Properties defined by the IVOA
      */
-    
+
     // Denotes a name given to the resource
-    public static final String PROPERTY_URI_TITLE = "ivo://ivoa.net/vospace/core#title"; 
-    
+    public static final String PROPERTY_URI_TITLE = "ivo://ivoa.net/vospace/core#title";
+
     // Denotes an entity primarily responsible for making the resource
     public static final String PROPERTY_URI_CREATOR = "ivo://ivoa.net/vospace/core#creator";
-    
+
     // Denotes the topic of the resource
     public static final String PROPERTY_URI_SUBJECT = "ivo://ivoa.net/vospace/core#subject";
-    
+
     // Denotes an account of the resource
     public static final String PROPERTY_URI_DESCRIPTION = "ivo://ivoa.net/vospace/core#description";
-    
+
     // Denotes an entity responsible for making the resource available
     public static final String PROPERTY_URI_PUBLISHER = "ivo://ivoa.net/vospace/core#publisher";
-    
+
     // Denotes an entity responsible for making contributions to this resource
     public static final String PROPERTY_URI_CONTRIBUTOR = "ivo://ivoa.net/vospace/core#contributor";
-    
+
     // timestamp of the last modification to the node metadata or stored bytes
     public static final String PROPERTY_URI_DATE = "ivo://ivoa.net/vospace/core#date";
-    
+
     // Denotes the nature or genre of the resource
     public static final String PROPERTY_URI_TYPE = "ivo://ivoa.net/vospace/core#type";
-    
+
     // Denotes the file format, physical medium, or dimensions of the resource
     public static final String PROPERTY_URI_FORMAT = "ivo://ivoa.net/vospace/core#format";
-    
+
     // Denotes an unambiguous reference to the resource within a given context
     public static final String PROPERTY_URI_IDENTIFIER = "ivo://ivoa.net/vospace/core#identifier";
-    
+
     // Denotes a related resource from which the described resource is derived
-    public static final String PROPERTY_URI_SOURCE = "ivo://ivoa.net/vospace/core#source"; 
-    
+    public static final String PROPERTY_URI_SOURCE = "ivo://ivoa.net/vospace/core#source";
+
     // Denotes a language of the resource
-    public static final String PROPERTY_URI_LANGUAGE = "ivo://ivoa.net/vospace/core#language"; 
-    
+    public static final String PROPERTY_URI_LANGUAGE = "ivo://ivoa.net/vospace/core#language";
+
     // Denotes a related resource
-    public static final String PROPERTY_URI_RELATION = "ivo://ivoa.net/vospace/core#relation"; 
-    
+    public static final String PROPERTY_URI_RELATION = "ivo://ivoa.net/vospace/core#relation";
+
     // Denotes the spatial or temporal topic of the resource, the spatial applicability of the resource, or the jurisdiction under which the resource is relevant
     public static final String PROPERTY_URI_COVERAGE = "ivo://ivoa.net/vospace/core#coverage";
-    
+
     // Denotes information about rights held in and over the resource
-    public static final String PROPERTY_URI_RIGHTS = "ivo://ivoa.net/vospace/core#rights"; 
-    
+    public static final String PROPERTY_URI_RIGHTS = "ivo://ivoa.net/vospace/core#rights";
+
     // Denotes the amount of space available within a container
     public static final String PROPERTY_URI_AVAILABLESPACE = "ivo://ivoa.net/vospace/core#availableSpace";
 
     // SHALL be used as the protocol URI for a HTTP GET transfer
     public static final String PROTOCOL_HTTP_GET = "ivo://ivoa.net/vospace/core#httpget";
-            
+
     // SHALL be used as the protocol URI for a HTTP PUT transfer
     public static final String PROTOCOL_HTTP_PUT = "ivo://ivoa.net/vospace/core#httpput";
 
@@ -222,43 +222,49 @@ public class VOS
 
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
     public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
-    
+
     /*
      * Standard Node Properties defined by the CADC
      */
-    
-    // The size of the resource 
+
+    // The size of the resource
     public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
 
     // The quota of a Container Node.
     public static final String PROPERTY_URI_QUOTA = "ivo://ivoa.net/vospace/core#quota";
-    
+
     // The content encoding of the resource
     public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
-    
+
     // The MD5 Checksum of the resource
     public static final String PROPERTY_URI_CONTENTMD5 = "ivo://ivoa.net/vospace/core#MD5";
-    
+
     // The groups who can read the resource
     public static final String PROPERTY_URI_GROUPREAD = "ivo://ivoa.net/vospace/core#groupread";
     public static final String PROPERTY_DELIM_GROUPREAD = " ";
-    
+
     // The groups who can write to the resource
     public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
     public static final String PROPERTY_DELIM_GROUPWRITE = " ";
-    
+
     // Flag indicating if the Node is public (true/false)
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
 
     // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
     public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
-    
+
     /*
      * CADC Node Properties
      */
     // Flag indicating if the Node locked (true/false)
     public static final String PROPERTY_URI_ISLOCKED = "ivo://cadc.nrc.ca/vospace/core#islocked";
-    
+
+    // Flag indicating that the Node passed a read-permission check
+    public static final String PROPERTY_URI_READABLE = "ivo://cadc.nrc.ca/vospace/core#readable";
+
+    // Flag indicating that the Node passed a write-permission check
+    public static final String PROPERTY_URI_WRITABLE = "ivo://cadc.nrc.ca/vospace/core#writable";
+
     /*
      * List of properties that are read-only by the user
      */
@@ -268,7 +274,9 @@ public class VOS
         PROPERTY_URI_CREATOR,
         PROPERTY_URI_QUOTA,
         PROPERTY_URI_CONTENTLENGTH,
-        PROPERTY_URI_CONTENTMD5
+        PROPERTY_URI_CONTENTMD5,
+        PROPERTY_URI_READABLE,
+        PROPERTY_URI_WRITABLE
     };
 
 }

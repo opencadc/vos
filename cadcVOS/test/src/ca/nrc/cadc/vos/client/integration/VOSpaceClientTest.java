@@ -156,12 +156,12 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        InetAddress localhost = InetAddress.getLocalHost();
-        String hostname = localhost.getCanonicalHostName();
-        log.debug("hostname=" + hostname);
-        endpoint = "https://" + hostname;
-        log.debug("endpoint=" + endpoint);
-        client = new VOSpaceClient(endpoint + "/vospace");
+//        InetAddress localhost = InetAddress.getLocalHost();
+//        String hostname = localhost.getCanonicalHostName();
+//        log.debug("hostname=" + hostname);
+//        endpoint = "https://" + hostname;
+//        log.debug("endpoint=" + endpoint);
+        client = new VOSpaceClient(URI.create("ivo://cadc.nrc.ca/vospace"));
     }
 
     /**

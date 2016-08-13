@@ -74,9 +74,11 @@ import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  *

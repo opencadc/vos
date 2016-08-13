@@ -53,8 +53,11 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -384,7 +387,7 @@ public class TransferRunner implements JobRunner
             }
             catch (Throwable t)
             {
-                log.debug("failed to do tranfer redirect", t);
+                log.error("failed to do tranfer redirect", t);
                 try
                 {
                     sendError(ExecutionPhase.EXECUTING, ErrorType.FATAL, t.getMessage(), HttpURLConnection.HTTP_INTERNAL_ERROR, false);
@@ -430,10 +433,12 @@ public class TransferRunner implements JobRunner
 
             // standard redirect
             StringBuilder sb = new StringBuilder();
-            sb.append("/transfers/").append(job.getID()).append("/results/transferDetails");
+            sb.append("/").append(job.getID()).append("/results/transferDetails");
             try
             {
-                URL location = regClient.getServiceURL(serviceURI, job.getProtocol(), sb.toString());
+                AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+                URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20, authMethod);
+                URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);
                 syncOutput.setHeader("Location", loc);

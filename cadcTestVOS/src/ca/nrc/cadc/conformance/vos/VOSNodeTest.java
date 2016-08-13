@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.reg.Standards;
+
 /**
  * Base class for testing Node resources.
  *
@@ -78,7 +80,8 @@ public class VOSNodeTest extends VOSBaseTest
 {
     public VOSNodeTest()
     {
-        super(VOSBaseTest.NODE_ENDPOINT);
+        super(Standards.VOSPACE_NODES_20);
+        setNodeStandardID(Standards.VOSPACE_NODES_20);
     }
     
 }

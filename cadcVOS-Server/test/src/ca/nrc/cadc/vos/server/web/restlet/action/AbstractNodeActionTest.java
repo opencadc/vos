@@ -88,6 +88,8 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 public abstract class AbstractNodeActionTest<N extends NodeAction>
         extends AbstractCADCVOSTest<N>
 {
+    protected final String VOS_URI_PREFIX = "vos://example.com!vospace";
+
     private Node mockNodeC = createMock(Node.class);
     private Node mockNodeS = createMock(Node.class);
 
@@ -103,7 +105,7 @@ public abstract class AbstractNodeActionTest<N extends NodeAction>
     private URL fakeURL;
 
     protected String nodeName = "child";
-    protected String vosURI = "vos://example.com!vopspace/parent/" + nodeName;
+    protected String vosURI = VOS_URI_PREFIX + "/parent/" + nodeName;
     protected URI vosURIObject;
 
     @Test

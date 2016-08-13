@@ -77,16 +77,19 @@ import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * Test case for creating ContainerNodes.
@@ -124,36 +127,36 @@ public class GetLinkNodeTest extends VOSNodeTest
             TestNode nodeA = getSampleContainerNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, nodeA.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), nodeA.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child container node B.
             ContainerNode nodeB = new ContainerNode(new VOSURI(nodeA.sampleNode.getUri() + "/B"));
-            response = put(VOSBaseTest.NODE_ENDPOINT, nodeB, new NodeWriter());
+            response = put(getNodeStandardID(), nodeB, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child data node C.
             DataNode nodeC = new DataNode(new VOSURI(nodeB.getUri() + "/C"));
-            response = put(VOSBaseTest.NODE_ENDPOINT, nodeC, new NodeWriter());
+            response = put(getNodeStandardID(), nodeC, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child link node link2B
             LinkNode link2B = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2B"), nodeB.getUri().getURI());
-            response = put(VOSBaseTest.NODE_ENDPOINT, link2B, new NodeWriter());
+            response = put(getNodeStandardID(), link2B, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child link node link2C
             LinkNode link2C = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2C"), nodeC.getUri().getURI());
-            response = put(VOSBaseTest.NODE_ENDPOINT, link2C, new NodeWriter());
+            response = put(getNodeStandardID(), link2C, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child link node link2www
             LinkNode link2www = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2www"), new URI("http://localhost"));
-            response = put(VOSBaseTest.NODE_ENDPOINT, link2www, new NodeWriter());
+            response = put(getNodeStandardID(), link2www, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get and validate data node C
-            response = get(VOSBaseTest.NODE_ENDPOINT, nodeC);
+            response = get(nodeC);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             String xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
@@ -161,14 +164,14 @@ public class GetLinkNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Get and validate link node link2B
-            response = get(VOSBaseTest.NODE_ENDPOINT, link2B);
+            response = get(link2B);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
             reader.read(xml);
 
             // Get and validate link node link2C
-            response = get(VOSBaseTest.NODE_ENDPOINT, link2C);
+            response = get(link2C);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
@@ -176,14 +179,14 @@ public class GetLinkNodeTest extends VOSNodeTest
 
             // Get and validate link node path /A/link2B/C
             DataNode alink2BC = new DataNode(new VOSURI(nodeA.sampleNode.getUri().toString() + "/link2B/C"));
-            response = get(VOSBaseTest.NODE_ENDPOINT, alink2BC);
+            response = get(alink2BC);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);
             reader.read(xml);
 
             // Get and validate link node link2C
-            response = get(VOSBaseTest.NODE_ENDPOINT, link2www);
+            response = get(link2www);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
             log.debug("GET XML:\r\n" + xml);

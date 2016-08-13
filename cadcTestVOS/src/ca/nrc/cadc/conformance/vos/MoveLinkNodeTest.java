@@ -68,11 +68,14 @@
 */
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-
-import java.net.URI;
-
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Transfer;
+import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -80,14 +83,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.Transfer;
+import java.net.URI;
 
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * Test case for moving LinkNodes.
@@ -105,7 +104,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
 
     public MoveLinkNodeTest()
     {
-        super(ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, Standards.VOSPACE_NODES_20);
     }
 
     @Test
@@ -125,12 +124,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             LinkNode targetNode = getSampleLinkNode();
 
             // Add LinkNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            response = put(getNodeStandardID(), destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -141,19 +140,19 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
             // Check node has been moved and old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = get(getNodeStandardID(), targetNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             // Get the moved nodes.
-            response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = get(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURI());
-            response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = get(getNodeStandardID(), movedNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = delete(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("moveLinkNodeToContainerNode passed.");
@@ -182,12 +181,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             LinkNode targetNode = getSampleLinkNode();
 
             // Add LinkNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            response = put(getNodeStandardID(), destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -198,19 +197,19 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
             // Check node has been moved and old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = get(getNodeStandardID(), targetNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             // Get the moved nodes.
-            response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = get(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             LinkNode movedNode = new LinkNode(destinationNode.sampleNode.getUri(), targetNode.getUri().getURI());
-            response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = get(getNodeStandardID(), movedNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = delete(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("moveLinkNodeToContainerNodeUsingLinkNodes passed.");
@@ -245,12 +244,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             LinkNode targetNode = getSampleLinkNode();
 
             // Add LinkNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination DataNode Z.
             TestNode destinationNode = getSampleDataNode("Z");
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            response = put(getNodeStandardID(), destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -277,9 +276,9 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = delete(getNodeStandardID(), targetNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = delete(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
@@ -314,7 +313,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
 
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -341,7 +340,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = delete(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("containerNotFoundFault passed.");
@@ -375,12 +374,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             LinkNode targetNode = getSampleLinkNode(new URI("http://www.google.com"));
 
             // Add LinkNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination LinkNode.
             LinkNode destinationNode = getSampleLinkNode(new URI("vos://cadc.nrc.ca~vospace/CADCAuthtest1"));
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode, new NodeWriter());
+            response = put(getNodeStandardID(), destinationNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -407,9 +406,9 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = delete(getNodeStandardID(), targetNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode);
+            response = delete(getNodeStandardID(), destinationNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("duplicateNodeFault passed.");
@@ -444,12 +443,12 @@ public class MoveLinkNodeTest extends VOSTransferTest
             TestNode targetNode = getSampleDataNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode, new NodeWriter());
+            WebResponse response = put(getNodeStandardID(), targetNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            response = put(getNodeStandardID(), destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Do the move.
@@ -476,9 +475,9 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
 
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
+            response = delete(getNodeStandardID(), targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            response = delete(getNodeStandardID(), destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("invalidURI passed.");

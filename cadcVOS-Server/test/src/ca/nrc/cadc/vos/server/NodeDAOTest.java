@@ -2090,7 +2090,7 @@ public class NodeDAOTest
             sql = "select nodeID from Node where name='" + rootContainer.getName() + "'";
             Long rootNodeID = jdbc.queryForLong(sql);
 
-            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
             Assert.assertTrue("Wrong number of oustanding propagations", propagations.size() == 2);
 
             // sort them for assertion
@@ -2156,7 +2156,19 @@ public class NodeDAOTest
             sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
 
-            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, true);
+            // sort them
+            Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
+                @Override
+                public int compare(NodeSizePropagation n1, NodeSizePropagation n2)
+                {
+                    return -1 * n1.getChildType().compareTo(n2.getChildType());
+                }
+            });
+            Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
+
+            // get them again
+            propagations = nodeDAO.getOutstandingPropagations(100, false);
 
             // sort them
             Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
@@ -2169,15 +2181,15 @@ public class NodeDAOTest
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 2);
             nodeDAO.applyPropagation(propagations.get(0));
 
-            propagations = nodeDAO.getOutstandingPropagations(100);
+            propagations = nodeDAO.getOutstandingPropagations(100, false);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
             nodeDAO.applyPropagation(propagations.get(0));
 
-            propagations = nodeDAO.getOutstandingPropagations(100);
+            propagations = nodeDAO.getOutstandingPropagations(100, false);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
             nodeDAO.applyPropagation(propagations.get(0));
 
-            propagations = nodeDAO.getOutstandingPropagations(100);
+            propagations = nodeDAO.getOutstandingPropagations(100, false);
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 0);
         }
         catch(Exception unexpected)
@@ -2271,7 +2283,7 @@ public class NodeDAOTest
             log.debug("nodeID is " + nodeID);
 
             // get the propagation
-            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
             NodeSizePropagation propagation = null;
             for (NodeSizePropagation next : propagations)
             {
@@ -2425,7 +2437,7 @@ public class NodeDAOTest
             long nodeID = jdbc.queryForLong(sql);
 
             // get the propagation
-            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
             NodeSizePropagation propagation = null;
             for (NodeSizePropagation next : propagations)
             {

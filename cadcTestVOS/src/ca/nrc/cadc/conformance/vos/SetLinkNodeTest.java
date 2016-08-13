@@ -70,22 +70,27 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
-import org.junit.matchers.JUnitMatchers;
-import org.junit.Ignore;
-import org.junit.Assert;
-import java.util.List;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOS;
 import com.meterware.httpunit.WebResponse;
-import java.net.URI;
-import java.util.ArrayList;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.matchers.JUnitMatchers;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Test case for updating LinkNodes.

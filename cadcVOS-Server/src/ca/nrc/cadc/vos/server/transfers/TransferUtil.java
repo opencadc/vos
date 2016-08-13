@@ -11,6 +11,7 @@ import java.util.List;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
@@ -33,8 +34,9 @@ public class TransferUtil
 {
     private static Logger log = Logger.getLogger(TransferUtil.class);
 
-    public static final String VOSPACE_NODES = "ivo://cadc.nrc.ca/vospace#nodes";
-    public static final String VOSPACE_SYNC = "ivo://cadc.nrc.ca/vospace#sync";
+//    public static final String VOSPACE_NODES = "ivo://cadc.nrc.ca/vospace#nodes";
+//    public static final String VOSPACE_SYNC = "ivo://cadc.nrc.ca/vospace#sync";
+    public static final String VOSPACE_RESOURCE_ID = "ivo://cadc.nrc.ca/vospace";
 
     public static final String ANONYMOUS_USER = "anonUser";
 
@@ -112,6 +114,8 @@ public class TransferUtil
             AuthMethod am = forceAuthMethod;
             if (am == null)
                 am = AuthenticationUtil.getAuthMethod(subject); // default: perserve
+            if (am == null)
+                am = AuthMethod.ANON;
 
             log.debug("getSynctransParamURL: " + scheme + " " + am + " " + uri);
             StringBuilder sb = new StringBuilder();
@@ -135,7 +139,8 @@ public class TransferUtil
             sb.append("&DIRECTION=").append(NetUtil.encode(Direction.pullFromVoSpaceValue));
             sb.append("&PROTOCOL=").append(NetUtil.encode(protocol.getUri()));
 
-            URL url = reg.getServiceURL(new URI(TransferUtil.VOSPACE_SYNC), scheme, sb.toString(), am);
+            URL serviceURL = reg.getServiceURL(new URI(VOSPACE_RESOURCE_ID), Standards.VOSPACE_SYNC_21, am);
+            URL url = new URL(serviceURL.toExternalForm() + sb.toString());
 
             log.debug("DataView URL: " + am + " : " + url);
             return url;
@@ -250,7 +255,7 @@ public class TransferUtil
         }
         else if (VOS.PROTOCOL_HTTPS_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTPS_PUT.equals(p.getUri()))
         {
-            if (AuthMethod.CERT.getSecurityMethod().equals(p.getSecurityMethod()))
+            if (Standards.getSecurityMethod(AuthMethod.CERT).equals(p.getSecurityMethod()))
                 return true;
         }
         return false;

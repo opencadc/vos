@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -86,20 +87,22 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -118,7 +121,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
     public MoveVOSpaceInternalTest()
     {
-        super(ASYNC_TRANSFER_ENDPOINT);
+        super(Standards.VOSPACE_TRANSFERS_20, Standards.VOSPACE_NODES_20);
     }
 
     @Test
@@ -133,7 +136,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             dataNode.sampleNode.getProperties().add(
                     new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                             new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,
+            WebResponse response = put(getNodeStandardID(),
                     dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -141,7 +144,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // Create a container node
             TestNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
+            response = put(getNodeStandardID(), containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -231,11 +234,11 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // check node has been moved
             // old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
+            response = get(getNodeStandardID(), dataNode.sampleNode);
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = get(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
@@ -246,17 +249,17 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     containerNode.sampleNode.getUri() + "/" + dataNode.sampleNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = get(getNodeStandardID(), movedNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = delete(getNodeStandardID(), movedNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = delete(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
@@ -279,7 +282,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             // Get a DataNode.
             LinkNode linkNode = getSampleLinkNode(new URI(
                     "www.google.com"));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,
+            WebResponse response = put(getNodeStandardID(),
                     linkNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -287,7 +290,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // Create a container node
             TestNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
+            response = put(getNodeStandardID(), containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -377,11 +380,11 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // check node has been moved
             // old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            response = get(getNodeStandardID(), linkNode);
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = get(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
@@ -392,17 +395,17 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     containerNode.sampleNode.getUri() + "/" + linkNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = get(getNodeStandardID(), movedNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = delete(getNodeStandardID(), movedNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = delete(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
@@ -427,7 +430,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             dataNode.sampleNode.getProperties().add(
                     new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                             new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,
+            WebResponse response = put(getNodeStandardID(),
                     dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -435,7 +438,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // Create a container node
             TestNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
+            response = put(getNodeStandardID(), containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -443,7 +446,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // create a link to the container node
             LinkNode linkNode = getSampleLinkNode(containerNode.sampleNode);
-            response = put(VOSBaseTest.NODE_ENDPOINT, linkNode,
+            response = put(getNodeStandardID(), linkNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -533,11 +536,11 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // check node has been moved
             // old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
+            response = get(getNodeStandardID(), dataNode.sampleNode);
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = get(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
@@ -548,22 +551,22 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     containerNode.sampleNode.getUri() + "/" + dataNode.sampleNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = get(getNodeStandardID(), movedNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, movedNode);
+            response = delete(getNodeStandardID(), movedNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
+            response = delete(getNodeStandardID(), containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
             // Delete the link node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            response = delete(getNodeStandardID(), linkNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
