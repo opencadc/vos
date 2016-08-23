@@ -1,0 +1,5 @@
+language: java
+jdk:
+  - openjdk7
+  - oraclejdk8
+script: for mod in cadc-vos cadc-vos-server cadc-test-vos; do cd $mod; gradle assemble check install || break -1; cd ..; done
