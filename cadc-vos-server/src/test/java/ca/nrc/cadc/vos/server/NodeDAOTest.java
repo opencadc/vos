@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.FileNotFoundException;
 import java.net.URI;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -184,6 +185,16 @@ public class NodeDAOTest
             //jdbc.update("DELETE FROM " + nodeSchema.nodeTable);
 
             this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+        }
+        catch (FileNotFoundException e)
+        {
+            log.warn("Skipping itegration tests because there is no ~/.dbrc file.");
+            org.junit.Assume.assumeTrue(false);
+        }
+        catch (NoSuchElementException e)
+        {
+            log.warn("Skipping itegration tests because there is no database entry in ~/.dbrc");
+            org.junit.Assume.assumeTrue(false);
         }
         catch(Exception ex)
         {
