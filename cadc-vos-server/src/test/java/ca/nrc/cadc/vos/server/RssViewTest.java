@@ -135,7 +135,7 @@ public class RssViewTest
 
     protected Subject owner;
     protected Principal principal;
-    protected NodePersistence nodePersistence;
+    protected TestNodePersistence nodePersistence;
     protected VOSpaceAuthorizer voSpaceAuthorizer;
     
     public RssViewTest()
@@ -182,6 +182,12 @@ public class RssViewTest
     @Test
     public void testSetNodeReturnsDenied()
     {
+        if (nodePersistence.getDataSource() == null)
+        {
+            log.warn("Skipping integration test testSetNodeReturnsDenied().  Could not find datasource in ~/.dbrc");
+            return;
+        }
+
         log.debug("testSetNodeReturnsDenied - START");
         try
         {
@@ -235,6 +241,12 @@ public class RssViewTest
     @Test
     public void testSetNode()
     {
+        if (nodePersistence.getDataSource() == null)
+        {
+            log.warn("Skipping integration test testSetNode().  Could not find datasource in ~/.dbrc");
+            return;
+        }
+
         try
         {
             Subject subject = new Subject();
@@ -353,6 +365,13 @@ public class RssViewTest
 
             log.info("testSetNode passed");
         }
+        catch (IllegalArgumentException e)
+        {
+            String method = Thread.currentThread().getStackTrace()[1].getMethodName();
+            String msg = "Skipping integration test: " + method + ". Could not find datasource in ~/.dbrc";
+            log.warn(msg, e);
+            System.err.println("WARNING: " + msg);
+        }
         catch(Exception unexpected)
         {
             log.error("unexpected exception", unexpected);
@@ -363,6 +382,12 @@ public class RssViewTest
     @Test
     public void testSetStructuredDataNode()
     {
+        if (nodePersistence.getDataSource() == null)
+        {
+            log.warn("Skipping integration test testSetStructuredDataNode().  Could not find datasource in ~/.dbrc");
+            return;
+        }
+
         try
         {
             Subject subject = new Subject();

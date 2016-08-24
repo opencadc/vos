@@ -853,7 +853,7 @@ public class NodeDAO
 
                     // Note: if node size is null, the jdbc template
                     // will return zero.
-                    Long sizeDifference = jdbc.queryForObject(sql, Long.class);
+                    Long sizeDifference = jdbc.queryForLong(sql);
                     prof.checkpoint("getSelectContentLengthSQL");
 
                     // delete the node only if it is not busy
@@ -1331,7 +1331,7 @@ public class NodeDAO
                 sql = this.getSelectContentLengthForDeleteSQL(src);
 
                 // Note: if contentLength is null, jdbc template will return zero.
-                contentLength = jdbc.queryForObject(sql, Long.class);
+                contentLength = jdbc.queryForLong(sql);
                 prof.checkpoint("getSelectContentLengthSQL");
             }
 
@@ -1544,7 +1544,7 @@ public class NodeDAO
         {
             // Note: if node size is null, the jdbc template
             // will return zero.
-            sizeDifference = jdbc.queryForObject(sql, Long.class);
+            sizeDifference = jdbc.queryForLong(sql);
             prof.checkpoint("getSelectContentLengthSQL");
         }
 
