@@ -173,7 +173,7 @@ public class Transfer
 
     /**
      * Enable/Disable CADC quick transfer feature
-     * @param quickCopy True if enable quick transfer, false otherwise
+     * @param quickTransfer True if enable quick transfer, false otherwise
      */
     public void setQuickTransfer(boolean quickTransfer)
     {
@@ -243,7 +243,6 @@ public class Transfer
      * Returns a list of endpoints matching the protocol. Order in the list is
      * as recommended by the server: clients should try the end points
      * in the given order.
-     * @param strProtocol
      * @return
      */
     public List<String> getAllEndpoints()

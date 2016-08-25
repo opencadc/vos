@@ -148,7 +148,7 @@ public class View
     /**
      * Sets the view param list.
      * 
-     * @param param
+     * @param params
      */
     public void setParameters(List<Parameter> params)
     {
@@ -179,7 +179,7 @@ public class View
         /**
          * Param constructor.
          * 
-         * @param name The param URI.
+         * @param uri The param URI.
          * @param value The param value.
          */
         public Parameter(URI uri, String value)

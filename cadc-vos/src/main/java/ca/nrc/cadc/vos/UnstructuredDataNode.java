@@ -87,7 +87,6 @@ public class UnstructuredDataNode extends DataNode
     /**
      * UnstructuredDataNode constructor.
      * @param uri
-     * @throws URISyntaxException 
      */
     public UnstructuredDataNode(VOSURI uri)
     {

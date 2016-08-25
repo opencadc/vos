@@ -87,7 +87,6 @@ public class StructuredDataNode extends DataNode
     /**
      * StructuredDataNode constructor.
      * @param uri
-     * @throws URISyntaxException 
      */
     public StructuredDataNode(VOSURI uri)
     {
