@@ -219,7 +219,6 @@ public interface NodePersistence
      * @param node The node on which to alter the busy state.
      * @param curState The current state of the node.
      * @param newState The new state for the node.
-     * @return the new state or null if the transition failed
      * @throws TransientException
      */
     void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
@@ -242,7 +241,6 @@ public interface NodePersistence
      * 
      * @param src The node to move.
      * @param destination The destination container.
-     * @param name The name of the destination node.
      * @throws TransientException
      */
     void copy(Node src, ContainerNode destination)
