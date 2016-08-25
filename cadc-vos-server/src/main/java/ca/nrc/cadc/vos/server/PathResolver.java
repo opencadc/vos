@@ -156,8 +156,8 @@ public class PathResolver
      * returned from resolveWithReadPermissionCheck with resolveLeafNodes == false.
      * 
      * @param uri
+     * @param node
      * @param readAuthorizer
-     * @param resolveLeafNodes true if leaf nodes resolved, false otherwise
      * @return
      * @throws NodeNotFoundException
      * @throws LinkingException

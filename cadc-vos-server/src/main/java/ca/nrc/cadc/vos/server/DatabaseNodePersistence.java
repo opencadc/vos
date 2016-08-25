@@ -265,8 +265,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * from the database. Delete recursively calls updateContentLength for the
      * parent, if necessary.
      *
-     * @see NodeDAO.delete(Node)
-     * @see NodeDAO.markForDeletion(Node)
      * @param node the node to delete
      */
     @Override

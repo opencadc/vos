@@ -128,7 +128,8 @@ public class ViewsWriter
     /**
      * Write accepts and provides to an OutputStream.
      *
-     * @param node Node to write.
+     * @param accepts
+     * @param provides
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */

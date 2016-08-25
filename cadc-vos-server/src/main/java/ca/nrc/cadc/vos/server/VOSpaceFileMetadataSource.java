@@ -121,7 +121,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
     /**
      * Get the current file metadata for the specified resource.
      * 
-     * @param resource identifier for the target resource
+     * @param persistentNode
      * @return a FileMetadata object, populated with available metadata
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
@@ -207,7 +207,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
     /** 
      * Set the current file metadata for the specified resource. 
      * 
-     * @param resource identifier for the target resource
+     * @param persistentNode The target node
      * @param meta new metadata values to persist
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file

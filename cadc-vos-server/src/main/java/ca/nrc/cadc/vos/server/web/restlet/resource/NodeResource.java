@@ -178,7 +178,6 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
     /**
      * Performs the specified node action, first checking for errors, and
      * catching any errors that may happen.
-     * @param action The action to perform.
      * @return A representation of the output or of any error that happens.
      */
     @Override
