@@ -183,7 +183,6 @@ public class NodeDAO
          * @param nodeTable fully qualified name of node table
          * @param propertyTable fully qualified name of property table
          * @param limitWithTop - true if the RDBMS uses TOP, false for LIMIT
-         * @param fileMetadataWritable true if the contentLength and contentMD5 properties
          * are writable, false if they are read-only in the DB
          */
         public NodeSchema(String nodeTable, String propertyTable,
@@ -853,7 +852,7 @@ public class NodeDAO
 
                     // Note: if node size is null, the jdbc template
                     // will return zero.
-                    Long sizeDifference = jdbc.queryForObject(sql, Long.class);
+                    Long sizeDifference = jdbc.queryForLong(sql);
                     prof.checkpoint("getSelectContentLengthSQL");
 
                     // delete the node only if it is not busy
@@ -947,7 +946,8 @@ public class NodeDAO
      * Change the busy stateof a node from a known state to another.
      *
      * @param node
-     * @param state
+     * @param curState
+     * @param newState
      */
     public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState) throws TransientException
     {
@@ -1285,7 +1285,6 @@ public class NodeDAO
      *
      * @param src The node to move
      * @param dest The container in which to move the node.
-     * @param subject The new owner for the moved node.
      */
     public void move(Node src, ContainerNode dest) throws TransientException
     {
@@ -1331,7 +1330,7 @@ public class NodeDAO
                 sql = this.getSelectContentLengthForDeleteSQL(src);
 
                 // Note: if contentLength is null, jdbc template will return zero.
-                contentLength = jdbc.queryForObject(sql, Long.class);
+                contentLength = jdbc.queryForLong(sql);
                 prof.checkpoint("getSelectContentLengthSQL");
             }
 
@@ -1437,8 +1436,8 @@ public class NodeDAO
     /**
      * Copy the node to the new path.
      *
-     * @param node
-     * @param destPath
+     * @param src 
+     * @param dest
      * @throws UnsupportedOperationException Until implementation is complete.
      */
     public void copy(Node src, ContainerNode dest) throws TransientException
@@ -1544,7 +1543,7 @@ public class NodeDAO
         {
             // Note: if node size is null, the jdbc template
             // will return zero.
-            sizeDifference = jdbc.queryForObject(sql, Long.class);
+            sizeDifference = jdbc.queryForLong(sql);
             prof.checkpoint("getSelectContentLengthSQL");
         }
 
@@ -1950,7 +1949,9 @@ public class NodeDAO
     }
 
     /**
-     * @param node The node to delete
+     * @param dest
+     * @param size
+     * @param increment
      * @return The SQL string for applying a negative or positive
      * delta to the parent of the target node.
      */

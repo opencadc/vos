@@ -168,7 +168,6 @@ public class GetDataNodeTest extends VOSNodeTest
     /**
      * min: the returned record for the node contains minimum detail with all
      * optional parts removed - the node type should be returned
-     * e.g. <Node uri="vos://service/name" xsi:type="Node"/>
      */
     @Ignore("min detail parameter not currently implemented")
     @Test

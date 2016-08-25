@@ -322,7 +322,6 @@ public abstract class Node implements Comparable<Object>
 
     /**
      * Find a property by its key (propertyUri).
-     * TODO: this should return a List<NodeProperty>
      * 
      * @param propertyURI
      * @return the node property object or null if not found

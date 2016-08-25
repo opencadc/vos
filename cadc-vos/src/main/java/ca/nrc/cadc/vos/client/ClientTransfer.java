@@ -316,7 +316,7 @@ public class ClientTransfer implements Runnable
     /**
      * Set the maximum number of retries when the server is busy. This value is
      * passed to the underlying HttpTransfer.
-     * </p><p>
+     * 
      * Set this to Integer.MAX_VALUE to retry indefinitely.
      * 
      * @param maxRetries

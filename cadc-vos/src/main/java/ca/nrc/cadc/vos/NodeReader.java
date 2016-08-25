@@ -297,7 +297,6 @@ public class NodeReader implements XmlProcessor
      * @param el a node Element in the Document.
      * @param namespace Document Namespace.
      * @param uri Node uri attribute.
-     * @param target Target resource pointed to by the LinkNode
      * @return LinkNode.
      * @throws NodeParsingException if there is an error parsing the XML.
      * @throws URISyntaxException 
@@ -423,7 +422,7 @@ public class NodeReader implements XmlProcessor
      * Sets the attributes of a DataNode from the given DataNode, Element 
      * of the Document and Document Namespace.
      *
-     * @parm node a DataNode
+     * @param node a DataNode
      * @param el a node Element in the Document.
      * @param namespace Document Namespace.
      * @throws NodeParsingException if there is an error parsing the XML.

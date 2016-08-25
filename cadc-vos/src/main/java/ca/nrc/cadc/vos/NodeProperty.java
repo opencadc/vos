@@ -264,8 +264,6 @@ public class NodeProperty
      * Given a string representing multiple values of a property specified by uri,
      * return the values as an array.
      * 
-     * @param uri
-     * @param values
      * @return
      */
     public List<String> extractPropertyValueList()

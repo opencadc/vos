@@ -95,7 +95,6 @@ public class DataNode extends Node
     /**
      * Data node constructor.
      * @param uri
-     * @throws URISyntaxException 
      */
     public DataNode(VOSURI uri)
     {

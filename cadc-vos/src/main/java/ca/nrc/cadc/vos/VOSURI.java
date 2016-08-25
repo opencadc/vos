@@ -292,7 +292,6 @@ public class VOSURI
      * it returns:
      * URI("ivo://cadc.nrc.ca/vospace")
      *
-     * @throws URISyntaxException
      * @author Sailor Zhang, 2010-07-15
      */
     public URI getServiceURI()
