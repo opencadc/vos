@@ -179,7 +179,6 @@ public class GetContainerNodeTest extends VOSNodeTest
     /**
      * min: the returned record for the node contains minimum detail with all
      * optional parts removed - the node type should be returned
-     * e.g. <Node uri="vos://service/name" xsi:type="Node"/>
      * 
      * Detail parameter not currently supported.
      */
