@@ -4,7 +4,6 @@ plugins {
     id 'maven-publish'
     id 'com.jfrog.bintray' version '1.7.1'
     id 'application'
-    id 'nebula.ospackage' version '4.0.0'
 }
 
 repositories {
@@ -33,9 +32,6 @@ dependencies {
     testCompile 'junit:junit:4.+'
     testCompile 'org.easymock:easymock:3.+'
     testCompile 'org.skyscreamer:jsonassert:1.+'
-
-
-
 }
 
 configurations {
