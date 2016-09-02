@@ -8,11 +8,6 @@ plugins {
 repositories {
     jcenter()
     mavenLocal()
-
-    // Only here until cadcUtil is in jcenter.
-    maven {
-        url  'http://dl.bintray.com/opencadc/software'
-    }
 }
 
 sourceCompatibility = 1.7
@@ -26,10 +21,8 @@ dependencies {
     compile 'org.jdom:jdom2:2.+'
     compile 'xerces:xercesImpl:2.+'
     compile 'org.json:json:20160212'
-    compile 'javax.servlet:javax.servlet-api:3.1.+'
     compile 'org.restlet.jse:org.restlet:2.1.+'
     compile 'org.springframework:spring-jdbc:2.5.6.SEC01'
-    compile 'javax.servlet:javax.servlet-api:3.1.+'
 
     compile 'org.opencadc:cadc-util:1.+'
     compile 'org.opencadc:cadc-log:1.+'
@@ -42,14 +35,7 @@ dependencies {
 
     testCompile 'junit:junit:4.+'
     testCompile 'org.easymock:easymock:3.+'
-    testCompile 'commons-logging:commons-logging:1.+'
     testCompile 'org.skyscreamer:jsonassert:1.+'
 
     testRuntime 'net.sourceforge.jtds:jtds:1.+'
-}
-
-test {
-    testLogging {
-        events 'standard_error'
-    }
 }

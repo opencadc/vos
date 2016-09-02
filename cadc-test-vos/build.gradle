@@ -8,11 +8,6 @@ plugins {
 repositories {
     jcenter()
     mavenLocal()
-
-    // Only here until cadcUtil is in jcenter.
-    maven {
-        url  'http://dl.bintray.com/opencadc/software'
-    }
 }
 
 sourceCompatibility = 1.7
