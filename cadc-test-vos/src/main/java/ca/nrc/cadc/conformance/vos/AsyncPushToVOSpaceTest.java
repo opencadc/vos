@@ -69,6 +69,23 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.meterware.httpunit.WebResponse;
+
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -79,21 +96,6 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
-import com.meterware.httpunit.WebResponse;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 /**
  * Test case for sending data to a service (pushToVoSpace).
@@ -168,7 +170,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("testPushToVOSpace passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -229,7 +231,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("testPushToVOSpaceLinkNode passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -248,7 +250,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -298,7 +300,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("viewNotSupportedFault passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -345,7 +347,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("protocolNotSupportedFault passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -364,7 +366,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("invalidViewParameterFault passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -383,7 +385,7 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
 
             log.info("invalidProtocolParameterFault passed.");
         }
-        catch (Exception unexpected)
+        catch (Throwable unexpected)
         {
             log.error("unexpected exception: " + unexpected);
             Assert.fail("unexpected exception: " + unexpected);

@@ -69,18 +69,19 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.UUID;
+
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses
@@ -108,8 +109,7 @@ import org.junit.runners.Suite;
 
 public class VOSTestSuite
 {
-    private static Logger log = Logger.getLogger(VOSTestSuite.class);
-    
+
     public static final String baseTestNodeName;
     public static String testSuiteNodeName;
     public static String testSuiteLinkNodeName;
@@ -122,23 +122,27 @@ public class VOSTestSuite
         {
             Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
 
-            File crt = FileUtil.getFileFromResource("proxy.pem", VOSTestSuite.class);
+            File crt = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", VOSTestSuite.class);
             SSLUtil.initSSL(crt);
-            log.debug("initSSL: " + crt);
         }
         catch(Throwable t)
         {
             throw new RuntimeException("failed to init SSL", t);
         }
 
-        DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
-        userName = "CADCRegtest1";
-        testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
-        testSuiteLinkNodeName = userName + "_int-test_link_" + dateFormat.format(Calendar.getInstance().getTime());
-        log.debug("VOSTestSuite Node name: " + testSuiteNodeName);
-        log.debug("VOSTestSuite LinkNode name: " + testSuiteLinkNodeName);
+        try
+        {
+            DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
+            userName = "CADCRegtest1";
+            testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
+            testSuiteLinkNodeName = userName + "_int-test_link_" + dateFormat.format(Calendar.getInstance().getTime());
 
-        baseTestNodeName = generateAlphaNumeric();
+            baseTestNodeName = generateAlphaNumeric();
+        }
+        catch (Throwable t)
+        {
+            throw new ExceptionInInitializerError(t);
+        }
     }
 
     /**

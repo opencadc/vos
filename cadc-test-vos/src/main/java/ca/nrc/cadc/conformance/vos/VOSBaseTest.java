@@ -69,25 +69,8 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.auth.AuthMethod;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import ca.nrc.cadc.vos.VOSException;
-import ca.nrc.cadc.vos.VOSURI;
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.PutMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,9 +83,29 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.log4j.Logger;
-import static org.junit.Assert.*;
 import org.xml.sax.SAXException;
+
+import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.PostMethodWebRequest;
+import com.meterware.httpunit.PutMethodWebRequest;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
+
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSException;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Base class for all VOSpace conformance tests. Contains methods to PUT, GET,
@@ -143,7 +146,7 @@ public abstract class VOSBaseTest
         	// resourceIdentifier for this test suite
             String propertyName = VOSTestSuite.class.getName() + ".resourceIdentifier";
             String propertyValue = System.getProperty(propertyName);
-            log.debug(propertyName + "=" + propertyValue);
+            log.debug("resourceID: " + propertyName + "=" + propertyValue);
             if (propertyValue != null)
             {
                 this.resourceIdentifier = new URI(propertyValue);
@@ -168,7 +171,7 @@ public abstract class VOSBaseTest
                 log.debug("resourceURL: " + this.resourceURL.toExternalForm());
                 if (this.resourceURL == null)
                 {
-                    throw new RuntimeException("No service URL found for resourceIdentifier=" + 
+                    throw new RuntimeException("No service URL found for resourceIdentifier=" +
                         resourceIdentifier + ", standardID=" + standardID + ", AuthMethod=" + AuthMethod.CERT);
                 }
             }
@@ -235,15 +238,15 @@ public abstract class VOSBaseTest
      */
     private ContainerNode getBaseTestNode()
     {
-        if (baseTestNode == null)
+        try
         {
-            String baseNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName;
-
-            RegistryClient registryClient = new RegistryClient();
-            URL serviceURL = registryClient.getServiceURL(resourceIdentifier, getNodeStandardID(), AuthMethod.CERT);
-
-            try
+            if (baseTestNode == null)
             {
+                String baseNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName;
+
+                RegistryClient registryClient = new RegistryClient();
+                URL serviceURL = registryClient.getServiceURL(resourceIdentifier, getNodeStandardID(), AuthMethod.CERT);
+
                 baseTestNode = new ContainerNode(new VOSURI(baseNodeName));
                 String resourceUrl = serviceURL.toExternalForm() + baseTestNode.getUri().getPath();
                 log.debug("**************************************************");
@@ -263,14 +266,17 @@ public abstract class VOSBaseTest
                 {
                     throw new VOSException(response.getResponseMessage());
                 }
+
+                log.debug("Created base test Node: " + baseTestNode);
             }
-            catch (Throwable t)
-            {
-                throw new RuntimeException("Cannot create base test Node " + baseNodeName, t);
-            }
-            log.debug("Created base test Node: " + baseTestNode);
+            return baseTestNode;
         }
-        return baseTestNode;
+        catch (Throwable t)
+        {
+            log.error("unexpected", t);
+            log.error("cause", t.getCause());
+            throw new RuntimeException("Cannot create base test Node", t);
+        }
     }
 
     /**
