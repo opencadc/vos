@@ -95,17 +95,12 @@ import javax.security.auth.x500.X500Principal;
 
 import ca.nrc.cadc.auth.CookiePrincipal;
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.net.*;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpPost;
-import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.StringUtil;
@@ -457,102 +452,31 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void deleteNode(String path)
+    /**
+     * Remove the Node associated with the given Path.
+     * @param path      The path of the Node to delete.
+     */
+    public void deleteNode(final String path)
     {
         // length 0 is root: no
         // Path must be absolute
         final String nodePath = (path.length() > 0 && !path.startsWith("/"))
                                 ? ("/" + path) : path;
-
-        final URL vospaceURL = getRegistryClient()
-                .getServiceURL(serviceID, Standards.VOSPACE_NODES_20,
-                               getAuthMethod());
-
-        final HttpTransfer httpDelete = new HttpTransfer(true)
-        {
-            @Override
-            public void run()
-            {
-                try
-                {
-                    final URL url = new URL(vospaceURL + nodePath);
-
-                    log.debug(url);
-                    final HttpURLConnection connection =
-                            (HttpURLConnection) url.openConnection();
-                    if (connection instanceof HttpsURLConnection)
-                    {
-                        final HttpsURLConnection sslConn =
-                                (HttpsURLConnection) connection;
-                        initHTTPS(sslConn);
-                    }
-
-                    setRequestSSOCookie(connection);
-                    connection.setDoOutput(true);
-                    connection.setRequestMethod("DELETE");
-                    connection.setUseCaches(false);
-                    connection.setDoInput(true);
-                    connection.setDoOutput(false);
-
-                    final int responseCode = connection.getResponseCode();
-                    final String responseMessage =
-                            connection.getResponseMessage();
-
-                    switch (responseCode)
-                    {
-                        case 200: // successful
-                            break;
-
-                        case 500:
-                            // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body
-                            // if the operation fails
-                            //
-                            // If a parent node in the URI path does not exist then
-                            // the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity-body
-                            //
-                            // If a parent node in the URI path is a LinkNode,
-                            // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity-body.
-                            throw new RuntimeException(responseMessage);
-                        case 401:
-                            // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
-                            // if the user does not have permissions to perform the operation
-
-                            String msg = responseMessage;
-                            if (msg == null)
-                            {
-                                msg = "permission denied";
-                            }
-                            throw new AccessControlException(msg);
-                        case 404:
-                            // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body
-                            // if the target node does not exist
-                            //
-                            // If the target node in the URI path does not exist,
-                            // the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body.
-
-                            throw new IllegalArgumentException(responseMessage);
-                        case 423:
-                            // The service SHALL throw a HTTP 423 status code if the node is locked
-                            throw new NodeLockedException(responseMessage);
-                        default:
-                            log.error(responseMessage + ". HTTP Code: " + responseCode);
-                            throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
-                    }
-                }
-                catch (IOException ex)
-                {
-                    log.debug("failed to get node", ex);
-                    throw new IllegalStateException("failed to get node",
-                                                    ex);
-                }
-            }
-        };
-
-        runHttpTransfer(httpDelete);
-
         try
         {
+            final URL vospaceURL = getRegistryClient()
+                .getServiceURL(serviceID, Standards.VOSPACE_NODES_20,
+                               getAuthMethod());
+            final URL url = new URL(vospaceURL.toExternalForm() + nodePath);
+            final HttpDelete httpDelete = new HttpDelete(url, false);
+
+            runHttpTransfer(httpDelete);
             VOSClientUtil.checkFailure(httpDelete.getThrowable());
+        }
+        catch (MalformedURLException e)
+        {
+            log.debug(String.format("Error creating URL from %s", nodePath));
+            throw new RuntimeException(e);
         }
         catch (NodeNotFoundException e)
         {
