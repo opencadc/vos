@@ -25,7 +25,7 @@ dependencies {
     compile 'xerces:xercesImpl:2.+'
     compile 'org.json:json:20160212'
 
-    compile 'org.opencadc:cadc-util:[1.0.6,)'
+    compile 'org.opencadc:cadc-util:[1.0.7,)'
     compile 'org.opencadc:cadc-uws:1.+'
     compile 'org.opencadc:cadc-registry:1.+'
 
