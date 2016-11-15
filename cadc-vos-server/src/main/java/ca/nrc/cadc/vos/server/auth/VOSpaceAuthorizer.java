@@ -70,7 +70,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -423,19 +422,18 @@ public class VOSpaceAuthorizer implements Authorizer
                 try
                 {
                     LOG.debug("Checking GMS on groupURI: " + groupURI);
-                    URI uri = new URI(groupURI);
-                    GroupURI guri = new GroupURI(uri);
-                    GMSClient gmsClient = new GMSClient();
-                    boolean isMember = gmsClient.isMember(guri, Role.MEMBER);
+                    GroupURI guri = new GroupURI(groupURI);
+                    URI serviceID = guri.getServiceID();
+                    LOG.debug("Using GMS service ID: " + serviceID);
+                    GMSClient gmsClient = new GMSClient(serviceID);
+                    boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
                     profiler.checkpoint("gmsClient.ismember");
                     if (isMember)
-                    {
                         return true;
-                    }
                 }
-                catch (URISyntaxException e)
+                catch (IllegalArgumentException e)
                 {
-                    LOG.warn("skipping invalid group URI: " + groupURI);
+                    LOG.warn("skipping invalid group URI: " + groupURI, e);
                 }
                 catch(UserNotFoundException ex)
                 {
