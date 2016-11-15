@@ -87,7 +87,6 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.ac.GroupURI;
 import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.ac.client.GMSClient;
@@ -423,19 +422,29 @@ public class VOSpaceAuthorizer implements Authorizer
                 try
                 {
                     LOG.debug("Checking GMS on groupURI: " + groupURI);
-                    URI uri = new URI(groupURI);
-                    GroupURI guri = new GroupURI(uri);
-                    GMSClient gmsClient = new GMSClient();
-                    boolean isMember = gmsClient.isMember(guri, Role.MEMBER);
-                    profiler.checkpoint("gmsClient.ismember");
-                    if (isMember)
+                    URI guri = new URI(groupURI);
+                    if (guri.getFragment() != null && groupURI.endsWith(guri.getFragment()))
                     {
-                        return true;
+                        String serviceID = groupURI.substring(0, groupURI.length() - (guri.getFragment().length() + 1));
+                        LOG.debug("Using GMS service ID: " + serviceID);
+                        GMSClient gmsClient = new GMSClient(URI.create(serviceID));
+                        boolean isMember = gmsClient.isMember(guri.getFragment(), Role.MEMBER);
+                        profiler.checkpoint("gmsClient.ismember");
+                        if (isMember)
+                            return true;
                     }
+                    else
+                    {
+                        LOG.warn("skipping invalid group URI (missing or malformed fragment): " + groupURI);
+                    }
+                }
+                catch (IllegalArgumentException e)
+                {
+                    LOG.warn("skipping invalid group URI: " + groupURI, e);
                 }
                 catch (URISyntaxException e)
                 {
-                    LOG.warn("skipping invalid group URI: " + groupURI);
+                    LOG.warn("skipping invalid group URI: " + groupURI, e);
                 }
                 catch(UserNotFoundException ex)
                 {
