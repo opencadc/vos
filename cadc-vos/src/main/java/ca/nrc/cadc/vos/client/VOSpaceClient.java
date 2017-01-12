@@ -92,6 +92,8 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.SSOCookieCredential;
+import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
@@ -460,9 +462,7 @@ public class VOSpaceClient
                                 ? ("/" + path) : path;
         try
         {
-            final URL vospaceURL = getRegistryClient()
-                .getServiceURL(serviceID, Standards.VOSPACE_NODES_20,
-                               getAuthMethod());
+            final URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
             final URL url = new URL(vospaceURL.toExternalForm() + nodePath);
             final HttpDelete httpDelete = new HttpDelete(url, false);
 
@@ -721,7 +721,16 @@ public class VOSpaceClient
     private AuthMethod getAuthMethod()
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
-        return AuthenticationUtil.getAuthMethod(subject);
+        for (Object o : subject.getPublicCredentials())
+        {
+            if (o instanceof X509CertificateChain)
+                return AuthMethod.CERT;
+            if (o instanceof SSOCookieCredential)
+                return AuthMethod.COOKIE;
+            // AuthMethod.PASSWORD not supported
+            // AuthMethod.TOKEN not supported
+        }
+        return AuthMethod.ANON;
     }
 
 }
