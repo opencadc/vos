@@ -721,14 +721,17 @@ public class VOSpaceClient
     private AuthMethod getAuthMethod()
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
-        for (Object o : subject.getPublicCredentials())
+        if (subject != null)
         {
-            if (o instanceof X509CertificateChain)
-                return AuthMethod.CERT;
-            if (o instanceof SSOCookieCredential)
-                return AuthMethod.COOKIE;
-            // AuthMethod.PASSWORD not supported
-            // AuthMethod.TOKEN not supported
+            for (Object o : subject.getPublicCredentials())
+            {
+                if (o instanceof X509CertificateChain)
+                    return AuthMethod.CERT;
+                if (o instanceof SSOCookieCredential)
+                    return AuthMethod.COOKIE;
+                // AuthMethod.PASSWORD not supported
+                // AuthMethod.TOKEN not supported
+            }
         }
         return AuthMethod.ANON;
     }
