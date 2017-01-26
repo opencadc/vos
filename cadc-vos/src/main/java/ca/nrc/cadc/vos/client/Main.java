@@ -984,7 +984,7 @@ public class Main implements Runnable
         else if ( ExecutionPhase.ABORTED.equals(ep) )
             throw new RuntimeException("transfer aborted by service");
         else if ( !ExecutionPhase.COMPLETED.equals(ep) )
-            throw new RuntimeException("unexpected job state: " + ep.name());
+            log.warn("unexpected job state: " + ep.name());
     }
 
     private void checkPhase(ClientRecursiveSetNode recSetNode)
@@ -999,7 +999,7 @@ public class Main implements Runnable
         else if ( ExecutionPhase.ABORTED.equals(ep) )
             throw new RuntimeException("recursive set node aborted by service");
         else if ( !ExecutionPhase.COMPLETED.equals(ep) )
-            throw new RuntimeException("unexpected job state: " + ep.name());
+            log.warn("unexpected job state: " + ep.name());
     }
 
     /**
