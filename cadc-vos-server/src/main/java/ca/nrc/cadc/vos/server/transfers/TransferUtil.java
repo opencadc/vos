@@ -2,7 +2,6 @@ package ca.nrc.cadc.vos.server.transfers;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -11,12 +10,12 @@ import java.util.List;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
@@ -27,6 +26,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.DataView;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
 import ca.nrc.cadc.vos.server.Views;
 
@@ -34,9 +34,12 @@ public class TransferUtil
 {
     private static Logger log = Logger.getLogger(TransferUtil.class);
 
-//    public static final String VOSPACE_NODES = "ivo://cadc.nrc.ca/vospace#nodes";
-//    public static final String VOSPACE_SYNC = "ivo://cadc.nrc.ca/vospace#sync";
-    public static final String VOSPACE_RESOURCE_ID = "ivo://cadc.nrc.ca/vospace";
+    public static final URI VOSPACE_RESOURCE_ID;
+    static
+    {
+        LocalServiceURI serviceURI = new LocalServiceURI();
+        VOSPACE_RESOURCE_ID = serviceURI.getURI();
+    }
 
     public static final String ANONYMOUS_USER = "anonUser";
 
@@ -139,7 +142,7 @@ public class TransferUtil
             sb.append("&DIRECTION=").append(NetUtil.encode(Direction.pullFromVoSpaceValue));
             sb.append("&PROTOCOL=").append(NetUtil.encode(protocol.getUri()));
 
-            URL serviceURL = reg.getServiceURL(new URI(VOSPACE_RESOURCE_ID), Standards.VOSPACE_SYNC_21, am);
+            URL serviceURL = reg.getServiceURL(VOSPACE_RESOURCE_ID, Standards.VOSPACE_SYNC_21, am);
             URL url = new URL(serviceURL.toExternalForm() + sb.toString());
 
             log.debug("DataView URL: " + am + " : " + url);
@@ -148,12 +151,6 @@ public class TransferUtil
         catch (MalformedURLException e)
         {
             String message = "BUG: misconfigured service URL";
-            log.error(message, e);
-            throw new IllegalStateException(message, e);
-        }
-        catch (URISyntaxException e)
-        {
-            String message = "BUG: misconfigured service URI";
             log.error(message, e);
             throw new IllegalStateException(message, e);
         }

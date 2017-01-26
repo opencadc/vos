@@ -78,13 +78,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import ca.nrc.cadc.auth.AuthMethod;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -102,6 +101,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.Views;
 
@@ -136,7 +136,8 @@ public abstract class VOSpaceTransfer
         try
         {
             this.defaultViewURI = new URI(VOS.VIEW_DEFAULT);
-            this.serviceURI = new URI("ivo://cadc.nrc.ca/vospace");
+            LocalServiceURI localServiceURI = new LocalServiceURI();
+            this.serviceURI = localServiceURI.getURI();
             log.debug("vospace serviceURI: " + serviceURI);
         }
         catch(Throwable bug)
