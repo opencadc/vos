@@ -118,6 +118,8 @@ import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import java.security.AccessControlException;
+import java.util.Set;
 
 /**
  * VOSpace client library. This implementation
@@ -232,7 +234,7 @@ public class VOSpaceClient
                     if (n.getName().equals(node.getName()))
                         throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
 
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
 
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
@@ -299,7 +301,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             URL url = new URL(vospaceURL.toExternalForm() + path);
             log.debug("getNode(), URL=" + url);
 
@@ -340,7 +342,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
@@ -379,7 +381,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODEPROPS_20, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODEPROPS_20);
 
 //            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -462,7 +464,7 @@ public class VOSpaceClient
                                 ? ("/" + path) : path;
         try
         {
-            final URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_NODES_20, getAuthMethod());
+            final URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             final URL url = new URL(vospaceURL.toExternalForm() + nodePath);
             final HttpDelete httpDelete = new HttpDelete(url, false);
 
@@ -497,7 +499,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_TRANSFERS_20, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_TRANSFERS_20);
 
 //            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
@@ -538,7 +540,7 @@ public class VOSpaceClient
     {
         try
         {
-            URL vospaceURL = getRegistryClient().getServiceURL(serviceID, Standards.VOSPACE_SYNC_21, getAuthMethod());
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_SYNC_21);
             log.debug("vospaceURL: " + vospaceURL);
 
             HttpPost httpPost = null;
@@ -718,21 +720,69 @@ public class VOSpaceClient
 
     }
 
-    private AuthMethod getAuthMethod()
+    // temporary fix -- the code below needs to be moved out to a library
+    private URL lookupServiceURL(final URI standard)
+            throws AccessControlException
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
-        if (subject != null)
+        AuthMethod am = getAuthMethod(subject);
+        
+        URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
+        
+        // now that we have a URL we can check if the cookie will actually be sent to it
+        if (AuthMethod.COOKIE.equals(am))
         {
-            for (Object o : subject.getPublicCredentials())
+            try
             {
-                if (o instanceof X509CertificateChain)
-                    return AuthMethod.CERT;
-                if (o instanceof SSOCookieCredential)
-                    return AuthMethod.COOKIE;
-                // AuthMethod.PASSWORD not supported
-                // AuthMethod.TOKEN not supported
+                boolean domainMatch = false;
+                String domain = NetUtil.getDomainName(serviceURL);
+                for (SSOCookieCredential cc : subject.getPublicCredentials(SSOCookieCredential.class))
+                {
+                    if (cc.getDomain().equals(domain))
+                        domainMatch = true;
+                } 
+                if (!domainMatch)
+                {
+                    throw new AccessControlException("no SSOCookieCredential for domain " + domain);
+                }
+            }
+            catch(IOException ex)
+            {
+                throw new RuntimeException("failure checking domain for cookie use", ex);
             }
         }
+        
+        if (serviceURL == null)
+        {
+            throw new RuntimeException(
+                    String.format("Unable to get Service URL for '%s', '%s', '%s'",
+                                  serviceID.toString(), standard, am));
+        }
+        
+        return serviceURL;
+    }
+    
+    private AuthMethod getAuthMethod(Subject subject)
+    {
+        if (subject != null)
+        {
+            // web services use CDP to load a proxy cert so prefer that
+            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
+                    subject.getPublicCredentials());
+            if (privateKeyChain != null)
+                return AuthMethod.CERT;
+            
+            // ui applications pass cookie(s) along
+            Set sso = subject.getPublicCredentials(SSOCookieCredential.class);
+            if ( !sso.isEmpty() )
+            {
+                return AuthMethod.COOKIE;
+            }
+            
+            // AuthMethod.PASSWORD not supported
+            // AuthMethod.TOKEN not supported
+        }
+        
         return AuthMethod.ANON;
     }
 
