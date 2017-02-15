@@ -743,9 +743,7 @@ public class VOSpaceClient
                 } 
                 if (!domainMatch)
                 {
-                    // drop to anon
-                    am = AuthMethod.ANON;
-                    serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
+                    throw new AccessControlException("no SSOCookieCredential for domain " + domain);
                 }
             }
             catch(IOException ex)
