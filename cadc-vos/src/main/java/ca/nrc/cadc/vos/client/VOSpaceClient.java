@@ -743,7 +743,9 @@ public class VOSpaceClient
                 } 
                 if (!domainMatch)
                 {
-                    throw new AccessControlException("no SSOCookieCredential for domain " + domain);
+                    // drop to anon
+                    am = AuthMethod.ANON;
+                    serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
                 }
             }
             catch(IOException ex)
@@ -781,12 +783,9 @@ public class VOSpaceClient
             
             // AuthMethod.PASSWORD not supported
             // AuthMethod.TOKEN not supported
-            throw new AccessControlException("No valid public credentials.");
         }
-        else
-        {
-            throw new AccessControlException("Anonymous access not supported.");
-        }
+        
+        return AuthMethod.ANON;
     }
 
 }
