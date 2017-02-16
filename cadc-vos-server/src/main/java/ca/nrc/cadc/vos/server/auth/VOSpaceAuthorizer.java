@@ -419,44 +419,44 @@ public class VOSpaceAuthorizer implements Authorizer
             // need credentials in the subject to call GMS
             if (CredUtil.checkCredentials(subject))
             {
-	            // make gms calls to see if the user has group membership
-	            for (String groupURI : groupURIs)
-	            {
-	                try
-	                {
-	                    LOG.debug("Checking GMS on groupURI: " + groupURI);
-	                    GroupURI guri = new GroupURI(groupURI);
-	                    URI serviceID = guri.getServiceID();
-	                    LOG.debug("Using GMS service ID: " + serviceID);
-	                    GMSClient gmsClient = new GMSClient(serviceID);
-	                    boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
-	                    profiler.checkpoint("gmsClient.ismember");
-	                    if (isMember)
-	                        return true;
-	                }
-	                catch (IllegalArgumentException e)
-	                {
-	                    LOG.warn("skipping invalid group URI: " + groupURI, e);
-	                }
-	                catch(UserNotFoundException ex)
-	                {
-	                    LOG.debug("failed to call canfar gms service", ex);
-	                    if (firstFail == null)
-	                    {
-	                        firstFail = ex;
-	                        wrapException = new AccessControlException("failed to check membership with group service: " + ex);
-	                    }
-	                }
-	                catch(IOException ex)
-	                {
-	                    LOG.debug("failed to call canfar gms service", ex);
-	                    if (firstFail == null)
-	                    {
-	                        firstFail = ex;
-	                        wrapException = new RuntimeException("failed to check membership with group service", ex);
-	                    }
-	                }
-	            }
+                // make gms calls to see if the user has group membership
+                for (String groupURI : groupURIs)
+                {
+                    try
+                    {
+                        LOG.debug("Checking GMS on groupURI: " + groupURI);
+                        GroupURI guri = new GroupURI(groupURI);
+                        URI serviceID = guri.getServiceID();
+                        LOG.debug("Using GMS service ID: " + serviceID);
+                        GMSClient gmsClient = new GMSClient(serviceID);
+                        boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
+                        profiler.checkpoint("gmsClient.ismember");
+                        if (isMember)
+                            return true;
+                    }
+                    catch (IllegalArgumentException e)
+                    {
+                        LOG.warn("skipping invalid group URI: " + groupURI, e);
+                    }
+                    catch(UserNotFoundException ex)
+                    {
+                        LOG.debug("failed to call canfar gms service", ex);
+                        if (firstFail == null)
+                        {
+                            firstFail = ex;
+                            wrapException = new AccessControlException("failed to check membership with group service: " + ex);
+                        }
+                    }
+                    catch(IOException ex)
+                    {
+                        LOG.debug("failed to call canfar gms service", ex);
+                        if (firstFail == null)
+                        {
+                            firstFail = ex;
+                            wrapException = new RuntimeException("failed to check membership with group service", ex);
+                        }
+                    }
+                }
             }
         } 
         catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) 
