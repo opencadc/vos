@@ -417,8 +417,8 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             // need credentials in the subject to call GMS
-        	if (CredUtil.checkCredentials(subject))
-        	{
+            if (CredUtil.checkCredentials(subject))
+            {
 	            // make gms calls to see if the user has group membership
 	            for (String groupURI : groupURIs)
 	            {
@@ -457,12 +457,12 @@ public class VOSpaceAuthorizer implements Authorizer
 	                    }
 	                }
 	            }
-        	}
+            }
         } 
         catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) 
         {
             wrapException = new RuntimeException("failed credentials check", ex);
-		}
+        }
         finally { }
 
         if (wrapException != null)
