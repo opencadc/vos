@@ -77,6 +77,8 @@ import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -96,6 +98,7 @@ import ca.nrc.cadc.auth.DelegationToken;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.client.CredClient;
+import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -414,46 +417,51 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             // need credentials in the subject to call GMS
-            checkCredentials(subject); // succeed or throw
-
-            // make gms calls to see if the user has group membership
-            for (String groupURI : groupURIs)
+            if (CredUtil.checkCredentials(subject))
             {
-                try
+                // make gms calls to see if the user has group membership
+                for (String groupURI : groupURIs)
                 {
-                    LOG.debug("Checking GMS on groupURI: " + groupURI);
-                    GroupURI guri = new GroupURI(groupURI);
-                    URI serviceID = guri.getServiceID();
-                    LOG.debug("Using GMS service ID: " + serviceID);
-                    GMSClient gmsClient = new GMSClient(serviceID);
-                    boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
-                    profiler.checkpoint("gmsClient.ismember");
-                    if (isMember)
-                        return true;
-                }
-                catch (IllegalArgumentException e)
-                {
-                    LOG.warn("skipping invalid group URI: " + groupURI, e);
-                }
-                catch(UserNotFoundException ex)
-                {
-                    LOG.debug("failed to call canfar gms service", ex);
-                    if (firstFail == null)
+                    try
                     {
-                        firstFail = ex;
-                        wrapException = new AccessControlException("failed to check membership with group service: " + ex);
+                        LOG.debug("Checking GMS on groupURI: " + groupURI);
+                        GroupURI guri = new GroupURI(groupURI);
+                        URI serviceID = guri.getServiceID();
+                        LOG.debug("Using GMS service ID: " + serviceID);
+                        GMSClient gmsClient = new GMSClient(serviceID);
+                        boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
+                        profiler.checkpoint("gmsClient.ismember");
+                        if (isMember)
+                            return true;
                     }
-                }
-                catch(IOException ex)
-                {
-                    LOG.debug("failed to call canfar gms service", ex);
-                    if (firstFail == null)
+                    catch (IllegalArgumentException e)
                     {
-                        firstFail = ex;
-                        wrapException = new RuntimeException("failed to check membership with group service", ex);
+                        LOG.warn("skipping invalid group URI: " + groupURI, e);
+                    }
+                    catch(UserNotFoundException ex)
+                    {
+                        LOG.debug("failed to call canfar gms service", ex);
+                        if (firstFail == null)
+                        {
+                            firstFail = ex;
+                            wrapException = new AccessControlException("failed to check membership with group service: " + ex);
+                        }
+                    }
+                    catch(IOException ex)
+                    {
+                        LOG.debug("failed to call canfar gms service", ex);
+                        if (firstFail == null)
+                        {
+                            firstFail = ex;
+                            wrapException = new RuntimeException("failed to check membership with group service", ex);
+                        }
                     }
                 }
             }
+        } 
+        catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) 
+        {
+            wrapException = new RuntimeException("failed credentials check", ex);
         }
         finally { }
 
@@ -470,56 +478,6 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
         return SSLUtil.createSubject(pemFile);
-    }
-
-    private void checkCredentials(final Subject subject)
-    {
-        // lazy init of credentials
-        try
-        {
-            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
-                    subject.getPublicCredentials());
-
-            // If we don't have the private key chain, get it from the credential
-            // delegation service and add it to the subject's public credentials
-            // for use later.
-            if (privateKeyChain == null)
-            {
-                final CredClient cred = new CredClient(URI.create(CRED_SERVICE_ID));
-                Subject opsSubject = createOpsSubject();
-                try
-                {
-                    privateKeyChain = Subject.doAs(opsSubject, new PrivilegedExceptionAction<X509CertificateChain>()
-                    {
-                        public X509CertificateChain run() throws Exception
-                        {
-                            return cred.getProxyCertificate(subject, 0.2);
-                        }
-                    });
-                }
-                catch(PrivilegedActionException ex)
-                {
-                    throw new RuntimeException("CredClient.getProxyCertficate failed", ex.getException());
-                }
-                profiler.checkpoint("CredClient.getProxyCertificate");
-                if (privateKeyChain == null)
-                {
-                    throw new AccessControlException("credential service did not return a delegated certificate");
-                }
-
-                privateKeyChain.getChain()[0].checkValidity();
-
-                subject.getPublicCredentials().add(privateKeyChain);
-            }
-        }
-        catch (AccessControlException e)
-        {
-            throw new RuntimeException("CredClient.getProxyCertficate failed", e);
-        }
-        catch (CertificateException e)
-        {
-            throw new AccessControlException("credential service returned an invalid certificate");
-        }
     }
 
     /**
