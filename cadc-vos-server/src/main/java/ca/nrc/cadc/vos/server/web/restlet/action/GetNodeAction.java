@@ -428,6 +428,11 @@ public class GetNodeAction extends NodeAction
         {
             // no read access, continue
         }
+        catch (Exception e)
+        {
+            // error checking access, log a warning
+            log.warn("Failed to check read permission", e);
+        }
     }
 
     /**
@@ -450,6 +455,11 @@ public class GetNodeAction extends NodeAction
         catch (AccessControlException e)
         {
             // no write access, continue
+        }
+        catch (Exception e)
+        {
+            // error checking access, log a warning
+            log.warn("Failed to check write permission", e);
         }
     }
 }
