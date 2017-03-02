@@ -386,6 +386,13 @@ public class GetNodeAction extends NodeAction
                 log.debug("doFilterChildren: remove " + n);
                 iter.remove();
             }
+            catch (Exception e)
+            {
+                // error checking access, log a warning
+                log.warn("Failed to check read permission", e);
+                log.debug("doFilterChildren: remove due to auth check error " + n);
+                iter.remove();
+            }
         }
 
         // since a limit isn't supplied to node persistence when getting
