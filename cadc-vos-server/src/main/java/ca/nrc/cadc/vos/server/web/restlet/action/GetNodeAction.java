@@ -184,16 +184,7 @@ public class GetNodeAction extends NodeAction
 
             // get the children as requested
             start = System.currentTimeMillis();
-            if (cn.getUri().isRoot())
-            {
-                // if this is the root node, ignore user requested limit
-                // for the time being (see method doFilterChildren below)
-                nodePersistence.getChildren(cn, startURIObject, null);
-                log.debug(String.format(
-                    "Get children on root returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                        cn.getNodes().size(), startURI, null));
-            }
-            else if (paginate)
+            if (paginate)
             {
                 if (pageLimit != null && pageLimit < 1)
                 {
@@ -218,9 +209,6 @@ public class GetNodeAction extends NodeAction
 
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
-
-            // filter children at the root
-            doFilterChildren(cn, pageLimit);
 
             if (VOS.Detail.max.getValue().equals(detailLevel))
             {
@@ -347,61 +335,6 @@ public class GetNodeAction extends NodeAction
         {
             log.debug("failed to unresolve node paths", e);
             throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * If this is the root node, we apply a privacy policy and filter out
-     * child nodes the caller is not allowed to read
-     *
-     * TODO: The approach to manually trimming to the pageLimit size for
-     * the root container will cease to work when the number of root
-     * container nodes exceeds the upper limit of children returned as
-     * defined in the node persistence.  Instead, a loop should be implemented,
-     * as it is in the client, to manually retrieve more children if
-     * necessary if some have been filtered out due to lack of read permission.
-     */
-    private void doFilterChildren(ContainerNode node, Integer pageLimit)
-    {
-        if ( !node.getUri().isRoot() )
-            return;
-
-        ListIterator<Node> iter = node.getNodes().listIterator();
-        int nodeCount = 0;
-        boolean metLimit = false;
-        while ( iter.hasNext() && !metLimit)
-        {
-            Node n = iter.next();
-            try
-            {
-                voSpaceAuthorizer.getReadPermission(n);
-                nodeCount++;
-
-                // stop iterating if we've met a specified limit
-                if (pageLimit != null && nodeCount >= pageLimit)
-                    metLimit = true;
-            }
-            catch(AccessControlException ex)
-            {
-                log.debug("doFilterChildren: remove " + n);
-                iter.remove();
-            }
-            catch (Exception e)
-            {
-                // error checking access, log a warning
-                log.warn("Failed to check read permission", e);
-                log.debug("doFilterChildren: remove due to auth check error " + n);
-                iter.remove();
-            }
-        }
-
-        // since a limit isn't supplied to node persistence when getting
-        // the children of the root node, apply the limit value now.
-        if (pageLimit != null && node.getNodes().size() > pageLimit)
-        {
-            log.debug("Reducing child list size from " + node.getNodes().size() +
-                    " to " + pageLimit + " to meet limit request on root node.");
-            node.setNodes(node.getNodes().subList(0, pageLimit));
         }
     }
 
