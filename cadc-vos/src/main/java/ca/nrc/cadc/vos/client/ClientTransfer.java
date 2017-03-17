@@ -70,12 +70,9 @@
 package ca.nrc.cadc.vos.client;
 
 import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.StringReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.AccessControlContext;
@@ -92,21 +89,17 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
 import ca.nrc.cadc.net.*;
-import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.event.TransferListener;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.XmlProcessor;
 import ca.nrc.cadc.xml.XmlUtil;
 
@@ -572,7 +565,7 @@ public class ClientTransfer implements Runnable
                 }
                 throw new RuntimeException("unexpected failure mode: " + error.getMessage() + "(" + transfer.getResponseCode() + ")");
             }
-            
+
             if (monitorAsync)
             {
                 while (phase == null)
