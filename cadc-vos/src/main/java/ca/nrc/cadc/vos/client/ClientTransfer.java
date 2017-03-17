@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.client;
 
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -90,16 +91,12 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.net.*;
+import ca.nrc.cadc.reg.Standards;
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpRequestProperty;
-import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -120,8 +117,10 @@ public class ClientTransfer implements Runnable
 {
     private static Logger log = Logger.getLogger(ClientTransfer.class);
     private static final long POLL_INTERVAL = 100L;
-    
+
+    // socket factory to use when connecting
     private SSLSocketFactory sslSocketFactory;
+    private SSLSocketFactory mySocketFactory;
     
     private URL jobURL;
     private Transfer transfer;
@@ -143,10 +142,10 @@ public class ClientTransfer implements Runnable
     /**
      * @param jobURL UWS job URL for the transfer job
      * @param transfer a negotiated transfer
-     * @param monitor monitor the job until complete (true) or just start
+     * @param transListener monitor the job until complete (true) or just start
      *  it and return (false)
      */
-    ClientTransfer(URL jobURL, Transfer transfer, boolean schemaValidation)
+    ClientTransfer(URL jobURL, Transfer transfer, boolean transListener)
     {
         this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
         this.jobURL = jobURL;
@@ -545,43 +544,35 @@ public class ClientTransfer implements Runnable
         {
             URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
             String parameters = "PHASE=RUN";
-            
-            HttpURLConnection connection = (HttpURLConnection) phaseURL.openConnection();
-            if (connection instanceof HttpsURLConnection)
-                initHTTPS((HttpsURLConnection) connection);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Length", "" + Integer.toString(parameters.getBytes().length));
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setInstanceFollowRedirects(false);
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
 
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(parameters.getBytes("UTF-8"));
-            outputStream.close();
+            HttpPost transfer = new HttpPost(phaseURL, parameters.toString(),
+                    "application/xml", false);
+            transfer.setSSLSocketFactory(getSSLSocketFactory());
+            transfer.setTransferListener(this.transListener);
+            transfer.run();
 
-            int responseCode = connection.getResponseCode();
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-                responseMessage += ": " + errorBody;
-            
-            switch (responseCode)
+            Throwable error = transfer.getThrowable();
+            if (error != null)
             {
-                case 200: // successful
-                case 303: // redirect to jobURL
-                    break;
-                case 500:
-                    throw new RuntimeException(responseMessage);
-                case 401:
-                    throw new AccessControlException(responseMessage);
-                case 404:
-                    throw new IllegalArgumentException(responseMessage);
-                default:
-                    throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
+                log.debug("createGroup throwable", error);
+                // transfer returns a -1 code for anonymous uploads.
+                if ((transfer.getResponseCode() == -1) ||
+                        (transfer.getResponseCode() == 401) ||
+                        (transfer.getResponseCode() == 403))
+                {
+                    throw new AccessControlException(error.getMessage());
+                }
+                if (transfer.getResponseCode() == 400)
+                {
+                    throw new IllegalArgumentException(error.getMessage());
+                }
+                if (transfer.getResponseCode() == 404)
+                {
+                    throw new IllegalArgumentException(error.getMessage());
+                }
+                throw new RuntimeException("unexpected failure mode: " + error.getMessage() + "(" + transfer.getResponseCode() + ")");
             }
-
+            
             if (monitorAsync)
             {
                 while (phase == null)
@@ -627,4 +618,37 @@ public class ClientTransfer implements Runnable
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
     }
+
+
+    private int subjectHashCode = 0;
+    private SSLSocketFactory getSSLSocketFactory()
+    {
+        AccessControlContext ac = AccessController.getContext();
+        Subject s = Subject.getSubject(ac);
+
+        // no real Subject: can only use the one from setSSLSocketFactory
+        if (s == null || s.getPrincipals().isEmpty())
+        {
+            return sslSocketFactory;
+        }
+
+        // lazy init
+        if (this.mySocketFactory == null)
+        {
+            log.debug("getSSLSocketFactory: " + s);
+            this.mySocketFactory = SSLUtil.getSocketFactory(s);
+            this.subjectHashCode = s.hashCode();
+        }
+        else
+        {
+            int c = s.hashCode();
+            if (c != subjectHashCode)
+                throw new IllegalStateException("Illegal use of "
+                        + this.getClass().getSimpleName()
+                        + ": subject change not supported for internal SSLSocketFactory");
+        }
+        return this.mySocketFactory;
+    }
+
+
 }
