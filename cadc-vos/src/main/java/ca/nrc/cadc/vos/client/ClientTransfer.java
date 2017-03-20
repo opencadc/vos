@@ -75,24 +75,25 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessControlContext;
 import java.security.AccessControlException;
-import java.security.AccessController;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
-import ca.nrc.cadc.net.*;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.OutputStreamWrapper;
+import ca.nrc.cadc.net.HttpRequestProperty;
+import ca.nrc.cadc.net.HttpPost;
+
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -111,9 +112,7 @@ public class ClientTransfer implements Runnable
     private static Logger log = Logger.getLogger(ClientTransfer.class);
     private static final long POLL_INTERVAL = 100L;
 
-    // socket factory to use when connecting
     private SSLSocketFactory sslSocketFactory;
-    private SSLSocketFactory mySocketFactory;
     
     private URL jobURL;
     private Transfer transfer;
@@ -135,10 +134,10 @@ public class ClientTransfer implements Runnable
     /**
      * @param jobURL UWS job URL for the transfer job
      * @param transfer a negotiated transfer
-     * @param transListener monitor the job until complete (true) or just start
+     * @param schemaValidation monitor the job until complete (true) or just start
      *  it and return (false)
      */
-    ClientTransfer(URL jobURL, Transfer transfer, boolean transListener)
+    ClientTransfer(URL jobURL, Transfer transfer, boolean schemaValidation)
     {
         this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
         this.jobURL = jobURL;
@@ -536,12 +535,14 @@ public class ClientTransfer implements Runnable
         try
         {
             URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
-            String parameters = "PHASE=RUN";
 
-            HttpPost transfer = new HttpPost(phaseURL, parameters.toString(),
-                    "application/xml", false);
-            transfer.setSSLSocketFactory(getSSLSocketFactory());
-            transfer.setTransferListener(this.transListener);
+            final Map<String, Object> parameters = new HashMap<String, Object>();
+            parameters.put("PHASE", "RUN");
+
+            HttpPost transfer = new HttpPost(phaseURL, parameters, false);
+            if (transListener != null) {
+                transfer.setTransferListener(transListener);
+            }
             transfer.run();
 
             Throwable error = transfer.getThrowable();
@@ -579,10 +580,7 @@ public class ClientTransfer implements Runnable
         {
             throw new RuntimeException("BUG: failed to create phase url", bug);
         }
-        finally
-        {
 
-        }
     }
     
     protected void runHttpTransfer(HttpTransfer transfer)
@@ -595,53 +593,5 @@ public class ClientTransfer implements Runnable
         if (transfer.getSSLSocketFactory() != null)
             this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
-
-    private void initHTTPS(HttpsURLConnection sslConn)
-    {
-        if (sslSocketFactory == null) // lazy init
-        {
-            log.debug("initHTTPS: lazy init");
-            AccessControlContext ac = AccessController.getContext();
-            Subject s = Subject.getSubject(ac);
-            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
-        }
-        if (sslSocketFactory != null && sslConn != null)
-        {
-            log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
-            sslConn.setSSLSocketFactory(sslSocketFactory);
-        }
-    }
-
-
-    private int subjectHashCode = 0;
-    private SSLSocketFactory getSSLSocketFactory()
-    {
-        AccessControlContext ac = AccessController.getContext();
-        Subject s = Subject.getSubject(ac);
-
-        // no real Subject: can only use the one from setSSLSocketFactory
-        if (s == null || s.getPrincipals().isEmpty())
-        {
-            return sslSocketFactory;
-        }
-
-        // lazy init
-        if (this.mySocketFactory == null)
-        {
-            log.debug("getSSLSocketFactory: " + s);
-            this.mySocketFactory = SSLUtil.getSocketFactory(s);
-            this.subjectHashCode = s.hashCode();
-        }
-        else
-        {
-            int c = s.hashCode();
-            if (c != subjectHashCode)
-                throw new IllegalStateException("Illegal use of "
-                        + this.getClass().getSimpleName()
-                        + ": subject change not supported for internal SSLSocketFactory");
-        }
-        return this.mySocketFactory;
-    }
-
 
 }
