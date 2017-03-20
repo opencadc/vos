@@ -72,44 +72,35 @@ package ca.nrc.cadc.vos.client;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.StringReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessControlContext;
 import java.security.AccessControlException;
-import java.security.AccessController;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
+
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.OutputStreamWrapper;
+import ca.nrc.cadc.net.HttpRequestProperty;
+import ca.nrc.cadc.net.HttpPost;
 
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpRequestProperty;
-import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.event.TransferListener;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.XmlProcessor;
 import ca.nrc.cadc.xml.XmlUtil;
 
@@ -120,7 +111,7 @@ public class ClientTransfer implements Runnable
 {
     private static Logger log = Logger.getLogger(ClientTransfer.class);
     private static final long POLL_INTERVAL = 100L;
-    
+
     private SSLSocketFactory sslSocketFactory;
     
     private URL jobURL;
@@ -143,7 +134,7 @@ public class ClientTransfer implements Runnable
     /**
      * @param jobURL UWS job URL for the transfer job
      * @param transfer a negotiated transfer
-     * @param monitor monitor the job until complete (true) or just start
+     * @param schemaValidation monitor the job until complete (true) or just start
      *  it and return (false)
      */
     ClientTransfer(URL jobURL, Transfer transfer, boolean schemaValidation)
@@ -544,42 +535,36 @@ public class ClientTransfer implements Runnable
         try
         {
             URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
-            String parameters = "PHASE=RUN";
-            
-            HttpURLConnection connection = (HttpURLConnection) phaseURL.openConnection();
-            if (connection instanceof HttpsURLConnection)
-                initHTTPS((HttpsURLConnection) connection);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Length", "" + Integer.toString(parameters.getBytes().length));
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setInstanceFollowRedirects(false);
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
 
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(parameters.getBytes("UTF-8"));
-            outputStream.close();
+            final Map<String, Object> parameters = new HashMap<String, Object>();
+            parameters.put("PHASE", "RUN");
 
-            int responseCode = connection.getResponseCode();
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-                responseMessage += ": " + errorBody;
-            
-            switch (responseCode)
+            HttpPost transfer = new HttpPost(phaseURL, parameters, false);
+            if (transListener != null) {
+                transfer.setTransferListener(transListener);
+            }
+            transfer.run();
+
+            Throwable error = transfer.getThrowable();
+            if (error != null)
             {
-                case 200: // successful
-                case 303: // redirect to jobURL
-                    break;
-                case 500:
-                    throw new RuntimeException(responseMessage);
-                case 401:
-                    throw new AccessControlException(responseMessage);
-                case 404:
-                    throw new IllegalArgumentException(responseMessage);
-                default:
-                    throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
+                log.debug("createGroup throwable", error);
+                // transfer returns a -1 code for anonymous uploads.
+                if ((transfer.getResponseCode() == -1) ||
+                        (transfer.getResponseCode() == 401) ||
+                        (transfer.getResponseCode() == 403))
+                {
+                    throw new AccessControlException(error.getMessage());
+                }
+                if (transfer.getResponseCode() == 400)
+                {
+                    throw new IllegalArgumentException(error.getMessage());
+                }
+                if (transfer.getResponseCode() == 404)
+                {
+                    throw new IllegalArgumentException(error.getMessage());
+                }
+                throw new RuntimeException("unexpected failure mode: " + error.getMessage() + "(" + transfer.getResponseCode() + ")");
             }
 
             if (monitorAsync)
@@ -595,10 +580,7 @@ public class ClientTransfer implements Runnable
         {
             throw new RuntimeException("BUG: failed to create phase url", bug);
         }
-        finally
-        {
 
-        }
     }
     
     protected void runHttpTransfer(HttpTransfer transfer)
@@ -612,19 +594,4 @@ public class ClientTransfer implements Runnable
             this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 
-    private void initHTTPS(HttpsURLConnection sslConn)
-    {
-        if (sslSocketFactory == null) // lazy init
-        {
-            log.debug("initHTTPS: lazy init");
-            AccessControlContext ac = AccessController.getContext();
-            Subject s = Subject.getSubject(ac);
-            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
-        }
-        if (sslSocketFactory != null && sslConn != null)
-        {
-            log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
-            sslConn.setSSLSocketFactory(sslSocketFactory);
-        }
-    }
 }
