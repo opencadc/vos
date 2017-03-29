@@ -560,7 +560,19 @@ public class NodeDAO
     public void getChildren(ContainerNode parent) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null);
+        getChildren(parent, null, null, null);
+    }
+
+    /**
+     * Load all the children of a container based on the detail level.
+     *
+     * @param parent
+     * @param detailLevel
+     */
+    public void getChildren(ContainerNode parent, String detailLevel) throws TransientException
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        getChildren(parent, null, null, detailLevel);
     }
 
     /**
@@ -570,6 +582,18 @@ public class NodeDAO
      * @param limit
      */
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        getChildren(parent, start, limit, null);
+    }
+    
+    /**
+     * Loads some of the child nodes of the specified container based on the detail level.
+     * @param parent
+     * @param start
+     * @param limit
+     */
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, String detailLevel) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -582,7 +606,7 @@ public class NodeDAO
 
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
-        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));
+        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));        
         log.debug("getChildren: " + sql);
 
         TransactionStatus dirtyRead = null;
@@ -599,7 +623,11 @@ public class NodeDAO
             dirtyRead = null;
             prof.checkpoint("commit.getSelectNodesByParentSQL");
 
-            loadSubjects(nodes);
+            if ((detailLevel != null) && detailLevel.equals("root"))
+                setRawOwner(nodes);
+            else
+                loadSubjects(nodes);
+
             addChildNodes(parent, nodes);
         }
         catch(CannotCreateTransactionException ex)
@@ -672,6 +700,46 @@ public class NodeDAO
         }
     }
 
+    private void clearOwner(List<Node> nodes)
+    {
+        for (Node n: nodes)
+        {
+            if ((n != null) && (n.appData != null))
+            {
+                ((NodeID) n.appData).owner = null;
+            }
+        }
+    }
+    
+    private void setRawOwner(List<Node> nodes)
+    {
+        for (Node n : nodes)
+        {
+            setRawOwner(n);
+        }
+        
+        clearOwner(nodes);
+    }
+
+    private void setRawOwner(Node node)
+    {
+        if (node == null || node.appData == null)
+            return;
+
+        NodeID nid = (NodeID) node.appData;
+        if (nid.owner != null)
+            return; // already loaded (parent loop below)
+
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, (String) nid.ownerObject));
+        nid.owner = new Subject();
+        Node parent = node.getParent();
+        while (parent != null)
+        {
+            setRawOwner(parent);
+            parent = parent.getParent();
+        }
+    }
+    
     private void loadSubjects(List<Node> nodes)
     {
         for (Node n : nodes)

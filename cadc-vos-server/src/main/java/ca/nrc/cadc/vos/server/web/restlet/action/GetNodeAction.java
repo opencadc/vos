@@ -72,7 +72,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
-import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
@@ -193,18 +192,18 @@ public class GetNodeAction extends NodeAction
                 else
                 {
                     // request for a subset of children
-                    nodePersistence.getChildren(cn, startURIObject, pageLimit);
+                    nodePersistence.getChildren(cn, startURIObject, pageLimit, detailLevel);
                     log.debug(String.format(
-                        "Get children returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                            cn.getNodes().size(), startURI, pageLimit));
+                        "Get children on detail=[%s] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                            detailLevel, cn.getNodes().size(), startURI, pageLimit));
                 }
             }
             else
             {
                 // get as many children as allowed
-                nodePersistence.getChildren(cn);
+                nodePersistence.getChildren(cn, detailLevel);
                 log.debug(String.format(
-                    "Get children returned [%s] nodes.", cn.getNodes().size()));
+                    "Get children on detail=[%s] returned [%s] nodes.", detailLevel, cn.getNodes().size()));
             }
 
             end = System.currentTimeMillis();
