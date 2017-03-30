@@ -733,7 +733,7 @@ public class NodeDAO
         if (nid.owner != null)
             return; // already loaded (parent loop below)
 
-        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, (String) nid.ownerObject));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, String.valueOf(nid.ownerObject)));
         nid.owner = new Subject();
         Node parent = node.getParent();
         while (parent != null)

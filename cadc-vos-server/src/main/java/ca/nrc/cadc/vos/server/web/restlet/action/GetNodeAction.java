@@ -145,8 +145,7 @@ public class GetNodeAction extends NodeAction
 
         // Detail level parameter
         String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
-        Boolean resolveMetadata = (detailLevel != null && detailLevel.equals(Detail.raw)) ? false : true;
-        
+        Boolean resolveMetadata = (detailLevel != null && detailLevel.equals(Detail.raw.getValue())) ? false : true;
 
         if (serverNode instanceof ContainerNode)
         {
