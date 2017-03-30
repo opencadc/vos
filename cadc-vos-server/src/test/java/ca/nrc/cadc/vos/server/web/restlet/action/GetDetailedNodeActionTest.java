@@ -170,7 +170,7 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(mockPartialPathAuth.getReadPermission(testVOSURI.getURI())).
                 andReturn(mockServerNode).atLeastOnce();
 
-        getMockNodePersistence().getChildren(mockServerNode, "max");
+        getMockNodePersistence().getChildren(mockServerNode, true);
         expectLastCall().once();
 
         replay(queryForm);

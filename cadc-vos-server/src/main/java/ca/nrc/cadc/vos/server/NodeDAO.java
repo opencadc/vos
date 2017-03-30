@@ -560,19 +560,20 @@ public class NodeDAO
     public void getChildren(ContainerNode parent) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null, null);
+        getChildren(parent, null, null, true);
     }
 
     /**
-     * Load all the children of a container based on the detail level.
+     * Load all the children of a container based on whether the client 
+     * wants the metadata to be resolved.
      *
      * @param parent
-     * @param detailLevel
+     * @param resolveMetadata
      */
-    public void getChildren(ContainerNode parent, String detailLevel) throws TransientException
+    public void getChildren(ContainerNode parent, Boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null, detailLevel);
+        getChildren(parent, null, null, resolveMetadata);
     }
 
     /**
@@ -584,16 +585,18 @@ public class NodeDAO
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, start, limit, null);
+        getChildren(parent, start, limit, true);
     }
     
     /**
-     * Loads some of the child nodes of the specified container based on the detail level.
+     * Loads some of the child nodes of the specified container based on 
+     * whether the client wants the metadata to be resolved.
      * @param parent
      * @param start
      * @param limit
+     * @param resolveMetadata
      */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, String detailLevel) throws TransientException
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, Boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -623,10 +626,10 @@ public class NodeDAO
             dirtyRead = null;
             prof.checkpoint("commit.getSelectNodesByParentSQL");
 
-            if ((detailLevel != null) && detailLevel.equals("root"))
-                setRawOwner(nodes);
-            else
+            if (resolveMetadata)
                 loadSubjects(nodes);
+            else
+                setRawOwner(nodes);
 
             addChildNodes(parent, nodes);
         }

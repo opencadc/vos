@@ -561,9 +561,9 @@ public class NodeDAOTest
     }
 
     @Test
-    public void testGetChildrenWithDetail()
+    public void testGetChildrenWithResolveMetadata()
     {
-        log.debug("testGetChildrenWithDetail - START");
+        log.debug("testGetChildrenWithResolveMetadata - START");
         try
         {
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -600,7 +600,7 @@ public class NodeDAOTest
             Assert.assertNotNull(cur);
             Assert.assertEquals("empty child list", 0, cur.getNodes().size());
             // load the child nodes
-            nodeDAO.getChildren(cur, "root");
+            nodeDAO.getChildren(cur, false);
             Assert.assertEquals("full child list", 4, cur.getNodes().size());
             // rely on implementation of Node.equals
             Assert.assertTrue(cur.getNodes().contains(n1));
@@ -618,7 +618,7 @@ public class NodeDAOTest
         }
         finally
         {
-            log.debug("testGetChildrenWithDetail - DONE");
+            log.debug("testGetChildrenWithResolveMetadata - DONE");
         }
     }
 
@@ -691,9 +691,9 @@ public class NodeDAOTest
     }
 
     @Test
-    public void testGetChildrenLimitWithDetail()
+    public void testGetChildrenLimitWithResolveMetadata()
     {
-        log.debug("testGetChildrenLimitWithDetail - START");
+        log.debug("testGetChildrenLimitWithResolveMetadata - START");
         try
         {
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -731,7 +731,7 @@ public class NodeDAOTest
             Assert.assertNotNull(cur);
             Assert.assertEquals("empty child list", 0, cur.getNodes().size());
             // load 2 child nodes
-            nodeDAO.getChildren(cur, null, new Integer(2), "root");
+            nodeDAO.getChildren(cur, null, new Integer(2), false);
             Assert.assertEquals("leading partial child list", 2, cur.getNodes().size());
             // rely on implementation of Node.equals
             Assert.assertTrue(cur.getNodes().contains(n1));
@@ -739,7 +739,7 @@ public class NodeDAOTest
 
             // get a trailing batch
             cur.getNodes().clear();
-            nodeDAO.getChildren(cur, n3.getUri(), new Integer(100), "root");
+            nodeDAO.getChildren(cur, n3.getUri(), new Integer(100), false);
             Assert.assertEquals("trailing partial child list", 2, cur.getNodes().size());
             Assert.assertTrue(cur.getNodes().contains(n3));
             Assert.assertTrue(cur.getNodes().contains(n4));
@@ -754,7 +754,7 @@ public class NodeDAOTest
         }
         finally
         {
-            log.debug("testGetChildrenLimitWithDetail - DONE");
+            log.debug("testGetChildrenLimitWithResolveMetadata - DONE");
         }
     }
 
