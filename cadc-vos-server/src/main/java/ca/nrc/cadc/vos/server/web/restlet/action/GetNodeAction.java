@@ -72,7 +72,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
-import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
@@ -89,6 +88,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.VOS.Detail;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
@@ -145,6 +145,7 @@ public class GetNodeAction extends NodeAction
 
         // Detail level parameter
         String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+        Boolean resolveMetadata = (detailLevel != null && detailLevel.equals(Detail.raw.getValue())) ? false : true;
 
         if (serverNode instanceof ContainerNode)
         {
@@ -193,18 +194,18 @@ public class GetNodeAction extends NodeAction
                 else
                 {
                     // request for a subset of children
-                    nodePersistence.getChildren(cn, startURIObject, pageLimit);
+                    nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
                     log.debug(String.format(
-                        "Get children returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                            cn.getNodes().size(), startURI, pageLimit));
+                        "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                            resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
                 }
             }
             else
             {
                 // get as many children as allowed
-                nodePersistence.getChildren(cn);
+                nodePersistence.getChildren(cn, resolveMetadata);
                 log.debug(String.format(
-                    "Get children returned [%s] nodes.", cn.getNodes().size()));
+                    "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
             }
 
             end = System.currentTimeMillis();

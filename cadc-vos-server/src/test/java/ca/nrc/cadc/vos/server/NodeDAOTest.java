@@ -563,7 +563,7 @@ public class NodeDAOTest
     @Test
     public void testGetChildrenLimit()
     {
-        log.debug("testGetChildren - START");
+        log.debug("testGetChildrenLimit - START");
         try
         {
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -624,7 +624,7 @@ public class NodeDAOTest
         }
         finally
         {
-            log.debug("testGetChildren - DONE");
+            log.debug("testGetChildrenLimit - DONE");
         }
     }
 

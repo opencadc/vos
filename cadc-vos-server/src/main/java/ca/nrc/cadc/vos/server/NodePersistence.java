@@ -150,6 +150,34 @@ public interface NodePersistence
         throws TransientException;
 
     /**
+     * Load all the children of a container based on the detail level.
+     * If resolveMetadata is false, do not look up the owner subject so as to reduce
+     * the time spent on the current service.
+     *
+     * @param node
+     * @param resolveMetadata
+     * @throws TransientException
+     */
+    void getChildren(ContainerNode node, Boolean resolveMetadata)
+        throws TransientException;
+
+    /**
+     * Load some of the children of a container. If <code>uri</code> is null, a
+     * server-selected fitrst node is used. If <code>limit</code> is null or
+     * exceeds an arbitrary internal value, the internal value is used.
+     * If resolveMetadata is false, do not look up the owner subject so as to reduce
+     * the time spent on the current service.
+     * 
+     * @param parent
+     * @param start
+     * @param limit
+     * @param resolveMetadata
+     * @throws TransientException
+     */
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit, Boolean resolveMetadata)
+        throws TransientException;
+
+    /**
      * Load a single child of a container.
      * 
      * @param parent
