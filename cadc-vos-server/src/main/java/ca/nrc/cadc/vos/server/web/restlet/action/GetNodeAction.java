@@ -123,6 +123,9 @@ public class GetNodeAction extends NodeAction
     public Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, LinkingException, TransientException
     {
+        // TODO: Add support for detail=raw to the path resolver
+        // (Currently only getChildren supports detail=raw)
+
         // resolve any container links
         PathResolver pathResolver = new PathResolver(nodePersistence);
         try
@@ -145,7 +148,11 @@ public class GetNodeAction extends NodeAction
 
         // Detail level parameter
         String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
-        Boolean resolveMetadata = (detailLevel != null && detailLevel.equals(Detail.raw.getValue())) ? false : true;
+        boolean resolveMetadata = true;
+        if (detailLevel != null && detailLevel.equals(Detail.raw.getValue()))
+        {
+            resolveMetadata = false;
+        }
 
         if (serverNode instanceof ContainerNode)
         {

@@ -570,7 +570,7 @@ public class NodeDAO
      * @param parent
      * @param resolveMetadata
      */
-    public void getChildren(ContainerNode parent, Boolean resolveMetadata) throws TransientException
+    public void getChildren(ContainerNode parent, boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         getChildren(parent, null, null, resolveMetadata);
@@ -596,7 +596,7 @@ public class NodeDAO
      * @param limit
      * @param resolveMetadata
      */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, Boolean resolveMetadata) throws TransientException
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -702,17 +702,6 @@ public class NodeDAO
             }
         }
     }
-
-    private void clearOwner(List<Node> nodes)
-    {
-        for (Node n: nodes)
-        {
-            if ((n != null) && (n.appData != null))
-            {
-                ((NodeID) n.appData).owner = null;
-            }
-        }
-    }
     
     private void setRawOwner(List<Node> nodes)
     {
@@ -720,8 +709,6 @@ public class NodeDAO
         {
             setRawOwner(n);
         }
-        
-        clearOwner(nodes);
     }
 
     private void setRawOwner(Node node)
@@ -730,11 +717,10 @@ public class NodeDAO
             return;
 
         NodeID nid = (NodeID) node.appData;
-        if (nid.owner != null)
-            return; // already loaded (parent loop below)
+        if (nid.ownerObject == null)
+            return;
 
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, String.valueOf(nid.ownerObject)));
-        nid.owner = new Subject();
         Node parent = node.getParent();
         while (parent != null)
         {

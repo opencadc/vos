@@ -228,12 +228,12 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public void getChildren(ContainerNode node, Boolean resolveMetadata) throws TransientException
+    public void getChildren(ContainerNode node, boolean resolveMetadata) throws TransientException
     {
         getChildren(node, null, null, resolveMetadata);
     }
 
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, Boolean resolveMetadata)
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException
     {
         NodeDAO dao = getDAO( parent.getUri().getAuthority() );

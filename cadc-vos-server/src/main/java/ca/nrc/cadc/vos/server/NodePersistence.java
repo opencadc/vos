@@ -138,7 +138,7 @@ public interface NodePersistence
 
     /**
      * Load some of the children of a container. If <code>uri</code> is null, a
-     * server-selected fitrst node is used. If <code>limit</code> is null or
+     * server-selected first node is used. If <code>limit</code> is null or
      * exceeds an arbitrary internal value, the internal value is used.
      * 
      * @param parent
@@ -158,12 +158,12 @@ public interface NodePersistence
      * @param resolveMetadata
      * @throws TransientException
      */
-    void getChildren(ContainerNode node, Boolean resolveMetadata)
+    void getChildren(ContainerNode node, boolean resolveMetadata)
         throws TransientException;
 
     /**
      * Load some of the children of a container. If <code>uri</code> is null, a
-     * server-selected fitrst node is used. If <code>limit</code> is null or
+     * server-selected first node is used. If <code>limit</code> is null or
      * exceeds an arbitrary internal value, the internal value is used.
      * If resolveMetadata is false, do not look up the owner subject so as to reduce
      * the time spent on the current service.
@@ -174,7 +174,7 @@ public interface NodePersistence
      * @param resolveMetadata
      * @throws TransientException
      */
-    void getChildren(ContainerNode parent, VOSURI start, Integer limit, Boolean resolveMetadata)
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException;
 
     /**
