@@ -104,6 +104,9 @@ public class GetNodeAction extends NodeAction
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
 
+    String detailLevel;
+    boolean resolveMetadata;
+
     /**
      * Basic empty constructor.
      */
@@ -123,8 +126,9 @@ public class GetNodeAction extends NodeAction
     public Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, LinkingException, TransientException
     {
-        // TODO: Add support for detail=raw to the path resolver
-        // (Currently only getChildren supports detail=raw)
+        // TODO: The retrieval of the 'serverNode' done here needs to obey
+        // the 'resolveMetadata' detail level as the getChildren does in
+        // performNodeAction below.
 
         // resolve any container links
         PathResolver pathResolver = new PathResolver(nodePersistence);
@@ -147,8 +151,8 @@ public class GetNodeAction extends NodeAction
         long end;
 
         // Detail level parameter
-        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
-        boolean resolveMetadata = true;
+        detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+        resolveMetadata = true;
         if (detailLevel != null && detailLevel.equals(Detail.raw.getValue()))
         {
             resolveMetadata = false;
