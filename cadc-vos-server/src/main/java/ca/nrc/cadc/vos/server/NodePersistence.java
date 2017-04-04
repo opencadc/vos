@@ -128,6 +128,28 @@ public interface NodePersistence
         throws NodeNotFoundException, TransientException;
 
     /**
+     * Find the node with the specified path. The returned node(s) will include
+     * some properties (typically inherently single-valued properties like owner,
+     * content-length, content-type, content-encoding, content-MD5) plus all
+     * properties needed to make authorization checks (isPublic, group-read, and
+     * group-write). Remaining properties and child nodes can be filled in as
+     * needed with getProperties(Node) and getChildren(ContainerNode). When partial
+     * path is allowed (only allowed for a LinkNode) and the path of the identified
+     * node cannot be resolved to a leaf node, and the last resolved node in the
+     * partial path must be a LinkNode, and is returned.
+     *
+     * @param vos a node identifier
+     * @param allowPartialPaths true if partial path is allowed, false otherwise
+     * @param resolveMetadata If false, return raw system values for resolvable
+     *                        metadata.
+     * @return the specified node
+     * @throws NodeNotFoundException
+     * @throws TransientException
+     */
+    Node get(VOSURI vos, boolean allowPartialPaths, boolean resolveMetadata)
+        throws NodeNotFoundException, TransientException;
+
+    /**
      * Load all the children of a container.
      *
      * @param node
@@ -138,7 +160,7 @@ public interface NodePersistence
 
     /**
      * Load some of the children of a container. If <code>uri</code> is null, a
-     * server-selected fitrst node is used. If <code>limit</code> is null or
+     * server-selected first node is used. If <code>limit</code> is null or
      * exceeds an arbitrary internal value, the internal value is used.
      * 
      * @param parent
@@ -150,6 +172,34 @@ public interface NodePersistence
         throws TransientException;
 
     /**
+     * Load all the children of a container based on the detail level.
+     * If resolveMetadata is false, do not look up the owner subject so as to reduce
+     * the time spent on the current service.
+     *
+     * @param node
+     * @param resolveMetadata
+     * @throws TransientException
+     */
+    void getChildren(ContainerNode node, boolean resolveMetadata)
+        throws TransientException;
+
+    /**
+     * Load some of the children of a container. If <code>uri</code> is null, a
+     * server-selected first node is used. If <code>limit</code> is null or
+     * exceeds an arbitrary internal value, the internal value is used.
+     * If resolveMetadata is false, do not look up the owner subject so as to reduce
+     * the time spent on the current service.
+     * 
+     * @param parent
+     * @param start
+     * @param limit
+     * @param resolveMetadata
+     * @throws TransientException
+     */
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
+        throws TransientException;
+
+    /**
      * Load a single child of a container.
      * 
      * @param parent
@@ -157,6 +207,18 @@ public interface NodePersistence
      * @throws TransientException
      */
     void getChild(ContainerNode parent, String name)
+        throws TransientException;
+
+    /**
+     * Load a single child of a container.
+     *
+     * @param parent
+     * @param name
+     * @param resolveMetadata If false, return raw system values for resolvable
+     *                        metadata.
+     * @throws TransientException
+     */
+    void getChild(ContainerNode parent, String name, boolean resolveMetadata)
         throws TransientException;
 
     /**

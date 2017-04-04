@@ -111,7 +111,7 @@ public abstract class NodeAction
 
     // query form parameter names
     protected static final String QUERY_PARAM_VIEW = "view";
-    protected static final String QUERY_PARAM_DETAIL = "detail";
+    public static final String QUERY_PARAM_DETAIL = "detail";
     protected static final String QUERY_PARAM_URI = "uri";
     protected static final String QUERY_PARAM_LIMIT = "limit";
 
@@ -124,6 +124,8 @@ public abstract class NodeAction
     protected VOSURI vosURI;
     protected Representation nodeXML;
     protected String stylesheetReference;
+    protected String detailLevel;
+    protected boolean resolveMetadata = true;
 
     /**
      * Set the URI for this action.
@@ -198,6 +200,21 @@ public abstract class NodeAction
     {
         this.stylesheetReference = stylesheetReference;
     }
+
+    /**
+     * Set the detail level.
+     * @param detailLevel The value.
+     */
+    public void setDetailLevel(String detailLevel)
+    {
+        this.detailLevel = detailLevel;
+    }
+
+    /**
+     * Set the value for resolve metadata.
+     * @param resolveMetadata The value.
+     */
+    public void setResolveMetadata(boolean resolveMetadata) { this.resolveMetadata = resolveMetadata; }
 
     protected MediaType getMediaType()
     {

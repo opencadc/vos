@@ -88,10 +88,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 
+import ca.nrc.cadc.auth.NumericPrincipal;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -347,6 +349,26 @@ public class NodeDAO
      */
     public Node getPath(String path, boolean allowPartialPath) throws TransientException
     {
+        return this.getPath(path, allowPartialPath, true);
+    }
+
+    /**
+     * Get a complete path from the root container. For the container nodes in
+     * the returned node, only child nodes on the path will be included in the
+     * list of children; other children are not included. Nodes returned from
+     * this method will have some but not all properties set. Specifically, any
+     * properties that are inherently single-valued and stored in the Node table
+     * are included, as are the access-control properties (isPublic, group-read,
+     * and group-write). The remaining properties for a node can be obtained by
+     * calling getProperties(Node).
+     *
+     * @see getProperties(Node)
+     * @param path
+     * @param allowPartialPath
+     * @return the last node in the path, with all parents or null if not found
+     */
+    public Node getPath(String path, boolean allowPartialPath, boolean resolveMetadata) throws TransientException
+    {
         log.debug("getPath: " + path);
         if (path.length() > 0 && path.charAt(0) == '/')
             path = path.substring(1);
@@ -375,7 +397,7 @@ public class NodeDAO
             //		ret = null;
             //}
 
-            loadSubjects(ret);
+            getOwners(ret, resolveMetadata);
             return ret;
         }
         catch(CannotCreateTransactionException ex)
@@ -489,6 +511,17 @@ public class NodeDAO
      */
     public void getChild(ContainerNode parent, String name) throws TransientException
     {
+        getChild(parent, name, true);
+    }
+
+    /**
+     * Load a single child node of the specified container.
+     *
+     * @param parent
+     * @param name
+     */
+    public void getChild(ContainerNode parent, String name, boolean resolveMetadata) throws TransientException
+    {
         log.debug("getChild: " + parent.getUri().getPath() + ", " + name);
         expectPersistentNode(parent);
 
@@ -513,7 +546,7 @@ public class NodeDAO
                 throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
 
-            loadSubjects(nodes);
+            getOwners(nodes, resolveMetadata);
             addChildNodes(parent, nodes);
         }
         catch(CannotCreateTransactionException ex)
@@ -560,7 +593,20 @@ public class NodeDAO
     public void getChildren(ContainerNode parent) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null);
+        getChildren(parent, null, null, true);
+    }
+
+    /**
+     * Load all the children of a container based on whether the client 
+     * wants the metadata to be resolved.
+     *
+     * @param parent
+     * @param resolveMetadata
+     */
+    public void getChildren(ContainerNode parent, boolean resolveMetadata) throws TransientException
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        getChildren(parent, null, null, resolveMetadata);
     }
 
     /**
@@ -570,6 +616,20 @@ public class NodeDAO
      * @param limit
      */
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        getChildren(parent, start, limit, true);
+    }
+    
+    /**
+     * Loads some of the child nodes of the specified container based on 
+     * whether the client wants the metadata to be resolved.
+     * @param parent
+     * @param start
+     * @param limit
+     * @param resolveMetadata
+     */
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -582,7 +642,7 @@ public class NodeDAO
 
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
-        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));
+        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));        
         log.debug("getChildren: " + sql);
 
         TransactionStatus dirtyRead = null;
@@ -599,7 +659,8 @@ public class NodeDAO
             dirtyRead = null;
             prof.checkpoint("commit.getSelectNodesByParentSQL");
 
-            loadSubjects(nodes);
+            getOwners(nodes, resolveMetadata);
+
             addChildNodes(parent, nodes);
         }
         catch(CannotCreateTransactionException ex)
@@ -671,16 +732,16 @@ public class NodeDAO
             }
         }
     }
-
-    private void loadSubjects(List<Node> nodes)
+    
+    private void getOwners(List<Node> nodes, boolean resolve)
     {
         for (Node n : nodes)
         {
-            loadSubjects(n);
+            getOwners(n, resolve);
         }
     }
 
-    private void loadSubjects(Node node)
+    private void getOwners(Node node, boolean resolve)
     {
         if (node == null || node.appData == null)
             return;
@@ -689,25 +750,47 @@ public class NodeDAO
         if (nid.owner != null)
             return; // already loaded (parent loop below)
 
-
-        Subject s = identityCache.get(nid.ownerObject);
-        if (s == null)
+        String ownerPropertyString = null;
+        Subject s;
+        if (resolve)
         {
-            log.debug("lookup subject for owner=" + nid.ownerObject);
-            s = identManager.toSubject(nid.ownerObject);
-            prof.checkpoint("IdentityManager.toSubject");
-            identityCache.put(nid.ownerObject, s);
+            s = identityCache.get(nid.ownerObject);
+
+            if (s == null)
+            {
+                log.debug("lookup subject for owner=" + nid.ownerObject);
+                s = identManager.toSubject(nid.ownerObject);
+                prof.checkpoint("IdentityManager.toSubject");
+                identityCache.put(nid.ownerObject, s);
+            }
+            else
+            {
+                log.debug("found cached subject for owner=" + nid.ownerObject);
+            }
+
+            ownerPropertyString = identManager.toOwnerString(s);
         }
         else
-            log.debug("found cached subject for owner=" + nid.ownerObject);
+        {
+            log.debug("creating numeric principal only subject.");
+            s = new Subject();
+            if (nid.ownerObject != null)
+            {
+                Integer ownerInt = (Integer) nid.ownerObject;
+                UUID numericID = new UUID(0L, (long) ownerInt);
+                s.getPrincipals().add(new NumericPrincipal(numericID));
+                ownerPropertyString = ownerInt.toString();
+            }
+        }
+
         nid.owner = s;
-        String owner = identManager.toOwnerString(nid.owner);
-        if (owner != null)
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+        if (ownerPropertyString != null)
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, ownerPropertyString));
+
         Node parent = node.getParent();
         while (parent != null)
         {
-            loadSubjects(parent);
+            getOwners(parent, resolve);
             parent = parent.getParent();
         }
     }

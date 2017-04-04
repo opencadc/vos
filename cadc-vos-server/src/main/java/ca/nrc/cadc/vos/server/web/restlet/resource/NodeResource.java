@@ -77,6 +77,7 @@ import java.util.GregorianCalendar;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.vos.VOS;
 import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
@@ -201,11 +202,21 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
                 logInfo.setMessage(getErrorMessage(nodeFault));
                 return new NodeErrorRepresentation(nodeFault);
             }
+
+            // Detail level parameter
+            String detailLevel = getQueryForm().getFirstValue(NodeAction.QUERY_PARAM_DETAIL);
+            boolean resolveMetadata = true;
+            if (detailLevel != null && detailLevel.equals(VOS.Detail.raw.getValue()))
+            {
+                resolveMetadata = false;
+            }
+            LOGGER.debug("detail level: " + detailLevel);
+            LOGGER.debug("resolve metadata: " + resolveMetadata);
             
             // Two versions of authorizer: one that allows partial paths
             // for link resolution and one that doesn't.
-            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer(false);
-            VOSpaceAuthorizer partialPathVOSpaceAuthorizer = new VOSpaceAuthorizer(true);
+            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer(false, resolveMetadata);
+            VOSpaceAuthorizer partialPathVOSpaceAuthorizer = new VOSpaceAuthorizer(true, resolveMetadata);
             
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
             partialPathVOSpaceAuthorizer.setNodePersistence(getNodePersistence());
@@ -218,6 +229,8 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             action.setRequest(getRequest());
             action.setQueryForm(getQueryForm());
             action.setStylesheetReference(getStylesheetReference());
+            action.setDetailLevel(detailLevel);
+            action.setResolveMetadata(resolveMetadata);
             
             final NodeActionResult result = action.run();
             

@@ -102,6 +102,7 @@ public class PathResolver
     
     private NodePersistence nodePersistence;
     private List<String> visitedPaths;
+    private boolean resolveMetadata;
     
     // enforce a maximum visit limit to prevent stack overflows on
     // the recursive method
@@ -116,11 +117,17 @@ public class PathResolver
      */
     public PathResolver(NodePersistence nodePersistence)
     {
+        this(nodePersistence, true);
+    }
+
+    public PathResolver(NodePersistence nodePersistence, boolean resolveMetadata)
+    {
         if (nodePersistence == null)
         {
             throw new IllegalArgumentException("null node persistence.");
         }
         this.nodePersistence = nodePersistence;
+        this.resolveMetadata = resolveMetadata;
     }
     
     /**
@@ -265,7 +272,7 @@ public class PathResolver
         }
         else
         {
-             node = nodePersistence.get(vosuri, true);
+             node = nodePersistence.get(vosuri, true, resolveMetadata);
         }
         LOG.debug("found node: " + node.getUri().toString());
         

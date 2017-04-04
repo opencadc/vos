@@ -174,11 +174,17 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     @Override
     public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException, TransientException
     {
+        return this.get(vos, allowPartialPath, true);
+    }
+
+    @Override
+    public Node get(VOSURI vos, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException
+    {
         log.debug("get: " + vos + " -- " + vos.getName());
         if ( vos.isRoot() )
             return createRoot(vos.getAuthority());
         NodeDAO dao = getDAO( vos.getAuthority() );
-        Node ret = dao.getPath(vos.getPath(), allowPartialPath);
+        Node ret = dao.getPath(vos.getPath(), allowPartialPath, resolveMetadata);
         if (ret == null)
             throw new NodeNotFoundException("not found: " + vos.getURI().toASCIIString());
         return ret;
@@ -228,10 +234,35 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
+    public void getChildren(ContainerNode node, boolean resolveMetadata) throws TransientException
+    {
+        getChildren(node, null, null, resolveMetadata);
+    }
+
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
+        throws TransientException
+    {
+        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+
+        // enforce max limit
+        Integer actualLimit = limit;
+        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+            actualLimit = maxChildLimit;
+
+        dao.getChildren(parent, start, actualLimit, resolveMetadata);
+    }
+
+    @Override
     public void getChild(ContainerNode node, String name) throws TransientException
     {
+        getChild(node, name, true);
+    }
+
+    @Override
+    public void getChild(ContainerNode node, String name, boolean resolveMetadata) throws TransientException
+    {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.getChild(node, name);
+        dao.getChild(node, name, resolveMetadata);
     }
 
     @Override

@@ -15,7 +15,7 @@ sourceCompatibility = 1.7
 
 group = 'org.opencadc'
 
-version = '1.0.8'
+version = '1.0.9'
 
 mainClassName = 'ca.nrc.cadc.vos.client.Main'
 

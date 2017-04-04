@@ -125,7 +125,7 @@ public class VOSpaceAuthorizerTest
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
 
         NodePersistence np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
+        expect(np.get(vos, false, true)).andReturn(node).once();
         replay(np);
 
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
@@ -153,7 +153,7 @@ public class VOSpaceAuthorizerTest
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.TRUE.toString()));
 
         NodePersistence np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
+        expect(np.get(vos, false, true)).andReturn(node).once();
         replay(np);
 
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
@@ -194,7 +194,7 @@ public class VOSpaceAuthorizerTest
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
 
         NodePersistence np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
+        expect(np.get(vos, false, true)).andReturn(node).once();
         replay(np);
 
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
@@ -226,7 +226,7 @@ public class VOSpaceAuthorizerTest
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
 
         np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
+        expect(np.get(vos, false, true)).andReturn(node).once();
         replay(np);
 
         voSpaceAuthorizer = new VOSpaceAuthorizer();
@@ -250,7 +250,7 @@ public class VOSpaceAuthorizerTest
 
         // check scope missmatch
         np = createMock(NodePersistence.class);
-        expect(np.get(vos, false)).andReturn(node).once();
+        expect(np.get(vos, false, true)).andReturn(node).once();
         replay(np);
 
         voSpaceAuthorizer = new VOSpaceAuthorizer();

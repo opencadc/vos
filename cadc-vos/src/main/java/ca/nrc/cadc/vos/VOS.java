@@ -119,6 +119,7 @@ public class VOS
     {
         min("min"),
         max("max"),
+        raw("raw"),
         properties("properties");
 
         private String value;
@@ -136,6 +137,10 @@ public class VOS
             else if (value.equals(max.getValue()))
             {
                 return max;
+            }
+            else if (value.equals(raw.getValue()))
+            {
+                return raw;
             }
             else if (value.equals(properties.getValue()))
             {
