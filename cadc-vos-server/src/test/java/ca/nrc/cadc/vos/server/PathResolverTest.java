@@ -105,7 +105,7 @@ public class PathResolverTest
         VOSURI vosURI = new VOSURI("vos://cadc.nrc.ca~vospace/root/container/data");
         DataNode dataNode = new DataNode(vosURI);
         
-        EasyMock.expect(np.get(vosURI, true)).andReturn(dataNode);
+        EasyMock.expect(np.get(vosURI, true, true)).andReturn(dataNode);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);
@@ -123,7 +123,7 @@ public class PathResolverTest
         VOSURI returnedURI = new VOSURI("vos://cadc.nrc.ca~vospace/root/container/data");
         
         DataNode dataNode = new DataNode(returnedURI);
-        EasyMock.expect(np.get(requestedURI, true)).andReturn(dataNode);
+        EasyMock.expect(np.get(requestedURI, true, true)).andReturn(dataNode);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);
@@ -149,7 +149,7 @@ public class PathResolverTest
         
         LinkNode linkNode = new LinkNode(vosURI1, uri2);
         
-        EasyMock.expect(np.get(vosURI1, true)).andReturn(linkNode);
+        EasyMock.expect(np.get(vosURI1, true, true)).andReturn(linkNode);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);
@@ -171,8 +171,8 @@ public class PathResolverTest
         LinkNode linkNode = new LinkNode(linkURI, targetURI);
         DataNode dataNode = new DataNode(dataURI);
         
-        EasyMock.expect(np.get(requestedURI, true)).andReturn(linkNode);
-        EasyMock.expect(np.get(dataURI, true)).andReturn(dataNode);
+        EasyMock.expect(np.get(requestedURI, true, true)).andReturn(linkNode);
+        EasyMock.expect(np.get(dataURI, true, true)).andReturn(dataNode);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);
@@ -203,9 +203,9 @@ public class PathResolverTest
         LinkNode linkNode2 = new LinkNode(link2URI, target2URI);
         DataNode dataNode = new DataNode(dataURI);
         
-        EasyMock.expect(np.get(requestedURI, true)).andReturn(linkNode1);
-        EasyMock.expect(np.get(requestedURI2, true)).andReturn(linkNode2);
-        EasyMock.expect(np.get(dataURI, true)).andReturn(dataNode);
+        EasyMock.expect(np.get(requestedURI, true, true)).andReturn(linkNode1);
+        EasyMock.expect(np.get(requestedURI2, true, true)).andReturn(linkNode2);
+        EasyMock.expect(np.get(dataURI, true, true)).andReturn(dataNode);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);
@@ -234,8 +234,8 @@ public class PathResolverTest
         LinkNode linkNode1 = new LinkNode(link1URI, target1URI);
         LinkNode linkNode2 = new LinkNode(link2URI, target2URI);
         
-        EasyMock.expect(np.get(requestedURI, true)).andReturn(linkNode1).times(2);
-        EasyMock.expect(np.get(requestedURI2, true)).andReturn(linkNode2);
+        EasyMock.expect(np.get(requestedURI, true, true)).andReturn(linkNode1).times(2);
+        EasyMock.expect(np.get(requestedURI2, true, true)).andReturn(linkNode2);
         EasyMock.replay(np);
         
         PathResolver pathResolver = new PathResolver(np);

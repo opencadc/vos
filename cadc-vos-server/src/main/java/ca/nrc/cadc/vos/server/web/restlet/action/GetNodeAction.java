@@ -104,9 +104,6 @@ public class GetNodeAction extends NodeAction
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
 
-    String detailLevel;
-    boolean resolveMetadata;
-
     /**
      * Basic empty constructor.
      */
@@ -126,12 +123,8 @@ public class GetNodeAction extends NodeAction
     public Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, LinkingException, TransientException
     {
-        // TODO: The retrieval of the 'serverNode' done here needs to obey
-        // the 'resolveMetadata' detail level as the getChildren does in
-        // performNodeAction below.
-
         // resolve any container links
-        PathResolver pathResolver = new PathResolver(nodePersistence);
+        PathResolver pathResolver = new PathResolver(nodePersistence, resolveMetadata);
         try
         {
             return pathResolver.resolveWithReadPermissionCheck(vosURI,
@@ -150,13 +143,8 @@ public class GetNodeAction extends NodeAction
         long start;
         long end;
 
-        // Detail level parameter
-        detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
-        resolveMetadata = true;
-        if (detailLevel != null && detailLevel.equals(Detail.raw.getValue()))
-        {
-            resolveMetadata = false;
-        }
+        System.out.println("detail: " + detailLevel);
+        System.out.println("resolve: " + resolveMetadata);
 
         if (serverNode instanceof ContainerNode)
         {

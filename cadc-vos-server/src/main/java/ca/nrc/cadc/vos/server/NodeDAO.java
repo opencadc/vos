@@ -88,10 +88,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 
+import ca.nrc.cadc.auth.NumericPrincipal;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -395,7 +397,7 @@ public class NodeDAO
             //		ret = null;
             //}
 
-            loadSubjects(ret, resolveMetadata);
+            getOwners(ret, resolveMetadata);
             return ret;
         }
         catch(CannotCreateTransactionException ex)
@@ -544,7 +546,7 @@ public class NodeDAO
                 throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
 
-            loadSubjects(nodes, resolveMetadata);
+            getOwners(nodes, resolveMetadata);
             addChildNodes(parent, nodes);
         }
         catch(CannotCreateTransactionException ex)
@@ -657,7 +659,7 @@ public class NodeDAO
             dirtyRead = null;
             prof.checkpoint("commit.getSelectNodesByParentSQL");
 
-            loadSubjects(nodes, resolveMetadata);
+            getOwners(nodes, resolveMetadata);
 
             addChildNodes(parent, nodes);
         }
@@ -731,49 +733,64 @@ public class NodeDAO
         }
     }
     
-    private void loadSubjects(List<Node> nodes, boolean resolve)
+    private void getOwners(List<Node> nodes, boolean resolve)
     {
         for (Node n : nodes)
         {
-            loadSubjects(n, resolve);
+            getOwners(n, resolve);
         }
     }
 
-    private void loadSubjects(Node node, boolean resolve)
+    private void getOwners(Node node, boolean resolve)
     {
         if (node == null || node.appData == null)
             return;
 
         NodeID nid = (NodeID) node.appData;
-        if (!resolve)
-        {
-            if (nid.ownerObject != null)
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, String.valueOf(nid.ownerObject)));
-        }
-        else
-        {
-            if (nid.owner != null)
-                return; // already loaded (parent loop below)
+        if (nid.owner != null)
+            return; // already loaded (parent loop below)
 
-            Subject s = identityCache.get(nid.ownerObject);
+        String ownerPropertyString = null;
+        Subject s;
+        if (resolve)
+        {
+            s = identityCache.get(nid.ownerObject);
+
             if (s == null)
             {
                 log.debug("lookup subject for owner=" + nid.ownerObject);
                 s = identManager.toSubject(nid.ownerObject);
                 prof.checkpoint("IdentityManager.toSubject");
                 identityCache.put(nid.ownerObject, s);
-            } else
+            }
+            else
+            {
                 log.debug("found cached subject for owner=" + nid.ownerObject);
-            nid.owner = s;
-            String owner = identManager.toOwnerString(nid.owner);
-            if (owner != null)
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+            }
+
+            ownerPropertyString = identManager.toOwnerString(s);
         }
+        else
+        {
+            log.debug("creating numeric principal only subject.");
+            s = new Subject();
+            if (nid.ownerObject != null)
+            {
+                Integer ownerInt = (Integer) nid.ownerObject;
+                UUID numericID = new UUID(0L, (long) ownerInt);
+                s.getPrincipals().add(new NumericPrincipal(numericID));
+                ownerPropertyString = ownerInt.toString();
+            }
+        }
+
+        nid.owner = s;
+        if (ownerPropertyString != null)
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, ownerPropertyString));
 
         Node parent = node.getParent();
         while (parent != null)
         {
-            loadSubjects(parent, resolve);
+            getOwners(parent, resolve);
             parent = parent.getParent();
         }
     }

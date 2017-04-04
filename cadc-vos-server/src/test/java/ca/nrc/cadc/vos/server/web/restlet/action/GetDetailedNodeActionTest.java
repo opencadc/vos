@@ -116,11 +116,11 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
 
         // Override this here.
         getTestSubject().setVosURI(testVOSURI);
+        getTestSubject().setDetailLevel(VOS.Detail.max.toString());
+        getTestSubject().resolveMetadata = true;
 
         expect(queryForm.getFirstValue("view")).andReturn(
                 "VIEW/REFERENCE").once();
-        expect(queryForm.getFirstValue("detail")).andReturn(
-                VOS.Detail.max.getValue()).once();
         expect(queryForm.getFirstValue("uri")).andReturn(null).once();
         expect(queryForm.getFirstValue("limit")).andReturn(null).once();
 

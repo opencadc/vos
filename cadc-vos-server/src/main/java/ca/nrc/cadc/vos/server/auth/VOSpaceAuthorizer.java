@@ -138,6 +138,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean readable = true;
     private boolean writable  = true;
     private boolean allowPartialPaths = false;
+    private boolean resolveMetadata = true;
     private boolean disregardLocks = false;
 
     private NodePersistence nodePersistence;
@@ -151,8 +152,14 @@ public class VOSpaceAuthorizer implements Authorizer
 
     public VOSpaceAuthorizer(boolean allowPartialPaths)
     {
+        this(allowPartialPaths, true);
+    }
+
+    public VOSpaceAuthorizer(boolean allowPartialPaths, boolean resolveMetadata)
+    {
         initState();
         this.allowPartialPaths = allowPartialPaths;
+        this.resolveMetadata = resolveMetadata;
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -196,7 +203,7 @@ public class VOSpaceAuthorizer implements Authorizer
         {
 
             VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos, allowPartialPaths);
+            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
             profiler.checkpoint("nodePersistence.get");
             return getReadPermission(node);
         }
@@ -275,7 +282,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos, allowPartialPaths);
+            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
             profiler.checkpoint("nodePersistence.get");
             return getWritePermission(node);
         }
@@ -373,7 +380,7 @@ public class VOSpaceAuthorizer implements Authorizer
 
             Integer batchSize = new Integer(1000); // TODO: any value in not hard-coding this?
             VOSURI startURI = null;
-            nodePersistence.getChildren(container, startURI, batchSize);
+            nodePersistence.getChildren(container, startURI, batchSize, resolveMetadata);
             while ( !container.getNodes().isEmpty() )
             {
                 for (Node child : container.getNodes())
