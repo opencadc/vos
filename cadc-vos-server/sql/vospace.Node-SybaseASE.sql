@@ -182,3 +182,14 @@ go
 insert into Node (name,type,busyState,ownerID,creatorID,isPublic,isLocked,lastModified)
 values ('DeletedNodes','C','N','admin','admin',0,0,getdate())
 go
+
+-- Table used by vospace node availability test. The test performs row insertion and
+-- row deletion on the table.
+print "create table NodeAvailability ..."
+go
+
+CREATE TABLE NodeAvailability (
+   value         CHAR(1)           NULL
+)
+go
+
