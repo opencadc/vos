@@ -67,7 +67,7 @@
 --***********************************************************************
 --
 
-print "dropping: DeletedNode NodeProperty Node DeletedNodeAvailability NodePropertyAvailability NodeAvailability, "
+print "dropping: DeletedNode NodeProperty Node NodeAvailability, "
 drop table DeletedNode;
 drop table NodeProperty;
 drop table Node;
