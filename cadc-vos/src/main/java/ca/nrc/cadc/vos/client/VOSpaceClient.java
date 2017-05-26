@@ -77,27 +77,24 @@ import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessController;
+import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
-import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
@@ -118,8 +115,6 @@ import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import java.security.AccessControlException;
-import java.util.Set;
 
 /**
  * VOSpace client library. This implementation
@@ -134,7 +129,6 @@ public class VOSpaceClient
 
     private URI serviceID;
     boolean schemaValidation;
-    private SSLSocketFactory sslSocketFactory;
 
     /**
      * Constructor. XML Schema validation is enabled by default.
@@ -159,18 +153,6 @@ public class VOSpaceClient
     {
         this.schemaValidation = enableSchemaValidation;
         this.serviceID = serviceID;
-    }
-
-    public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
-    {
-        this.sslSocketFactory = sslSocketFactory;
-    }
-
-    // temp hack to share SSL with ClientTransfer
-    public SSLSocketFactory getSslSocketFactory()
-    {
-        initHTTPS(null);
-        return sslSocketFactory;
     }
 
     /**
@@ -243,7 +225,7 @@ public class VOSpaceClient
             HttpUpload put = new HttpUpload(out, url);
             put.setContentType("text/xml");
 
-            runHttpTransfer(put);
+            put.run();
 
             VOSClientUtil.checkFailure(put.getThrowable());
 
@@ -308,7 +290,7 @@ public class VOSpaceClient
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(url, out);
 
-            runHttpTransfer(get);
+            get.run();
 
             VOSClientUtil.checkFailure(get.getThrowable());
 
@@ -352,7 +334,7 @@ public class VOSpaceClient
             nodeWriter.write(node, nodeXML);
             HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
 
-            runHttpTransfer(httpPost);
+            httpPost.run();
 
             VOSClientUtil.checkFailure(httpPost.getThrowable());
 
@@ -391,7 +373,7 @@ public class VOSpaceClient
 
             HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
 
-            runHttpTransfer(httpPost);
+            httpPost.run();
 
             VOSClientUtil.checkFailure(httpPost.getThrowable());
 
@@ -468,7 +450,7 @@ public class VOSpaceClient
             final URL url = new URL(vospaceURL.toExternalForm() + nodePath);
             final HttpDelete httpDelete = new HttpDelete(url, false);
 
-            runHttpTransfer(httpDelete);
+            httpDelete.run();
             VOSClientUtil.checkFailure(httpDelete.getThrowable());
         }
         catch (MalformedURLException e)
@@ -509,7 +491,7 @@ public class VOSpaceClient
 
             HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
 
-            runHttpTransfer(httpPost);
+            httpPost.run();
 
             if (httpPost.getThrowable() != null)
             {
@@ -563,7 +545,7 @@ public class VOSpaceClient
 	            httpPost = new HttpPost(vospaceURL, sw.toString(), "text/xml", false);
         	}
 
-            runHttpTransfer(httpPost);
+            httpPost.run();
 
             if (httpPost.getThrowable() != null)
             {
@@ -598,7 +580,7 @@ public class VOSpaceClient
 	            ByteArrayOutputStream out = new ByteArrayOutputStream();
 	            HttpDownload get = new HttpDownload(redirectURL, out);
 
-	            runHttpTransfer(get);
+	            get.run();
 
 	            if (get.getThrowable() != null)
 	            {
@@ -676,33 +658,6 @@ public class VOSpaceClient
         return new URL(baseURL + "/" + jobList + "/" + jobID);
     }
 
-    private void initHTTPS(HttpsURLConnection sslConn)
-    {
-        if (sslSocketFactory == null) // lazy init
-        {
-            log.debug("initHTTPS: lazy init");
-            AccessControlContext ac = AccessController.getContext();
-            Subject s = Subject.getSubject(ac);
-            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
-        }
-        if (sslSocketFactory != null && sslConn != null)
-        {
-            log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
-            sslConn.setSSLSocketFactory(sslSocketFactory);
-        }
-    }
-
-    private void runHttpTransfer(HttpTransfer transfer)
-    {
-        if (sslSocketFactory != null)
-            transfer.setSSLSocketFactory(sslSocketFactory);
-
-        transfer.run();
-
-        if (transfer.getSSLSocketFactory() != null)
-            this.sslSocketFactory = transfer.getSSLSocketFactory();
-    }
-
     private class NodeOutputStream implements OutputStreamWrapper
     {
         private Node node;
@@ -726,9 +681,9 @@ public class VOSpaceClient
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
         AuthMethod am = getAuthMethod(subject);
-        
+
         URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
-        
+
         // now that we have a URL we can check if the cookie will actually be sent to it
         if (AuthMethod.COOKIE.equals(am))
         {
@@ -740,7 +695,7 @@ public class VOSpaceClient
                 {
                     if (cc.getDomain().equals(domain))
                         domainMatch = true;
-                } 
+                }
                 if (!domainMatch)
                 {
                     throw new AccessControlException("no SSOCookieCredential for domain " + domain);
@@ -751,17 +706,17 @@ public class VOSpaceClient
                 throw new RuntimeException("failure checking domain for cookie use", ex);
             }
         }
-        
+
         if (serviceURL == null)
         {
             throw new RuntimeException(
                     String.format("Unable to get Service URL for '%s', '%s', '%s'",
                                   serviceID.toString(), standard, am));
         }
-        
+
         return serviceURL;
     }
-    
+
     private AuthMethod getAuthMethod(Subject subject)
     {
         if (subject != null)
@@ -771,18 +726,18 @@ public class VOSpaceClient
                     subject.getPublicCredentials());
             if (privateKeyChain != null)
                 return AuthMethod.CERT;
-            
+
             // ui applications pass cookie(s) along
             Set sso = subject.getPublicCredentials(SSOCookieCredential.class);
             if ( !sso.isEmpty() )
             {
                 return AuthMethod.COOKIE;
             }
-            
+
             // AuthMethod.PASSWORD not supported
             // AuthMethod.TOKEN not supported
         }
-        
+
         return AuthMethod.ANON;
     }
 
