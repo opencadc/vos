@@ -745,7 +745,6 @@ public class Main implements Runnable
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
-        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToUpload);
 
         clientTransfer.runTransfer();
@@ -840,7 +839,6 @@ public class Main implements Runnable
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(true));
-        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToSave);
 
         clientTransfer.runTransfer();

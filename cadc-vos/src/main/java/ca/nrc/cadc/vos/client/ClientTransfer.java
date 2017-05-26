@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -82,18 +82,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.SSLSocketFactory;
-
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.net.OutputStreamWrapper;
-import ca.nrc.cadc.net.HttpRequestProperty;
-import ca.nrc.cadc.net.HttpPost;
-
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpRequestProperty;
+import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -112,13 +109,11 @@ public class ClientTransfer implements Runnable
     private static Logger log = Logger.getLogger(ClientTransfer.class);
     private static final long POLL_INTERVAL = 100L;
 
-    private SSLSocketFactory sslSocketFactory;
-    
     private URL jobURL;
     private Transfer transfer;
     private boolean monitorAsync;
     private boolean schemaValidation;
-    
+
     private File localFile;
     private OutputStreamWrapper wrapper;
     private List<HttpRequestProperty> httpRequestProperties;
@@ -128,7 +123,7 @@ public class ClientTransfer implements Runnable
     private Throwable throwable;
     private ExecutionPhase phase;
     private ErrorSummary error;
-    
+
     private ClientTransfer() { }
 
     /**
@@ -148,7 +143,7 @@ public class ClientTransfer implements Runnable
 
     /**
      * Get the URL to the Job.
-     * 
+     *
      * @return URL tot the Job.
      */
     public URL getJobURL()
@@ -158,7 +153,7 @@ public class ClientTransfer implements Runnable
 
     /**
      * Get the negotiated transfer details.
-     * 
+     *
      * @return the negotiated transfer
      */
     public Transfer getTransfer() { return transfer; }
@@ -193,7 +188,7 @@ public class ClientTransfer implements Runnable
                 || ExecutionPhase.ERROR.equals(ep) )
             this.phase = ep; // only set when final phase
         return ep;
-                
+
     }
 
     public ErrorSummary getServerError()
@@ -209,22 +204,22 @@ public class ClientTransfer implements Runnable
 
     private Job getJob()
         throws IOException
-    {       
+    {
         if (transfer.isQuickTransfer())
         	throw new IllegalStateException("No job information available for quick transfers");
-        
+
         try
         {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(jobURL, out);
-            
+
             runHttpTransfer(get);
 
             if (get.getThrowable() != null)
             {
                 throw new RuntimeException("Unable to get Job because " + get.getThrowable().getLocalizedMessage());
             }
-            
+
             // add the extra xsd information for vospace if we
             // are using schema validation
             JobReader jobReader = null;
@@ -241,7 +236,7 @@ public class ClientTransfer implements Runnable
             {
                 jobReader = new JobReader(false);
             }
-            
+
             return jobReader.read(new StringReader(new String(out.toByteArray(), "UTF-8")));
         }
         catch(ParseException ex)
@@ -270,14 +265,14 @@ public class ClientTransfer implements Runnable
 
     /**
      * After a download, this will be the actual file downloaded.
-     * 
+     *
      * @return
      */
     public File getLocalFile()
     {
         return localFile;
     }
-    
+
     public void setOutputStreamWrapper(OutputStreamWrapper wrapper)
     {
         if (Direction.pushToVoSpace.equals(transfer.getDirection()))
@@ -290,7 +285,7 @@ public class ClientTransfer implements Runnable
 
     /**
      * Set an optional listener to get events from the underying HttpTransfer.
-     * 
+     *
      * @param transListener
      */
     public void setTransferListener(TransferListener transListener)
@@ -298,18 +293,12 @@ public class ClientTransfer implements Runnable
         this.transListener = transListener;
     }
 
-    public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
-    {
-        this.sslSocketFactory = sslSocketFactory;
-    }
-
-
     /**
      * Set the maximum number of retries when the server is busy. This value is
      * passed to the underlying HttpTransfer.
-     * 
+     *
      * Set this to Integer.MAX_VALUE to retry indefinitely.
-     * 
+     *
      * @param maxRetries
      */
     public void setMaxRetries(int maxRetries)
@@ -329,10 +318,10 @@ public class ClientTransfer implements Runnable
     }
 
     /**
-     * Enable or disable monitoring an async job until it is finished. If enabled, 
-     * the run() method will not return until the job reaches a terminal state. If 
+     * Enable or disable monitoring an async job until it is finished. If enabled,
+     * the run() method will not return until the job reaches a terminal state. If
      * disabled, the run() method will simply start the async job and return immediately.
-     * 
+     *
      * @param enabled
      */
     public void setMonitor(boolean enabled) { this.monitorAsync = enabled; }
@@ -391,7 +380,7 @@ public class ClientTransfer implements Runnable
         }
     }
 
-    
+
     private void checkProtocols()
         throws IOException, JDOMException, ParseException
     {
@@ -415,7 +404,7 @@ public class ClientTransfer implements Runnable
             }
         }
     }
-   
+
     // pick one of the endpoints
     private List<URL> findGetEndpoint()
         throws MalformedURLException
@@ -423,7 +412,7 @@ public class ClientTransfer implements Runnable
         List<String> ret = transfer.getAllEndpoints();
         if (ret.isEmpty())
             throw new RuntimeException("failed to find a usable endpoint URL");
-        
+
         List<URL> urls = new ArrayList<URL>();
         for (String urlStr : ret)
         {
@@ -455,15 +444,15 @@ public class ClientTransfer implements Runnable
             upload = new HttpUpload(localFile, url);
         else
             upload = new HttpUpload(wrapper, url);
-        
+
         log.debug("calling HttpUpload.setRequestProperties with " + httpRequestProperties.size() + " props");
         upload.setRequestProperties(httpRequestProperties);
         upload.setMaxRetries(maxRetries);
         if (transListener != null)
             upload.setTransferListener(transListener);
-        
+
         runHttpTransfer(upload);
-        
+
         if (upload.getThrowable() != null)
         {
             // allow illegal arugment exceptions through
@@ -525,7 +514,7 @@ public class ClientTransfer implements Runnable
 
         // got here so none of the urls worked
         throw new IOException("failed to download file", firstDownload.getThrowable());
-        
+
     }
 
     // run and monitor an async server side transfer
@@ -582,16 +571,10 @@ public class ClientTransfer implements Runnable
         }
 
     }
-    
+
     protected void runHttpTransfer(HttpTransfer transfer)
     {
-        if (sslSocketFactory != null)
-            transfer.setSSLSocketFactory(sslSocketFactory);
-        
         transfer.run();
-        
-        if (transfer.getSSLSocketFactory() != null)
-            this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 
 }
