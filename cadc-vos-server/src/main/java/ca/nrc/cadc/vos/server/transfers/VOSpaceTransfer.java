@@ -78,9 +78,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
@@ -167,11 +170,8 @@ public abstract class VOSpaceTransfer
         URI uri;
         try
         {
-            AuthMethod authMethod = AuthMethod.ANON;
-            if (job.getProtocol().equals("https"))
-            {
-                authMethod = AuthMethod.CERT;
-            }
+            Subject s = AuthenticationUtil.getCurrentSubject();
+            AuthMethod authMethod = AuthenticationUtil.getAuthMethod(s);
             URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_XFER_20, authMethod);
             String path = "/" + job.getID();
             URL url = new URL(serviceURL.toExternalForm() + path);
