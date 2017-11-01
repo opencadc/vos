@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/j2ee/dtds/web-app_2_3.dtd">
+
+<web-app>
+
+  <display-name>cavern</display-name>
+
+  <context-param>
+    <param-name>ivoa.vos.uri</param-name>
+    <param-value>vos://canfar.net~cavern</param-value>
+  </context-param>
+
+  <context-param>
+    <param-name>VOSpaceStylesheetReference</param-name>
+    <param-value>/cavern/vospace.xsl</param-value>
+  </context-param>
+
+<servlet>
+    <servlet-name>logControl</servlet-name>
+    <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
+    <init-param>
+      <param-name>logLevel</param-name>
+      <param-value>info</param-value>
+    </init-param>
+    <init-param>
+      <param-name>logLevelPackages</param-name>
+      <param-value>
+        ca.nrc.cadc.reg
+        ca.nrc.cadc.rest
+        ca.nrc.cadc.log
+        ca.nrc.cadc.uws
+        ca.nrc.cadc.vos
+        ca.nrc.cadc.net
+        ca.nrc.cadc.auth
+        ca.nrc.cadc.vosi
+      </param-value>
+    </init-param>
+    <init-param>
+      <param-name>logAccessGroup</param-name>
+      <param-value>ivo://cadc.nrc.ca/gms?CADC</param-value>
+    </init-param>
+    <init-param>
+      <param-name>groupAuthorizer</param-name>
+      <param-value>ca.nrc.cadc.ac.client.GroupAuthorizer</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  
+  <!-- async transfer servlet-->
+  <servlet>
+    <servlet-name>TransferServlet</servlet-name>
+    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+
+    <init-param>
+      <param-name>org.restlet.application</param-name>
+      <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
+      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
+      </param-value>
+    </init-param>
+    <load-on-startup>3</load-on-startup>
+  </servlet>
+
+  <!-- async transfer servlet with http basic auth, restlet requires a 2nd deployment-->
+  <servlet>
+    <servlet-name>AuthTransferServlet</servlet-name>
+    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+
+    <init-param>
+      <param-name>org.restlet.application</param-name>
+      <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
+      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
+      </param-value>
+    </init-param>
+    <load-on-startup>3</load-on-startup>
+  </servlet>
+
+  <!-- sync transfer servlet-->
+  <servlet>
+    <servlet-name>SyncTransferServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+      <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnGET</param-name>
+      <param-value>true</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnPOST</param-name>
+      <param-value>true</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
+      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
+      </param-value>
+    </init-param>
+  </servlet>
+
+  <!-- VOSpace NodesServlet -->
+  <servlet>
+    <servlet-name>NodesServlet</servlet-name>
+    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+
+    <init-param>
+      <param-name>org.restlet.application</param-name>
+      <param-value>ca.nrc.cadc.vos.server.web.restlet.NodesApplication</param-value>
+    </init-param>
+
+    <load-on-startup>4</load-on-startup>
+  </servlet>
+  <!-- VOSpace NodesServlet with http basic auth, restlet requires a 2nd deployment-->
+  <servlet>
+    <servlet-name>AuthNodesServlet</servlet-name>
+    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+
+    <init-param>
+      <param-name>org.restlet.application</param-name>
+      <param-value>ca.nrc.cadc.vos.server.web.restlet.NodesApplication</param-value>
+    </init-param>
+
+    <load-on-startup>4</load-on-startup>
+  </servlet>
+  
+  <servlet>
+    <servlet-name>FilesServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>org.opencadc.cavern.files.GetAction</param-value>
+        </init-param>
+        <!--
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>org.opencadc.cavern.files.PostAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>put</param-name>
+            <param-value>org.opencadc.cavern.files.PutAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>org.opencadc.cavern.files.DeleteAction</param-value>
+        </init-param>
+        -->
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+
+  <!-- VOSpace ViewsServlet -->
+  <servlet>
+    <servlet-name>ViewsServlet</servlet-name>
+    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+
+    <init-param>
+      <param-name>org.restlet.application</param-name>
+      <param-value>ca.nrc.cadc.vos.server.web.restlet.ViewsApplication
+      </param-value>
+    </init-param>
+
+    <load-on-startup>4</load-on-startup>
+  </servlet>
+
+  <!-- VOSI availability -->
+  <servlet>
+    <servlet-name>AvailabilityServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.vosi.AvailabilityServlet</servlet-class>
+    <init-param>
+      <param-name>ca.nrc.cadc.vosi.WebService</param-name>
+      <param-value>org.opencadc.cavern.ServiceAvailability</param-value>
+    </init-param>
+    <load-on-startup>5</load-on-startup>
+  </servlet>
+
+  <!-- VOSI capabilities -->
+  <servlet>
+    <servlet-name>CapabilitiesServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.vosi.CapabilitiesServlet</servlet-class>
+    <init-param>
+      <param-name>input</param-name>
+      <param-value>/capabilities.xml</param-value>
+    </init-param>
+  </servlet>
+
+  <!-- the VOSpace Endpoints -->
+  <servlet-mapping>
+    <servlet-name>NodesServlet</servlet-name>
+    <url-pattern>/nodes/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>AuthNodesServlet</servlet-name>
+    <url-pattern>/auth/nodes/*</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>ViewsServlet</servlet-name>
+    <url-pattern>/views</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>FilesServlet</servlet-name>
+    <url-pattern>/files/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>FilesServlet</servlet-name>
+    <url-pattern>/auth/files/*</url-pattern>
+  </servlet-mapping>
+  
+  <!-- Transfer servlet endpoints -->
+  <servlet-mapping>
+    <servlet-name>TransferServlet</servlet-name>
+    <url-pattern>/transfers/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>AuthTransferServlet</servlet-name>
+    <url-pattern>/auth/transfers/*</url-pattern>
+  </servlet-mapping>
+
+  <!-- Availability servlet endpoint -->
+  <servlet-mapping>
+    <servlet-name>AvailabilityServlet</servlet-name>
+    <url-pattern>/availability</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>AvailabilityServlet</servlet-name>
+    <url-pattern>/auth/availability</url-pattern>
+  </servlet-mapping>
+
+  <!-- Capability servlet endpoint -->
+  <servlet-mapping>
+    <servlet-name>CapabilitiesServlet</servlet-name>
+    <url-pattern>/capabilities</url-pattern>
+  </servlet-mapping>
+
+  <!-- Log control servlet endpoint -->
+  <servlet-mapping>
+    <servlet-name>logControl</servlet-name>
+    <url-pattern>/logControl</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>SyncTransferServlet</servlet-name>
+    <url-pattern>/synctrans/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>SyncTransferServlet</servlet-name>
+    <url-pattern>/auth/synctrans/*</url-pattern>
+  </servlet-mapping>
+
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+
+  <!-- Define a security constraint for auth servlet -->
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>auth</web-resource-name>
+      <description/>
+      <url-pattern>/auth/*</url-pattern>
+      <url-pattern>/logControl/*</url-pattern>
+      <http-method>GET</http-method>
+      <http-method>POST</http-method>
+      <http-method>HEAD</http-method>
+      <http-method>PUT</http-method>
+      <http-method>OPTIONS</http-method>
+      <http-method>TRACE</http-method>
+      <http-method>DELETE</http-method>
+    </web-resource-collection>
+    <auth-constraint>
+      <description>force authentication for all requests</description>
+      <role-name>public</role-name>
+    </auth-constraint>
+  </security-constraint>
+
+  <login-config>
+    <auth-method>BASIC</auth-method>
+    <realm-name>Canadian Astronomy Data Centre</realm-name>
+  </login-config>
+
+</web-app>
