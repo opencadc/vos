@@ -67,15 +67,20 @@
 
 package org.opencadc.cavern.nodes;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.*;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 
@@ -111,23 +116,28 @@ public abstract class NodeUtil {
         
         UserPrincipal owner = getOwner(root.getFileSystem().getUserPrincipalLookupService(), node);
         assertNotNull("owner", owner);
+        // TODO: don't assume convention of user == default group
+        GroupPrincipal group = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(owner.getName());
         
         Path ret = null;
         if (node instanceof ContainerNode) {
             ret = Files.createDirectory(np);
-            Files.setOwner(ret, owner);
         } else if (node instanceof DataNode) {
             ret = Files.createFile(np);
-            Files.setOwner(ret, owner);
         } else if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             String targPath = ln.getTarget().getPath().substring(1);
             Path absPath = root.resolve(targPath);
             Path tp = root.relativize(absPath);
             ret = Files.createSymbolicLink(np, tp);
-            //setOwner modifies the target of the link
         } else {
             throw new UnsupportedOperationException("unexpected node type: " + node.getClass().getName());
+        }
+        
+        PosixFileAttributeView pv = Files.getFileAttributeView(ret, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        pv.setOwner(owner);
+        if (group != null) {
+            pv.setGroup(group);
         }
         
         return ret;
@@ -153,6 +163,14 @@ public abstract class NodeUtil {
         }
         log.debug("[get] attrs: " + attrs);
         setOwner(ret, attrs.owner());
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        //Date created = new Date(attrs.creationTime().toMillis());
+        //Date accessed = new Date(attrs.lastAccessTime().toMillis());
+        Date modified = new Date(attrs.lastModifiedTime().toMillis());
+        //ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, df.format(created)));
+        //ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ACCESS_DATE, df.format(accessed)));
+        //ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
+        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, df.format(modified)));
         
         // TODO: restore generic properties
         return ret;

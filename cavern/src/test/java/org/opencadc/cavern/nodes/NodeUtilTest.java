@@ -73,6 +73,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.URI;
@@ -163,6 +164,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(nn);
             Assert.assertTrue(nn instanceof ContainerNode);
             Assert.assertEquals(n.getUri(), nn.getUri());
+            Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             
             NodeUtil.delete(root, uri);
             Assert.assertFalse("deleted", Files.exists(dir));

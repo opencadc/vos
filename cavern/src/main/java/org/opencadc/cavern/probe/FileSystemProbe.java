@@ -229,9 +229,11 @@ public class FileSystemProbe implements Runnable {
             
             Node tn = new DataNode(turi);
             NodeUtil.setOwner(tn, linkTargetOwner);
+            log.info("[symlink] " +  tn.getClass().getSimpleName() + " " + tn.getUri() + " " + owner);
             
             LinkNode n1 = new LinkNode(uri, turi.getURI());
             NodeUtil.setOwner(n1, owner);
+            log.info("[symlink] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
             
             String fail = " [FAIL]";
             Path tp = NodeUtil.create(root, tn);
