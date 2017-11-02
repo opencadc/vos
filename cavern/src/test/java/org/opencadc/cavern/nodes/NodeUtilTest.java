@@ -149,11 +149,20 @@ public class NodeUtilTest {
             Path dir = createFile(root, n, up);
             Assert.assertTrue("dir", Files.isDirectory(dir));
             
+            Node nn = NodeUtil.get(root, uri);
+            log.info("found: " + nn);
+            Assert.assertNotNull(nn);
+            Assert.assertTrue(nn instanceof ContainerNode);
+            Assert.assertEquals(n.getUri(), nn.getUri());
+            
+            NodeUtil.delete(root, uri);
+            Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
     @Test
     public void testCreateFile() {
         try {
@@ -167,6 +176,15 @@ public class NodeUtilTest {
             DataNode n = new DataNode(uri);
             Path file = createFile(root, n, up);
             Assert.assertTrue("file", Files.isRegularFile(file));
+            
+            Node nn = NodeUtil.get(root, uri);
+            log.info("found: " + nn);
+            Assert.assertNotNull(nn);
+            Assert.assertTrue(nn instanceof DataNode);
+            Assert.assertEquals(n.getUri(), nn.getUri());
+            
+            NodeUtil.delete(root, uri);
+            Assert.assertFalse("deleted", Files.exists(file));
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -186,12 +204,26 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
             
             Node n = new DataNode(uri);
-            createFile(root, n, up);
+            Path file = createFile(root, n, up);
             
-            n = new LinkNode(luri, uri.getURI());
-            Path link = createFile(root, n, up);
+            LinkNode ln = new LinkNode(luri, uri.getURI());
+            Path link = createFile(root, ln, up);
             Assert.assertTrue("link", Files.isSymbolicLink(link));
+            
+            Node nn = NodeUtil.get(root, luri);
+            Assert.assertNotNull(nn);
+            log.info("found: " + nn);
+            Assert.assertTrue(nn instanceof LinkNode);
+            LinkNode ln2 = (LinkNode) nn;
+            Assert.assertEquals(ln.getUri(), ln2.getUri());
+            Assert.assertEquals(ln.getTarget(), ln2.getTarget());
             // TODO: test that the link is relative to fs-mount view will be consistent
+            
+            NodeUtil.delete(root, uri);
+            Assert.assertFalse("deleted", Files.exists(file));
+            
+            NodeUtil.delete(root, luri);
+            Assert.assertFalse("deleted", Files.exists(link));
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);

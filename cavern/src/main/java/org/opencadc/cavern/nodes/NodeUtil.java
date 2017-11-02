@@ -69,7 +69,9 @@ package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.vos.*;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.List;
@@ -88,10 +90,12 @@ public abstract class NodeUtil {
     public static Path create(Path root, Node node) throws IOException {
         assertNotNull("root", root);
         assertNotNull("node", node);
-        log.debug("root: " + root + " node: " + node.getUri());
+        log.debug("[create] root: " + root + " node: " + node.getUri());
         
         String nodePath = node.getUri().getPath().substring(1);
         Path np = root.resolve(nodePath);
+        log.debug("[create] path: " +node.getUri() + " -> " + np);
+        
         UserPrincipal owner = getOwner(node);
         
         if (node instanceof ContainerNode) {
@@ -115,12 +119,46 @@ public abstract class NodeUtil {
         }
     }
     
-    public static Node get(Path root, VOSURI uri) {
-        throw new UnsupportedOperationException();
+    public static Node get(Path root, VOSURI uri) throws IOException {
+        assertNotNull("root", root);
+        assertNotNull("uri", uri);
+        log.debug("[get] root: " + root + " node: " + uri);
+        
+        String nodePath = uri.getPath().substring(1);
+        Path np = root.resolve(nodePath);
+        log.debug("[get] path: " + uri.getURI() + " -> " + np);
+        
+        if (Files.isDirectory(np, LinkOption.NOFOLLOW_LINKS)) {
+            ContainerNode ret = new ContainerNode(uri);
+            // TODO: restore properties
+            return ret;
+        } else if (Files.isRegularFile(np, LinkOption.NOFOLLOW_LINKS)) {
+            DataNode ret = new DataNode(uri);
+            // TODO: restore properties
+            return ret;
+        } else if (Files.isSymbolicLink(np)) {
+            Path tp = Files.readSymbolicLink(np);
+            URI turi = URI.create(uri.getScheme() + "://" + uri.getAuthority() + "/" + tp.toFile().getPath());
+            LinkNode ret = new LinkNode(uri, turi);
+            // TODO: restore properties
+            return ret;
+        } else {
+            throw new IllegalStateException("found unexpected file system object: " + np);
+        }
     }
     
-    public static void delete(Path root, Node node) {
-        throw new UnsupportedOperationException();
+    public static void delete(Path root, VOSURI uri) throws IOException {
+        assertNotNull("root", root);
+        assertNotNull("uri", uri);
+        log.debug("[delete] root: " + root + " uri: " + uri);
+        
+        String nodePath = uri.getPath().substring(1);
+        Path np = root.resolve(nodePath);
+        log.debug("[create] path: " + uri + " -> " + np);
+        if (Files.isDirectory(np, LinkOption.NOFOLLOW_LINKS)) {
+            // TODO: walk tree and empty it from bottom up
+        }
+        Files.delete(np);
     }
     
     public static List<Node> list(Path root, ContainerNode parent, VOSURI start, Long limit) {
