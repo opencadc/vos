@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'com.jfrog.bintray' version '1.7.1'
     id 'war'
+    id 'application'
 }
 
 repositories {
@@ -21,6 +22,8 @@ version = '1000'
 war {
     archiveName = project.name + '##' + project.version + '.war'
 }
+
+mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
     compile 'log4j:log4j:1.2.+'

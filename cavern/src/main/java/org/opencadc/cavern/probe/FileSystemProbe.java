@@ -1,0 +1,338 @@
+/*
+************************************************************************
+*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+*
+*  (c) 2017.                            (c) 2017.
+*  Government of Canada                 Gouvernement du Canada
+*  National Research Council            Conseil national de recherches
+*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+*  All rights reserved                  Tous droits réservés
+*
+*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+*  expressed, implied, or               énoncée, implicite ou légale,
+*  statutory, of any kind with          de quelque nature que ce
+*  respect to the software,             soit, concernant le logiciel,
+*  including without limitation         y compris sans restriction
+*  any warranty of merchantability      toute garantie de valeur
+*  or fitness for a particular          marchande ou de pertinence
+*  purpose. NRC shall not be            pour un usage particulier.
+*  liable in any event for any          Le CNRC ne pourra en aucun cas
+*  damages, whether direct or           être tenu responsable de tout
+*  indirect, special or general,        dommage, direct ou indirect,
+*  consequential or incidental,         particulier ou général,
+*  arising from the use of the          accessoire ou fortuit, résultant
+*  software.  Neither the name          de l'utilisation du logiciel. Ni
+*  of the National Research             le nom du Conseil National de
+*  Council of Canada nor the            Recherches du Canada ni les noms
+*  names of its contributors may        de ses  participants ne peuvent
+*  be used to endorse or promote        être utilisés pour approuver ou
+*  products derived from this           promouvoir les produits dérivés
+*  software without specific prior      de ce logiciel sans autorisation
+*  written permission.                  préalable et particulière
+*                                       par écrit.
+*
+*  This file is part of the             Ce fichier fait partie du projet
+*  OpenCADC project.                    OpenCADC.
+*
+*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+*  you can redistribute it and/or       vous pouvez le redistribuer ou le
+*  modify it under the terms of         modifier suivant les termes de
+*  the GNU Affero General Public        la “GNU Affero General Public
+*  License as published by the          License” telle que publiée
+*  Free Software Foundation,            par la Free Software Foundation
+*  either version 3 of the              : soit la version 3 de cette
+*  License, or (at your option)         licence, soit (à votre gré)
+*  any later version.                   toute version ultérieure.
+*
+*  OpenCADC is distributed in the       OpenCADC est distribué
+*  hope that it will be useful,         dans l’espoir qu’il vous
+*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+*  without even the implied             GARANTIE : sans même la garantie
+*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+*  General Public License for           Générale Publique GNU Affero
+*  more details.                        pour plus de détails.
+*
+*  You should have received             Vous devriez avoir reçu une
+*  a copy of the GNU Affero             copie de la Licence Générale
+*  General Public License along         Publique GNU Affero avec
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+*                                       <http://www.gnu.org/licenses/>.
+*
+************************************************************************
+*/
+
+package org.opencadc.cavern.probe;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.UUID;
+import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.NodeUtil;
+
+/**
+ *
+ * @author pdowler
+ */
+public class FileSystemProbe implements Runnable {
+    private static final Logger log = Logger.getLogger(FileSystemProbe.class);
+
+    private final Path root;
+    private final UserPrincipal owner;
+    private final UserPrincipal linkTargetOwner;
+    private final UserPrincipalLookupService users;
+    
+    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner) throws IOException {
+        this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
+        this.users = root.getFileSystem().getUserPrincipalLookupService();
+        this.owner = users.lookupPrincipalByName(owner);
+        this.linkTargetOwner = users.lookupPrincipalByName(linkTargetOwner);
+    }
+
+    @Override
+    public void run() {
+        log.info("START");
+        
+        doCreateDir();
+        
+        doCreateFile();
+        
+        doCreateSymlink();
+        
+        
+        log.info("END");
+    }
+
+    public void doCreateDir() {
+        try {
+            String name = UUID.randomUUID().toString();
+            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+
+            ContainerNode n1 = new ContainerNode(uri);
+            NodeUtil.setOwner(n1, owner);
+            log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
+            
+            String fail = " [FAIL]";
+            Path pth = NodeUtil.create(root, n1);
+            if (pth == null || !Files.exists(pth)) {
+                log.error("[dir] failed to create directory in fs: " + root + "/" + name + fail);
+                return;
+            }
+            
+            Node n2 = NodeUtil.get(root, uri);
+            if (n2 == null) {
+                log.error("[dir] failed to get ContainerNode: " + uri + " from " + root + fail);
+                return;
+            }
+            
+            int num = 0;
+            if (!n1.getClass().equals(n2.getClass())) {
+                log.error("[dir] failed to restore node type: " + n1.getClass().getSimpleName() 
+                        + " != " + n2.getClass().getSimpleName());
+                num++;
+            }
+            if (!n1.getName().equals(n2.getName())) {
+                log.error("[dir] failed to restore node name: " + n1.getName() + " != " + n2.getName());
+                num++;
+            }
+            UserPrincipal owner2 = NodeUtil.getOwner(users, n2);
+            if (owner == null || !owner.equals(owner2)) {
+                log.error("[dir] failed to restore node owner: " + owner + " != " + owner2);
+                num++;
+            }
+        
+            StringBuilder sb = new StringBuilder();
+            sb.append("[dir] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
+            if (num == 0) {
+                sb.append(" [OK]");
+                log.info(sb.toString());
+            } else {
+                sb.append(fail);
+                log.error(sb.toString());
+            }
+        } catch (IOException ex) {
+            log.error("FAIL", ex);
+        }
+    }
+    
+    public void doCreateFile() {
+        try {
+            String name = UUID.randomUUID().toString();
+            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+
+            DataNode n1 = new DataNode(uri);
+            NodeUtil.setOwner(n1, owner);
+            log.info("[file] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
+            
+            String fail = " [FAIL]";
+            Path pth = NodeUtil.create(root, n1);
+            if (pth == null || !Files.exists(pth)) {
+                log.error("[file] failed to create file in fs: " + root + "/" + name + fail);
+                return;
+            }
+            
+            Node n2 = NodeUtil.get(root, uri);
+            if (n2 == null) {
+                log.error("[file] failed to get DataNode: " + uri + " from " + root + fail);
+                return;
+            }
+            
+            int num = 0;
+            if (!n1.getClass().equals(n2.getClass())) {
+                log.error("[file] failed to restore node type: " + n1.getClass().getSimpleName() 
+                        + " != " + n2.getClass().getSimpleName());
+                num++;
+            }
+            if (!n1.getName().equals(n2.getName())) {
+                log.error("[file] failed to restore node name: " + n1.getName() + " != " + n2.getName());
+                num++;
+            }
+            UserPrincipal owner2 = NodeUtil.getOwner(users, n2);
+            if (owner == null || !owner.equals(owner2)) {
+                log.error("[file] failed to restore node owner: " + owner + " != " + owner2);
+                num++;
+            }
+        
+            StringBuilder sb = new StringBuilder();
+            sb.append("[file] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
+            if (num == 0) {
+                sb.append(" [OK]");
+                log.info(sb.toString());
+            } else {
+                sb.append(" [FAIL]");
+                log.error(sb.toString());
+            }
+        } catch (IOException ex) {
+            log.error("FAIL", ex);
+        }
+    }
+    
+    public void doCreateSymlink() {
+        try {
+            String name = UUID.randomUUID().toString();
+            VOSURI turi = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/link-to-" + name));
+            
+            Node tn = new DataNode(turi);
+            NodeUtil.setOwner(tn, linkTargetOwner);
+            
+            LinkNode n1 = new LinkNode(uri, turi.getURI());
+            NodeUtil.setOwner(n1, owner);
+            
+            String fail = " [FAIL]";
+            Path tp = NodeUtil.create(root, tn);
+            if (tp == null || !Files.exists(tp)) {
+                log.error("[symlink] failed to create file in fs: " + root + "/" + name + fail);
+                return;
+            }
+            
+            Path pth = NodeUtil.create(root, n1);
+            if (pth == null || !Files.exists(pth)) {
+                log.error("[symlink] failed to create symlink in fs: " + root + "/" + name + fail);
+                return;
+            }
+            
+            Node n2 = NodeUtil.get(root, uri);
+            
+            if (n2 == null) {
+                log.error("[symlink] failed to get LinkNode: " + uri + " from " + root + fail);
+                return;
+            }
+            
+            int num = 0;
+            if (!n1.getClass().equals(n2.getClass())) {
+                log.error("[symlink] failed to restore node type: " + n1.getClass().getSimpleName() 
+                        + " != " + n2.getClass().getSimpleName());
+                num++;
+            }
+            if (!n1.getName().equals(n2.getName())) {
+                log.error("[symlink] failed to restore node name: " + n1.getName() + " != " + n2.getName());
+                num++;
+            }
+            UserPrincipal owner2 = NodeUtil.getOwner(users, n2);
+            if (owner == null || !owner.equals(owner2)) {
+                log.error("[symlink] failed to restore node owner: " + owner + " != " + owner2);
+                num++;
+            }
+
+            // LinkNode-specific checks
+            LinkNode ln2 = (LinkNode) n2;
+            if (!n1.getTarget().equals(ln2.getTarget())) {
+                log.error("[symlink] failed to restore symlink target: " + n1.getTarget() + " != " + ln2.getTarget());
+                num++;
+            }
+
+            // verify that the target node was not modified
+            Node tn2 = NodeUtil.get(root, turi);
+            if (tn2 == null) {
+                log.error("[symlink] failed to get target node: " + turi + " from " + root);
+                num++;
+            } else {
+                if (!tn.getClass().equals(tn2.getClass())) {
+                    log.error("[symlink] target node type was modified by symlink: " + tn.getClass().getSimpleName() 
+                            + " != " + tn2.getClass().getSimpleName());
+                    num++;
+                }
+                if (!tn.getName().equals(tn2.getName())) {
+                    log.error("[symlink] target node name was modified by symlink: " + tn.getName() + " != " + tn2.getName());
+                    num++;
+                }
+                UserPrincipal towner2 = NodeUtil.getOwner(users, tn2);
+                if (towner2 == null || !linkTargetOwner.equals(towner2)) {
+                    log.error("[symlink] target node owner was modified by symlink: " + linkTargetOwner + " != " + owner2);
+                    num++;
+                }
+            }
+        
+            StringBuilder sb = new StringBuilder();
+            sb.append("[symlink] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
+            if (num == 0) {
+                sb.append(" [OK]");
+                log.info(sb.toString());
+            } else {
+                sb.append(" [FAIL]");
+                log.error(sb.toString());
+            }
+        } catch (IOException ex) {
+            log.error("FAIL", ex);
+        }
+    }
+    
+    public void doCopyFile() {
+        
+    }
+    
+    public void doMoveFile() {
+        
+    }
+    
+    public void doCopyDir() {
+        
+    }
+    
+    public void doMoveDir() {
+        
+    }
+    
+    public void doCopySymlink() {
+        
+    }
+    
+    public void doMoveSymlink() {
+        
+    }
+}

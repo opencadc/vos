@@ -73,7 +73,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.List;
 import org.apache.log4j.Logger;
 
@@ -87,73 +89,77 @@ public abstract class NodeUtil {
     private NodeUtil() { 
     }
     
-    public static Path create(Path root, Node node) throws IOException {
-        assertNotNull("root", root);
+    public static Path nodeToPath(Path root, Node node) {
         assertNotNull("node", node);
-        log.debug("[create] root: " + root + " node: " + node.getUri());
+        return nodeToPath(root, node.getUri());
+    }
+    
+    public static Path nodeToPath(Path root, VOSURI uri) {
+        assertNotNull("root", root);
+        assertNotNull("uri", uri);
+        log.debug("[nodeToPath] root: " + root + " uri: " + uri);
         
-        String nodePath = node.getUri().getPath().substring(1);
+        String nodePath = uri.getPath().substring(1);
         Path np = root.resolve(nodePath);
-        log.debug("[create] path: " +node.getUri() + " -> " + np);
+        log.debug("[nodeToPath] path: " + uri + " -> " + np);
+        return np;
+    }
+    
+    public static Path create(Path root, Node node) throws IOException {
+        Path np = nodeToPath(root, node);
+        log.debug("[create] path: " + node.getUri() + " -> " + np);
         
-        UserPrincipal owner = getOwner(node);
+        UserPrincipal owner = getOwner(root.getFileSystem().getUserPrincipalLookupService(), node);
+        assertNotNull("owner", owner);
         
+        Path ret = null;
         if (node instanceof ContainerNode) {
-            Path ret = Files.createDirectory(np);
-            //Files.setOwner(ret, owner);
-            return ret;
+            ret = Files.createDirectory(np);
+            Files.setOwner(ret, owner);
         } else if (node instanceof DataNode) {
-            Path ret = Files.createFile(np);
-            //Files.setOwner(ret, owner);
-            return ret;
+            ret = Files.createFile(np);
+            Files.setOwner(ret, owner);
         } else if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             String targPath = ln.getTarget().getPath().substring(1);
             Path absPath = root.resolve(targPath);
             Path tp = root.relativize(absPath);
-            Path ret = Files.createSymbolicLink(np, tp);
-            //Files.setOwner(ret, owner);
-            return ret;
+            ret = Files.createSymbolicLink(np, tp);
+            //setOwner modifies the target of the link
         } else {
             throw new UnsupportedOperationException("unexpected node type: " + node.getClass().getName());
         }
+        
+        return ret;
     }
     
     public static Node get(Path root, VOSURI uri) throws IOException {
-        assertNotNull("root", root);
-        assertNotNull("uri", uri);
-        log.debug("[get] root: " + root + " node: " + uri);
-        
-        String nodePath = uri.getPath().substring(1);
-        Path np = root.resolve(nodePath);
+        Path np = nodeToPath(root, uri);
         log.debug("[get] path: " + uri.getURI() + " -> " + np);
         
-        if (Files.isDirectory(np, LinkOption.NOFOLLOW_LINKS)) {
-            ContainerNode ret = new ContainerNode(uri);
-            // TODO: restore properties
-            return ret;
-        } else if (Files.isRegularFile(np, LinkOption.NOFOLLOW_LINKS)) {
-            DataNode ret = new DataNode(uri);
-            // TODO: restore properties
-            return ret;
-        } else if (Files.isSymbolicLink(np)) {
+        PosixFileAttributes attrs = Files.readAttributes(np, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        Node ret = null;
+        if (attrs.isDirectory()) {
+            ret = new ContainerNode(uri);
+        } else if (attrs.isRegularFile()) {
+            ret = new DataNode(uri);
+            // TODO: restore file-specific properties
+        } else if (attrs.isSymbolicLink()) {
             Path tp = Files.readSymbolicLink(np);
             URI turi = URI.create(uri.getScheme() + "://" + uri.getAuthority() + "/" + tp.toFile().getPath());
-            LinkNode ret = new LinkNode(uri, turi);
-            // TODO: restore properties
-            return ret;
+            ret = new LinkNode(uri, turi);
         } else {
             throw new IllegalStateException("found unexpected file system object: " + np);
         }
+        log.debug("[get] attrs: " + attrs);
+        setOwner(ret, attrs.owner());
+        
+        // TODO: restore generic properties
+        return ret;
     }
     
     public static void delete(Path root, VOSURI uri) throws IOException {
-        assertNotNull("root", root);
-        assertNotNull("uri", uri);
-        log.debug("[delete] root: " + root + " uri: " + uri);
-        
-        String nodePath = uri.getPath().substring(1);
-        Path np = root.resolve(nodePath);
+        Path np = nodeToPath(root, uri);
         log.debug("[create] path: " + uri + " -> " + np);
         if (Files.isDirectory(np, LinkOption.NOFOLLOW_LINKS)) {
             // TODO: walk tree and empty it from bottom up
@@ -171,8 +177,16 @@ public abstract class NodeUtil {
         }
     }
             
-    public static UserPrincipal getOwner(Node node) {
-        // TODO: 
+    // temporary: store bare UserPrincipal in node property list as string
+    public static void setOwner(Node node, UserPrincipal owner) {
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner.getName()));
+    }
+    
+    public static UserPrincipal getOwner(UserPrincipalLookupService users, Node node) throws IOException {
+        NodeProperty prop = node.findProperty(VOS.PROPERTY_URI_CREATOR);
+        if (prop != null) {
+            return users.lookupPrincipalByName(prop.getPropertyValue());
+        }
         return null;
     }
 }

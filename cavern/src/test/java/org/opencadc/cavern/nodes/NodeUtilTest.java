@@ -74,6 +74,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOSURI;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -99,19 +100,25 @@ public class NodeUtilTest {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
     }
     
-    static String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
+    static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
     
-    static final String OWNER = System.getProperty("user.name"); // "guest";
+    static final String OWNER = System.getProperty("user.name");
     
+    static {
+        try {
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            if (!Files.exists(root)) {
+                Files.createDirectory(root);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("TEST SETUP: failed to create test dir: " + ROOT, ex);
+        }
+    }
     
     public NodeUtilTest() { 
     }
     
     private Path createFile(final Path root, final Node n, UserPrincipal up) throws Exception {
-        if (!Files.exists(root)) {
-            Files.createDirectory(root);
-        }
-        
         Subject s = AuthenticationUtil.getAnonSubject();
         // TODO: add UserPrincipal to the subject
         
@@ -146,6 +153,8 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
             
             ContainerNode n = new ContainerNode(uri);
+            NodeUtil.setOwner(n, up);
+            
             Path dir = createFile(root, n, up);
             Assert.assertTrue("dir", Files.isDirectory(dir));
             
@@ -174,6 +183,8 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
             
             DataNode n = new DataNode(uri);
+            NodeUtil.setOwner(n, up);
+            
             Path file = createFile(root, n, up);
             Assert.assertTrue("file", Files.isRegularFile(file));
             
@@ -204,9 +215,13 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
             
             Node n = new DataNode(uri);
-            Path file = createFile(root, n, up);
+            NodeUtil.setOwner(n, up);
+            
+            final Path file = createFile(root, n, up);
             
             LinkNode ln = new LinkNode(luri, uri.getURI());
+            NodeUtil.setOwner(ln, up);
+            
             Path link = createFile(root, ln, up);
             Assert.assertTrue("link", Files.isSymbolicLink(link));
             
