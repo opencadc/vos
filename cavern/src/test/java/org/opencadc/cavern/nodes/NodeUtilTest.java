@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -82,9 +81,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.security.PrivilegedExceptionAction;
+import java.util.Iterator;
 import java.util.UUID;
-import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -119,28 +117,35 @@ public class NodeUtilTest {
     public NodeUtilTest() { 
     }
     
-    private Path createFile(final Path root, final Node n, UserPrincipal up) throws Exception {
-        Subject s = AuthenticationUtil.getAnonSubject();
-        // TODO: add UserPrincipal to the subject
-        
-        Path actual = Subject.doAs(s, new PrivilegedExceptionAction<Path>() {
-            @Override
-            public Path run() throws Exception{
-                return NodeUtil.create(root, n);
-            }
-        });    
+    private Path doCreate(final Path root, final Node n, UserPrincipal up) throws Exception {
+        Path actual = NodeUtil.create(root, n);
         
         Assert.assertNotNull(actual);
         Assert.assertTrue("exists", Files.exists(actual));
-        
         Assert.assertEquals("name", n.getName(), actual.toFile().getName());
-
         UserPrincipal owner = Files.getOwner(actual);
         Assert.assertNotNull(owner);
-        log.info("owner: " + owner);
         Assert.assertEquals(up, owner);
         
-        return actual; // for additional tests
+        return actual;
+    }
+    
+    @Test
+    public void testGetRoot() {
+        try {
+            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern"));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            
+            Node rootNode = NodeUtil.get(root, uri);
+            Assert.assertNotNull(rootNode);
+            ContainerNode cn = (ContainerNode) rootNode;
+            Assert.assertEquals(uri, rootNode.getUri());
+            Assert.assertTrue(rootNode.getUri().isRoot());
+            Assert.assertTrue(rootNode.isPublic());
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
     
     @Test
@@ -156,7 +161,7 @@ public class NodeUtilTest {
             ContainerNode n = new ContainerNode(uri);
             NodeUtil.setOwner(n, up);
             
-            Path dir = createFile(root, n, up);
+            Path dir = doCreate(root, n, up);
             Assert.assertTrue("dir", Files.isDirectory(dir));
             
             Node nn = NodeUtil.get(root, uri);
@@ -187,7 +192,7 @@ public class NodeUtilTest {
             DataNode n = new DataNode(uri);
             NodeUtil.setOwner(n, up);
             
-            Path file = createFile(root, n, up);
+            Path file = doCreate(root, n, up);
             Assert.assertTrue("file", Files.isRegularFile(file));
             
             Node nn = NodeUtil.get(root, uri);
@@ -219,12 +224,12 @@ public class NodeUtilTest {
             Node n = new DataNode(uri);
             NodeUtil.setOwner(n, up);
             
-            final Path file = createFile(root, n, up);
+            final Path file = doCreate(root, n, up);
             
             LinkNode ln = new LinkNode(luri, uri.getURI());
             NodeUtil.setOwner(ln, up);
             
-            Path link = createFile(root, ln, up);
+            Path link = doCreate(root, ln, up);
             Assert.assertTrue("link", Files.isSymbolicLink(link));
             
             Node nn = NodeUtil.get(root, luri);
@@ -236,11 +241,12 @@ public class NodeUtilTest {
             Assert.assertEquals(ln.getTarget(), ln2.getTarget());
             // TODO: test that the link is relative to fs-mount view will be consistent
             
-            NodeUtil.delete(root, uri);
-            Assert.assertFalse("deleted", Files.exists(file));
-            
             NodeUtil.delete(root, luri);
             Assert.assertFalse("deleted", Files.exists(link));
+            Assert.assertTrue("target not deleted", Files.exists(file));
+            
+            NodeUtil.delete(root, uri);
+            Assert.assertFalse("deleted", Files.exists(file));
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -248,5 +254,50 @@ public class NodeUtilTest {
         }
     }
     
-    
+    @Test
+    public void testCreateTree() {
+        
+        try {
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+                 
+            String name = UUID.randomUUID().toString();
+            VOSURI testURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            ContainerNode n = new ContainerNode(testURI);
+            NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+            
+            for (int i = 0; i<3; i++) {
+                name = "dir" + i;
+                VOSURI uri = new VOSURI(URI.create(testURI.getURI().toASCIIString() + "/" + name));
+                n = new ContainerNode(uri);
+                NodeUtil.setOwner(n, up);
+
+                Path d = doCreate(root, n, up);
+                Assert.assertTrue("dir", Files.isDirectory(d));
+
+                Node nn = NodeUtil.get(root, uri);
+                log.info("found: " + nn);
+                Assert.assertNotNull(nn);
+                Assert.assertTrue(nn instanceof ContainerNode);
+                Assert.assertEquals(n.getUri(), nn.getUri());
+                Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            }
+
+            Iterator<Node> iter = NodeUtil.list(root, n, null, null);
+            while (iter.hasNext()) {
+                Node nn = iter.next();
+                log.info("list: " + nn);
+            }
+            
+            NodeUtil.delete(root, testURI);
+            Assert.assertFalse("deleted", Files.exists(dir));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        } 
+        
+    }
 }

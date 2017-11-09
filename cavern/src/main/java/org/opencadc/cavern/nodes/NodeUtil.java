@@ -68,19 +68,35 @@
 package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.vos.*;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import org.apache.log4j.Logger;
 
@@ -104,10 +120,18 @@ public abstract class NodeUtil {
         assertNotNull("uri", uri);
         log.debug("[nodeToPath] root: " + root + " uri: " + uri);
         
-        String nodePath = uri.getPath().substring(1);
+        String nodePath = uri.getPath();
+        if (nodePath.startsWith("/")) {
+            nodePath = nodePath.substring(1);
+        }
         Path np = root.resolve(nodePath);
         log.debug("[nodeToPath] path: " + uri + " -> " + np);
         return np;
+    }
+    
+    public static VOSURI pathToURI(Path root, Path p, VOSURI rootURI) {
+        Path tp = root.relativize(p);
+        return new VOSURI(URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
     
     public static Path create(Path root, Node node) throws IOException {
@@ -144,24 +168,69 @@ public abstract class NodeUtil {
     }
     
     public static Node get(Path root, VOSURI uri) throws IOException {
-        Path np = nodeToPath(root, uri);
-        log.debug("[get] path: " + uri.getURI() + " -> " + np);
+        LinkedList<String> nodeNames = new LinkedList<String>();
+        nodeNames.add(uri.getName());
+        VOSURI parent = uri.getParentURI();
+        VOSURI rootURI = uri;
+        while (parent != null) {
+            if (parent.isRoot()) {
+                rootURI = parent;
+            } else {
+                nodeNames.add(parent.getName());
+            }
+            parent = parent.getParentURI();
+        }
+        log.debug("[get] path components: " + nodeNames.size());
         
-        PosixFileAttributes attrs = Files.readAttributes(np, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        ContainerNode cn = new ContainerNode(rootURI);
+        cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
+        Node ret = cn;
+        Iterator<String> iter = nodeNames.descendingIterator();
+        Path cur = root;
+        StringBuilder sb = new StringBuilder(rootURI.getURI().toASCIIString());
+        while (iter.hasNext()) {
+            String pathComp = iter.next();
+            Path p = cur.resolve(pathComp);
+            cur = p;
+            VOSURI parentURI = new VOSURI(URI.create(sb.toString()));
+            sb.append("/").append(pathComp); // for next loop
+            log.debug("[get-walk] " + pathComp + " -> " + parentURI);
+            try {
+                ret = pathToNode(root, p, rootURI);
+                if (cn != null) {
+                    cn.getNodes().add(ret);
+                }
+                if (ret instanceof ContainerNode) {
+                    ContainerNode tmp = (ContainerNode) ret;
+                    cn = tmp;
+                }
+            } catch (NoSuchFileException ex) {
+                return null;
+            }
+            log.debug(uri + " public=" + ret.isPublic());
+        }
+        
+        // TODO: restore generic properties
+        return ret;
+    }
+    
+    private static Node pathToNode(Path root, Path p, VOSURI rootURI) throws IOException, NoSuchFileException {
         Node ret = null;
+        VOSURI nuri = pathToURI(root, p, rootURI);
+        PosixFileAttributes attrs = Files.readAttributes(p, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (attrs.isDirectory()) {
-            ret = new ContainerNode(uri);
+            ret = new ContainerNode(nuri);
         } else if (attrs.isRegularFile()) {
-            ret = new DataNode(uri);
+            ret = new DataNode(nuri);
             // TODO: restore file-specific properties
         } else if (attrs.isSymbolicLink()) {
-            Path tp = Files.readSymbolicLink(np);
-            URI turi = URI.create(uri.getScheme() + "://" + uri.getAuthority() + "/" + tp.toFile().getPath());
-            ret = new LinkNode(uri, turi);
+            Path tp = Files.readSymbolicLink(p);
+            URI turi = URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + tp.toFile().getPath());
+            ret = new LinkNode(nuri, turi);
         } else {
-            throw new IllegalStateException("found unexpected file system object: " + np);
+            throw new IllegalStateException("found unexpected file system object: " + p);
         }
-        log.debug("[get] attrs: " + attrs);
+
         setOwner(ret, attrs.owner());
         DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         //Date created = new Date(attrs.creationTime().toMillis());
@@ -171,24 +240,119 @@ public abstract class NodeUtil {
         //ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ACCESS_DATE, df.format(accessed)));
         //ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
         ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, df.format(modified)));
-        
-        // TODO: restore generic properties
+
+        for (PosixFilePermission pfp : attrs.permissions()) {
+            if (PosixFilePermission.OTHERS_READ.equals(pfp)) {
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
+            }
+        }
         return ret;
     }
     
     public static void delete(Path root, VOSURI uri) throws IOException {
         Path np = nodeToPath(root, uri);
         log.debug("[create] path: " + uri + " -> " + np);
-        if (Files.isDirectory(np, LinkOption.NOFOLLOW_LINKS)) {
-            // TODO: walk tree and empty it from bottom up
+        delete(np);
+    }
+    
+    private static void delete(Path path)  throws IOException {
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            Files.walkFileTree(path, new DeleteVisitor());
+        } else {
+            Files.delete(path);
         }
-        Files.delete(np);
     }
     
-    public static List<Node> list(Path root, ContainerNode parent, VOSURI start, Long limit) {
-        throw new UnsupportedOperationException();
+    private static class DeleteVisitor implements FileVisitor<Path> {
+        @Override
+        public FileVisitResult preVisitDirectory(Path t, BasicFileAttributes bfa) throws IOException {
+            log.debug("enter: " + t);
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFile(Path t, BasicFileAttributes bfa) throws IOException {
+            Files.delete(t);
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path t, IOException ioe) throws IOException {
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(Path t, IOException ioe) throws IOException {
+            Files.delete(t);
+            log.debug("leave: " + t);
+            return FileVisitResult.CONTINUE;
+        }
     }
     
+    public static Iterator<Node> list(Path root, ContainerNode node, VOSURI start, Integer limit) throws IOException {
+        Path np = nodeToPath(root, node);
+        log.debug("[list] " + node.getUri() + " -> " + np);
+        VOSURI rootURI = node.getUri();
+        while (!rootURI.isRoot()) {
+            rootURI = rootURI.getParentURI();
+        }
+        log.debug("[list] root: " + rootURI + " -> " + root);
+        
+        DirectoryVisitor dv = new DirectoryVisitor(root, rootURI, start, limit);
+        
+        Files.walkFileTree(np, EnumSet.noneOf(FileVisitOption.class), 1, dv);
+        log.debug("[list] found: " + dv.nodes.size());
+        return dv.nodes.iterator();
+    }
+    
+    private static class DirectoryVisitor implements FileVisitor<Path> {
+        private final Path root;
+        private final VOSURI rootURI;
+        private final VOSURI start;
+        private final Integer limit;
+        
+        List<Node> nodes = new ArrayList<Node>();
+
+        public DirectoryVisitor(Path root, VOSURI rootURI, VOSURI start, Integer limit) {
+            this.root = root;
+            this.rootURI = rootURI;
+            this.start = start;
+            this.limit = limit;
+        }
+
+        @Override
+        public FileVisitResult preVisitDirectory(Path t, BasicFileAttributes bfa) throws IOException {
+            // self
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFile(Path t, BasicFileAttributes bfa) throws IOException {
+            log.debug("[visitFile] " + t + " " + start + " " + limit + " vs " + nodes.size());
+            Node n = pathToNode(root, t, rootURI);
+            if (start == null || start.getName().compareTo(n.getName()) <= 0) {
+                nodes.add(n);
+                log.debug("[visitFile] found: " + n);
+            }
+            if (limit != null && limit == nodes.size()) {
+                return FileVisitResult.TERMINATE;
+            }
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path t, IOException ioe) throws IOException {
+            log.debug("[list] visitFileFailed: " + t + " reason: " + ioe);
+            return FileVisitResult.TERMINATE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(Path t, IOException ioe) throws IOException {
+            // self
+            return FileVisitResult.CONTINUE;
+        }
+        
+    }
     public static void assertNotNull(String name, Object o) {
         if (o == null) {
             throw new IllegalArgumentException(name + " cannot be null");
