@@ -78,6 +78,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -121,16 +122,16 @@ public class NodeUtilTest {
         Path actual = NodeUtil.create(root, n);
         
         Assert.assertNotNull(actual);
-        Assert.assertTrue("exists", Files.exists(actual));
+        Assert.assertTrue("exists", Files.exists(actual, LinkOption.NOFOLLOW_LINKS));
         Assert.assertEquals("name", n.getName(), actual.toFile().getName());
-        UserPrincipal owner = Files.getOwner(actual);
+        UserPrincipal owner = Files.getOwner(actual, LinkOption.NOFOLLOW_LINKS);
         Assert.assertNotNull(owner);
         Assert.assertEquals(up, owner);
         
         return actual;
     }
     
-    @Test
+    //@Test
     public void testGetRoot() {
         try {
             VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern"));
@@ -148,30 +149,33 @@ public class NodeUtilTest {
         }
     }
     
-    @Test
+    //@Test
     public void testCreateDir() {
         try {
+            // top-level test dir
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
-                    
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
-            
-            ContainerNode n = new ContainerNode(uri);
+            ContainerNode n = new ContainerNode(testDir);
             NodeUtil.setOwner(n, up);
-            
             Path dir = doCreate(root, n, up);
             Assert.assertTrue("dir", Files.isDirectory(dir));
             
-            Node nn = NodeUtil.get(root, uri);
-            log.info("found: " + nn);
-            Assert.assertNotNull(nn);
-            Assert.assertTrue(nn instanceof ContainerNode);
-            Assert.assertEquals(n.getUri(), nn.getUri());
-            Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            // actual child test
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/dir-" + name));
+            ContainerNode tn = new ContainerNode(uri);
+            NodeUtil.setOwner(tn, up);
+            Path tdir = doCreate(root, tn, up);
+            Node tn2 = NodeUtil.get(root, uri);
+            log.info("found: " + tn2);
+            Assert.assertNotNull(tn2);
+            Assert.assertTrue(tn2 instanceof ContainerNode);
+            Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             
-            NodeUtil.delete(root, uri);
+            NodeUtil.delete(root, testDir);
             Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -179,31 +183,34 @@ public class NodeUtilTest {
         }
     }
     
-    @Test
+    //@Test
     public void testCreateFile() {
         try {
+            // top-level test dir
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
-                    
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
-            
-            DataNode n = new DataNode(uri);
+            ContainerNode n = new ContainerNode(testDir);
             NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
             
-            Path file = doCreate(root, n, up);
-            Assert.assertTrue("file", Files.isRegularFile(file));
+            // actual child test
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/dir-" + name));
+            DataNode tn = new DataNode(uri);
+            NodeUtil.setOwner(tn, up);
+            Path tdir = doCreate(root, tn, up);
+            Node tn2 = NodeUtil.get(root, uri);
+            log.info("found: " + tn2);
+            Assert.assertNotNull(tn2);
+            Assert.assertTrue(tn2 instanceof DataNode);
+            Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             
-            Node nn = NodeUtil.get(root, uri);
-            log.info("found: " + nn);
-            Assert.assertNotNull(nn);
-            Assert.assertTrue(nn instanceof DataNode);
-            Assert.assertEquals(n.getUri(), nn.getUri());
-            
-            NodeUtil.delete(root, uri);
-            Assert.assertFalse("deleted", Files.exists(file));
-            
+            NodeUtil.delete(root, testDir);
+            Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -213,18 +220,23 @@ public class NodeUtilTest {
     @Test
     public void testCreateLink() {
         try {
+            // top-level test dir
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
-            VOSURI luri = new VOSURI(URI.create("vos://canfar.net~cavern/link-to-" + name));
-                    
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode testN = new ContainerNode(testDir);
+            NodeUtil.setOwner(testN, up);
+            Path dir = doCreate(root, testN, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
             
-            Node n = new DataNode(uri);
-            NodeUtil.setOwner(n, up);
-            
-            final Path file = doCreate(root, n, up);
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+            VOSURI luri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/link-to-" + name));
+                    
+            Node dn = new DataNode(uri);
+            NodeUtil.setOwner(dn, up);
+            final Path file = doCreate(root, dn, up);
             
             LinkNode ln = new LinkNode(luri, uri.getURI());
             NodeUtil.setOwner(ln, up);
@@ -241,20 +253,19 @@ public class NodeUtilTest {
             Assert.assertEquals(ln.getTarget(), ln2.getTarget());
             // TODO: test that the link is relative to fs-mount view will be consistent
             
-            NodeUtil.delete(root, luri);
-            Assert.assertFalse("deleted", Files.exists(link));
-            Assert.assertTrue("target not deleted", Files.exists(file));
+            //NodeUtil.delete(root, luri);
+            //Assert.assertFalse("deleted", Files.exists(link));
+            //Assert.assertTrue("target not deleted", Files.exists(file));
             
-            NodeUtil.delete(root, uri);
-            Assert.assertFalse("deleted", Files.exists(file));
-            
+            //NodeUtil.delete(root, testDir);
+            //Assert.assertFalse("deleted", Files.exists(file));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
     
-    @Test
+    //@Test
     public void testCreateTree() {
         
         try {

@@ -85,7 +85,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
@@ -141,28 +140,31 @@ public abstract class NodeUtil {
         UserPrincipal owner = getOwner(root.getFileSystem().getUserPrincipalLookupService(), node);
         assertNotNull("owner", owner);
         // TODO: don't assume convention of user == default group
-        GroupPrincipal group = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(owner.getName());
+        //GroupPrincipal group = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(owner.getName());
         
         Path ret = null;
         if (node instanceof ContainerNode) {
+            log.debug("[create] dir: " + np);
             ret = Files.createDirectory(np);
         } else if (node instanceof DataNode) {
+            log.debug("[create] file: " + np);
             ret = Files.createFile(np);
         } else if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             String targPath = ln.getTarget().getPath().substring(1);
             Path absPath = root.resolve(targPath);
-            Path tp = root.relativize(absPath);
-            ret = Files.createSymbolicLink(np, tp);
+            Path rel = np.getParent().relativize(absPath);
+            log.debug("[create] link: " + np + "\ntarget: " + targPath + "\nabs: " + absPath + "\nrel: " + rel);
+            ret = Files.createSymbolicLink(np, rel);
         } else {
             throw new UnsupportedOperationException("unexpected node type: " + node.getClass().getName());
         }
         
         PosixFileAttributeView pv = Files.getFileAttributeView(ret, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         pv.setOwner(owner);
-        if (group != null) {
-            pv.setGroup(group);
-        }
+        //if (group != null) {
+        //    pv.setGroup(group);
+        //}
         
         return ret;
     }
@@ -225,7 +227,10 @@ public abstract class NodeUtil {
             // TODO: restore file-specific properties
         } else if (attrs.isSymbolicLink()) {
             Path tp = Files.readSymbolicLink(p);
-            URI turi = URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + tp.toFile().getPath());
+            Path abs = p.getParent().resolve(tp);
+            Path rel = root.relativize(abs);
+            URI turi = URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + rel.toString());
+            log.debug("[pathToNode] link: " + p + "\ntarget: " + tp + "\nabs: " + abs + "\nrel: " + rel + "\nuri: " + turi);
             ret = new LinkNode(nuri, turi);
         } else {
             throw new IllegalStateException("found unexpected file system object: " + p);
