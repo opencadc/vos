@@ -110,12 +110,14 @@ public class FileSystemProbe implements Runnable {
     public void run() {
         log.info("START");
         
+        log.info("testing create directory...");
         doCreateDir();
         
+        log.info("testing create file...");
         doCreateFile();
         
+        log.info("testing create symlink...");
         doCreateSymlink();
-        
         
         log.info("END");
     }
