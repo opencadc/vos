@@ -82,14 +82,17 @@ public class Main {
     private static final Logger log = Logger.getLogger(Main.class);
 
     private static String[] logPackages = new String[]{
-        "org.opencadc.cavern"
+        "org.opencadc.cavern",
+        "ca.nrc.cadc.vos"
     };
 
     static void usage() {
         System.out.println("usage: cavern [-h|--help]");
-        System.out.println("usage: cavern [-v|--verbose|-d|--debug] --dir=<test directory>");
-        System.out.println("                                        --owner=<username>");
-        System.out.println("                                        --target-owner=<username>");
+        System.out.println("usage: cavern [-v|--verbose|-d|--debug]");
+        System.out.println("              --dir=<test directory>");
+        System.out.println("              --owner=<posix username> ");
+        System.out.println("              --group=<posix group name>");
+        System.out.println("              --target-owner=<posix username>)");
         System.out.println("Note: the target-owner owns the target of a link and should differ from");
         System.out.println("      the owner so that correct behaviour of symlinks can be verified");
     }
@@ -117,16 +120,21 @@ public class Main {
             String dir = am.getValue("dir");
             String owner = am.getValue("owner");
             String targetOwner = am.getValue("target-owner");
+            String group = am.getValue("group");
             if (dir == null) {
                 log.error("missing required argument: --dir=<test directory>");
                 ok = false;
             }
             if (owner == null) {
-                log.error("missing required argument: --owner=<username>");
+                log.error("missing required argument: --owner=<posix username>");
                 ok = false;
             }
             if (targetOwner == null) {
-                log.error("missing required argument: --target-owner=<username>");
+                log.error("missing required argument: --target-owner=<posix username>");
+                ok = false;
+            }
+            if (group == null) {
+                log.error("missing required argument: --group=<posix group name>");
                 ok = false;
             }
             
@@ -151,7 +159,7 @@ public class Main {
                 System.exit(1);
             }
             
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner);
+            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
             probe.run();
            
         } catch (Throwable t) {

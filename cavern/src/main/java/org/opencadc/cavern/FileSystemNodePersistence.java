@@ -63,10 +63,9 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern;
-
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
@@ -86,6 +85,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
@@ -98,21 +98,30 @@ import org.opencadc.cavern.nodes.NodeUtil;
  * @author pdowler
  */
 public class FileSystemNodePersistence implements NodePersistence {
+
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
+
+    private static final String POSIX_GROUP = "vospace";
 
     private PosixIdentityManager identityManager;
     private Path root;
-    
+    private GroupPrincipal posixGroup;
+
     public FileSystemNodePersistence() {
         this.root = getRootFromConfig();
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
+        try {
+            this.posixGroup = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(POSIX_GROUP);
+        } catch (IOException ex) {
+            throw new RuntimeException("CONFIG: failed to lookup posix group: " + POSIX_GROUP, ex);
+        }
     }
-    
+
     private Path getRootFromConfig() {
         File baseDir = new File("/tmp/cavern-base");
         return FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
     }
-    
+
     @Override
     public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
         try {
@@ -191,7 +200,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public void getChild(ContainerNode cn, String name, boolean resolveMetadata) throws TransientException {
         VOSURI vuri = new VOSURI(URI.create(cn.getUri().getURI().toASCIIString() + "/" + name));
         try {
-            
+
             Node child = get(vuri);
             if (child != null) {
                 cn.getNodes().add(child);
@@ -208,20 +217,23 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node put(Node node) throws NodeNotSupportedException, TransientException {
-        if (node.isStructured())
-    		throw new NodeNotSupportedException("StructuredDataNode is not supported.");
-        if (node.getParent() != null && node.getParent().appData == null)
+        if (node.isStructured()) {
+            throw new NodeNotSupportedException("StructuredDataNode is not supported.");
+        }
+        if (node.getParent() != null && node.getParent().appData == null) {
             throw new IllegalArgumentException("parent of node is not a persistent node: " + node.getUri().getPath());
+        }
 
-        if (node.appData != null) // persistent node == update == not supported
-            throw new UnsupportedOperationException("update of existing node not supported; try updateProperties");
-        
+        if (node.appData != null) { // persistent node == update == not supported
+            throw new UnsupportedOperationException("update of existing node not supported");
+        }
+
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
             NodeUtil.setOwner(node, owner);
             Path root = getRootFromConfig();
-            NodeUtil.create(root, node);
+            NodeUtil.create(root, node, posixGroup);
             return NodeUtil.get(root, node.getUri());
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);

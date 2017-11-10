@@ -85,6 +85,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
@@ -132,7 +133,7 @@ public abstract class NodeUtil {
         return new VOSURI(URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
     
-    public static Path create(Path root, Node node) throws IOException {
+    public static Path create(Path root, Node node, GroupPrincipal posixGroup) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
         
@@ -161,11 +162,17 @@ public abstract class NodeUtil {
         
         PosixFileAttributeView pv = Files.getFileAttributeView(ret, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         pv.setOwner(owner);
-        //if (group != null) {
-        //    pv.setGroup(group);
-        //}
+        if (posixGroup != null) {
+            pv.setGroup(posixGroup);
+        }
         
         return ret;
+    }
+    
+    public static Path update(Path root, Node node) throws IOException {
+        Path np = nodeToPath(root, node);
+        log.debug("[update] path: " + node.getUri() + " -> " + np);
+        throw new UnsupportedOperationException();
     }
     
     public static Node get(Path root, VOSURI uri) throws IOException {

@@ -80,6 +80,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Iterator;
@@ -103,6 +104,7 @@ public class NodeUtilTest {
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
     
     static final String OWNER = System.getProperty("user.name");
+    static final String GROUP = System.getProperty("user.name");
     
     static {
         try {
@@ -119,7 +121,8 @@ public class NodeUtilTest {
     }
     
     private Path doCreate(final Path root, final Node n, UserPrincipal up) throws Exception {
-        Path actual = NodeUtil.create(root, n);
+        GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
+        Path actual = NodeUtil.create(root, n, gp);
         
         Assert.assertNotNull(actual);
         Assert.assertTrue("exists", Files.exists(actual, LinkOption.NOFOLLOW_LINKS));

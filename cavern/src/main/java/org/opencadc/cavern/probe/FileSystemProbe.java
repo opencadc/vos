@@ -78,6 +78,7 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.UUID;
@@ -95,12 +96,14 @@ public class FileSystemProbe implements Runnable {
     private final UserPrincipal owner;
     private final UserPrincipal linkTargetOwner;
     private final UserPrincipalLookupService users;
+    private final GroupPrincipal group;
     
-    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner) throws IOException {
+    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner, String group) throws IOException {
         this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
         this.users = root.getFileSystem().getUserPrincipalLookupService();
         this.owner = users.lookupPrincipalByName(owner);
         this.linkTargetOwner = users.lookupPrincipalByName(linkTargetOwner);
+        this.group = users.lookupPrincipalByGroupName(group);
     }
 
     @Override
@@ -127,7 +130,7 @@ public class FileSystemProbe implements Runnable {
             log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
             
             String fail = " [FAIL]";
-            Path pth = NodeUtil.create(root, n1);
+            Path pth = NodeUtil.create(root, n1, group);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[dir] failed to create directory in fs: " + root + "/" + name + fail);
                 return;
@@ -179,7 +182,7 @@ public class FileSystemProbe implements Runnable {
             log.info("[file] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
             
             String fail = " [FAIL]";
-            Path pth = NodeUtil.create(root, n1);
+            Path pth = NodeUtil.create(root, n1, group);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[file] failed to create file in fs: " + root + "/" + name + fail);
                 return;
@@ -236,13 +239,13 @@ public class FileSystemProbe implements Runnable {
             log.info("[symlink] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
             
             String fail = " [FAIL]";
-            Path tp = NodeUtil.create(root, tn);
+            Path tp = NodeUtil.create(root, tn, group);
             if (tp == null || !Files.exists(tp)) {
                 log.error("[symlink] failed to create file in fs: " + root + "/" + name + fail);
                 return;
             }
             
-            Path pth = NodeUtil.create(root, n1);
+            Path pth = NodeUtil.create(root, n1, group);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[symlink] failed to create symlink in fs: " + root + "/" + name + fail);
                 return;
