@@ -190,35 +190,36 @@ public abstract class NodeUtil {
         }
         log.debug("[get] path components: " + nodeNames.size());
         
-        ContainerNode cn = new ContainerNode(rootURI);
-        cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
-        Node ret = cn;
+        ContainerNode cn = null; // new ContainerNode(rootURI);
+        //cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
         Iterator<String> iter = nodeNames.descendingIterator();
         Path cur = root;
         StringBuilder sb = new StringBuilder(rootURI.getURI().toASCIIString());
+        Node ret = cn;
         while (iter.hasNext()) {
             String pathComp = iter.next();
             Path p = cur.resolve(pathComp);
             cur = p;
-            VOSURI parentURI = new VOSURI(URI.create(sb.toString()));
             sb.append("/").append(pathComp); // for next loop
-            log.debug("[get-walk] " + pathComp + " -> " + parentURI);
+            log.debug("[get-walk] " + sb.toString());
             try {
-                ret = pathToNode(root, p, rootURI);
-                if (cn != null) {
-                    cn.getNodes().add(ret);
+                Node tmp = pathToNode(root, p, rootURI);
+                if (cn == null) {
+                    cn = (ContainerNode) tmp; // top-level dir
+                } else {
+                    cn.getNodes().add(tmp);
+                    tmp.setParent(cn);
+                    if (tmp instanceof ContainerNode) {
+                        cn = (ContainerNode) tmp;
+                    }
                 }
-                if (ret instanceof ContainerNode) {
-                    ContainerNode tmp = (ContainerNode) ret;
-                    cn = tmp;
-                }
+                ret = tmp;
             } catch (NoSuchFileException ex) {
                 return null;
             }
-            log.debug(uri + " public=" + ret.isPublic());
         }
-        
         // TODO: restore generic properties
+        log.debug("[get] returning " + ret);
         return ret;
     }
     
@@ -283,6 +284,7 @@ public abstract class NodeUtil {
 
         @Override
         public FileVisitResult visitFile(Path t, BasicFileAttributes bfa) throws IOException {
+            log.debug("delete: " + t);
             Files.delete(t);
             return FileVisitResult.CONTINUE;
         }
@@ -295,7 +297,7 @@ public abstract class NodeUtil {
         @Override
         public FileVisitResult postVisitDirectory(Path t, IOException ioe) throws IOException {
             Files.delete(t);
-            log.debug("leave: " + t);
+            log.debug("delete: " + t);
             return FileVisitResult.CONTINUE;
         }
     }
