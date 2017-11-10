@@ -77,7 +77,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileVisitOption;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -93,7 +93,6 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -302,62 +301,62 @@ public abstract class NodeUtil {
             rootURI = rootURI.getParentURI();
         }
         log.debug("[list] root: " + rootURI + " -> " + root);
-        
-        DirectoryVisitor dv = new DirectoryVisitor(root, rootURI, start, limit);
-        
-        Files.walkFileTree(np, EnumSet.noneOf(FileVisitOption.class), 1, dv);
-        log.debug("[list] found: " + dv.nodes.size());
-        return dv.nodes.iterator();
+        List<Node> nodes = new ArrayList<Node>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
+            for (Path file: stream) {
+                log.warn("[list] visit: " + file);
+                Node n = pathToNode(root, file, rootURI);
+                if (!nodes.isEmpty() || start == null || start.getName().equals(n.getName())) {
+                    nodes.add(n);
+                }
+                if (limit != null && limit == nodes.size()) {
+                    break;
+                }
+            }
+        }
+        log.debug("[list] found: " + nodes.size());
+        return nodes.iterator();
     }
     
+    // currently unused visitor with the minimal setup to call pathToNode
     private static class DirectoryVisitor implements FileVisitor<Path> {
         private final Path root;
         private final VOSURI rootURI;
-        private final VOSURI start;
-        private final Integer limit;
         
         List<Node> nodes = new ArrayList<Node>();
 
-        public DirectoryVisitor(Path root, VOSURI rootURI, VOSURI start, Integer limit) {
+        public DirectoryVisitor(Path root, VOSURI rootURI) {
             this.root = root;
             this.rootURI = rootURI;
-            this.start = start;
-            this.limit = limit;
         }
 
         @Override
         public FileVisitResult preVisitDirectory(Path t, BasicFileAttributes bfa) throws IOException {
-            // self
+            log.debug("[preVisitDirectory] " + t);
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFile(Path t, BasicFileAttributes bfa) throws IOException {
-            log.debug("[visitFile] " + t + " " + start + " " + limit + " vs " + nodes.size());
-            Node n = pathToNode(root, t, rootURI);
-            if (start == null || start.getName().compareTo(n.getName()) <= 0) {
-                nodes.add(n);
-                log.debug("[visitFile] found: " + n);
-            }
-            if (limit != null && limit == nodes.size()) {
-                return FileVisitResult.TERMINATE;
-            }
+            log.debug("[visitFile] " + t);
+            //Node n = pathToNode(root, t, rootURI);
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFileFailed(Path t, IOException ioe) throws IOException {
             log.debug("[list] visitFileFailed: " + t + " reason: " + ioe);
-            return FileVisitResult.TERMINATE;
+            return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult postVisitDirectory(Path t, IOException ioe) throws IOException {
-            // self
+            log.debug("[postVisitDirectory] " + t);
             return FileVisitResult.CONTINUE;
         }
         
     }
+    
     public static void assertNotNull(String name, Object o) {
         if (o == null) {
             throw new IllegalArgumentException(name + " cannot be null");
