@@ -63,112 +63,101 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
- */
+*/
 
-package org.opencadc.cavern.probe;
+package org.opencadc.cavern;
 
-import ca.nrc.cadc.util.ArgumentMap;
+
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.UUID;
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *
  * @author pdowler
  */
-public class Main {
+public class PosixIdentityManagerTest {
+    private static final Logger log = Logger.getLogger(PosixIdentityManagerTest.class);
 
-    private static final Logger log = Logger.getLogger(Main.class);
-
-    private static String[] logPackages = new String[]{
-        "org.opencadc.cavern",
-        "ca.nrc.cadc.vos"
-    };
-
-    static void usage() {
-        System.out.println("usage: cavern [-h|--help]");
-        System.out.println("usage: cavern [-v|--verbose|-d|--debug]");
-        System.out.println("              --dir=<test directory>");
-        System.out.println("              --owner=<posix username> ");
-        System.out.println("              --group=<posix group name>");
-        System.out.println("              --target-owner=<posix username>)");
-        System.out.println("Note: the target-owner owns the target of a link and should differ from");
-        System.out.println("      the owner so that correct behaviour of symlinks can be verified");
+    static {
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
-
-    public static void main(String[] args) {
+    
+    private UserPrincipalLookupService users = FileSystems.getDefault().getUserPrincipalLookupService();
+    
+    public PosixIdentityManagerTest() { 
+    }
+    
+    private UserPrincipal getTestPrincipal() throws IOException {
+        return users.lookupPrincipalByName("guest");
+    }
+    
+    @Test
+    public void testNull() {
         try {
-            ArgumentMap am = new ArgumentMap(args);
-            if (am.isSet("h") || am.isSet("help")) {
-                usage();
-                System.exit(0);
-            }
-
-            // Set debug mode
-            Level level = Level.WARN;
-            if (am.isSet("d") || am.isSet("debug")) {
-                level = Level.DEBUG;
-            } else if (am.isSet("v") || am.isSet("verbose")) {
-                level = Level.INFO;
-            }
-            for (String pkg : logPackages) {
-                Log4jInit.setLevel(pkg, level);
-            }
+            PosixIdentityManager im = new PosixIdentityManager(users);
             
-            boolean ok = true;
-            String dir = am.getValue("dir");
-            String owner = am.getValue("owner");
-            String targetOwner = am.getValue("target-owner");
-            String group = am.getValue("group");
-            if (dir == null) {
-                log.error("missing required argument: --dir=<test directory>");
-                ok = false;
-            }
-            if (owner == null) {
-                log.error("missing required argument: --owner=<posix username>");
-                ok = false;
-            }
-            if (targetOwner == null) {
-                log.error("missing required argument: --target-owner=<posix username>");
-                ok = false;
-            }
-            if (group == null) {
-                log.error("missing required argument: --group=<posix group name>");
-                ok = false;
-            }
+            Assert.assertNull("toOwner", im.toOwner(null));
             
-            File baseDir = null;
-            if (dir != null) {
-                File tmp  = new File(dir);
-                log.info("    base dir: " + tmp.getAbsolutePath());
-                log.info("      exists:" + tmp.exists());
-                log.info("is directory:" + tmp.isDirectory());
-                log.info("    readable:" + tmp.canRead());
-                log.info("    writable:" + tmp.canWrite());
-                if (tmp.exists() && tmp.isDirectory() && tmp.canRead() && tmp.canWrite()) {
-                    baseDir = tmp;
-                } else {
-                    log.error("cannot use test directory: " + tmp.getAbsolutePath());
-                    ok = false;
-                }
-            }
+            Assert.assertNull("toSubject", im.toSubject(null));
             
-            if (!ok) {
-                usage();
-                System.exit(1);
-            }
+            Assert.assertNull("toOwnerString", im.toOwnerString(null));
             
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
-            probe.run();
-           
-        } catch (Throwable t) {
-            log.error("unexpected failure", t);
-            System.exit(1);
+            try {
+                im.getOwnerType();
+            } catch (UnsupportedOperationException expected) {
+                log.info("caught expected: " + expected);
+            }
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
-        System.exit(0);
     }
+    
+    @Test
+    public void testRountTrip() {
+        try {
+            PosixIdentityManager im = new PosixIdentityManager(users);
+            UserPrincipal orig = getTestPrincipal();
+            HttpPrincipal expected = new HttpPrincipal(orig.getName());
 
-    public Main() {
+            Subject s = im.toSubject(orig);
+            Assert.assertNotNull(s);
+            
+            // add other principal types to subject
+            String dn = "cn=" + orig.getName() + ",ou=opencadc.org,c=ca";
+            X500Principal x500 = new X500Principal(dn);
+            s.getPrincipals().add(x500);
+            s.getPrincipals().add(new NumericPrincipal(UUID.randomUUID()));
+            
+            // the value to "store"
+            Object o = im.toOwner(s);
+            Assert.assertNotNull(o);
+            String owner = (String) o;
+            UserPrincipal actual = users.lookupPrincipalByName(owner);
+            Assert.assertEquals(orig, actual);
+            Assert.assertEquals(expected.getName(), actual.getName());
+            
+            String actualDN = im.toOwnerString(s);
+            Assert.assertNotNull(actualDN);
+            X500Principal actualX500 = new X500Principal(actualDN);
+            Assert.assertEquals(0, AuthenticationUtil.compare(x500, actualX500));
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 }

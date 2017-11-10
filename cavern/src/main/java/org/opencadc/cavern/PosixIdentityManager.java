@@ -65,110 +65,129 @@
 ************************************************************************
  */
 
-package org.opencadc.cavern.probe;
+package org.opencadc.cavern;
 
-import ca.nrc.cadc.util.ArgumentMap;
-import ca.nrc.cadc.util.Log4jInit;
-import java.io.File;
-import org.apache.log4j.Level;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.IdentityManager;
+import java.io.IOException;
+import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.security.Principal;
+import java.util.HashSet;
+import java.util.Set;
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 /**
+ * An IdentityManager implementation that can map from POSIX file system object
+ * owner to subject.
  *
  * @author pdowler
  */
-public class Main {
+public class PosixIdentityManager implements IdentityManager {
 
-    private static final Logger log = Logger.getLogger(Main.class);
+    private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
-    private static String[] logPackages = new String[]{
-        "org.opencadc.cavern",
-        "ca.nrc.cadc.vos"
-    };
-
-    static void usage() {
-        System.out.println("usage: cavern [-h|--help]");
-        System.out.println("usage: cavern [-v|--verbose|-d|--debug]");
-        System.out.println("              --dir=<test directory>");
-        System.out.println("              --owner=<posix username> ");
-        System.out.println("              --group=<posix group name>");
-        System.out.println("              --target-owner=<posix username>)");
-        System.out.println("Note: the target-owner owns the target of a link and should differ from");
-        System.out.println("      the owner so that correct behaviour of symlinks can be verified");
+    private UserPrincipalLookupService users;
+    
+    private PosixIdentityManager() {
+    }
+    
+    public PosixIdentityManager(UserPrincipalLookupService users) {
+        this.users = users;
     }
 
-    public static void main(String[] args) {
-        try {
-            ArgumentMap am = new ArgumentMap(args);
-            if (am.isSet("h") || am.isSet("help")) {
-                usage();
-                System.exit(0);
-            }
-
-            // Set debug mode
-            Level level = Level.WARN;
-            if (am.isSet("d") || am.isSet("debug")) {
-                level = Level.DEBUG;
-            } else if (am.isSet("v") || am.isSet("verbose")) {
-                level = Level.INFO;
-            }
-            for (String pkg : logPackages) {
-                Log4jInit.setLevel(pkg, level);
-            }
-            
-            boolean ok = true;
-            String dir = am.getValue("dir");
-            String owner = am.getValue("owner");
-            String targetOwner = am.getValue("target-owner");
-            String group = am.getValue("group");
-            if (dir == null) {
-                log.error("missing required argument: --dir=<test directory>");
-                ok = false;
-            }
-            if (owner == null) {
-                log.error("missing required argument: --owner=<posix username>");
-                ok = false;
-            }
-            if (targetOwner == null) {
-                log.error("missing required argument: --target-owner=<posix username>");
-                ok = false;
-            }
-            if (group == null) {
-                log.error("missing required argument: --group=<posix group name>");
-                ok = false;
-            }
-            
-            File baseDir = null;
-            if (dir != null) {
-                File tmp  = new File(dir);
-                log.info("    base dir: " + tmp.getAbsolutePath());
-                log.info("      exists:" + tmp.exists());
-                log.info("is directory:" + tmp.isDirectory());
-                log.info("    readable:" + tmp.canRead());
-                log.info("    writable:" + tmp.canWrite());
-                if (tmp.exists() && tmp.isDirectory() && tmp.canRead() && tmp.canWrite()) {
-                    baseDir = tmp;
-                } else {
-                    log.error("cannot use test directory: " + tmp.getAbsolutePath());
-                    ok = false;
-                }
-            }
-            
-            if (!ok) {
-                usage();
-                System.exit(1);
-            }
-            
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
-            probe.run();
-           
-        } catch (Throwable t) {
-            log.error("unexpected failure", t);
-            System.exit(1);
+    @Override
+    public Subject toSubject(Object o) {
+        if (o == null) {
+            return null;
         }
-        System.exit(0);
+        
+        if (o instanceof UserPrincipal) {
+            // convert posix UserPrincipal to external HttpPrincipal
+            UserPrincipal p = (UserPrincipal) o;
+            HttpPrincipal hp = new HttpPrincipal(p.getName());
+            Set<Principal> pset = new HashSet<Principal>();
+            pset.add(hp);
+            Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
+            // TODO: augment subject?
+            return ret;
+        }
+        throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
     }
 
-    public Main() {
+    public UserPrincipal toUserPrincipal(Subject subject) throws IOException {
+        if (subject == null) {
+            return null;
+        }
+        
+        X500Principal x500Principal = null;
+        Set<Principal> principals = subject.getPrincipals();
+        for (Principal principal : principals) {
+            if (principal instanceof HttpPrincipal) {
+                return users.lookupPrincipalByName(principal.getName());
+            }
+        }
+        return null;
+    }
+    
+    @Override
+    public Object toOwner(Subject subject) {
+        if (subject == null) {
+            return null;
+        }
+        
+        X500Principal x500Principal = null;
+        Set<Principal> principals = subject.getPrincipals();
+        for (Principal principal : principals) {
+            if (principal instanceof HttpPrincipal) {
+                return principal.getName();
+            }
+            if (principal instanceof X500Principal) {
+                x500Principal = (X500Principal) principal;
+            }
+        }
+
+        if (x500Principal == null) {
+            return null;
+        }
+
+        // The user has connected with a valid client cert but does not have an account:
+        // create an auto-approved account with their x500Principal
+        UserPrincipal up = createX500User(x500Principal);
+        subject.getPrincipals().add(up);
+        return up.getName();
+    }
+
+    @Override
+    public int getOwnerType() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String toOwnerString(Subject subject) {
+        if (subject == null) {
+            return null;
+        }
+        
+        Set<Principal> principals = subject.getPrincipals();
+        for (Principal principal : principals) {
+            // vospace output should be X500 DN
+            if (principal instanceof X500Principal) { 
+                return principal.getName();
+            }
+        }
+        
+        // TODO: lazy augment?
+        return null;
+    }
+
+    private UserPrincipal createX500User(X500Principal x500Principal) {
+        // TODO: 
+        // create a new username -- UUID.randomID()?
+        // create new User with X500principal and UserPrincipal
+        // wait for that user to be locally resolvable so we can return one that will work
+        throw new UnsupportedOperationException("create user from unknown X500Principal");
     }
 }

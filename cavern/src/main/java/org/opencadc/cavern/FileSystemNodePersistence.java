@@ -63,11 +63,11 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern;
 
-
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -78,74 +78,166 @@ import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.UserPrincipal;
+import java.util.Iterator;
 import java.util.List;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
  *
  * @author pdowler
  */
 public class FileSystemNodePersistence implements NodePersistence {
+
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
-    
+
+    private static final String POSIX_GROUP = "vospace";
+
+    private PosixIdentityManager identityManager;
+    private Path root;
+    private GroupPrincipal posixGroup;
+
     public FileSystemNodePersistence() {
-        
+        this.root = getRootFromConfig();
+        this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
+        try {
+            this.posixGroup = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(POSIX_GROUP);
+        } catch (IOException ex) {
+            throw new RuntimeException("CONFIG: failed to lookup posix group: " + POSIX_GROUP, ex);
+        }
     }
-    
+
+    private Path getRootFromConfig() {
+        File baseDir = new File("/tmp/cavern-base");
+        return FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
+    }
+
     @Override
-    public Node get(VOSURI vosuri) throws NodeNotFoundException, TransientException {
-        throw new UnsupportedOperationException();
+    public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
+        try {
+            Path root = getRootFromConfig();
+            Node ret = NodeUtil.get(root, uri);
+            if (ret == null) {
+                throw new NodeNotFoundException(uri.getPath());
+            }
+            Node cur = ret;
+            while (cur != null) {
+                UserPrincipal owner = NodeUtil.getOwner(root.getFileSystem().getUserPrincipalLookupService(), cur);
+                Subject so = identityManager.toSubject(owner);
+                cur.appData = new NodeID(-1L, so, null);
+                cur = cur.getParent();
+            }
+            log.debug("[get] " + ret);
+            return ret;
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
     }
 
     @Override
     public Node get(VOSURI vosuri, boolean bln) throws NodeNotFoundException, TransientException {
-        throw new UnsupportedOperationException();
+        return get(vosuri);
+        //throw new UnsupportedOperationException("get-partial");
     }
 
     @Override
     public Node get(VOSURI vosuri, boolean bln, boolean bln1) throws NodeNotFoundException, TransientException {
-        throw new UnsupportedOperationException();
+        return get(vosuri);
+        //throw new UnsupportedOperationException("get-partial-resolve");
     }
 
     @Override
     public void getChildren(ContainerNode cn) throws TransientException {
-        throw new UnsupportedOperationException();
+        getChildren(cn, null, 100, true);
     }
 
     @Override
     public void getChildren(ContainerNode cn, VOSURI vosuri, Integer intgr) throws TransientException {
-        throw new UnsupportedOperationException();
+        getChildren(cn, vosuri, 100, true);
     }
 
     @Override
     public void getChildren(ContainerNode cn, boolean bln) throws TransientException {
-        throw new UnsupportedOperationException();
+        getChildren(cn, null, 100, bln);
     }
 
     @Override
-    public void getChildren(ContainerNode cn, VOSURI vosuri, Integer intgr, boolean bln) throws TransientException {
-        throw new UnsupportedOperationException();
+    public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
+        try {
+            Path root = getRootFromConfig();
+            Iterator<Node> ni = NodeUtil.list(root, cn, start, limit);
+            while (ni.hasNext()) {
+                Node cur = ni.next();
+                UserPrincipal owner = NodeUtil.getOwner(root.getFileSystem().getUserPrincipalLookupService(), cur);
+                Subject so = identityManager.toSubject(owner);
+                log.debug(cur.getUri() + " owner: " + so);
+                cur.appData = new NodeID(-1L, so, null);
+                cur.setParent(cn);
+                cn.getNodes().add(cur);
+                log.debug("[getChildren] " + cur);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
     }
 
     @Override
-    public void getChild(ContainerNode cn, String string) throws TransientException {
-        throw new UnsupportedOperationException();
+    public void getChild(ContainerNode cn, String name) throws TransientException {
+        getChild(cn, name, true);
     }
 
     @Override
-    public void getChild(ContainerNode cn, String string, boolean bln) throws TransientException {
-        throw new UnsupportedOperationException();
+    public void getChild(ContainerNode cn, String name, boolean resolveMetadata) throws TransientException {
+        VOSURI vuri = new VOSURI(URI.create(cn.getUri().getURI().toASCIIString() + "/" + name));
+        try {
+
+            Node child = get(vuri);
+            if (child != null) {
+                cn.getNodes().add(child);
+            }
+        } catch (NodeNotFoundException ignore) {
+            log.debug("not found: " + vuri);
+        }
     }
 
     @Override
     public void getProperties(Node node) throws TransientException {
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException("getProperties");
     }
 
     @Override
     public Node put(Node node) throws NodeNotSupportedException, TransientException {
-        throw new UnsupportedOperationException();
+        if (node.isStructured()) {
+            throw new NodeNotSupportedException("StructuredDataNode is not supported.");
+        }
+        if (node.getParent() != null && node.getParent().appData == null) {
+            throw new IllegalArgumentException("parent of node is not a persistent node: " + node.getUri().getPath());
+        }
+
+        if (node.appData != null) { // persistent node == update == not supported
+            throw new UnsupportedOperationException("update of existing node not supported");
+        }
+
+        try {
+            Subject s = AuthenticationUtil.getCurrentSubject();
+            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            NodeUtil.setOwner(node, owner);
+            Path root = getRootFromConfig();
+            NodeUtil.create(root, node, posixGroup);
+            return NodeUtil.get(root, node.getUri());
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
     }
 
     @Override
@@ -155,7 +247,12 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void delete(Node node) throws TransientException {
-        throw new UnsupportedOperationException();
+        try {
+            Path root = getRootFromConfig();
+            NodeUtil.delete(root, node.getUri());
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
     }
 
     @Override
