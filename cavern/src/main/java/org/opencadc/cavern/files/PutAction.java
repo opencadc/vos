@@ -67,14 +67,18 @@
 
 package org.opencadc.cavern.files;
 
+
+import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.rest.RestAction;
-import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.security.AccessControlException;
+import java.io.InputStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import org.apache.log4j.Logger;
 
@@ -82,42 +86,39 @@ import org.apache.log4j.Logger;
  *
  * @author majorb
  */
-public abstract class FileAction extends RestAction {
-    private static final Logger log = Logger.getLogger(FileAction.class);
+public class PutAction extends FileAction {
+    private static final Logger log = Logger.getLogger(PutAction.class);
 
-    // TBD: make this configurable
-    protected static final String ROOT = "/tmp/cavern-tests";
+    private static final String INPUT_STREAM = "in";
 
-    private VOSURI nodeURI;
-
-    protected FileAction() {
+    public PutAction() {
+        super();
     }
 
     @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return null;
-    }
-
-    protected VOSURI getNodeURI() throws AccessControlException, IOException {
-        initTarget();
-        return nodeURI;
-    }
-
-    private void initTarget() throws AccessControlException, IOException {
-        if (nodeURI == null) {
-            String path = syncInput.getPath();
-            String[] parts = path.split("/");
-            if (parts.length < 5) {
-                throw new IllegalArgumentException("Invalid request");
+    protected InlineContentHandler getInlineContentHandler()
+    {
+        return new InlineContentHandler() {
+            public Content accept(String name, String contentType,
+                    InputStream inputStream)
+                    throws InlineContentException, IOException
+            {
+                InlineContentHandler.Content c = new InlineContentHandler.Content();
+                c.name = INPUT_STREAM;
+                c.value = inputStream;
+                return c;
             }
-            log.debug("Context path: " + syncInput.getContextPath());
-            String meta = URLDecoder.decode(parts[3], "UTF-8");
-            String sig = URLDecoder.decode(parts[4], "UTF-8");
-            log.debug("meta: " + meta);
-            log.debug("sig: " + sig);
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            nodeURI = urlGen.getNodeURI(sig, meta, Direction.pullFromVoSpace);
-            log.debug("Init node uri: " + nodeURI);
-        }
+        };
+    }
+
+    @Override
+    public void doAction() throws Exception {
+        VOSURI nodeURI = getNodeURI();
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, nodeURI.getPath());
+        InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
+        log.debug("Starting copy to file: " + target);
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        log.debug("Completed copy to file: " + target);
     }
 }

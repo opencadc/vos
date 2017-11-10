@@ -21,6 +21,18 @@ version = '1000'
 
 war {
     archiveName = project.name + '##' + project.version + '.war'
+    
+    // Include the private key for preauthorized transfers
+    from(System.getenv('A') + '/etc/') {
+        into 'WEB-INF/classes/'
+        include 'RsaSignaturePriv.key'
+    }
+}
+
+sourceSets {
+    test {
+        resources.srcDirs += new File(System.getenv('A') + '/etc/')
+    }
 }
 
 mainClassName = 'org.opencadc.cavern.probe.Main'

@@ -68,21 +68,40 @@
 package org.opencadc.cavern.files;
 
 
+import ca.nrc.cadc.vos.VOSURI;
+
+import java.io.FileNotFoundException;
+import java.io.OutputStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.apache.log4j.Logger;
 
 /**
  *
- * @author pdowler
+ * @author majorb
  */
 public class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
-    public GetAction() { 
+    public GetAction() {
         super();
     }
 
     @Override
     public void doAction() throws Exception {
-        throw new UnsupportedOperationException();
+        VOSURI nodeURI = getNodeURI();
+        FileSystem fs = FileSystems.getDefault();
+        Path source = fs.getPath(ROOT, nodeURI.getPath());
+        OutputStream out = syncOutput.getOutputStream();
+        if (!Files.exists(source)) {
+            throw new FileNotFoundException(nodeURI.getPath());
+        }
+        log.debug("Starting copy of file " + source);
+        Files.copy(source, out);
+        log.debug("Completed copy of file " + source);
+        out.flush();
     }
 }
