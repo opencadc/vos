@@ -270,4 +270,11 @@ public class CavernURLGeneratorTest
         }
     }
 
+    @Test
+    public void testBase64URL() {
+        String s = "11/++222/";
+        log.debug("s: " + s);
+        Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
+    }
+
 }
