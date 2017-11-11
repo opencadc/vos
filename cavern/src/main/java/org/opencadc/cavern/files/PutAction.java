@@ -116,6 +116,11 @@ public class PutAction extends FileAction {
         VOSURI nodeURI = getNodeURI();
         FileSystem fs = FileSystems.getDefault();
         Path target = fs.getPath(ROOT, nodeURI.getPath());
+        if (Files.exists(target) && !Files.isWritable(target)) {
+            // permission denied
+            syncOutput.setCode(403);
+            return;
+        }
         InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
         log.debug("Starting copy to file: " + target);
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);

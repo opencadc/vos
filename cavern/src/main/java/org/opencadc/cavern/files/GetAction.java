@@ -72,10 +72,13 @@ import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
 
@@ -92,16 +95,31 @@ public class GetAction extends FileAction {
 
     @Override
     public void doAction() throws Exception {
-        VOSURI nodeURI = getNodeURI();
-        FileSystem fs = FileSystems.getDefault();
-        Path source = fs.getPath(ROOT, nodeURI.getPath());
-        OutputStream out = syncOutput.getOutputStream();
-        if (!Files.exists(source)) {
-            throw new FileNotFoundException(nodeURI.getPath());
+        try {
+            VOSURI nodeURI = getNodeURI();
+            FileSystem fs = FileSystems.getDefault();
+            Path source = fs.getPath(ROOT, nodeURI.getPath());
+            if (!Files.exists(source)) {
+                // not found
+                syncOutput.setCode(404);
+                return;
+            }
+            if (!Files.isReadable(source)) {
+                // permission denied
+                syncOutput.setCode(403);
+                return;
+            }
+            OutputStream out = syncOutput.getOutputStream();
+            log.debug("Starting copy of file " + source);
+            Files.copy(source, out);
+            log.debug("Completed copy of file " + source);
+            out.flush();
+        } catch (FileNotFoundException | NoSuchFileException e) {
+            log.debug(e);
+            syncOutput.setCode(404);
+        } catch (AccessControlException | AccessDeniedException e) {
+            log.debug(e);
+            syncOutput.setCode(403);
         }
-        log.debug("Starting copy of file " + source);
-        Files.copy(source, out);
-        log.debug("Completed copy of file " + source);
-        out.flush();
     }
 }

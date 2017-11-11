@@ -73,7 +73,6 @@ import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
@@ -107,16 +106,15 @@ public abstract class FileAction extends RestAction {
         if (nodeURI == null) {
             String path = syncInput.getPath();
             String[] parts = path.split("/");
-            if (parts.length < 5) {
+            if (parts.length < 3) {
                 throw new IllegalArgumentException("Invalid request");
             }
-            log.debug("Context path: " + syncInput.getContextPath());
-            String meta = URLDecoder.decode(parts[3], "UTF-8");
-            String sig = URLDecoder.decode(parts[4], "UTF-8");
+            String meta = parts[0];
+            String sig = parts[1];
             log.debug("meta: " + meta);
             log.debug("sig: " + sig);
             CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            nodeURI = urlGen.getNodeURI(sig, meta, Direction.pullFromVoSpace);
+            nodeURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
             log.debug("Init node uri: " + nodeURI);
         }
     }

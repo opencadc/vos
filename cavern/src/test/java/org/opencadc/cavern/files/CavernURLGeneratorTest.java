@@ -78,7 +78,6 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
 import java.net.URL;
-import java.net.URLDecoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -170,8 +169,8 @@ public class CavernURLGeneratorTest
             String path = transferURL.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
-            String sig = URLDecoder.decode(parts[4], "UTF-8");
-            String meta = URLDecoder.decode(parts[3], "UTF-8");
+            String sig = parts[4];
+            String meta = parts[3];
             VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
             Assert.assertEquals(nodeURI, retURI);
 
@@ -194,8 +193,8 @@ public class CavernURLGeneratorTest
             URL transferURL = urls.get(0);
             String path = transferURL.getPath();
             String[] parts = path.split("/");
-            String sig = URLDecoder.decode(parts[4], "UTF-8");
-            String meta = URLDecoder.decode(parts[3], "UTF-8");
+            String sig = parts[4];
+            String meta = parts[3];
             try {
                 urlGen.getNodeURI(meta, sig, Direction.pushToVoSpace);
                 Assert.fail();
@@ -222,8 +221,8 @@ public class CavernURLGeneratorTest
             URL transferURL = urls.get(0);
             String path = transferURL.getPath();
             String[] parts = path.split("/");
-            //String sig = URLDecoder.decode(parts[4], "UTF-8");
-            String meta = URLDecoder.decode(parts[3], "UTF-8");
+            //String sig = parts[4];
+            String meta = parts[3];
             try {
                 urlGen.getNodeURI(meta, "12345", Direction.pushToVoSpace);
                 Assert.fail();
@@ -254,8 +253,8 @@ public class CavernURLGeneratorTest
             String path = transferURL.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
-            String sig = URLDecoder.decode(parts[4], "UTF-8");
-            //String meta = URLDecoder.decode(parts[3], "UTF-8");
+            String sig = parts[4];
+            //String meta = parts[3];
             VOSURI altURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/fakeFile");
             String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
             try {

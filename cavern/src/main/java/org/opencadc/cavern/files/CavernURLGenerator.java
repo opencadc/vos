@@ -89,12 +89,10 @@ import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -215,22 +213,18 @@ public class CavernURLGenerator implements TransferGenerator
 
         // build the request path
         StringBuilder path = new StringBuilder();
-        try {
-            String metaURLEncoded = URLEncoder.encode(meta, "UTF-8");
-            String sigURLEncoded = URLEncoder.encode(sig, "UTF-8");
+        String metaURLEncoded = base64URLEncode(meta);
+        String sigURLEncoded = base64URLEncode(sig);
 
-            log.debug("metaURLEncoded: " + metaURLEncoded);
-            log.debug("sigURLEncoded: " + sigURLEncoded);
+        log.debug("metaURLEncoded: " + metaURLEncoded);
+        log.debug("sigURLEncoded: " + sigURLEncoded);
 
-            path.append("/");
-            path.append(metaURLEncoded);
-            path.append("/");
-            path.append(sigURLEncoded);
-            path.append(node.getUri().getPath());
-            log.debug("Created request path: " + path.toString());
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Could not generate url", e);
-        }
+        path.append("/");
+        path.append(metaURLEncoded);
+        path.append("/");
+        path.append(sigURLEncoded);
+        path.append(node.getUri().getPath());
+        log.debug("Created request path: " + path.toString());
 
         // add the request path to each of the base URLs
         List<URL> returnList = new ArrayList<URL>();
@@ -257,8 +251,8 @@ public class CavernURLGenerator implements TransferGenerator
         log.debug("sig: " + sig);
         log.debug("meta: " + meta);
 
-        byte[] sigBytes = Base64.decode(sig);
-        byte[] metaBytes = Base64.decode(meta);
+        byte[] sigBytes = Base64.decode(base64URLDecode(sig));
+        byte[] metaBytes = Base64.decode(base64URLDecode(meta));
 
         RsaSignatureVerifier sv = new RsaSignatureVerifier();
         boolean verified;
@@ -307,5 +301,22 @@ public class CavernURLGenerator implements TransferGenerator
         throw new IllegalArgumentException("Missing node URI");
 
     }
+
+    public static String base64URLEncode(String s) {
+        if (s == null) {
+            return null;
+        }
+        return s.replace("/", "-").replace("+", "_");
+    }
+
+    public static String base64URLDecode(String s) {
+        if (s == null) {
+            return null;
+        }
+        return s.replace("-", "/").replace("_", "+");
+    }
+
+
+
 
 }
