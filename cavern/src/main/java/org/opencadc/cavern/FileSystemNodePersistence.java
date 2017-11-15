@@ -80,11 +80,13 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.util.PropertiesReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
@@ -101,8 +103,6 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
 
-    private static final String POSIX_GROUP = "vospace";
-
     private PosixIdentityManager identityManager;
     private Path root;
     private GroupPrincipal posixGroup;
@@ -110,16 +110,30 @@ public class FileSystemNodePersistence implements NodePersistence {
     public FileSystemNodePersistence() {
         this.root = getRootFromConfig();
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
+        String groupConfig = getPosixGroupFromConfig();
         try {
-            this.posixGroup = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(POSIX_GROUP);
+            this.posixGroup = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(groupConfig);
         } catch (IOException ex) {
-            throw new RuntimeException("CONFIG: failed to lookup posix group: " + POSIX_GROUP, ex);
+            throw new RuntimeException("CONFIG: failed to lookup posix group: " + groupConfig, ex);
         }
     }
 
     private Path getRootFromConfig() {
-        File baseDir = new File("/tmp/cavern-base");
-        return FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        String rootConfig = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        if (rootConfig == null) {
+            throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
+        }
+        return Paths.get(rootConfig);
+    }
+
+    private String getPosixGroupFromConfig() {
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        String groupConfig = pr.getFirstPropertyValue("POSIX_GROUP");
+        if (groupConfig == null) {
+            throw new RuntimeException("CONFIG: Failed to find POSIX_GROUP");
+        }
+        return groupConfig;
     }
 
     @Override

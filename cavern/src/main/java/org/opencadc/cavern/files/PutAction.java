@@ -115,7 +115,7 @@ public class PutAction extends FileAction {
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
         FileSystem fs = FileSystems.getDefault();
-        Path target = fs.getPath(ROOT, nodeURI.getPath());
+        Path target = fs.getPath(getRoot(), nodeURI.getPath());
         if (Files.exists(target) && !Files.isWritable(target)) {
             // permission denied
             syncOutput.setCode(403);

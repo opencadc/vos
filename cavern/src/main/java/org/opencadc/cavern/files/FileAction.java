@@ -71,6 +71,7 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.util.PropertiesReader;
 
 import java.io.IOException;
 import java.security.AccessControlException;
@@ -85,11 +86,16 @@ public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     // TBD: make this configurable
-    protected static final String ROOT = "/tmp/cavern-tests";
+    private String root;
 
     private VOSURI nodeURI;
 
     protected FileAction() {
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        if (root == null) {
+            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
+        }
     }
 
     @Override
@@ -100,6 +106,10 @@ public abstract class FileAction extends RestAction {
     protected VOSURI getNodeURI() throws AccessControlException, IOException {
         initTarget();
         return nodeURI;
+    }
+
+    protected String getRoot() {
+        return root;
     }
 
     private void initTarget() throws AccessControlException, IOException {
@@ -113,7 +123,7 @@ public abstract class FileAction extends RestAction {
             String sig = parts[1];
             log.debug("meta: " + meta);
             log.debug("sig: " + sig);
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
+            CavernURLGenerator urlGen = new CavernURLGenerator(root);
             nodeURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
             log.debug("Init node uri: " + nodeURI);
         }

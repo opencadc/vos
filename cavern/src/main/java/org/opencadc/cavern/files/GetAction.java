@@ -98,7 +98,7 @@ public class GetAction extends FileAction {
         try {
             VOSURI nodeURI = getNodeURI();
             FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(ROOT, nodeURI.getPath());
+            Path source = fs.getPath(getRoot(), nodeURI.getPath());
             if (!Files.exists(source)) {
                 // not found
                 syncOutput.setCode(404);
