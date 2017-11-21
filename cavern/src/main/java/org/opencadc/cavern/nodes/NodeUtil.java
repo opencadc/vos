@@ -97,6 +97,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
 
 /**
@@ -161,10 +162,20 @@ public abstract class NodeUtil {
         }
         
         PosixFileAttributeView pv = Files.getFileAttributeView(ret, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        pv.setOwner(owner);
         if (posixGroup != null) {
             pv.setGroup(posixGroup);
+            if (!(node instanceof LinkNode)) {
+                Set<PosixFilePermission> perms = pv.readAttributes().permissions();
+                perms.add(PosixFilePermission.GROUP_WRITE);
+                perms.add(PosixFilePermission.GROUP_WRITE);
+                if (node instanceof ContainerNode) {
+                    perms.add(PosixFilePermission.GROUP_EXECUTE);
+                }
+                pv.setPermissions(perms);
+            }
         }
+
+        pv.setOwner(owner);
         
         return ret;
     }
