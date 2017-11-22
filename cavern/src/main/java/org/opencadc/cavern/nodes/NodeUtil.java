@@ -75,6 +75,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.DirectoryStream;
@@ -84,6 +85,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
@@ -98,6 +100,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -107,19 +110,19 @@ import org.apache.log4j.Logger;
 public abstract class NodeUtil {
     private static final Logger log = Logger.getLogger(NodeUtil.class);
 
-    private NodeUtil() { 
+    private NodeUtil() {
     }
-    
+
     public static Path nodeToPath(Path root, Node node) {
         assertNotNull("node", node);
         return nodeToPath(root, node.getUri());
     }
-    
+
     public static Path nodeToPath(Path root, VOSURI uri) {
         assertNotNull("root", root);
         assertNotNull("uri", uri);
         log.debug("[nodeToPath] root: " + root + " uri: " + uri);
-        
+
         String nodePath = uri.getPath();
         if (nodePath.startsWith("/")) {
             nodePath = nodePath.substring(1);
@@ -128,21 +131,21 @@ public abstract class NodeUtil {
         log.debug("[nodeToPath] path: " + uri + " -> " + np);
         return np;
     }
-    
+
     public static VOSURI pathToURI(Path root, Path p, VOSURI rootURI) {
         Path tp = root.relativize(p);
         return new VOSURI(URI.create(rootURI.getScheme() + "://" + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
-    
+
     public static Path create(Path root, Node node, GroupPrincipal posixGroup) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
-        
+
         UserPrincipal owner = getOwner(root.getFileSystem().getUserPrincipalLookupService(), node);
         assertNotNull("owner", owner);
         // TODO: don't assume convention of user == default group
         //GroupPrincipal group = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(owner.getName());
-        
+
         Path ret = null;
         if (node instanceof ContainerNode) {
             log.debug("[create] dir: " + np);
@@ -160,7 +163,7 @@ public abstract class NodeUtil {
         } else {
             throw new UnsupportedOperationException("unexpected node type: " + node.getClass().getName());
         }
-        
+
         PosixFileAttributeView pv = Files.getFileAttributeView(ret, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (posixGroup != null) {
             pv.setGroup(posixGroup);
@@ -176,16 +179,16 @@ public abstract class NodeUtil {
         }
 
         pv.setOwner(owner);
-        
+
         return ret;
     }
-    
+
     public static Path update(Path root, Node node) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[update] path: " + node.getUri() + " -> " + np);
         throw new UnsupportedOperationException();
     }
-    
+
     public static Node get(Path root, VOSURI uri) throws IOException {
         LinkedList<String> nodeNames = new LinkedList<String>();
         nodeNames.add(uri.getName());
@@ -200,7 +203,7 @@ public abstract class NodeUtil {
             parent = parent.getParentURI();
         }
         log.debug("[get] path components: " + nodeNames.size());
-        
+
         ContainerNode cn = null; // new ContainerNode(rootURI);
         //cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
         Iterator<String> iter = nodeNames.descendingIterator();
@@ -233,7 +236,19 @@ public abstract class NodeUtil {
         log.debug("[get] returning " + ret);
         return ret;
     }
-    
+
+    public static void move(Path root, VOSURI source, VOSURI dest) throws IOException {
+        Path sourcePath = nodeToPath(root, source);
+        Path destPath = nodeToPath(root, dest);
+        Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    public static void copy(Path root, VOSURI source, VOSURI dest) throws IOException {
+        Path sourcePath = nodeToPath(root, source);
+        Path destPath = nodeToPath(root, dest);
+        Files.copy(sourcePath, destPath, StandardCopyOption.COPY_ATTRIBUTES);
+    }
+
     private static Node pathToNode(Path root, Path p, VOSURI rootURI) throws IOException, NoSuchFileException {
         Node ret = null;
         VOSURI nuri = pathToURI(root, p, rootURI);
@@ -271,13 +286,13 @@ public abstract class NodeUtil {
         }
         return ret;
     }
-    
+
     public static void delete(Path root, VOSURI uri) throws IOException {
         Path np = nodeToPath(root, uri);
         log.debug("[create] path: " + uri + " -> " + np);
         delete(np);
     }
-    
+
     private static void delete(Path path)  throws IOException {
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
             Files.walkFileTree(path, new DeleteVisitor());
@@ -285,7 +300,7 @@ public abstract class NodeUtil {
             Files.delete(path);
         }
     }
-    
+
     private static class DeleteVisitor implements FileVisitor<Path> {
         @Override
         public FileVisitResult preVisitDirectory(Path t, BasicFileAttributes bfa) throws IOException {
@@ -312,7 +327,7 @@ public abstract class NodeUtil {
             return FileVisitResult.CONTINUE;
         }
     }
-    
+
     public static Iterator<Node> list(Path root, ContainerNode node, VOSURI start, Integer limit) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[list] " + node.getUri() + " -> " + np);
@@ -337,12 +352,12 @@ public abstract class NodeUtil {
         log.debug("[list] found: " + nodes.size());
         return nodes.iterator();
     }
-    
+
     // currently unused visitor with the minimal setup to call pathToNode
     private static class DirectoryVisitor implements FileVisitor<Path> {
         private final Path root;
         private final VOSURI rootURI;
-        
+
         List<Node> nodes = new ArrayList<Node>();
 
         public DirectoryVisitor(Path root, VOSURI rootURI) {
@@ -374,20 +389,20 @@ public abstract class NodeUtil {
             log.debug("[postVisitDirectory] " + t);
             return FileVisitResult.CONTINUE;
         }
-        
+
     }
-    
+
     public static void assertNotNull(String name, Object o) {
         if (o == null) {
             throw new IllegalArgumentException(name + " cannot be null");
         }
     }
-            
+
     // temporary: store bare UserPrincipal in node property list as string
     public static void setOwner(Node node, UserPrincipal owner) {
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner.getName()));
     }
-    
+
     public static UserPrincipal getOwner(UserPrincipalLookupService users, Node node) throws IOException {
         NodeProperty prop = node.findProperty(VOS.PROPERTY_URI_CREATOR);
         if (prop != null) {

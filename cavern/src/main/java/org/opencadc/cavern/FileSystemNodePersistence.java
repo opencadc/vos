@@ -70,6 +70,7 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -80,18 +81,18 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.util.PropertiesReader;
-import java.io.File;
+
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
+
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -108,7 +109,13 @@ public class FileSystemNodePersistence implements NodePersistence {
     private GroupPrincipal posixGroup;
 
     public FileSystemNodePersistence() {
-        this.root = getRootFromConfig();
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        String rootConfig = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        if (rootConfig == null) {
+            throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
+        }
+        this.root = Paths.get(rootConfig);
+
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
         String groupConfig = getPosixGroupFromConfig();
         try {
@@ -116,15 +123,6 @@ public class FileSystemNodePersistence implements NodePersistence {
         } catch (IOException ex) {
             throw new RuntimeException("CONFIG: failed to lookup posix group: " + groupConfig, ex);
         }
-    }
-
-    private Path getRootFromConfig() {
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        String rootConfig = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
-        if (rootConfig == null) {
-            throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
-        }
-        return Paths.get(rootConfig);
     }
 
     private String getPosixGroupFromConfig() {
@@ -139,7 +137,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
         try {
-            Path root = getRootFromConfig();
             Node ret = NodeUtil.get(root, uri);
             if (ret == null) {
                 throw new NodeNotFoundException(uri.getPath());
@@ -188,7 +185,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
         try {
-            Path root = getRootFromConfig();
             Iterator<Node> ni = NodeUtil.list(root, cn, start, limit);
             while (ni.hasNext()) {
                 Node cur = ni.next();
@@ -246,7 +242,6 @@ public class FileSystemNodePersistence implements NodePersistence {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
             NodeUtil.setOwner(node, owner);
-            Path root = getRootFromConfig();
             NodeUtil.create(root, node, posixGroup);
             return NodeUtil.get(root, node.getUri());
         } catch (IOException ex) {
@@ -262,7 +257,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public void delete(Node node) throws TransientException {
         try {
-            Path root = getRootFromConfig();
             NodeUtil.delete(root, node.getUri());
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
@@ -281,11 +275,54 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void move(Node node, ContainerNode cn) throws TransientException {
-        throw new UnsupportedOperationException();
+        log.debug("move: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
+        // move rule check: check authorities
+        checkSameAuthority(node, cn);
+
+        if (node instanceof ContainerNode)
+        {
+            // move rule check: check that we are not moving root or a root container
+            if (node.getParent() == null || node.getParent().getUri().isRoot())
+                throw new IllegalArgumentException("Cannot move a root container.");
+
+            // move rule check: check that 'src' is not in the path of 'dest' so that
+            // circular paths are not created
+            Node target = cn;
+            while (target != null && !target.getUri().isRoot())
+            {
+                if (target.getUri().getPath().equals(node.getUri().getPath()))
+                    throw new IllegalArgumentException("Cannot move to a contained sub-node.");
+                target = target.getParent();
+            }
+        }
+
+        try {
+            NodeUtil.move(root, node.getUri(), cn.getUri());
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
+
     }
 
     @Override
     public void copy(Node node, ContainerNode cn) throws TransientException {
-        throw new UnsupportedOperationException();
+        log.debug("copy: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
+        // copy rule check: check authorities
+        checkSameAuthority(node, cn);
+
+        try {
+            NodeUtil.copy(root, node.getUri(), cn.getUri());
+        } catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
+    }
+
+    private void checkSameAuthority(Node n1, Node n2) {
+        URI srcAuthority = n1.getUri().getServiceURI(); // this removes the ! vs ~ issue
+        URI destAuthority = n2.getUri().getServiceURI();
+        if (!srcAuthority.equals(destAuthority))
+        {
+            throw new RuntimeException("Nodes have different authorities.");
+        }
     }
 }
