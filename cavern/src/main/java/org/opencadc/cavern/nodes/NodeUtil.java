@@ -87,6 +87,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
@@ -288,15 +289,17 @@ public abstract class NodeUtil
         applyPermissions(root, destPath, posixGroup, owner);
     }
 
-    public static void copy(Path root, VOSURI source, VOSURI dest, UserPrincipal owner, GroupPrincipal posixGroup) throws IOException {
+    public static void copy(Path root, VOSURI source, VOSURI destDir, UserPrincipal owner, GroupPrincipal posixGroup) throws IOException {
         Path sourcePath = nodeToPath(root, source);
-        Path destPath = nodeToPath(root, dest);
+        VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + source.getName()));
+        Path destPath = nodeToPath(root, destWithName);
         // follow links
         if (Files.isDirectory(sourcePath)) {
             Files.walkFileTree(sourcePath, new CopyVisitor(root, sourcePath, destPath, owner, posixGroup));
-        } else {
+        } else { // links and files
             Files.copy(sourcePath, destPath, StandardCopyOption.COPY_ATTRIBUTES);
             applyPermissions(root, destPath, posixGroup, owner);
+            Files.setLastModifiedTime(destPath, FileTime.fromMillis(System.currentTimeMillis()));
         }
     }
 
@@ -428,11 +431,12 @@ public abstract class NodeUtil
             log.debug("copy: pre-visit dir: " + t);
             if (sourceDir == null) {
                 sourceDir = t;
-            } else {
-                Path dir = destDir.resolve(sourceDir.relativize(t));
-                Files.createDirectories(dir);
-                NodeUtil.applyPermissions(root, dir, posixGroup, owner);
             }
+            Path dir = destDir.resolve(sourceDir.relativize(t));
+            log.debug("Creating: " + dir);
+            Files.createDirectories(dir);
+            NodeUtil.applyPermissions(root, dir, posixGroup, owner);
+            Files.setLastModifiedTime(dir, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
 
@@ -442,8 +446,10 @@ public abstract class NodeUtil
         {
             log.debug("copy: visit file: " + t);
             Path file = destDir.resolve(sourceDir.relativize(t));
+            log.debug("creating: " + file);
             Files.copy(t, file);
             NodeUtil.applyPermissions(root, file, posixGroup, owner);
+            Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
 

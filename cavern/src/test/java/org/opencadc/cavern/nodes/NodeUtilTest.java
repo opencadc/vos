@@ -462,4 +462,261 @@ public class NodeUtilTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    @Test
+    public void testCopyFile() {
+        try {
+            // top-level test dir
+            String name = UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode n = new ContainerNode(testDir);
+            NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // make copy target dir
+            String name2 = UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            ContainerNode n2 = new ContainerNode(testDir2);
+            NodeUtil.setOwner(n2, up);
+            Path dir2 = doCreate(root, n2, up);
+            Assert.assertTrue("dir2", Files.isDirectory(dir2));
+
+            // TEST COPY FILE
+
+            // create data node in dir 1
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+            DataNode tn = new DataNode(uri);
+            NodeUtil.setOwner(tn, up);
+            Path tfile = doCreate(root, tn, up);
+            Node tn2 = NodeUtil.get(root, uri);
+            log.info("found: " + tn2);
+            Assert.assertNotNull(tn2);
+            Assert.assertTrue(tn2 instanceof DataNode);
+            Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+
+            // copy the data node to dir2
+            log.debug("Copying: " + tn2.getUri() + " to " + testDir2);
+            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
+            NodeUtil.copy(root, tn.getUri(), testDir2, up, gp);
+            uri = new VOSURI(URI.create(testDir2.getURI().toASCIIString() + "/file-" + name));
+            log.debug("Asserting: " + uri);
+            Node copied = NodeUtil.get(root, uri);
+            Assert.assertNotNull(copied);
+            Assert.assertTrue(copied instanceof DataNode);
+            Assert.assertEquals(uri, copied.getUri());
+            Assert.assertNotNull("lastModified", copied.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            // check the original
+            log.debug("Asserting: " + tn.getUri());
+            Node orig = NodeUtil.get(root, tn.getUri());
+            Assert.assertNotNull(orig);
+            Assert.assertTrue(orig instanceof DataNode);
+            Assert.assertEquals(tn.getUri(), orig.getUri());
+            Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testCopyDirectory() {
+        try {
+            // top-level test dir
+            String name = UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode cn = new ContainerNode(testDir);
+            NodeUtil.setOwner(cn, up);
+            Path dir = doCreate(root, cn, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // make copy target dir
+            String name2 = UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            ContainerNode n2 = new ContainerNode(testDir2);
+            NodeUtil.setOwner(n2, up);
+            Path dir2 = doCreate(root, n2, up);
+            Assert.assertTrue("dir2", Files.isDirectory(dir2));
+
+            // TEST COPY POPULATED DIRECTORY
+
+            // create data node in dir 1
+            VOSURI top = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c"));
+            VOSURI[] vosuris = {
+                top,
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d2")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d3")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/d2")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/d1"))
+            };
+
+            Node n = null;
+            for (VOSURI u : vosuris) {
+                if (u.getName().startsWith("d")) {
+                    n = new DataNode(u);
+                } else {
+                    n = new ContainerNode(u);
+                }
+                NodeUtil.setOwner(n, up);
+                doCreate(root, n, up);
+            }
+
+            log.debug("Copying: " + top + " to " + testDir2);
+            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
+            NodeUtil.copy(root, top, testDir2, up, gp);
+
+            // assert both copies are there
+            for (VOSURI u : vosuris) {
+                // ensure the original is there
+                log.debug("Asserting: " + u);
+                Node orig = NodeUtil.get(root, u);
+                Assert.assertNotNull(orig);
+                if (u.getName().startsWith("d")) {
+                    Assert.assertTrue(orig instanceof DataNode);
+                } else {
+                    Assert.assertTrue(orig instanceof ContainerNode);
+                }
+                Assert.assertEquals(u, orig.getUri());
+                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                // assure the copy is there
+                VOSURI c = new VOSURI(URI.create(u.toString().replace(testDir.getURI().toASCIIString(), "vos://canfar.net~cavern/test-" + name2)));
+                log.debug("Asserting: " + c);
+                Node copy = NodeUtil.get(root, c);
+                Assert.assertNotNull(copy);
+                if (c.getName().startsWith("d")) {
+                    Assert.assertTrue(orig instanceof DataNode);
+                } else {
+                    Assert.assertTrue(orig instanceof ContainerNode);
+                }
+                Assert.assertEquals(c, copy.getUri());
+                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            }
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testCopyDirectoryWithLinks() {
+        try {
+            // top-level test dir
+            String name = UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode cn = new ContainerNode(testDir);
+            NodeUtil.setOwner(cn, up);
+            Path dir = doCreate(root, cn, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // create data node in outside directory
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/linkdir"));
+            cn = new ContainerNode(uri);
+            NodeUtil.setOwner(cn, up);
+            doCreate(root, cn, up);
+            VOSURI linkTarget = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/linkdir/file"));
+            DataNode dn = new DataNode(linkTarget);
+            NodeUtil.setOwner(dn, up);
+            doCreate(root, dn, up);
+
+            // make copy target dir
+            String name2 = UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            ContainerNode n2 = new ContainerNode(testDir2);
+            NodeUtil.setOwner(n2, up);
+            Path dir2 = doCreate(root, n2, up);
+            Assert.assertTrue("dir2", Files.isDirectory(dir2));
+
+            // TEST COPY POPULATED DIRECTORY
+
+            // create data node in dir 1
+            VOSURI top = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c"));
+            VOSURI[] vosuris = {
+                top,
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d2")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/c1/d3")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c1/l1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1/c1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/c2/c1/c1/d1")),
+                new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/c/l1"))
+            };
+
+            Node n = null;
+            for (VOSURI u : vosuris) {
+                if (u.getName().startsWith("d")) {
+                    n = new DataNode(u);
+                } else if (u.getName().startsWith("l")) {
+                    n = new LinkNode(u, linkTarget.getURI());
+                } else {
+                    n = new ContainerNode(u);
+                }
+                NodeUtil.setOwner(n, up);
+                doCreate(root, n, up);
+            }
+
+            log.debug("Copying: " + top + " to " + testDir2);
+            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
+            NodeUtil.copy(root, top, testDir2, up, gp);
+
+            // assert both copies are there
+            for (VOSURI u : vosuris) {
+                // ensure the original is there
+                log.debug("Asserting: " + u);
+                Node orig = NodeUtil.get(root, u);
+                Assert.assertNotNull(orig);
+                if (u.getName().startsWith("d")) {
+                    Assert.assertTrue(orig instanceof DataNode);
+                } else if (u.getName().startsWith("l")) {
+                    Assert.assertTrue(orig instanceof LinkNode);
+                } else {
+                    Assert.assertTrue(orig instanceof ContainerNode);
+                }
+                Assert.assertEquals(u, orig.getUri());
+                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                // assure the copy is there
+                VOSURI c = new VOSURI(URI.create(u.toString().replace(testDir.getURI().toASCIIString(), "vos://canfar.net~cavern/test-" + name2)));
+                log.debug("Asserting: " + c);
+                Node copy = NodeUtil.get(root, c);
+                Assert.assertNotNull(copy);
+                // link nodes turn into data nodes
+                if (c.getName().startsWith("d") || c.getName().startsWith("l")) {
+                    Assert.assertTrue(copy instanceof DataNode);
+                } else {
+                    Assert.assertTrue(copy instanceof ContainerNode);
+                }
+                Assert.assertEquals(c, copy.getUri());
+                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            }
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
 }
