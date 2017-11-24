@@ -287,6 +287,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
             // move rule check: check that 'src' is not in the path of 'dest' so that
             // circular paths are not created
+            // This check is probably done by the file system, consider removing it.
             Node target = cn;
             while (target != null && !target.getUri().isRoot())
             {
@@ -297,11 +298,12 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
 
         try {
-            NodeUtil.move(root, node.getUri(), cn.getUri());
+            Subject s = AuthenticationUtil.getCurrentSubject();
+            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            NodeUtil.move(root, node.getUri(), cn.getUri(), owner, posixGroup);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
-
     }
 
     @Override
@@ -311,7 +313,9 @@ public class FileSystemNodePersistence implements NodePersistence {
         checkSameAuthority(node, cn);
 
         try {
-            NodeUtil.copy(root, node.getUri(), cn.getUri());
+            Subject s = AuthenticationUtil.getCurrentSubject();
+            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            NodeUtil.copy(root, node.getUri(), cn.getUri(), owner, posixGroup);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
