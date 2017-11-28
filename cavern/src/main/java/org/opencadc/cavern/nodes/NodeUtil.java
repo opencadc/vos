@@ -258,7 +258,9 @@ public abstract class NodeUtil
                 Node tmp = pathToNode(root, p, rootURI);
                 if (cn == null)
                 {
-                    cn = (ContainerNode) tmp; // top-level dir
+                    if (tmp instanceof ContainerNode) {
+                        cn = (ContainerNode) tmp; // top-level dir
+                    }
                 } else
                 {
                     cn.getNodes().add(tmp);

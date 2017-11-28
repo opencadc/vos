@@ -67,25 +67,29 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.AuthenticatorImpl;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vosi.AvailabilityStatus;
 import ca.nrc.cadc.vosi.WebService;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
+
+import java.io.File;
 import java.net.URI;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
+
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.probe.FileSystemProbe;
 
 /**
  *
@@ -118,10 +122,27 @@ public class ServiceAvailability implements WebService {
                 return new AvailabilityStatus(false, null, null, null, VOSpaceAuthorizer.READ_ONLY_MSG);
             }
 
+            // File system probe
+            PropertiesReader pr = new PropertiesReader("Cavern.properties");
+            String rootPath = pr.getFirstPropertyValue("PROBE_ROOT");
+            log.debug("rootPath: " + rootPath);
+            String owner = pr.getFirstPropertyValue("PROBE_OWNER");
+            log.debug("owner: " + owner);
+            String linkTargetOwner = pr.getFirstPropertyValue("PROBE_LINKOWER");
+            log.debug("linkTargetOwner: " + linkTargetOwner);
+            String group = pr.getFirstPropertyValue("PROBE_GROUP");
+            log.debug("group: " + group);
+            File root = new File(rootPath);
+
+            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner, group);
+            Boolean success = fsp.call();
+            if (success == null || !success) {
+                return new AvailabilityStatus(false, null, null, null, "File system probe failed");
+            }
+
             // ReadWrite: proceed with live checks
             // check filesystem status: readable, writable, space available?
             // check job persistence status: memory available, cleaner thread keeping up?
-            
 
             // check other services we depend on
             RegistryClient reg = new RegistryClient();
@@ -141,6 +162,7 @@ public class ServiceAvailability implements WebService {
             note = ce.getMessage();
         } catch (Throwable t) {
             // the test itself failed
+            log.debug("failure", t);
             isGood = false;
             note = "test failed, reason: " + t;
         }

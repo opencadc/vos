@@ -69,7 +69,9 @@ package org.opencadc.cavern.probe;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+
 import java.io.File;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -115,7 +117,7 @@ public class Main {
             for (String pkg : logPackages) {
                 Log4jInit.setLevel(pkg, level);
             }
-            
+
             boolean ok = true;
             String dir = am.getValue("dir");
             String owner = am.getValue("owner");
@@ -137,7 +139,7 @@ public class Main {
                 log.error("missing required argument: --group=<posix group name>");
                 ok = false;
             }
-            
+
             File baseDir = null;
             if (dir != null) {
                 File tmp  = new File(dir);
@@ -153,15 +155,18 @@ public class Main {
                     ok = false;
                 }
             }
-            
+
             if (!ok) {
                 usage();
                 System.exit(1);
             }
-            
+
             FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
-            probe.run();
-           
+            Boolean success = probe.call();
+            if (success == null || !success) {
+                System.exit(1);
+            }
+
         } catch (Throwable t) {
             log.error("unexpected failure", t);
             System.exit(1);
