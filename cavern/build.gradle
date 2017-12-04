@@ -26,6 +26,7 @@ war {
     from(System.getenv('A') + '/etc/') {
         into 'WEB-INF/classes/'
         include 'RsaSignaturePriv.key'
+        include 'RsaSignaturePub.key'
     }
 }
 

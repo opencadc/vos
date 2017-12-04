@@ -70,17 +70,21 @@ package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.UserPrincipal;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
  *
@@ -93,6 +97,11 @@ public class PutAction extends FileAction {
 
     public PutAction() {
         super();
+    }
+
+    @Override
+    public Direction getDirection() {
+        return Direction.pushToVoSpace;
     }
 
     @Override
@@ -114,16 +123,33 @@ public class PutAction extends FileAction {
     @Override
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
-        FileSystem fs = FileSystems.getDefault();
-        Path target = fs.getPath(getRoot(), nodeURI.getPath());
-        if (Files.exists(target) && !Files.isWritable(target)) {
-            // permission denied
-            syncOutput.setCode(403);
+
+        Path rootPath = Paths.get(getRoot());
+        Node node = NodeUtil.get(rootPath, nodeURI);
+        if (node == null) {
+            // When the /files endpoint supports the putting of data
+            // before the node is created this will have to change.
+            // For now, return NotFound.
+            syncOutput.setCode(404);
             return;
         }
+
+        UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
+
+        // only support data nodes for now
+        if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
+            syncOutput.getOutputStream().write("Not a writable node".getBytes());
+            syncOutput.setCode(400);
+        }
+
+        Path target = NodeUtil.nodeToPath(rootPath, node);
+
         InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
         log.debug("Starting copy to file: " + target);
-        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         log.debug("Completed copy to file: " + target);
+
+        log.debug("Restoring original permissions");
+        NodeUtil.applyPermissions(rootPath, target, getPosixGroup(), owner);
     }
 }

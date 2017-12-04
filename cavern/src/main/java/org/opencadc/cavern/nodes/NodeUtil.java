@@ -189,9 +189,8 @@ public abstract class NodeUtil
         return ret;
     }
 
-    private static void applyPermissions(Path root, Path p,
-            GroupPrincipal posixGroup, UserPrincipal owner) throws IOException
-    {
+    public static void applyPermissions(Path root, Path p,
+            GroupPrincipal posixGroup, UserPrincipal owner) throws IOException {
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (posixGroup != null)
@@ -430,7 +429,7 @@ public abstract class NodeUtil
         public FileVisitResult preVisitDirectory(Path t,
                 BasicFileAttributes bfa) throws IOException
         {
-            log.debug("copy: pre-visit dir: " + t);
+            log.debug("copy: pre-visit directory: " + t);
             if (sourceDir == null) {
                 sourceDir = t;
             }

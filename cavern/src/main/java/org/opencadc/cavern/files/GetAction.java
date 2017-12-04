@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 
+import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.FileNotFoundException;
@@ -91,6 +92,11 @@ public class GetAction extends FileAction {
 
     public GetAction() {
         super();
+    }
+
+    @Override
+    public Direction getDirection() {
+        return Direction.pullFromVoSpace;
     }
 
     @Override

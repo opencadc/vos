@@ -69,14 +69,19 @@ package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.util.PropertiesReader;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.PosixIdentityManager;
 
 /**
  *
@@ -85,16 +90,32 @@ import org.apache.log4j.Logger;
 public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
-    // TBD: make this configurable
     private String root;
+    private GroupPrincipal posixGroup;
+    private UserPrincipalLookupService upLookupSvc;
+    private PosixIdentityManager identityManager;
 
     private VOSURI nodeURI;
 
     protected FileAction() {
         PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
-        if (root == null) {
+        this.root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        if (this.root == null) {
             throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
+        }
+
+        String posixGroupString = pr.getFirstPropertyValue("POSIX_GROUP");
+        if (posixGroupString == null) {
+            throw new IllegalStateException("POSIX_GROUP not configured.");
+        }
+
+        Path rootPath = Paths.get(getRoot());
+        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
+        this.identityManager = new PosixIdentityManager(upLookupSvc);
+        try {
+            posixGroup = this.upLookupSvc.lookupPrincipalByGroupName(posixGroupString);
+        } catch (IOException e) {
+            throw new IllegalStateException("Couldn't lookup posix group", e);
         }
     }
 
@@ -112,6 +133,20 @@ public abstract class FileAction extends RestAction {
         return root;
     }
 
+    protected GroupPrincipal getPosixGroup() {
+        return posixGroup;
+    }
+
+    protected UserPrincipalLookupService getUpLookupSvc() {
+        return upLookupSvc;
+    }
+
+    protected PosixIdentityManager getIdentityManager() {
+        return identityManager;
+    }
+
+    protected abstract Direction getDirection();
+
     private void initTarget() throws AccessControlException, IOException {
         if (nodeURI == null) {
             String path = syncInput.getPath();
@@ -123,8 +158,9 @@ public abstract class FileAction extends RestAction {
             String sig = parts[1];
             log.debug("meta: " + meta);
             log.debug("sig: " + sig);
-            CavernURLGenerator urlGen = new CavernURLGenerator(root);
-            nodeURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
+            CavernURLGenerator urlGen = new CavernURLGenerator();
+            Direction direction = this.getDirection();
+            nodeURI = urlGen.getNodeURI(meta, sig, direction);
             log.debug("Init node uri: " + nodeURI);
         }
     }

@@ -73,6 +73,7 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.util.RsaSignatureVerifier;
 import ca.nrc.cadc.uws.Job;
@@ -116,7 +117,18 @@ public class CavernURLGenerator implements TransferGenerator
     private static final String KEY_META_NODE = "node";
     private static final String KEY_META_DIRECTION = "dir";
 
-    public CavernURLGenerator(String root) {
+    public CavernURLGenerator() {
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        this.root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        if (this.root == null) {
+            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
+        }
+    }
+
+    /**
+     * Allow root override.
+     */
+    public void setRoot(String root) {
         this.root = root;
     }
 
