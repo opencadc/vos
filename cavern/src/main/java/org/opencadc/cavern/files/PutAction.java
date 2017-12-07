@@ -77,11 +77,13 @@ import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.UserPrincipal;
+import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
@@ -124,32 +126,37 @@ public class PutAction extends FileAction {
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
 
-        Path rootPath = Paths.get(getRoot());
-        Node node = NodeUtil.get(rootPath, nodeURI);
-        if (node == null) {
-            // When the /files endpoint supports the putting of data
-            // before the node is created this will have to change.
-            // For now, return NotFound.
-            syncOutput.setCode(404);
-            return;
+        try {
+            Path rootPath = Paths.get(getRoot());
+            Node node = NodeUtil.get(rootPath, nodeURI);
+            if (node == null) {
+                // When the /files endpoint supports the putting of data
+                // before the node is created this will have to change.
+                // For now, return NotFound.
+                syncOutput.setCode(404);
+                return;
+            }
+
+            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
+
+            // only support data nodes for now
+            if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
+                syncOutput.getOutputStream().write("Not a writable node".getBytes());
+                syncOutput.setCode(400);
+            }
+
+            Path target = NodeUtil.nodeToPath(rootPath, node);
+
+            InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
+            log.debug("Starting copy to file: " + target);
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("Completed copy to file: " + target);
+
+            log.debug("Restoring original permissions");
+            NodeUtil.applyPermissions(rootPath, target, getPosixGroup(), owner);
+        } catch (AccessControlException | AccessDeniedException e) {
+            log.debug(e);
+            syncOutput.setCode(403);
         }
-
-        UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-
-        // only support data nodes for now
-        if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
-            syncOutput.getOutputStream().write("Not a writable node".getBytes());
-            syncOutput.setCode(400);
-        }
-
-        Path target = NodeUtil.nodeToPath(rootPath, node);
-
-        InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
-        log.debug("Starting copy to file: " + target);
-        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-        log.debug("Completed copy to file: " + target);
-
-        log.debug("Restoring original permissions");
-        NodeUtil.applyPermissions(rootPath, target, getPosixGroup(), owner);
     }
 }

@@ -140,6 +140,17 @@
     <load-on-startup>4</load-on-startup>
   </servlet>
   
+    <!-- internal servlet to assist async transfer servlet -->
+  <servlet>
+    <servlet-name>TransferDetailsServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.vos.server.transfers.TransferDetailsServlet</servlet-class>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+    </init-param>
+    <load-on-startup>2</load-on-startup>
+  </servlet>
+  
   <servlet>
     <servlet-name>FilesServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
@@ -232,6 +243,16 @@
   <servlet-mapping>
     <servlet-name>AuthTransferServlet</servlet-name>
     <url-pattern>/auth/transfers/*</url-pattern>
+  </servlet-mapping>
+  
+    <!-- Client transfer servlet endpoints -->
+  <servlet-mapping>
+    <servlet-name>TransferDetailsServlet</servlet-name>
+    <url-pattern>/xfer/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>TransferDetailsServlet</servlet-name>
+    <url-pattern>/auth/xfer/*</url-pattern>
   </servlet-mapping>
 
   <!-- Availability servlet endpoint -->

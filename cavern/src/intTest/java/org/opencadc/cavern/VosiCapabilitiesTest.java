@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2016.                            (c) 2016.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,27 +62,28 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
 */
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
+import ca.nrc.cadc.vosi.CapabilitiesTest;
+
+import java.net.URI;
 
 import org.apache.log4j.Logger;
 
 /**
- *
- * @author pdowler
+ * All tests inherited from CapabilitiesTest
  */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+public class VosiCapabilitiesTest extends CapabilitiesTest
+{
+    private static final Logger log = Logger.getLogger(VosiCapabilitiesTest.class);
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
-
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), new ACIdentityManager(), JOB_CLEANER_INTERVAL);
+    public VosiCapabilitiesTest()
+    {
+        super(URI.create("ivo://canfar.net/cavern"));
     }
 }

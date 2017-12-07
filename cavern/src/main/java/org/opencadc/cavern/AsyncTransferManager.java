@@ -68,31 +68,29 @@
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.SimpleJobManager;
 import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import ca.nrc.cadc.vos.server.transfers.TransferRunner;
+
 import org.apache.log4j.Logger;
 
 /**
  *
  * @author pdowler
  */
-public class AsyncTransferManager extends SimpleJobManager {
+public class AsyncTransferManager extends JobManager {
     private static final Logger log = Logger.getLogger(AsyncTransferManager.class);
 
-    public AsyncTransferManager() { 
+    public AsyncTransferManager() {
         super();
-        
-        JobPersistence jp = new JobPersistenceImpl();
+
         JobUpdater ju = (JobUpdater) jp;
-        
+
         JobExecutor je = new ThreadPoolExecutor(ju, TransferRunner.class, 6);
-        
+
         super.setJobPersistence(jp);
         super.setJobExecutor(je);
-        
+
         super.setMaxDestruction(60000L);
         super.setMaxExecDuration(2000L);
         super.setMaxQuote(40000L);

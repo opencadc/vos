@@ -62,27 +62,87 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 5 $
+*
 ************************************************************************
 */
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.client.ClientTransfer;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
+import java.io.File;
+import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- *
- * @author pdowler
- */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+public class ExternalCertIntTest
+{
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
+    private static final Logger log = Logger.getLogger(ExternalCertIntTest.class);
 
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), new ACIdentityManager(), JOB_CLEANER_INTERVAL);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
+
+    public ExternalCertIntTest()
+    {
+    }
+
+    @Test
+    public void testGetPublicFile()
+    {
+        try
+        {
+            File SSL_CERT = FileUtil.getFileFromResource("x509_CADCExterntest1.pem", ExternalCertIntTest.class);
+            Subject s = SSLUtil.createSubject(SSL_CERT);
+            Subject.doAs(s, new PrivilegedExceptionAction<Object>()
+            {
+                @Override
+                public Object run() throws Exception
+                {
+                    // node uri to a public file
+                    VOSURI vosURI = new VOSURI("vos://cadc.nrc.ca~vospace/CADCAuthtest1/a1");
+                    VOSpaceClient c = new VOSpaceClient(vosURI.getServiceURI());
+
+                    View view = new View(new URI(VOS.VIEW_DEFAULT));
+                    List<Protocol> protocols = new ArrayList<Protocol>();
+                    protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+
+                    Transfer transfer = new Transfer(vosURI.getURI(), Direction.pullFromVoSpace, view, protocols);
+                    ClientTransfer clientTransfer = c.createTransfer(transfer);
+                    clientTransfer.run();
+
+                    return null;
+                }
+            });
+
+        }
+        catch (Throwable t)
+        {
+            log.error("unexpeced throwable", t);
+            Assert.fail("unexpected throwable: " + t.getMessage());
+        }
+    }
+
 }

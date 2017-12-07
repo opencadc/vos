@@ -68,31 +68,29 @@
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.SimpleJobManager;
 import ca.nrc.cadc.uws.server.SyncJobExecutor;
 import ca.nrc.cadc.vos.server.transfers.TransferRunner;
+
 import org.apache.log4j.Logger;
 
 /**
  *
  * @author pdowler
  */
-public class SyncTransferManager extends SimpleJobManager {
+public class SyncTransferManager extends JobManager {
     private static final Logger log = Logger.getLogger(SyncTransferManager.class);
 
     public SyncTransferManager() {
         super();
-        
-        JobPersistence jp = new JobPersistenceImpl();
+
         JobUpdater ju = (JobUpdater) jp;
-        
+
         JobExecutor je = new SyncJobExecutor(ju, TransferRunner.class);
-        
+
         super.setJobPersistence(jp);
         super.setJobExecutor(je);
-        
+
         // TODO: would be nice to enable a feature like destroy-on-complete instead of timed destruction
         super.setMaxDestruction(20000L);
         super.setMaxExecDuration(2000L);

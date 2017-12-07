@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,27 +62,127 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 5 $
+*
 ************************************************************************
 */
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
 
+import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URL;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.json.JSONObject;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- *
+ * Test that the node writing on the server side prodcues valid output for all
+ * supported content-type(s).
+ * 
  * @author pdowler
  */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+public class NodeOutputFormatTest 
+{
+    private static final Logger log = Logger.getLogger(NodeOutputFormatTest.class);
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
+    }
+    
+    static final String VOSACE_SCHEMA = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    
+    static final String VOSPACE_NODES = "ivo://canfar.net/cavern";
+    
+    static final String XML = "text/xml";
+    static final String JSON = "application/json";
+    
+    public NodeOutputFormatTest() { }
+    
+    @Test
+    public void testXML()
+    {
+        try
+        {
+            RegistryClient rc = new RegistryClient();
+//            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), "http", null, AuthMethod.ANON);
+            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(url, bos);
+            get.run();
+            Assert.assertNull("GET failure", get.getThrowable());
+            
+            Assert.assertEquals(XML, get.getContentType());
+            
+            NodeReader r = new NodeReader();
+            Node n = r.read(new ByteArrayInputStream(bos.toByteArray()));
+            log.debug("got valid node: " + n);
+        }
+        catch(Exception ex)
+        {
+            log.error("unexpected exception", ex);
+            Assert.fail("unexpected exception: " + ex);
+        }
+    }
+    
+    
+    @Test
+    public void testJSON() throws Exception
+    {
+        try
+        {
+            RegistryClient rc = new RegistryClient();
+//            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), "http", null, AuthMethod.ANON);
+            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(url, bos);
+            get.setRequestProperty("Accept", JSON);
+            get.run();
+            Assert.assertNull("GET failure", get.getThrowable());
+            
+            Assert.assertEquals(JSON, get.getContentType());
+            
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            InputStreamReader isr = new InputStreamReader(bis);
+            StringBuilder sb = new StringBuilder();
+            char[] buf = new char[16384];
+            int n = isr.read(buf);
+            while ( n > 0 )
+            {
+                sb.append(buf, 0, n);
+                n = isr.read(buf);
+            }
+            String str = sb.toString();
+            log.debug(str);
+            JSONObject doc = new JSONObject(str);
+            JSONObject node = doc.getJSONObject("vos:node");
+            
+            String xmlns = node.getString("@xmlns:vos");
+            Assert.assertNotNull(xmlns);
+            Assert.assertEquals(VOSACE_SCHEMA, xmlns);
+            
+            String vosuri = node.getString("@uri");
+            Assert.assertNotNull(vosuri);
+            Assert.assertEquals("vos://canfar.net~cavern", vosuri);
+        }
+        catch(Exception ex)
+        {
+            log.error("unexpected exception", ex);
+            Assert.fail("unexpected exception: " + ex);
+        }
 
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), new ACIdentityManager(), JOB_CLEANER_INTERVAL);
     }
 }

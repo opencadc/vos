@@ -156,8 +156,7 @@ public class CavernURLGeneratorTest
     public void testRoundTripSuccess() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.setRoot(ROOT);
+            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -185,8 +184,7 @@ public class CavernURLGeneratorTest
     public void testWrongDirection() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.setRoot(ROOT);
+            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -214,8 +212,7 @@ public class CavernURLGeneratorTest
     public void testInvalidSignature() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.setRoot(ROOT);
+            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -243,8 +240,7 @@ public class CavernURLGeneratorTest
     public void testMetaTampered() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.setRoot(ROOT);
+            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;

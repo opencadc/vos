@@ -67,22 +67,21 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.SimpleJobManager;
 
 import org.apache.log4j.Logger;
 
-/**
- *
- * @author pdowler
- */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+public abstract class JobManager extends SimpleJobManager
+{
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
+    private static final Logger log = Logger.getLogger(JobManager.class);
 
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), new ACIdentityManager(), JOB_CLEANER_INTERVAL);
+    protected static JobPersistence jp;
+
+    static {
+        log.info("Creating shared job manager");
+        jp = new JobPersistenceImpl();
     }
+
 }

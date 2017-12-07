@@ -115,32 +115,32 @@ public class FileSystemProbe implements Callable<Boolean> {
 
         boolean success = true;
 
-        log.info("testing create directory...");
-        success = success && doCreateDir();
-
         log.info("testing create file...");
-        success = success && doCreateFile();
+        success = doCreateFile() & success;
+
+        log.info("testing create directory...");
+        success = doCreateDir() & success;
 
         log.info("testing create symlink...");
-        success = success && doCreateSymlink();
+        success = doCreateSymlink() & success;
 
         log.info("testing copy file...");
-        success = success && doCopyFile();
+        success = doCopyFile() & success;
 
         log.info("testing move file...");
-        success = success && doMoveFile();
+        success = doMoveFile() & success;
 
         log.info("testing copy directory...");
-        success = success && doCopyDir();
+        success = doCopyDir() & success;
 
         log.info("testing move directory...");
-        success = success && doMoveDir();
+        success = doMoveDir() & success;
 
         log.info("testing copy symlink...");
-        success = success && doCopySymlink();
+        success = doCopySymlink() & success;
 
         log.info("testing move symlink...");
-        success = success && doMoveSymlink();
+        success = doMoveSymlink() & success;
 
         log.info("END");
 

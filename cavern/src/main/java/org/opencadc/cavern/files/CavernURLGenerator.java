@@ -125,10 +125,7 @@ public class CavernURLGenerator implements TransferGenerator
         }
     }
 
-    /**
-     * Allow root override.
-     */
-    public void setRoot(String root) {
+    public CavernURLGenerator(String root) {
         this.root = root;
     }
 
