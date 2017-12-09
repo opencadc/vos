@@ -69,18 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.util.Arrays;
-import java.util.List;
-
-import javax.security.auth.Subject;
-import javax.sql.DataSource;
-
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
 import ca.nrc.cadc.net.TransientException;
@@ -95,6 +83,18 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Logger;
 
 /**
  * Simple implementation of the NodePersistence interface that uses the NodeDAO
@@ -316,7 +316,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             throw new RuntimeException("Cannot move nodes between authorities.");
         }
         NodeDAO dao = getDAO(src.getUri().getAuthority());
-        dao.move(src, dest);
+        Node persSrc = dao.getPath(src.getUri().getPath());
+        dao.move(persSrc, dest);
     }
 
     @Override

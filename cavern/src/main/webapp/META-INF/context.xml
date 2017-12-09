@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Context>
+
+    <WatchedResource>WEB-INF/web.xml</WatchedResource>
+
+    <ResourceLink name="jdbc/vospace"
+        global="jdbc/vospace-rw"
+        type="javax.sql.DataSource" />
+    
+    <ResourceLink name="jdbc/uws"
+        global="jdbc/vospace-uws-rw"
+        type="javax.sql.DataSource" />
+
+    <ResourceLink name="jdbc/identity"
+        global="jdbc/identity-ro"
+        type="javax.sql.DataSource" />
+    
+    <ResourceLink name="jdbc/subject"
+        global="jdbc/subject-ro"
+        type="javax.sql.DataSource" />
+    
+</Context>
