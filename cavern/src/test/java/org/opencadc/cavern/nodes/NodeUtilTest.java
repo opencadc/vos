@@ -106,7 +106,6 @@ public class NodeUtilTest {
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
 
     static final String OWNER = System.getProperty("user.name");
-    static final String GROUP = System.getProperty("user.name");
 
     static {
         try {
@@ -123,8 +122,7 @@ public class NodeUtilTest {
     }
 
     private Path doCreate(final Path root, final Node n, UserPrincipal up) throws Exception {
-        GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
-        Path actual = NodeUtil.create(root, n, gp);
+        Path actual = NodeUtil.create(root, n);
 
         Assert.assertNotNull(actual);
         Assert.assertTrue("exists", Files.exists(actual, LinkOption.NOFOLLOW_LINKS));
@@ -425,8 +423,7 @@ public class NodeUtilTest {
 
             // move the data node to dir2
             log.debug("Moving: " + tn2.getUri() + " to " + testDir2);
-            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
-            NodeUtil.move(root, tn.getUri(), testDir2, up, gp);
+            NodeUtil.move(root, tn.getUri(), testDir2, up);
             uri = new VOSURI(URI.create(testDir2.getURI().toASCIIString() + "/file-" + name));
             log.debug("Asserting: " + uri);
             Node moved = NodeUtil.get(root, uri);
@@ -439,7 +436,7 @@ public class NodeUtilTest {
 
             // move dir2 to dir1
             log.debug("Moving: " + testDir2 + " to " + dir);
-            NodeUtil.move(root, testDir2, testDir, up, gp);
+            NodeUtil.move(root, testDir2, testDir, up);
             uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/test-" + name2));
             log.debug("Asserting: " + uri);
             moved = NodeUtil.get(root, uri);
@@ -501,8 +498,7 @@ public class NodeUtilTest {
 
             // copy the data node to dir2
             log.debug("Copying: " + tn2.getUri() + " to " + testDir2);
-            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
-            NodeUtil.copy(root, tn.getUri(), testDir2, up, gp);
+            NodeUtil.copy(root, tn.getUri(), testDir2, up);
             uri = new VOSURI(URI.create(testDir2.getURI().toASCIIString() + "/file-" + name));
             log.debug("Asserting: " + uri);
             Node copied = NodeUtil.get(root, uri);
@@ -578,8 +574,7 @@ public class NodeUtilTest {
             }
 
             log.debug("Copying: " + top + " to " + testDir2);
-            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
-            NodeUtil.copy(root, top, testDir2, up, gp);
+            NodeUtil.copy(root, top, testDir2, up);
 
             // assert both copies are there
             for (VOSURI u : vosuris) {
@@ -680,8 +675,7 @@ public class NodeUtilTest {
             }
 
             log.debug("Copying: " + top + " to " + testDir2);
-            GroupPrincipal gp = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(GROUP);
-            NodeUtil.copy(root, top, testDir2, up, gp);
+            NodeUtil.copy(root, top, testDir2, up);
 
             // assert both copies are there
             for (VOSURI u : vosuris) {

@@ -146,19 +146,16 @@ public abstract class NodeUtil
                 + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
 
-    public static Path create(Path root, Node node, GroupPrincipal posixGroup)
+    public static Path create(Path root, Node node)
             throws IOException
     {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
 
-        UserPrincipal owner = getOwner(
-                root.getFileSystem().getUserPrincipalLookupService(), node);
+        UserPrincipal owner = getOwner(root.getFileSystem().getUserPrincipalLookupService(), node);
         assertNotNull("owner", owner);
-
-        // TODO: don't assume convention of user == default group
-        // GroupPrincipal group =
-        // root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(owner.getName());
+        GroupPrincipal group = getDefaultGroup(root.getFileSystem().getUserPrincipalLookupService(), owner);
+        assertNotNull("group", group);
 
         Path ret = null;
         if (node instanceof ContainerNode)
@@ -184,32 +181,17 @@ public abstract class NodeUtil
                     "unexpected node type: " + node.getClass().getName());
         }
 
-        applyPermissions(root, ret, posixGroup, owner);
+        applyPermissions(root, ret, owner, group);
 
         return ret;
     }
 
     public static void applyPermissions(Path root, Path p,
-            GroupPrincipal posixGroup, UserPrincipal owner) throws IOException {
+            UserPrincipal owner, GroupPrincipal group) throws IOException {
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        if (posixGroup != null)
-        {
-            pv.setGroup(posixGroup);
-            if (!(Files.isSymbolicLink(p)))
-            {
-                Set<PosixFilePermission> perms = pv.readAttributes()
-                        .permissions();
-                perms.add(PosixFilePermission.GROUP_WRITE);
-                perms.add(PosixFilePermission.GROUP_WRITE);
-                if (Files.isDirectory(p))
-                {
-                    perms.add(PosixFilePermission.GROUP_EXECUTE);
-                }
-                pv.setPermissions(perms);
-            }
-        }
         pv.setOwner(owner);
+        pv.setGroup(group);
     }
 
     public static Path update(Path root, Node node) throws IOException
@@ -281,25 +263,32 @@ public abstract class NodeUtil
     }
 
     public static void move(Path root, VOSURI source, VOSURI destDir,
-            UserPrincipal owner, GroupPrincipal posixGroup) throws IOException
+            UserPrincipal owner) throws IOException
     {
         Path sourcePath = nodeToPath(root, source);
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + source.getName()));
         Path destPath = nodeToPath(root, destWithName);
         Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
-        applyPermissions(root, destPath, posixGroup, owner);
+        
+        // TODO: preserve old group during move?
+        GroupPrincipal group = getDefaultGroup(root.getFileSystem().getUserPrincipalLookupService(), owner);
+        assertNotNull("group", group);
+        applyPermissions(root, destPath, owner, group);
     }
 
-    public static void copy(Path root, VOSURI source, VOSURI destDir, UserPrincipal owner, GroupPrincipal posixGroup) throws IOException {
+    public static void copy(Path root, VOSURI source, VOSURI destDir, UserPrincipal owner) throws IOException {
+        GroupPrincipal group = getDefaultGroup(root.getFileSystem().getUserPrincipalLookupService(), owner);
+        assertNotNull("group", group);
+        
         Path sourcePath = nodeToPath(root, source);
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + source.getName()));
         Path destPath = nodeToPath(root, destWithName);
         // follow links
         if (Files.isDirectory(sourcePath)) {
-            Files.walkFileTree(sourcePath, new CopyVisitor(root, sourcePath, destPath, owner, posixGroup));
+            Files.walkFileTree(sourcePath, new CopyVisitor(root, sourcePath, destPath, owner, group));
         } else { // links and files
             Files.copy(sourcePath, destPath, StandardCopyOption.COPY_ATTRIBUTES);
-            applyPermissions(root, destPath, posixGroup, owner);
+            applyPermissions(root, destPath, owner, group);
             Files.setLastModifiedTime(destPath, FileTime.fromMillis(System.currentTimeMillis()));
         }
     }
@@ -413,16 +402,18 @@ public abstract class NodeUtil
     private static class CopyVisitor implements FileVisitor<Path>
     {
         UserPrincipal owner;
-        GroupPrincipal posixGroup;
+        GroupPrincipal group;
         Path root;
         Path destDir;
         Path sourceDir;
 
-        CopyVisitor(Path root, Path source, Path dest, UserPrincipal owner, GroupPrincipal posixGroup) {
+        // TODO: alt ctor without group to preserve group during copy?
+        
+        CopyVisitor(Path root, Path source, Path dest, UserPrincipal owner, GroupPrincipal group) {
             this.root = root;
             this.destDir = dest;
             this.owner = owner;
-            this.posixGroup = posixGroup;
+            this.group = group;
         }
 
         @Override
@@ -436,7 +427,7 @@ public abstract class NodeUtil
             Path dir = destDir.resolve(sourceDir.relativize(t));
             log.debug("Creating: " + dir);
             Files.createDirectories(dir);
-            NodeUtil.applyPermissions(root, dir, posixGroup, owner);
+            NodeUtil.applyPermissions(root, dir, owner, group);
             Files.setLastModifiedTime(dir, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
@@ -449,7 +440,7 @@ public abstract class NodeUtil
             Path file = destDir.resolve(sourceDir.relativize(t));
             log.debug("creating: " + file);
             Files.copy(t, file);
-            NodeUtil.applyPermissions(root, file, posixGroup, owner);
+            NodeUtil.applyPermissions(root, file, owner, group);
             Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
@@ -575,5 +566,11 @@ public abstract class NodeUtil
             return users.lookupPrincipalByName(prop.getPropertyValue());
         }
         return null;
+    }
+    
+    public static GroupPrincipal getDefaultGroup(UserPrincipalLookupService users, 
+            UserPrincipal user) throws IOException {
+        // TODO: this assumes default group name == owner name and should be fixed
+        return users.lookupPrincipalByGroupName(user.getName());
     }
 }
