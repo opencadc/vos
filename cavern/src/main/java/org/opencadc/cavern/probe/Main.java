@@ -93,7 +93,6 @@ public class Main {
         System.out.println("usage: cavern [-v|--verbose|-d|--debug]");
         System.out.println("              --dir=<test directory>");
         System.out.println("              --owner=<posix username> ");
-        System.out.println("              --group=<posix group name>");
         System.out.println("              --target-owner=<posix username>)");
         System.out.println("Note: the target-owner owns the target of a link and should differ from");
         System.out.println("      the owner so that correct behaviour of symlinks can be verified");
@@ -135,10 +134,6 @@ public class Main {
                 log.error("missing required argument: --target-owner=<posix username>");
                 ok = false;
             }
-            if (group == null) {
-                log.error("missing required argument: --group=<posix group name>");
-                ok = false;
-            }
 
             File baseDir = null;
             if (dir != null) {
@@ -161,7 +156,7 @@ public class Main {
                 System.exit(1);
             }
 
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
+            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner);
             Boolean success = probe.call();
             if (success == null || !success) {
                 System.exit(1);

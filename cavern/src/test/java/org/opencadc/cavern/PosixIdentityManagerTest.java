@@ -104,7 +104,7 @@ public class PosixIdentityManagerTest {
     }
 
     private UserPrincipal getTestPrincipal() throws IOException {
-        return users.lookupPrincipalByName("guest");
+        return users.lookupPrincipalByName(System.getProperty("user.name"));
     }
 
     @Test
