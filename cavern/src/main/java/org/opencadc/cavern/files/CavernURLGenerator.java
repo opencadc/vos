@@ -159,7 +159,6 @@ public class CavernURLGenerator implements TransferGenerator
 
         String scheme = null;
         Direction dir = null;
-        URI securityMethod = protocol.getSecurityMethod();
 
         switch (protocol.getUri().toString()) {
             case VOS.PROTOCOL_HTTP_GET:
@@ -180,24 +179,9 @@ public class CavernURLGenerator implements TransferGenerator
                 break;
         }
 
-        // find all the base endpoints
-        List<URL> baseURLs = new ArrayList<URL>();
-        try {
-            RegistryClient rc = new RegistryClient();
-            Capabilities caps = rc.getCapabilities(URI.create("ivo://canfar.net/cavern"));
-            Capability cap = caps.findCapability(Standards.DATA_10);
-            List<Interface> interfaces = cap.getInterfaces();
-            for (Interface ifc : interfaces)
-            {
-                if (securityMethod == null) {
-                    baseURLs.add(ifc.getAccessURL().getURL());
-                } else if (ifc.getSecurityMethod().equals(securityMethod) &&
-                    ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
-                    baseURLs.add(ifc.getAccessURL().getURL());
-                }
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Error creating transfer urls", e);
+        List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
+        if (baseURLs == null) {
+            return null;
         }
 
         // create the metadata and signature segments
@@ -236,7 +220,7 @@ public class CavernURLGenerator implements TransferGenerator
         log.debug("Created request path: " + path.toString());
 
         // add the request path to each of the base URLs
-        List<URL> returnList = new ArrayList<URL>();
+        List<URL> returnList = new ArrayList<URL>(baseURLs.size());
         for (URL baseURL : baseURLs) {
             URL next;
             try {
@@ -325,7 +309,28 @@ public class CavernURLGenerator implements TransferGenerator
         return s.replace("-", "/").replace("_", "+");
     }
 
-
-
+    List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
+        // find all the base endpoints
+        List<URL> baseURLs = new ArrayList<URL>();
+        try {
+            RegistryClient rc = new RegistryClient();
+            URI serviceURI = target.getServiceURI();
+            Capabilities caps = rc.getCapabilities(serviceURI);
+            Capability cap = caps.findCapability(Standards.DATA_10);
+            List<Interface> interfaces = cap.getInterfaces();
+            for (Interface ifc : interfaces)
+            {
+                if (securityMethod == null) {
+                    baseURLs.add(ifc.getAccessURL().getURL());
+                } else if (ifc.getSecurityMethod().equals(securityMethod) &&
+                    ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
+                    baseURLs.add(ifc.getAccessURL().getURL());
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Error creating transfer urls", e);
+        }
+        return baseURLs;
+    }
 
 }
