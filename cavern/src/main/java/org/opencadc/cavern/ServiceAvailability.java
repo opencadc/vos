@@ -130,11 +130,9 @@ public class ServiceAvailability implements WebService {
             log.debug("owner: " + owner);
             String linkTargetOwner = pr.getFirstPropertyValue("PROBE_LINKOWER");
             log.debug("linkTargetOwner: " + linkTargetOwner);
-            String group = pr.getFirstPropertyValue("PROBE_GROUP");
-            log.debug("group: " + group);
             File root = new File(rootPath);
 
-            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner, group);
+            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner);
             Boolean success = fsp.call();
             if (success == null || !success) {
                 return new AvailabilityStatus(false, null, null, null, "File system probe failed");

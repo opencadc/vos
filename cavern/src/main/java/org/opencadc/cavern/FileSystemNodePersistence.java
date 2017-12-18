@@ -106,7 +106,6 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     private PosixIdentityManager identityManager;
     private Path root;
-    private GroupPrincipal posixGroup;
 
     public FileSystemNodePersistence() {
         PropertiesReader pr = new PropertiesReader("Cavern.properties");
@@ -115,23 +114,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
         }
         this.root = Paths.get(rootConfig);
-
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
-        String groupConfig = getPosixGroupFromConfig();
-        try {
-            this.posixGroup = root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByGroupName(groupConfig);
-        } catch (IOException ex) {
-            throw new RuntimeException("CONFIG: failed to lookup posix group: " + groupConfig, ex);
-        }
-    }
-
-    private String getPosixGroupFromConfig() {
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        String groupConfig = pr.getFirstPropertyValue("POSIX_GROUP");
-        if (groupConfig == null) {
-            throw new RuntimeException("CONFIG: Failed to find POSIX_GROUP");
-        }
-        return groupConfig;
     }
 
     @Override
@@ -242,7 +225,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
             NodeUtil.setOwner(node, owner);
-            NodeUtil.create(root, node, posixGroup);
+            NodeUtil.create(root, node);
             return NodeUtil.get(root, node.getUri());
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
@@ -300,7 +283,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
-            NodeUtil.move(root, node.getUri(), cn.getUri(), owner, posixGroup);
+            NodeUtil.move(root, node.getUri(), cn.getUri(), owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
@@ -315,7 +298,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
-            NodeUtil.copy(root, node.getUri(), cn.getUri(), owner, posixGroup);
+            NodeUtil.copy(root, node.getUri(), cn.getUri(), owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }

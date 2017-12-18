@@ -99,14 +99,12 @@ public class FileSystemProbe implements Callable<Boolean> {
     private final UserPrincipal owner;
     private final UserPrincipal linkTargetOwner;
     private final UserPrincipalLookupService users;
-    private final GroupPrincipal group;
 
-    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner, String group) throws IOException {
+    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner) throws IOException {
         this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
         this.users = root.getFileSystem().getUserPrincipalLookupService();
         this.owner = users.lookupPrincipalByName(owner);
         this.linkTargetOwner = users.lookupPrincipalByName(linkTargetOwner);
-        this.group = users.lookupPrincipalByGroupName(group);
     }
 
     @Override
@@ -157,7 +155,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
 
             String fail = " [FAIL]";
-            Path pth = NodeUtil.create(root, n1, group);
+            Path pth = NodeUtil.create(root, n1);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[dir] failed to create directory in fs: " + root + "/" + name + fail);
                 return false;
@@ -212,7 +210,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             log.info("[file] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
 
             String fail = " [FAIL]";
-            Path pth = NodeUtil.create(root, n1, group);
+            Path pth = NodeUtil.create(root, n1);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[file] failed to create file in fs: " + root + "/" + name + fail);
                 return false;
@@ -272,13 +270,13 @@ public class FileSystemProbe implements Callable<Boolean> {
             log.info("[symlink] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
 
             String fail = " [FAIL]";
-            Path tp = NodeUtil.create(root, tn, group);
+            Path tp = NodeUtil.create(root, tn);
             if (tp == null || !Files.exists(tp)) {
                 log.error("[symlink] failed to create file in fs: " + root + "/" + name + fail);
                 return false;
             }
 
-            Path pth = NodeUtil.create(root, n1, group);
+            Path pth = NodeUtil.create(root, n1);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[symlink] failed to create symlink in fs: " + root + "/" + name + fail);
                 return false;
@@ -374,28 +372,28 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[copyfile] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copyfile] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copyfile] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copyfile] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copyfile] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[copyfile] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.copy(root, dn.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.copy(root, dn.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name3));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -448,28 +446,28 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[movefile] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movefile] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movefile] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movefile] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movefile] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[movefile] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.move(root, dn.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.move(root, dn.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -515,28 +513,28 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[copydir] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copydir] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copydir] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copydir] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copydir] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[copydir] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.copy(root, srcDir.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.copy(root, srcDir.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name1 + "/" + name3));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -589,28 +587,28 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[movedir] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movedir] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movedir] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movedir] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movedir] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[movedir] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name1 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -660,35 +658,35 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[copysymlink] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copysymlink] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copysymlink] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[copysymlink] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[copysymlink] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[copysymlink] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             log.info("[copysymlink] " +  ln.getClass().getSimpleName() + " " + ln.getUri() + " " + owner);
-            pth = NodeUtil.create(root, ln, group);
+            pth = NodeUtil.create(root, ln);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[copysymlink] failed to create symlink in fs: " + root + "/" + ln.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.copy(root, ln.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.copy(root, ln.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -745,35 +743,35 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
 
             log.info("[movesymlink] " +  srcDir.getClass().getSimpleName() + " " + srcDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, srcDir, group);
+            pth = NodeUtil.create(root, srcDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movesymlink] failed to create directory in fs: " + root + "/" + srcDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movesymlink] " +  destDir.getClass().getSimpleName() + " " + destDir.getUri() + " " + owner);
-            pth = NodeUtil.create(root, destDir, group);
+            pth = NodeUtil.create(root, destDir);
             if (pth == null || !Files.isDirectory(pth)) {
                 log.error("[movesymlink] failed to create directory in fs: " + root + "/" + destDir.getUri() + fail);
                 return false;
             }
 
             log.info("[movesymlink] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
-            pth = NodeUtil.create(root, dn, group);
+            pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[movesymlink] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 
             log.info("[movesymlink] " +  ln.getClass().getSimpleName() + " " + ln.getUri() + " " + owner);
-            pth = NodeUtil.create(root, ln, group);
+            pth = NodeUtil.create(root, ln);
             if (pth == null || !Files.exists(pth)) {
                 log.error("[movesymlink] failed to create symlink in fs: " + root + "/" + ln.getUri() + fail);
                 return false;
             }
 
             int num = 0;
-            NodeUtil.move(root, ln.getUri(), destDir.getUri(), owner, group);
+            NodeUtil.move(root, ln.getUri(), destDir.getUri(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof LinkNode)) {
