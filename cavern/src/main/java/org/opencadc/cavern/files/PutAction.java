@@ -82,6 +82,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 
@@ -138,6 +139,7 @@ public class PutAction extends FileAction {
             }
 
             UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
+            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
 
             // only support data nodes for now
             if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
@@ -153,7 +155,7 @@ public class PutAction extends FileAction {
             log.debug("Completed copy to file: " + target);
 
             log.debug("Restoring original permissions");
-            NodeUtil.applyPermissions(rootPath, target, getPosixGroup(), owner);
+            NodeUtil.applyPermissions(rootPath, target, owner, group);
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
