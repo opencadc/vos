@@ -32,9 +32,10 @@ war {
 
 sourceSets {
     test {
-        resources.srcDirs += new File(System.getenv('A') + '/etc/')
+        resources.srcDirs += 'src/test/resources'
     }
 }
+
 
 mainClassName = 'org.opencadc.cavern.probe.Main'
 

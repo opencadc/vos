@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
@@ -75,6 +76,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -95,8 +97,10 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.xerces.impl.dv.util.Base64;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -113,6 +117,8 @@ public class CavernURLGeneratorTest
     static final String OWNER = System.getProperty("user.name");
     static String TEST_DIR = UUID.randomUUID().toString();
     static String TEST_FILE = UUID.randomUUID().toString();
+
+    File pubFile, privFile;
 
     public CavernURLGeneratorTest() {
     }
@@ -145,6 +151,22 @@ public class CavernURLGeneratorTest
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Before
+    public void initKeys() throws Exception
+    {
+        String keysDir = "src/test/resources";
+        RsaSignatureGenerator.genKeyPair(keysDir);
+        privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
+        pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
+    }
+
+    @After
+    public void cleanupKeys() throws Exception
+    {
+        pubFile.delete();
+        privFile.delete();
     }
 
     @Test
