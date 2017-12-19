@@ -67,9 +67,8 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.auth.BasicX509TrustManager;
-import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
@@ -77,6 +76,9 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -86,6 +88,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.AccessControlException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -94,8 +97,10 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.xerces.impl.dv.util.Base64;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -113,6 +118,8 @@ public class CavernURLGeneratorTest
     static String TEST_DIR = UUID.randomUUID().toString();
     static String TEST_FILE = UUID.randomUUID().toString();
 
+    File pubFile, privFile;
+
     public CavernURLGeneratorTest() {
     }
 
@@ -126,9 +133,6 @@ public class CavernURLGeneratorTest
             FileAttribute<Set<PosixFilePermission>> fp = PosixFilePermissions.asFileAttribute(perms);
             Files.createDirectories(dir);
             Files.createFile(node, fp);
-
-            System.setProperty(RegistryClient.class.getName() + ".host", "majorb.cadc.dao.nrc.ca");
-            System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -138,9 +142,6 @@ public class CavernURLGeneratorTest
     @AfterClass
     public static void cleanup() {
         try {
-            System.clearProperty(RegistryClient.class.getName() + ".local");
-            System.clearProperty(BasicX509TrustManager.class.getName() + ".trust");
-
             FileSystem fs = FileSystems.getDefault();
             Path dir = fs.getPath(ROOT, TEST_DIR);
             Path node = fs.getPath(ROOT, TEST_DIR + "/" + TEST_FILE);
@@ -152,12 +153,29 @@ public class CavernURLGeneratorTest
         }
     }
 
+    @Before
+    public void initKeys() throws Exception
+    {
+        String keysDir = "build/resources/test";
+        RsaSignatureGenerator.genKeyPair(keysDir);
+        privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
+        pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
+        log.debug("Created pub key: " + pubFile.getAbsolutePath());
+    }
+
+    @After
+    public void cleanupKeys() throws Exception
+    {
+        pubFile.delete();
+        privFile.delete();
+    }
+
     @Test
     public void testRoundTripSuccess() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
+            TestURLGen urlGen = new TestURLGen(ROOT);
+            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
             Job job = null;
@@ -184,8 +202,8 @@ public class CavernURLGeneratorTest
     public void testWrongDirection() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
+            TestURLGen urlGen = new TestURLGen(ROOT);
+            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
             Job job = null;
@@ -212,8 +230,8 @@ public class CavernURLGeneratorTest
     public void testInvalidSignature() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
+            TestURLGen urlGen = new TestURLGen(ROOT);
+            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
             Job job = null;
@@ -240,8 +258,8 @@ public class CavernURLGeneratorTest
     public void testMetaTampered() {
         try {
 
-            CavernURLGenerator urlGen = new CavernURLGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/" + TEST_FILE);
+            TestURLGen urlGen = new TestURLGen(ROOT);
+            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
             Job job = null;
@@ -255,7 +273,7 @@ public class CavernURLGeneratorTest
             String[] parts = path.split("/");
             String sig = parts[4];
             //String meta = parts[3];
-            VOSURI altURI = new VOSURI("vos://cavern.canfar.net~vospace/" + TEST_DIR + "/fakeFile");
+            VOSURI altURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/fakeFile");
             String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
             try {
                 VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
@@ -281,6 +299,24 @@ public class CavernURLGeneratorTest
         for (String s : testStrings) {
             log.debug("testing: " + s);
             Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
+        }
+    }
+
+    class TestURLGen extends CavernURLGenerator {
+
+        public TestURLGen(String root) {
+            super(root);
+        }
+
+        @Override
+        List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
+            List<URL> list = new ArrayList<URL>(1);
+            try {
+                list.add(new URL("http://example.com/service/path"));
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("failure", e);
+            }
+            return list;
         }
     }
 
