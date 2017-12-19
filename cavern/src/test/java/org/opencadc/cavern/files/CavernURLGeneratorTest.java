@@ -160,6 +160,7 @@ public class CavernURLGeneratorTest
         RsaSignatureGenerator.genKeyPair(keysDir);
         privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
         pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
+        log.debug("Created pub key: " + pubFile.getAbsolutePath());
     }
 
     @After
