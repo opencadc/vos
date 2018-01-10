@@ -68,113 +68,52 @@
 package org.opencadc.cavern.files;
 
 
-import ca.nrc.cadc.rest.InlineContentException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.util.HexUtil;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.GroupPrincipal;
-import java.nio.file.attribute.UserPrincipal;
-import java.security.AccessControlException;
-import org.apache.log4j.Logger;
-import org.opencadc.cavern.nodes.NodeUtil;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  *
- * @author majorb
+ * @author pdowler
  */
-public class PutAction extends FileAction {
-    private static final Logger log = Logger.getLogger(PutAction.class);
-
-    private static final String INPUT_STREAM = "in";
-
-    public PutAction() {
-        super();
-    }
-
-    @Override
-    public Direction getDirection() {
-        return Direction.pushToVoSpace;
-    }
-
-    @Override
-    protected InlineContentHandler getInlineContentHandler()
-    {
-        return new InlineContentHandler() {
-            public Content accept(String name, String contentType,
-                    InputStream inputStream)
-                    throws InlineContentException, IOException
-            {
-                InlineContentHandler.Content c = new InlineContentHandler.Content();
-                c.name = INPUT_STREAM;
-                c.value = inputStream;
-                return c;
-            }
-        };
-    }
-
-    @Override
-    public void doAction() throws Exception {
-        VOSURI nodeURI = getNodeURI();
-
+public class VerifyingInputStream extends FilterInputStream {
+    private final MessageDigest md5;
+    
+    public VerifyingInputStream(InputStream istream) {
+        super(istream);
         try {
-            log.debug("put: start " + nodeURI.getURI().toASCIIString());
-            
-            Path rootPath = Paths.get(getRoot());
-            Node node = NodeUtil.get(rootPath, nodeURI);
-            if (node == null) {
-                // When the /files endpoint supports the putting of data
-                // before the node is created this will have to change.
-                // For now, return NotFound.
-                syncOutput.setCode(404);
-                return;
-            }
-
-            // only support data nodes for now
-            if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
-                syncOutput.getOutputStream().write("Not a writable node".getBytes());
-                syncOutput.setCode(400);
-            }
-
-            Path target = NodeUtil.nodeToPath(rootPath, node);
-
-            InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
-            VerifyingInputStream vis = new VerifyingInputStream(in);
-            log.debug("copy: start " + target);
-            Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("copy: done " + target);
-
-            log.debug("set properties");
-            byte[] md5 = vis.getChecksum();
-            String propValue = HexUtil.toHex(md5);
-            log.debug(nodeURI + " MD5: " + propValue);
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
-            
-            NodeUtil.setNodeProperties(target, node);
-            
-            // doing this last because it requires chown which is most likely to fail during expermintation
-            log.debug("restore owner & group");
-            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
-            NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
-            
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException("FATAL: MD5 not supported", ex);
         }
-        finally {
-            log.debug("put: done " + nodeURI.getURI().toASCIIString());
-        }
+    }
+
+    public byte[] getChecksum() {
+        return md5.digest();
+    }
+    
+    @Override
+    public int read(byte[] bytes, int i, int i1) throws IOException {
+        int ret = super.read(bytes, i, i1);
+        md5.update(bytes, 0, ret);
+        return ret;
+    }
+
+    @Override
+    public int read(byte[] bytes) throws IOException {
+        int ret = super.read(bytes);
+        md5.update(bytes, 0, ret);
+        return ret;
+    }
+
+    @Override
+    public int read() throws IOException {
+        int ret = super.read();
+        byte[] b = new byte[1];
+        b[0] = (byte) ret;
+        md5.update(b);
+        return ret;
     }
 }

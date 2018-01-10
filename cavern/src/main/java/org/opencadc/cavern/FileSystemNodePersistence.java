@@ -81,18 +81,14 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -234,7 +230,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node updateProperties(Node node, List<NodeProperty> list) throws TransientException {
-        throw new UnsupportedOperationException();
+        try {
+            Path np = NodeUtil.nodeToPath(root, node);
+            NodeUtil.setNodeProperties(np, node);
+        }  catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
+        return node;
     }
 
     @Override
@@ -248,11 +250,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void setFileMetadata(DataNode dn, FileMetadata fm, boolean bln) throws TransientException {
+        // callback from storage system
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void setBusyState(DataNode dn, VOS.NodeBusyState nbs, VOS.NodeBusyState nbs1) throws TransientException {
+        // callback from storage system
         throw new UnsupportedOperationException();
     }
 

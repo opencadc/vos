@@ -211,15 +211,7 @@ public abstract class NodeUtil {
 
         setPosixOwnerGroup(root, ret, owner, group);
 
-        if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
-            UserDefinedFileAttributeView udv = Files.getFileAttributeView(np,
-                    UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-            for (NodeProperty prop : node.getProperties()) {
-                if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
-                    setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
-                }
-            }
-        }
+        setNodeProperties(ret, node);
 
         //GroupPrincipal readOnly = getGroup(users, node, VOS.PROPERTY_URI_GROUPREAD);
         //GroupPrincipal readWrite = getGroup(users, node, VOS.PROPERTY_URI_GROUPWRITE);
@@ -235,6 +227,18 @@ public abstract class NodeUtil {
         }
         if (group != null) {
             pv.setGroup(group);
+        }
+    }
+    
+    public static void setNodeProperties(Path path, Node node) throws IOException { 
+        if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
+            UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
+                    UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+            for (NodeProperty prop : node.getProperties()) {
+                if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
+                    setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
+                }
+            }
         }
     }
 
