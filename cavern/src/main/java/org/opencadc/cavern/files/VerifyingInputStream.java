@@ -63,10 +63,9 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern.files;
-
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -79,8 +78,9 @@ import java.security.NoSuchAlgorithmException;
  * @author pdowler
  */
 public class VerifyingInputStream extends FilterInputStream {
+
     private final MessageDigest md5;
-    
+
     public VerifyingInputStream(InputStream istream) {
         super(istream);
         try {
@@ -93,7 +93,7 @@ public class VerifyingInputStream extends FilterInputStream {
     public byte[] getChecksum() {
         return md5.digest();
     }
-    
+
     @Override
     public int read(byte[] bytes, int i, int i1) throws IOException {
         int ret = super.read(bytes, i, i1);

@@ -63,10 +63,9 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern.files;
-
 
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
@@ -109,13 +108,11 @@ public class PutAction extends FileAction {
     }
 
     @Override
-    protected InlineContentHandler getInlineContentHandler()
-    {
+    protected InlineContentHandler getInlineContentHandler() {
         return new InlineContentHandler() {
             public Content accept(String name, String contentType,
                     InputStream inputStream)
-                    throws InlineContentException, IOException
-            {
+                    throws InlineContentException, IOException {
                 InlineContentHandler.Content c = new InlineContentHandler.Content();
                 c.name = INPUT_STREAM;
                 c.value = inputStream;
@@ -130,7 +127,7 @@ public class PutAction extends FileAction {
 
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
-            
+
             Path rootPath = Paths.get(getRoot());
             Node node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
@@ -160,20 +157,19 @@ public class PutAction extends FileAction {
             String propValue = HexUtil.toHex(md5);
             log.debug(nodeURI + " MD5: " + propValue);
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
-            
+
             NodeUtil.setNodeProperties(target, node);
-            
+
             // doing this last because it requires chown which is most likely to fail during expermintation
             log.debug("restore owner & group");
             UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
             GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
             NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
-            
+
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
-        }
-        finally {
+        } finally {
             log.debug("put: done " + nodeURI.getURI().toASCIIString());
         }
     }
