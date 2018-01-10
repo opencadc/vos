@@ -71,20 +71,19 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -107,6 +106,12 @@ public class FileSystemProbe implements Callable<Boolean> {
         this.linkTargetOwner = users.lookupPrincipalByName(linkTargetOwner);
     }
 
+    public void supportedFileAttributeViews() {
+        for (String vs : root.getFileSystem().supportedFileAttributeViews()) {
+            log.warn("FileAttributeView supported: " + vs);
+        }
+    }
+    
     @Override
     public Boolean call() {
         log.info("START");
@@ -115,6 +120,9 @@ public class FileSystemProbe implements Callable<Boolean> {
 
         log.info("testing create file...");
         success = doCreateFile() & success;
+        
+        log.info("testing set file attribute...");
+        success = doSetAttribute() & success;
 
         log.info("testing create directory...");
         success = doCreateDir() & success;
@@ -336,6 +344,68 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             StringBuilder sb = new StringBuilder();
             sb.append("[symlink] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
+            if (num == 0) {
+                sb.append(" [OK]");
+                log.info(sb.toString());
+                return true;
+            } else {
+                sb.append(" [FAIL]");
+                log.error(sb.toString());
+                return false;
+            }
+        } catch (IOException ex) {
+            log.error("FAIL", ex);
+            return false;
+        }
+    }
+
+    public boolean doSetAttribute() {
+        try {
+            String name = UUID.randomUUID().toString();
+            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            String origMD5 = "74808746f32f28650559885297f76efa";
+            
+            DataNode n1 = new DataNode(uri);
+            NodeUtil.setOwner(n1, owner);
+            log.info("[file] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
+            n1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, origMD5));
+
+            String fail = " [FAIL]";
+            Path pth = NodeUtil.create(root, n1);
+            if (pth == null || !Files.exists(pth)) {
+                log.error("[file] failed to create file in fs: " + root + "/" + name + fail);
+                return false;
+            }
+
+            Node n2 = NodeUtil.get(root, uri);
+            if (n2 == null) {
+                log.error("[file] failed to get DataNode: " + uri + " from " + root + fail);
+                return false;
+            }
+
+            int num = 0;
+            if (!n1.getClass().equals(n2.getClass())) {
+                log.error("[file] failed to restore node type: " + n1.getClass().getSimpleName()
+                        + " != " + n2.getClass().getSimpleName());
+                num++;
+            }
+            if (!n1.getName().equals(n2.getName())) {
+                log.error("[file] failed to restore node name: " + n1.getName() + " != " + n2.getName());
+                num++;
+            }
+            UserPrincipal owner2 = NodeUtil.getOwner(users, n2);
+            if (owner == null || !owner.equals(owner2)) {
+                log.error("[file] failed to restore node owner: " + owner + " != " + owner2);
+                num++;
+            }
+            String md5 = n2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (md5 == null || !origMD5.equals(md5)) {
+                log.error("[file] failed to restore node property: " + origMD5 + " != " + md5);
+                num++;
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            sb.append("[file] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
             if (num == 0) {
                 sb.append(" [OK]");
                 log.info(sb.toString());

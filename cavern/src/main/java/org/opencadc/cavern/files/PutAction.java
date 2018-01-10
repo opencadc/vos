@@ -155,7 +155,7 @@ public class PutAction extends FileAction {
             log.debug("Completed copy to file: " + target);
 
             log.debug("Restoring original permissions");
-            NodeUtil.applyPermissions(rootPath, target, owner, group);
+            NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);

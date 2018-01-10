@@ -72,21 +72,19 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Iterator;
 import java.util.UUID;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -167,8 +165,8 @@ public class NodeUtilTest {
     public void testCreateDir() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCreateDir-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -180,6 +178,11 @@ public class NodeUtilTest {
             // actual child test
             VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/dir-" + name));
             ContainerNode tn = new ContainerNode(uri);
+            String propURI = "ivo://opencadc.org/cavern#clash";
+            String propValue = "should I stay or should I go?";
+            tn.getProperties().add(new NodeProperty(propURI, propValue));
+            
+            
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
             Node tn2 = NodeUtil.get(root, uri);
@@ -188,9 +191,10 @@ public class NodeUtilTest {
             Assert.assertTrue(tn2 instanceof ContainerNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
 
-            NodeUtil.delete(root, testDir);
-            Assert.assertFalse("deleted", Files.exists(dir));
+            //NodeUtil.delete(root, testDir);
+            //Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -201,8 +205,8 @@ public class NodeUtilTest {
     public void testCreateFile() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCreateFile-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -212,8 +216,14 @@ public class NodeUtilTest {
             Assert.assertTrue("dir", Files.isDirectory(dir));
 
             // actual child test
-            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/dir-" + name));
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
             DataNode tn = new DataNode(uri);
+            String propURI = "ivo://opencadc.org/cavern#clash";
+            String propValue = "should I stay or should I go?";
+            tn.getProperties().add(new NodeProperty(propURI, propValue));
+            String origMD5 = "74808746f32f28650559885297f76efa";
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, origMD5));
+            
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
             Node tn2 = NodeUtil.get(root, uri);
@@ -222,9 +232,11 @@ public class NodeUtilTest {
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
+            Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
 
-            NodeUtil.delete(root, testDir);
-            Assert.assertFalse("deleted", Files.exists(dir));
+            //NodeUtil.delete(root, testDir);
+            //Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -235,8 +247,8 @@ public class NodeUtilTest {
     public void testCreateLink() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCreateLink-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -253,6 +265,11 @@ public class NodeUtilTest {
             final Path file = doCreate(root, dn, up);
 
             LinkNode ln = new LinkNode(luri, uri.getURI());
+            
+            // attrs on symlinks don't work, but set property to make sure it doesn't break anything
+            String propURI = "ivo://opencadc.org/cavern#clash";
+            String propValue = "should I stay or should I go?";
+            ln.getProperties().add(new NodeProperty(propURI, propValue));
             NodeUtil.setOwner(ln, up);
 
             Path link = doCreate(root, ln, up);
@@ -265,7 +282,10 @@ public class NodeUtilTest {
             LinkNode ln2 = (LinkNode) nn;
             Assert.assertEquals(ln.getUri(), ln2.getUri());
             Assert.assertEquals(ln.getTarget(), ln2.getTarget());
-
+            
+            // see above
+            //Assert.assertEquals("custom " + propURI, propValue, ln2.getPropertyValue(propURI));
+            
             // TODO: test that the link is relative to fs-mount view will be consistent
 
             NodeUtil.delete(root, luri);
@@ -288,7 +308,7 @@ public class NodeUtilTest {
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
-            String name = UUID.randomUUID().toString();
+            String name = "testCreatePath-" + UUID.randomUUID().toString();
             VOSURI testURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
@@ -325,8 +345,8 @@ public class NodeUtilTest {
 
             }
 
-            NodeUtil.delete(root, testURI);
-            Assert.assertFalse("deleted", Files.exists(dir));
+            //NodeUtil.delete(root, testURI);
+            //Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -341,7 +361,7 @@ public class NodeUtilTest {
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
-            String name = UUID.randomUUID().toString();
+            String name = "testList-" + UUID.randomUUID().toString();
             VOSURI testURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
@@ -377,8 +397,8 @@ public class NodeUtilTest {
                 Assert.assertEquals("num siblings", i + 1, num);
             }
 
-            NodeUtil.delete(root, testURI);
-            Assert.assertFalse("deleted", Files.exists(dir));
+            //NodeUtil.delete(root, testURI);
+            //Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -389,8 +409,8 @@ public class NodeUtilTest {
     public void testMove() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testMove-src-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -400,8 +420,8 @@ public class NodeUtilTest {
             Assert.assertTrue("dir", Files.isDirectory(dir));
 
             // make move target dir
-            String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            String name2 = "testMove-dest-" + UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -437,7 +457,7 @@ public class NodeUtilTest {
             // move dir2 to dir1
             log.debug("Moving: " + testDir2 + " to " + dir);
             NodeUtil.move(root, testDir2, testDir, up);
-            uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/test-" + name2));
+            uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/" + name2));
             log.debug("Asserting: " + uri);
             moved = NodeUtil.get(root, uri);
             Assert.assertNotNull(moved);
@@ -464,8 +484,8 @@ public class NodeUtilTest {
     public void testCopyFile() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCopyFile-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -476,7 +496,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -524,8 +544,8 @@ public class NodeUtilTest {
     public void testCopyDirectory() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCopyDirectory-src-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -535,8 +555,8 @@ public class NodeUtilTest {
             Assert.assertTrue("dir", Files.isDirectory(dir));
 
             // make copy target dir
-            String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            String name2 = "testCopyDirectory-dest-" + UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -590,7 +610,9 @@ public class NodeUtilTest {
                 Assert.assertEquals(u, orig.getUri());
                 Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
                 // assure the copy is there
-                VOSURI c = new VOSURI(URI.create(u.toString().replace(testDir.getURI().toASCIIString(), "vos://canfar.net~cavern/test-" + name2)));
+                VOSURI c = new VOSURI(URI.create(u.toString().replace(
+                        testDir.getURI().toASCIIString(), 
+                        testDir2.getURI().toASCIIString() )));
                 log.debug("Asserting: " + c);
                 Node copy = NodeUtil.get(root, c);
                 Assert.assertNotNull(copy);
@@ -613,8 +635,8 @@ public class NodeUtilTest {
     public void testCopyDirectoryWithLinks() {
         try {
             // top-level test dir
-            String name = UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name));
+            String name = "testCopyDirectoryWithLinks-src-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -634,8 +656,8 @@ public class NodeUtilTest {
             doCreate(root, dn, up);
 
             // make copy target dir
-            String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/test-" + name2));
+            String name2 = "testCopyDirectoryWithLinks-dest-" + UUID.randomUUID().toString();
+            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -693,7 +715,9 @@ public class NodeUtilTest {
                 Assert.assertEquals(u, orig.getUri());
                 Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
                 // assure the copy is there
-                VOSURI c = new VOSURI(URI.create(u.toString().replace(testDir.getURI().toASCIIString(), "vos://canfar.net~cavern/test-" + name2)));
+                VOSURI c = new VOSURI(URI.create(u.toString().replace(
+                        testDir.getURI().toASCIIString(), 
+                        testDir2.getURI().toASCIIString() )));
                 log.debug("Asserting: " + c);
                 Node copy = NodeUtil.get(root, c);
                 Assert.assertNotNull(copy);
