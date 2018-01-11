@@ -63,114 +63,129 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
- */
+*/
 
-package org.opencadc.cavern.files;
+package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.rest.InlineContentException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.util.HexUtil;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
+
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.GroupPrincipal;
-import java.nio.file.attribute.UserPrincipal;
-import java.security.AccessControlException;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
  *
- * @author majorb
+ * @author pdowler
  */
-public class PutAction extends FileAction {
-    private static final Logger log = Logger.getLogger(PutAction.class);
+public class AclCommandExecutor {
+    private static final Logger log = Logger.getLogger(AclCommandExecutor.class);
 
-    private static final String INPUT_STREAM = "in";
-
-    public PutAction() {
-        super();
+    private static final String GETACL = "getfacl";
+    private static final String SETACL = "setfacl";
+    private static final String FILE_RO = "r--";
+    private static final String FILE_RW = "rw-";
+    private static final String DIR_RO = "r-x";
+    private static final String DIR_RW = "rwx";
+    
+    
+    
+    private final Path path;
+    UserPrincipalLookupService users;
+    
+    public AclCommandExecutor(Path path, UserPrincipalLookupService users) { 
+        this.path = path;
+        this.users = users;
     }
-
-    @Override
-    public Direction getDirection() {
-        return Direction.pushToVoSpace;
-    }
-
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return new InlineContentHandler() {
-            public Content accept(String name, String contentType,
-                    InputStream inputStream)
-                    throws InlineContentException, IOException {
-                InlineContentHandler.Content c = new InlineContentHandler.Content();
-                c.name = INPUT_STREAM;
-                c.value = inputStream;
-                return c;
-            }
+    
+    public void clearACL()  throws IOException {
+        
+        String[] cmd = new String[] {
+            SETACL, "-b", toAbsolutePath(path)
         };
-    }
-
-    @Override
-    public void doAction() throws Exception {
-        VOSURI nodeURI = getNodeURI();
-
-        try {
-            log.debug("put: start " + nodeURI.getURI().toASCIIString());
-
-            Path rootPath = Paths.get(getRoot());
-            Node node = NodeUtil.get(rootPath, nodeURI);
-            if (node == null) {
-                // When the /files endpoint supports the putting of data
-                // before the node is created this will have to change.
-                // For now, return NotFound.
-                syncOutput.setCode(404);
-                return;
-            }
-
-            // only support data nodes for now
-            if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
-                syncOutput.getOutputStream().write("Not a writable node".getBytes());
-                syncOutput.setCode(400);
-            }
-
-            Path target = NodeUtil.nodeToPath(rootPath, node);
-            
-            InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
-            VerifyingInputStream vis = new VerifyingInputStream(in);
-            log.debug("copy: start " + target);
-            Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("copy: done " + target);
-
-            log.debug("set properties");
-            byte[] md5 = vis.getChecksum();
-            String propValue = HexUtil.toHex(md5);
-            log.debug(nodeURI + " MD5: " + propValue);
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
-
-            NodeUtil.setNodeProperties(target, node);
-
-            // doing this last because it requires chown which is most likely to fail during experimentation
-            log.debug("restore owner & group");
-            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
-            NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
-            
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
-        } finally {
-            log.debug("put: done " + nodeURI.getURI().toASCIIString());
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to clear ACLs on " + path + ": "
+                + grabber.getErrorOutput(true));
         }
+    }
+    
+    public void setReadOnlyACL(GroupPrincipal group, boolean isDir) throws IOException {
+        String perm = FILE_RO;
+        if (isDir) {
+            perm = DIR_RO;
+        }
+        setACL(group, perm);
+    }
+    
+    public void setReadWriteACL(GroupPrincipal group, boolean isDir) throws IOException {
+        String perm = FILE_RW;
+        if (isDir) {
+            perm = DIR_RW;
+        }
+        setACL(group, perm);
+    }
+    
+    private void setACL(GroupPrincipal group, String perm) throws IOException {
+        String[] cmd = new String[] {
+            SETACL, "-m", "group:" + group.getName() + ":" + perm, toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to set read-only ACL on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+    }
+    
+    public GroupPrincipal getReadOnlyACL(boolean isDir) throws IOException {
+        String perm = FILE_RO;
+        if (isDir) {
+            perm = DIR_RO;
+        }
+        return getACL(perm);
+    }
+    
+    public GroupPrincipal getReadWriteACL(boolean isDir) throws IOException {
+        String perm = FILE_RW;
+        if (isDir) {
+            perm = DIR_RW;
+        }
+        return getACL(perm);
+    }
+    
+    private GroupPrincipal getACL(String perm) throws IOException {
+        String[] cmd = new String[] {
+            GETACL, toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to set read-only ACL on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+        String out = grabber.getOutput(true);
+        String[] lines = out.split("[\n]");
+        for (String s : lines) {
+            if (!s.startsWith("#")) {
+                String[] tokens = s.split(":");
+                if (tokens.length == 3
+                        && "group".equals(tokens[0])
+                        && tokens[1].length() > 0
+                        && perm.equals(tokens[2])) {
+                    log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+                    return users.lookupPrincipalByGroupName(tokens[1]);
+                }                   
+            }
+            log.debug("getACL(" + perm + "): skip " + s);
+        }
+        log.debug("getACL(" + perm + "): found: null");
+        return null;
+    }
+    
+    private String toAbsolutePath(Path p) {
+        return p.toAbsolutePath().toString();
     }
 }

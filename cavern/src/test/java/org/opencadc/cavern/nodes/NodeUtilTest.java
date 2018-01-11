@@ -99,11 +99,14 @@ public class NodeUtilTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.util", Level.DEBUG);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
 
     static final String OWNER = System.getProperty("user.name");
+    static final String GROUP = System.getProperty("user.name");
 
     static {
         try {
@@ -182,6 +185,9 @@ public class NodeUtilTest {
             String propValue = "should I stay or should I go?";
             tn.getProperties().add(new NodeProperty(propURI, propValue));
             
+            // use one group-read property to test ACL round trip
+            String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
             
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
@@ -192,7 +198,8 @@ public class NodeUtilTest {
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
-
+            Assert.assertEquals("read-only " + VOS.PROPERTY_URI_GROUPREAD, roGroup, tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD));
+            
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
         } catch (Exception unexpected) {
@@ -224,6 +231,10 @@ public class NodeUtilTest {
             String origMD5 = "74808746f32f28650559885297f76efa";
             tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, origMD5));
             
+            // use one group-read property to test ACL round trip
+            String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
             Node tn2 = NodeUtil.get(root, uri);
@@ -237,6 +248,70 @@ public class NodeUtilTest {
 
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testNoSuchGroupFail() {
+        try {
+            // top-level test dir
+            String name = "testNoSuchGroupFail-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode n = new ContainerNode(testDir);
+            NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // actual child test
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+            DataNode tn = new DataNode(uri);
+            // use one group-read property to test ACL round trip
+            String roGroup = "ivo://cadc.nrc.ca/gms?NOGROUP";
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            
+            NodeUtil.setOwner(tn, up);
+            Path tdir = doCreate(root, tn, up);
+            Assert.fail("expected RuntimeException: got " + tdir);
+        } catch (RuntimeException expected) {
+            log.info("caught expected exception: " + expected);
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testExternalGroupFail() {
+        try {
+            // top-level test dir
+            String name = "testExternalGroupFail-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode n = new ContainerNode(testDir);
+            NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // actual child test
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+            DataNode tn = new DataNode(uri);
+            // use one group-read property to test ACL round trip
+            String roGroup = "ivo://extern.net/gms?" + GROUP;
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            
+            NodeUtil.setOwner(tn, up);
+            Path tdir = doCreate(root, tn, up);
+            Assert.fail("expected RuntimeException: got " + tdir);
+        } catch (RuntimeException expected) {
+            log.info("caught expected exception: " + expected);
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);

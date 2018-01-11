@@ -69,6 +69,8 @@ package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.ac.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
@@ -103,6 +105,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -213,9 +216,6 @@ public abstract class NodeUtil {
 
         setNodeProperties(ret, node);
 
-        //GroupPrincipal readOnly = getGroup(users, node, VOS.PROPERTY_URI_GROUPREAD);
-        //GroupPrincipal readWrite = getGroup(users, node, VOS.PROPERTY_URI_GROUPWRITE);
-        //applyACLs(root, np, readOnly, readWrite);
         return ret;
     }
 
@@ -239,10 +239,51 @@ public abstract class NodeUtil {
                     setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
                 }
             }
+            
+            LocalAuthority loc = new LocalAuthority();
+            URI localGMS = loc.getServiceURI(Standards.GMS_GROUPS_01.toASCIIString());
+            boolean isDir = (node instanceof ContainerNode);
+            UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
+            AclCommandExecutor acl = new AclCommandExecutor(path, users);
+            String sro = node.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
+            if (sro != null) {
+                GroupURI guri = new GroupURI(sro);
+                URI groupGMS = guri.getServiceID();
+                if (!groupGMS.equals(localGMS)) {
+                    // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                    throw new IllegalArgumentException("external group not supported: " + guri);
+                }
+                try {
+                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                    acl.setReadOnlyACL(gp, isDir);
+                } catch (UserPrincipalNotFoundException ex) {
+                    throw new RuntimeException("failed to find existing group: " + guri, ex);
+                }
+            }
+            
+            String srw = node.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
+            if (srw != null) {
+                GroupURI guri = new GroupURI(srw);
+                URI groupGMS = guri.getServiceID();
+                if (!groupGMS.equals(localGMS)) {
+                    // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                    throw new IllegalArgumentException("external group not supported: " + guri);
+                }
+                try {
+                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                    acl.setReadWriteACL(gp, isDir);
+                } catch (UserPrincipalNotFoundException ex) {
+                    throw new RuntimeException("failed to find existing group: " + guri, ex);
+                }
+            }
+            
+            
         }
     }
 
-    public static void createACL(Path root, Path p, GroupPrincipal readOnly, GroupPrincipal readWrite) throws IOException {
+    // NOTE: AclFileAttributeView not supported with linux OpenJDK so this code is maybe correct but useless
+    @Deprecated
+    private static void createACL(Path root, Path p, GroupPrincipal readOnly, GroupPrincipal readWrite) throws IOException {
         final AclFileAttributeView av = Files.getFileAttributeView(p, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (av == null) {
             throw new UnsupportedOperationException("AclFileAttributeView for " + p);
@@ -298,7 +339,7 @@ public abstract class NodeUtil {
     }
 
     private static void setAttribute(UserDefinedFileAttributeView v, String name, String value) throws IOException {
-        log.warn("setAttribute: " + name + " = " + value);
+        log.debug("setAttribute: " + name + " = " + value);
         value = value.trim();
         ByteBuffer buf = ByteBuffer.wrap(value.getBytes(Charset.forName("UTF-8")));
         v.write(name, buf);
@@ -447,6 +488,19 @@ public abstract class NodeUtil {
                 if (propValue != null) {
                     ret.getProperties().add(new NodeProperty(propName, propValue));
                 }
+            }
+            LocalAuthority loc = new LocalAuthority();
+            URI resourceID = loc.getServiceURI(Standards.GMS_GROUPS_01.toASCIIString());
+            AclCommandExecutor acl = new AclCommandExecutor(p, p.getFileSystem().getUserPrincipalLookupService());
+            GroupPrincipal rog = acl.getReadOnlyACL(attrs.isDirectory());
+            if (rog != null) {
+                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
+            }
+            GroupPrincipal rwg = acl.getReadWriteACL(attrs.isDirectory());
+            if (rog != null) {
+                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
             }
         }
 
@@ -657,16 +711,5 @@ public abstract class NodeUtil {
             UserPrincipal user) throws IOException {
         // TODO: this assumes default group name == owner name and should be fixed
         return users.lookupPrincipalByGroupName(user.getName());
-    }
-
-    public static GroupPrincipal getGroup(UserPrincipalLookupService users,
-            Node node, String property) throws IOException {
-
-        String suri = node.getPropertyValue(property);
-        if (suri == null) {
-            return null;
-        }
-        GroupURI uri = new GroupURI(suri);
-        return users.lookupPrincipalByGroupName(uri.getName());
     }
 }
