@@ -181,6 +181,7 @@ public class NodeUtilTest {
             // actual child test
             VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/dir-" + name));
             ContainerNode tn = new ContainerNode(uri);
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
             String propURI = "ivo://opencadc.org/cavern#clash";
             String propValue = "should I stay or should I go?";
             tn.getProperties().add(new NodeProperty(propURI, propValue));
@@ -196,6 +197,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(tn2);
             Assert.assertTrue(tn2 instanceof ContainerNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertTrue("public", tn2.isPublic());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("read-only " + VOS.PROPERTY_URI_GROUPREAD, roGroup, tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD));
@@ -225,6 +227,7 @@ public class NodeUtilTest {
             // actual child test
             VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
             DataNode tn = new DataNode(uri);
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
             String propURI = "ivo://opencadc.org/cavern#clash";
             String propValue = "should I stay or should I go?";
             tn.getProperties().add(new NodeProperty(propURI, propValue));
@@ -242,6 +245,69 @@ public class NodeUtilTest {
             Assert.assertNotNull(tn2);
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertTrue("public", tn2.isPublic());
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
+            Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+
+            //NodeUtil.delete(root, testDir);
+            //Assert.assertFalse("deleted", Files.exists(dir));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testSetProperties() {
+        try {
+            // top-level test dir
+            String name = "testSetProperties-" + UUID.randomUUID().toString();
+            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            Path root = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+            UserPrincipal up = users.lookupPrincipalByName(OWNER);
+            ContainerNode n = new ContainerNode(testDir);
+            NodeUtil.setOwner(n, up);
+            Path dir = doCreate(root, n, up);
+            Assert.assertTrue("dir", Files.isDirectory(dir));
+
+            // actual child test
+            VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+            DataNode tn = new DataNode(uri);
+            
+            String propURI = "ivo://opencadc.org/cavern#clash";
+            String propValue = "should I stay or should I go?";
+            String origMD5 = "74808746f32f28650559885297f76efa";
+            
+            NodeUtil.setOwner(tn, up);
+            Path tdir = doCreate(root, tn, up);
+            Node tn2 = NodeUtil.get(root, uri);
+            log.info("found: " + tn2);
+            Assert.assertNotNull(tn2);
+            Assert.assertTrue(tn2 instanceof DataNode);
+            Assert.assertEquals(tn.getUri(), tn2.getUri());
+            
+            Assert.assertFalse("public", tn2.isPublic());
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNull("custom " + propURI, tn2.getPropertyValue(propURI));
+            Assert.assertNull("Content-MD5", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+            
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, origMD5));
+            tn.getProperties().add(new NodeProperty(propURI, propValue));
+            // use one group-read property to test ACL round trip
+            String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            
+            NodeUtil.setNodeProperties(tdir, tn);
+            
+            tn2 = NodeUtil.get(root, uri);
+            log.info("found: " + tn2);
+            Assert.assertNotNull(tn2);
+            Assert.assertTrue(tn2 instanceof DataNode);
+            Assert.assertEquals(tn.getUri(), tn2.getUri());
+            Assert.assertTrue("public", tn2.isPublic());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));

@@ -229,9 +229,25 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
-    public Node updateProperties(Node node, List<NodeProperty> list) throws TransientException {
+    public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
+        // node arg is the current node, properties are the new propss
         try {
             Path np = NodeUtil.nodeToPath(root, node);
+            for (NodeProperty prop : properties)
+            {
+                NodeProperty cur = node.findProperty(prop.getPropertyURI());
+                if (cur != null) {
+                    if (prop.isMarkedForDeletion()) {
+                        node.getProperties().remove(cur);
+                    } else { // update
+                        cur.setValue(prop.getPropertyValue());
+                    }
+                } else { // add
+                    if (!prop.isMarkedForDeletion()) {
+                        node.getProperties().add(prop);
+                    } // else: ignore delete non-existent prop
+                }
+            }
             NodeUtil.setNodeProperties(np, node);
         }  catch (IOException ex) {
             throw new RuntimeException("oops", ex);

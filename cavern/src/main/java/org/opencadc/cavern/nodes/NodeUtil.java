@@ -231,12 +231,36 @@ public abstract class NodeUtil {
     }
     
     public static void setNodeProperties(Path path, Node node) throws IOException { 
+        log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (NodeProperty prop : node.getProperties()) {
                 if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
                     setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
+                }
+            }
+            
+            PosixFileAttributeView pv = Files.getFileAttributeView(path,
+                PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+            Set<PosixFilePermission> perms = pv.readAttributes().permissions(); // current perms
+            if (node.isPublic()) { 
+                // set
+                if (!perms.contains(PosixFilePermission.OTHERS_READ)) {
+                    perms.add(PosixFilePermission.OTHERS_READ);
+                    if (node instanceof ContainerNode) {
+                        perms.add(PosixFilePermission.OTHERS_EXECUTE);
+                    }
+                    pv.setPermissions(perms);
+                }
+            } else {
+                // unset
+                if (perms.contains(PosixFilePermission.OTHERS_READ)) {
+                    perms.remove(PosixFilePermission.OTHERS_READ);
+                    if (node instanceof ContainerNode) {
+                        perms.remove(PosixFilePermission.OTHERS_EXECUTE);
+                    }
+                    pv.setPermissions(perms);
                 }
             }
             
