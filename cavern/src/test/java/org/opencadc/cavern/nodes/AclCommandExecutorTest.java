@@ -132,25 +132,34 @@ public class AclCommandExecutorTest {
             UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
             AclCommandExecutor acl = new AclCommandExecutor(target, users);
             GroupPrincipal group = users.lookupPrincipalByGroupName(GROUP);
+            
+            // RO
             acl.setReadOnlyACL(group, false);
             
-            GroupPrincipal actual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("read-only", actual);
-            Assert.assertEquals("read-only", group, actual);
+            GroupPrincipal roActual = acl.getReadOnlyACL(false);
+            Assert.assertNotNull("read-only", roActual);
+            Assert.assertEquals("read-only", group, roActual);
+            
+            GroupPrincipal rwActual = acl.getReadWriteACL(false);
+            Assert.assertNull("null read-write", rwActual);
             
             acl.clearACL();
-            actual = acl.getReadOnlyACL(false);
-            Assert.assertNull("clear read-only", actual);
+            roActual = acl.getReadOnlyACL(false);
+            Assert.assertNull("clear read-only", roActual);
             
+            // RW
             acl.setReadWriteACL(group, false);
             
-            actual = acl.getReadWriteACL(false);
-            Assert.assertNotNull("read-write", actual);
-            Assert.assertEquals("read-write", group, actual);
+            rwActual = acl.getReadWriteACL(false);
+            Assert.assertNotNull("read-write", rwActual);
+            Assert.assertEquals("read-write", group, rwActual);
+            
+            roActual = acl.getReadOnlyACL(false);
+            Assert.assertNull("null read-only", roActual);
             
             acl.clearACL();
-            actual = acl.getReadOnlyACL(false);
-            Assert.assertNull("clear read-write", actual);
+            rwActual = acl.getReadWriteACL(false);
+            Assert.assertNull("clear read-write", rwActual);
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);

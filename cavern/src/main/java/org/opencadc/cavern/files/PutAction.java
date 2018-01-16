@@ -86,6 +86,8 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -147,13 +149,14 @@ public class PutAction extends FileAction {
             Path target = NodeUtil.nodeToPath(rootPath, node);
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
-            VerifyingInputStream vis = new VerifyingInputStream(in);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            DigestInputStream vis = new DigestInputStream(in, md);
             log.debug("copy: start " + target);
             Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("copy: done " + target);
 
             log.debug("set properties");
-            byte[] md5 = vis.getChecksum();
+            byte[] md5 = md.digest();
             String propValue = HexUtil.toHex(md5);
             log.debug(nodeURI + " MD5: " + propValue);
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));

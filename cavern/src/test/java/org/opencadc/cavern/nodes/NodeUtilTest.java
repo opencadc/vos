@@ -249,6 +249,11 @@ public class NodeUtilTest {
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+            String roActual = tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull("read-only", roActual);
+            Assert.assertEquals("read-only", roGroup, roActual);
+            String rwActual = tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
+            Assert.assertNull("read-write", rwActual);
 
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));

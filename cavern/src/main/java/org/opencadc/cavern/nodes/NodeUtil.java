@@ -397,9 +397,7 @@ public abstract class NodeUtil {
         }
         log.debug("[get] path components: " + nodeNames.size());
 
-        ContainerNode cn = null; // new ContainerNode(rootURI);
-        // cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC,
-        // Boolean.toString(true)));
+        ContainerNode cn = null;
         Iterator<String> iter = nodeNames.descendingIterator();
         Path cur = root;
         StringBuilder sb = new StringBuilder(rootURI.getURI().toASCIIString());
@@ -522,16 +520,17 @@ public abstract class NodeUtil {
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
             }
             GroupPrincipal rwg = acl.getReadWriteACL(attrs.isDirectory());
-            if (rog != null) {
-                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
-                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
+            if (rwg != null) {
+                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rwg.getName()));
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, guri.getURI().toASCIIString()));
             }
         }
 
+        NodeProperty publicProp = new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(false));
+        ret.getProperties().add(publicProp);
         for (PosixFilePermission pfp : attrs.permissions()) {
             if (PosixFilePermission.OTHERS_READ.equals(pfp)) {
-                ret.getProperties().add(new NodeProperty(
-                        VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(true)));
+                publicProp.setValue(Boolean.toString(true));
             }
         }
         return ret;
