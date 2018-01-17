@@ -120,7 +120,8 @@ public class CreateLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);
@@ -173,7 +174,8 @@ public class CreateLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);

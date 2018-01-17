@@ -121,7 +121,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             }
 
             // Add DataNode as target to a LinkNode.
-            LinkNode targetNode = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(getSampleLinkNode());
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
@@ -178,7 +178,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             }
 
             // Add DataNode as target to a LinkNode.
-            LinkNode targetNode = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(getSampleLinkNode());
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
@@ -241,7 +241,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             }
 
             // Target LinkNode.
-            LinkNode targetNode = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(getSampleLinkNode());
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
@@ -309,7 +309,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             }
 
             // Target LinkNode, don't persist.
-            LinkNode targetNode = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(getSampleLinkNode());
 
             // Get a destination ContainerNode Z.
             TestNode destinationNode = getSampleContainerNode("Z");
@@ -371,14 +371,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             }
 
             // Target LinkNode.
-            LinkNode targetNode = getSampleLinkNode(new URI("http://www.google.com"));
+            LinkNode targetNode = getSampleLinkNode(getSampleLinkNode());
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(getNodeStandardID(), targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination LinkNode.
-            LinkNode destinationNode = getSampleLinkNode(new URI("vos://cadc.nrc.ca~vospace/CADCAuthtest1"));
+            LinkNode destinationNode = getSampleLinkNode(getSampleLinkNode());
             response = put(getNodeStandardID(), destinationNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 

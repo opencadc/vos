@@ -168,7 +168,7 @@ public abstract class VOSBaseTest
 
                 RegistryClient rc = new RegistryClient();
                 this.resourceURL = rc.getServiceURL(resourceIdentifier, standardID, AuthMethod.CERT);
-                log.debug("resourceURL: " + this.resourceURL.toExternalForm());
+                log.debug("resourceURL: " + this.resourceURL);
                 if (this.resourceURL == null)
                 {
                     throw new RuntimeException("No service URL found for resourceIdentifier=" +
