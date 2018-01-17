@@ -198,7 +198,7 @@ public class NodeUtilTest {
             Assert.assertTrue(tn2 instanceof ContainerNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertTrue("public", tn2.isPublic());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("read-only " + VOS.PROPERTY_URI_GROUPREAD, roGroup, tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD));
             
@@ -246,7 +246,7 @@ public class NodeUtilTest {
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertTrue("public", tn2.isPublic());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertNotNull("Content-Length", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
             Assert.assertEquals("Content-Length", "0", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
@@ -296,7 +296,7 @@ public class NodeUtilTest {
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             
             Assert.assertFalse("public", tn2.isPublic());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertNull("custom " + propURI, tn2.getPropertyValue(propURI));
             Assert.assertNull("Content-MD5", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             
@@ -315,7 +315,7 @@ public class NodeUtilTest {
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertTrue("public", tn2.isPublic());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
 
@@ -480,7 +480,7 @@ public class NodeUtilTest {
                 Assert.assertNotNull(nn);
                 Assert.assertTrue(nn instanceof ContainerNode);
                 Assert.assertEquals(n.getUri(), nn.getUri());
-                Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_DATE));
                 // count nodes in path
                 int num = 0;
                 ContainerNode parent = nn.getParent();
@@ -531,7 +531,7 @@ public class NodeUtilTest {
                 Assert.assertNotNull(nn);
                 Assert.assertTrue(nn instanceof ContainerNode);
                 Assert.assertEquals(n.getUri(), nn.getUri());
-                Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
                 // count children
                 ContainerNode parent = nn.getParent();
@@ -587,7 +587,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(tn2);
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
             // move the data node to dir2
             log.debug("Moving: " + tn2.getUri() + " to " + testDir2);
@@ -598,7 +598,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(moved);
             Assert.assertTrue(moved instanceof DataNode);
             Assert.assertEquals(uri, moved.getUri());
-            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
             // TEST MOVE DIR
 
@@ -611,7 +611,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(moved);
             Assert.assertTrue(moved instanceof ContainerNode);
             Assert.assertEquals(uri, moved.getUri());
-            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
             // ensure the previously moved file is there
             uri = new VOSURI(URI.create(uri.getURI().toASCIIString() + "/file-" + name));
@@ -620,7 +620,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(moved);
             Assert.assertTrue(moved instanceof DataNode);
             Assert.assertEquals(uri, moved.getUri());
-            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -662,7 +662,7 @@ public class NodeUtilTest {
             Assert.assertNotNull(tn2);
             Assert.assertTrue(tn2 instanceof DataNode);
             Assert.assertEquals(tn.getUri(), tn2.getUri());
-            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
             // copy the data node to dir2
             log.debug("Copying: " + tn2.getUri() + " to " + testDir2);
@@ -673,14 +673,14 @@ public class NodeUtilTest {
             Assert.assertNotNull(copied);
             Assert.assertTrue(copied instanceof DataNode);
             Assert.assertEquals(uri, copied.getUri());
-            Assert.assertNotNull("lastModified", copied.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", copied.getPropertyValue(VOS.PROPERTY_URI_DATE));
             // check the original
             log.debug("Asserting: " + tn.getUri());
             Node orig = NodeUtil.get(root, tn.getUri());
             Assert.assertNotNull(orig);
             Assert.assertTrue(orig instanceof DataNode);
             Assert.assertEquals(tn.getUri(), orig.getUri());
-            Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -756,7 +756,7 @@ public class NodeUtilTest {
                     Assert.assertTrue(orig instanceof ContainerNode);
                 }
                 Assert.assertEquals(u, orig.getUri());
-                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_DATE));
                 // assure the copy is there
                 VOSURI c = new VOSURI(URI.create(u.toString().replace(
                         testDir.getURI().toASCIIString(), 
@@ -770,7 +770,7 @@ public class NodeUtilTest {
                     Assert.assertTrue(orig instanceof ContainerNode);
                 }
                 Assert.assertEquals(c, copy.getUri());
-                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_DATE));
             }
 
         } catch (Exception unexpected) {
@@ -861,7 +861,7 @@ public class NodeUtilTest {
                     Assert.assertTrue(orig instanceof ContainerNode);
                 }
                 Assert.assertEquals(u, orig.getUri());
-                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_DATE));
                 // assure the copy is there
                 VOSURI c = new VOSURI(URI.create(u.toString().replace(
                         testDir.getURI().toASCIIString(), 
@@ -876,7 +876,7 @@ public class NodeUtilTest {
                     Assert.assertTrue(copy instanceof ContainerNode);
                 }
                 Assert.assertEquals(c, copy.getUri());
-                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+                Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_DATE));
             }
 
         } catch (Exception unexpected) {

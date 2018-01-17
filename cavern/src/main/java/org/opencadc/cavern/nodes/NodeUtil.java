@@ -516,7 +516,7 @@ public abstract class NodeUtil {
         //    NodeProperty(VOS.PROPERTY_URI_ACCESS_DATE, df.format(accessed)));
         //ret.getProperties().add(new
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
-        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE,
+        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE,
                 df.format(modified)));
         
         if (attrs.isRegularFile()) {
