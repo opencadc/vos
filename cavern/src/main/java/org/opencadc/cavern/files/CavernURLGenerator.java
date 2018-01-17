@@ -63,7 +63,7 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern.files;
 
@@ -73,20 +73,21 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.util.RsaSignatureVerifier;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
-
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -96,21 +97,20 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.security.AccessControlException;
 import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.opencadc.cavern.nodes.NodeUtil;
+import org.opencadc.cavern.FileSystemNodePersistence;
 
-public class CavernURLGenerator implements TransferGenerator
-{
+public class CavernURLGenerator implements TransferGenerator {
+
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
-    private String root;
+    //private String root;
+    private final FileSystemNodePersistence nodes;
 
     public static final String KEY_SIGNATURE = "sig";
     public static final String KEY_META = "meta";
@@ -118,22 +118,18 @@ public class CavernURLGenerator implements TransferGenerator
     private static final String KEY_META_DIRECTION = "dir";
 
     public CavernURLGenerator() {
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        this.root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
-        if (this.root == null) {
-            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
-        }
+        this.nodes = new FileSystemNodePersistence();
     }
 
+    // for testing
     public CavernURLGenerator(String root) {
-        this.root = root;
+        this.nodes = new FileSystemNodePersistence(root);
     }
 
     @Override
     public List<URL> getURLs(VOSURI target, Protocol protocol, View view,
             Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException
-    {
+            throws FileNotFoundException, TransientException {
         if (target == null) {
             throw new IllegalArgumentException("target is required");
         }
@@ -141,98 +137,107 @@ public class CavernURLGenerator implements TransferGenerator
             throw new IllegalArgumentException("protocol is required");
         }
 
-        // get the node to check the type - consider changing this API
-        // so that the node instead of the URI is passed in so this step
-        // can be avoided.
-        FileSystem fs = FileSystems.getDefault();
-        Path rootPath = fs.getPath(root);
-        Node node = null;
         try {
-            node = NodeUtil.get(rootPath, target);
-        } catch (IOException e) {
-            throw new TransientException("Failed to get node", e);
-        }
 
-        if (!(node instanceof DataNode)) {
-            throw new UnsupportedOperationException("Only DataNode transfers currently supported");
-        }
+            // get the node to check the type - consider changing this API
+            // so that the node instead of the URI is passed in so this step
+            // can be avoided.
+            FileSystem fs = FileSystems.getDefault();
+            PathResolver ps = new PathResolver(nodes, true);
+            Node node = ps.resolveWithReadPermissionCheck(target, null, true);
 
-        String scheme = null;
-        Direction dir = null;
-
-        switch (protocol.getUri().toString()) {
-            case VOS.PROTOCOL_HTTP_GET:
-                scheme = "http";
-                dir = Direction.pullFromVoSpace;
-                break;
-            case VOS.PROTOCOL_HTTP_PUT:
-                scheme = "http";
-                dir = Direction.pushToVoSpace;
-                break;
-            case VOS.PROTOCOL_HTTPS_GET:
-                scheme = "https";
-                dir = Direction.pullFromVoSpace;
-                break;
-            case VOS.PROTOCOL_HTTPS_PUT:
-                scheme = "https";
-                dir = Direction.pushToVoSpace;
-                break;
-        }
-
-        List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
-        if (baseURLs == null) {
-            return null;
-        }
-
-        // create the metadata and signature segments
-        StringBuilder metaSb = new StringBuilder();
-        metaSb.append(KEY_META_NODE).append("=").append(target.toString());
-        metaSb.append("&");
-        metaSb.append(KEY_META_DIRECTION).append("=").append(dir.getValue());
-        byte[] metaBytes = metaSb.toString().getBytes();
-
-        RsaSignatureGenerator sg = new RsaSignatureGenerator();
-        String sig;
-        try {
-            byte[] sigBytes = sg.sign(new ByteArrayInputStream(metaBytes));
-            sig = new String(Base64.encode(sigBytes));
-            log.debug("Created signature: " + sig + " for meta: " + metaSb.toString());
-        } catch (InvalidKeyException | IOException | RuntimeException e) {
-            throw new IllegalStateException("Could not sign url", e);
-        }
-        String meta = new String(Base64.encode(metaBytes));
-        log.debug("meta: " + meta);
-        log.debug("sig: " + sig);
-
-        // build the request path
-        StringBuilder path = new StringBuilder();
-        String metaURLEncoded = base64URLEncode(meta);
-        String sigURLEncoded = base64URLEncode(sig);
-
-        log.debug("metaURLEncoded: " + metaURLEncoded);
-        log.debug("sigURLEncoded: " + sigURLEncoded);
-
-        path.append("/");
-        path.append(metaURLEncoded);
-        path.append("/");
-        path.append(sigURLEncoded);
-        path.append(node.getUri().getPath());
-        log.debug("Created request path: " + path.toString());
-
-        // add the request path to each of the base URLs
-        List<URL> returnList = new ArrayList<URL>(baseURLs.size());
-        for (URL baseURL : baseURLs) {
-            URL next;
-            try {
-                next = new URL(baseURL.toString() + path.toString());
-                log.debug("Added url: " + next);
-                returnList.add(next);
-            } catch (MalformedURLException e) {
-                throw new IllegalStateException("Could not generate url", e);
+            if (!(node instanceof DataNode)) {
+                throw new UnsupportedOperationException("Only DataNode transfers currently supported: " + node.getUri());
             }
-        }
 
-        return returnList;
+            String scheme = null;
+            Direction dir = null;
+
+            switch (protocol.getUri()) {
+                case VOS.PROTOCOL_HTTP_GET:
+                    scheme = "http";
+                    dir = Direction.pullFromVoSpace;
+                    break;
+                case VOS.PROTOCOL_HTTP_PUT:
+                    scheme = "http";
+                    dir = Direction.pushToVoSpace;
+                    break;
+                case VOS.PROTOCOL_HTTPS_GET:
+                    scheme = "https";
+                    dir = Direction.pullFromVoSpace;
+                    break;
+                case VOS.PROTOCOL_HTTPS_PUT:
+                    scheme = "https";
+                    dir = Direction.pushToVoSpace;
+                    break;
+            }
+
+            List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
+            if (baseURLs == null) {
+                log.debug("no matching interfaces ");
+                return null;
+            }
+
+            // create the metadata and signature segments
+            StringBuilder metaSb = new StringBuilder();
+            metaSb.append(KEY_META_NODE).append("=").append(target.toString());
+            metaSb.append("&");
+            metaSb.append(KEY_META_DIRECTION).append("=").append(dir.getValue());
+            byte[] metaBytes = metaSb.toString().getBytes();
+
+            RsaSignatureGenerator sg = new RsaSignatureGenerator();
+            String sig;
+            try {
+                byte[] sigBytes = sg.sign(new ByteArrayInputStream(metaBytes));
+                sig = new String(Base64.encode(sigBytes));
+                log.debug("Created signature: " + sig + " for meta: " + metaSb.toString());
+            } catch (InvalidKeyException | IOException | RuntimeException e) {
+                throw new IllegalStateException("Could not sign url", e);
+            }
+            String meta = new String(Base64.encode(metaBytes));
+            log.debug("meta: " + meta);
+            log.debug("sig: " + sig);
+
+            // build the request path
+            StringBuilder path = new StringBuilder();
+            String metaURLEncoded = base64URLEncode(meta);
+            String sigURLEncoded = base64URLEncode(sig);
+
+            log.debug("metaURLEncoded: " + metaURLEncoded);
+            log.debug("sigURLEncoded: " + sigURLEncoded);
+
+            path.append("/");
+            path.append(metaURLEncoded);
+            path.append("/");
+            path.append(sigURLEncoded);
+            if (Direction.pushToVoSpace.equals(dir)) {
+                // put to resolved path
+                path.append(node.getUri().getPath());
+            } else {
+                // get from unresolved path so filename at end of url is correct
+                path.append(target.getURI().getPath());
+            }
+            log.debug("Created request path: " + path.toString());
+
+            // add the request path to each of the base URLs
+            List<URL> returnList = new ArrayList<URL>(baseURLs.size());
+            for (URL baseURL : baseURLs) {
+                URL next;
+                try {
+                    next = new URL(baseURL.toString() + path.toString());
+                    log.debug("Added url: " + next);
+                    returnList.add(next);
+                } catch (MalformedURLException e) {
+                    throw new IllegalStateException("Could not generate url", e);
+                }
+            }
+
+            return returnList;
+        } catch (LinkingException ex) {
+            throw new RuntimeException("OOPS", ex);
+        } catch (NodeNotFoundException ex) {
+            throw new FileNotFoundException(target.getPath());
+        }
     }
 
     public VOSURI getNodeURI(String meta, String sig, Direction direction) throws AccessControlException, IOException {
@@ -318,12 +323,13 @@ public class CavernURLGenerator implements TransferGenerator
             Capabilities caps = rc.getCapabilities(serviceURI);
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
-            for (Interface ifc : interfaces)
-            {
-                if (securityMethod == null) {
+            for (Interface ifc : interfaces) {
+                log.debug("match? " + securityMethod + " vs " + ifc.getSecurityMethod());
+                if (securityMethod == null && 
+                        (ifc.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(ifc.getSecurityMethod()))) {
                     baseURLs.add(ifc.getAccessURL().getURL());
-                } else if (ifc.getSecurityMethod().equals(securityMethod) &&
-                    ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
+                } else if (ifc.getSecurityMethod().equals(securityMethod)
+                        && ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
                     baseURLs.add(ifc.getAccessURL().getURL());
                 }
             }

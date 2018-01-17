@@ -88,6 +88,7 @@ import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.util.Iterator;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -155,9 +156,26 @@ public class PutAction extends FileAction {
             Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("copy: done " + target);
 
+            String expectedMD5 = syncInput.getHeader("Content-MD5");
             log.debug("set properties");
             byte[] md5 = md.digest();
             String propValue = HexUtil.toHex(md5);
+            if (expectedMD5 != null && !expectedMD5.equals(propValue)) {
+                // upload failed: do not keep corrupt data
+                log.debug("upload corrupt: " + expectedMD5 + " != " + propValue);
+                Files.delete(target);
+                // restore empty DataNode: remove props that are no longer applicable
+                Iterator<NodeProperty> i = node.getProperties().iterator();
+                while (i.hasNext()) {
+                    NodeProperty np = i.next();
+                    if (VOS.PROPERTY_URI_CONTENTMD5.equals(np.getPropertyURI())) {
+                        i.remove();
+                    }
+                }
+                NodeUtil.create(rootPath, node);
+                return;
+            }
+            
             log.debug(nodeURI + " MD5: " + propValue);
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
 

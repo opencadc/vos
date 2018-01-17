@@ -247,6 +247,8 @@ public class NodeUtilTest {
             Assert.assertEquals(tn.getUri(), tn2.getUri());
             Assert.assertTrue("public", tn2.isPublic());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_CREATION_DATE));
+            Assert.assertNotNull("Content-Length", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("Content-Length", "0", tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             String roActual = tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
@@ -281,12 +283,12 @@ public class NodeUtilTest {
             VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
             DataNode tn = new DataNode(uri);
             
-            String propURI = "ivo://opencadc.org/cavern#clash";
-            String propValue = "should I stay or should I go?";
-            String origMD5 = "74808746f32f28650559885297f76efa";
+            final String propURI = "ivo://opencadc.org/cavern#clash";
+            final String propValue = "should I stay or should I go?";
+            final String origMD5 = "74808746f32f28650559885297f76efa";
             
             NodeUtil.setOwner(tn, up);
-            Path tdir = doCreate(root, tn, up);
+            final Path tdir = doCreate(root, tn, up);
             Node tn2 = NodeUtil.get(root, uri);
             log.info("found: " + tn2);
             Assert.assertNotNull(tn2);

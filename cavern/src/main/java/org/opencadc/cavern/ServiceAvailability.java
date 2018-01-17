@@ -101,7 +101,7 @@ public class ServiceAvailability implements WebService {
 
     private static final String AVAIL_PROTO = "http";
     private static String CRED_AVAIL = "ivo://cadc.nrc.ca/cred";
-    private static String AC_AVAIL = "ivo://cadc.nrc.ca/aa";
+    private static String AC_AVAIL = "ivo://canfar.net/aa";
 
     // identity of caller who is allowed to change service state remotely
     // TODO: this should be configured someplace

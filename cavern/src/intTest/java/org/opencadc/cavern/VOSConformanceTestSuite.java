@@ -42,12 +42,12 @@ import org.junit.runners.Suite;
 
     SetContainerNodeTest.class,
     SetDataNodeTest.class,
-    SetLinkNodeTest.class,
+    //SetLinkNodeTest.class, // no props on symlinks in filesystem impl
 
     MoveContainerNodeTest.class,
     MoveDataNodeTest.class,
     MoveLinkNodeTest.class,
-
+    
     SyncPullFromVOSpaceTest.class,
     SyncPushToVOSpaceTest.class,
 

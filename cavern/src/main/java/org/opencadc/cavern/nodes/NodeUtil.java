@@ -75,6 +75,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -200,6 +201,7 @@ public abstract class NodeUtil {
             log.debug("[create] file: " + np);
             ret = Files.createFile(np, PosixFilePermissions.asFileAttribute(perms));
         } else if (node instanceof LinkNode) {
+            log.debug("[create] link: " + np);
             LinkNode ln = (LinkNode) node;
             String targPath = ln.getTarget().getPath().substring(1);
             Path absPath = root.resolve(targPath);
@@ -218,7 +220,7 @@ public abstract class NodeUtil {
 
         return ret;
     }
-
+    
     public static void setPosixOwnerGroup(Path root, Path p, UserPrincipal owner, GroupPrincipal group) throws IOException {
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
@@ -237,7 +239,11 @@ public abstract class NodeUtil {
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (NodeProperty prop : node.getProperties()) {
                 if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
-                    setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
+                    if (prop.isMarkedForDeletion()) {
+                        udv.delete(prop.getPropertyURI());
+                    } else {
+                        setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
+                    }
                 }
             }
             
@@ -382,7 +388,11 @@ public abstract class NodeUtil {
         throw new UnsupportedOperationException();
     }
 
-    public static Node get(Path root, VOSURI uri) throws IOException {
+    public static Node get(Path root, VOSURI uri)  throws IOException {
+        return get(root, uri, false);
+    }
+    
+    public static Node get(Path root, VOSURI uri, boolean allowPartialPath) throws IOException {
         LinkedList<String> nodeNames = new LinkedList<String>();
         nodeNames.add(uri.getName());
         VOSURI parent = uri.getParentURI();
@@ -407,7 +417,7 @@ public abstract class NodeUtil {
             Path p = cur.resolve(pathComp);
             cur = p;
             sb.append("/").append(pathComp); // for next loop
-            log.debug("[get-walk] " + sb.toString());
+            log.debug("[get-walk] " + sb.toString() + " " + allowPartialPath);
             try {
                 Node tmp = pathToNode(root, p, rootURI);
                 if (cn == null) {
@@ -421,12 +431,21 @@ public abstract class NodeUtil {
                         cn = (ContainerNode) tmp;
                     }
                 }
+                if (tmp instanceof LinkNode) {
+                    if (allowPartialPath) {
+                        return tmp;
+                    } else if (uri.equals(tmp.getUri())) {
+                        return tmp;
+                    } else {
+                        ret = null;
+                        break;
+                    }
+                }
                 ret = tmp;
             } catch (NoSuchFileException ex) {
                 return null;
             }
         }
-        // TODO: restore generic properties
         log.debug("[get] returning " + ret);
         return ret;
     }
@@ -487,8 +506,7 @@ public abstract class NodeUtil {
         }
 
         setOwner(ret, attrs.owner());
-        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                DateUtil.UTC);
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         //Date created = new Date(attrs.creationTime().toMillis());
         //Date accessed = new Date(attrs.lastAccessTime().toMillis());
         Date modified = new Date(attrs.lastModifiedTime().toMillis());
@@ -500,13 +518,16 @@ public abstract class NodeUtil {
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
         ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE,
                 df.format(modified)));
+        
+        if (attrs.isRegularFile()) {
+            ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
+        }
 
         if (!attrs.isSymbolicLink()) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(p,
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (String propName : udv.list()) {
                 String propValue = getAttribute(udv, propName);
-                log.warn("UserDefinedFileAttributeView: " + propName + " = " + propValue);
                 if (propValue != null) {
                     ret.getProperties().add(new NodeProperty(propName, propValue));
                 }

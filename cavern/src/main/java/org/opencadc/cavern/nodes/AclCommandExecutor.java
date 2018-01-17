@@ -175,13 +175,13 @@ public class AclCommandExecutor {
                         && "group".equals(tokens[0])
                         && tokens[1].length() > 0
                         && perm.equals(tokens[2])) {
-                    log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+                    //log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
                     return users.lookupPrincipalByGroupName(tokens[1]);
                 }                   
             }
-            log.debug("getACL(" + perm + "): skip " + s);
+            //log.debug("getACL(" + perm + "): skip " + s);
         }
-        log.debug("getACL(" + perm + "): found: null");
+        //log.debug("getACL(" + perm + "): found: null");
         return null;
     }
     
