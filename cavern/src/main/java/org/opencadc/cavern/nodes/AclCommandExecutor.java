@@ -82,6 +82,8 @@ import org.apache.log4j.Logger;
 public class AclCommandExecutor {
     private static final Logger log = Logger.getLogger(AclCommandExecutor.class);
 
+    // these tools are from the acl package (fedora, ubuntu, ...)
+    // aka https://savannah.nongnu.org/projects/acl
     private static final String GETACL = "getfacl";
     private static final String SETACL = "setfacl";
     private static final String FILE_RO = "r--";
@@ -158,7 +160,7 @@ public class AclCommandExecutor {
     
     private GroupPrincipal getACL(String perm) throws IOException {
         String[] cmd = new String[] {
-            GETACL, toAbsolutePath(path)
+            GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
         };
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
@@ -169,16 +171,13 @@ public class AclCommandExecutor {
         String out = grabber.getOutput(true);
         String[] lines = out.split("[\n]");
         for (String s : lines) {
-            if (!s.startsWith("#")) {
-                String[] tokens = s.split(":");
-                if (tokens.length == 3
-                        && "group".equals(tokens[0])
-                        && tokens[1].length() > 0
-                        && perm.equals(tokens[2])) {
-                    //log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
-                    return users.lookupPrincipalByGroupName(tokens[1]);
-                }                   
-            }
+            String[] tokens = s.split(":");
+            if ("group".equals(tokens[0])
+                    && tokens[1].length() > 0
+                    && perm.equals(tokens[2])) {
+                //log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+                return users.lookupPrincipalByGroupName(tokens[1]);
+            }                   
             //log.debug("getACL(" + perm + "): skip " + s);
         }
         //log.debug("getACL(" + perm + "): found: null");
