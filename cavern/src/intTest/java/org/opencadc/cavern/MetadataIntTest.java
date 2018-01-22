@@ -69,55 +69,37 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.File;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.security.auth.Subject;
-
+import junit.framework.Assert;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.client.ClientTransfer;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import junit.framework.Assert;
-
-public class MetadataIntTest
-{
-
+public class MetadataIntTest {
     private static final Logger log = Logger.getLogger(MetadataIntTest.class);
 
     private static File SSL_CERT;
 
-//    private static String baseURL;
     private static VOSURI baseURI;
 
-    static
-    {
+    static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
-    public MetadataIntTest()
-    {
+    public MetadataIntTest() {
     }
 
     @BeforeClass
@@ -131,120 +113,34 @@ public class MetadataIntTest
         if ( StringUtil.hasText(uri) )
         {
             baseURI = new VOSURI(new URI(uri));
-//            nodeURI = vuri.getURI().toASCIIString();
-//            RegistryClient rc = new RegistryClient();
-//            URL vos = rc.getServiceURL(vuri.getServiceURI(), "https");
-//            baseURL = vos.toExternalForm();
         }
         else
             throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
     }
 
-    private static class DeleteNodeAction implements PrivilegedExceptionAction<Node>
-    {
-        VOSpaceClient vos;
-        String path;
-
-        DeleteNodeAction(VOSpaceClient vos, String path)
-        {
-            this.vos = vos;
-            this.path = path;
-        }
-        public Node run() throws Exception
-        {
-            try
-            {
-                vos.deleteNode(path);
-            }
-            catch (Exception ignore) {}
-            return null;
-        }
-    }
-
-    private static class GetNodeAction implements PrivilegedExceptionAction<Node>
-    {
-        VOSpaceClient vos;
-        String path;
-
-        GetNodeAction(VOSpaceClient vos, String path)
-        {
-            this.vos = vos;
-            this.path = path;
-        }
-        public Node run() throws Exception
-        {
-            return vos.getNode(path);
-        }
-    }
-
-    private static class UploadNodeAction implements PrivilegedExceptionAction<Node>
-    {
-        VOSpaceClient vos;
-        VOSURI uri;
-        String md5;
-        File file;
-
-        UploadNodeAction(VOSpaceClient vos, VOSURI uri, String md5, File file)
-        {
-            this.vos = vos;
-            this.uri = uri;
-            this.md5 = md5;
-            this.file = file;
-        }
-        public Node run() throws Exception
-        {
-            View view = new View(new URI(VOS.VIEW_DEFAULT));
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-
-            Transfer transfer = new Transfer(uri.getURI(), Direction.pushToVoSpace, view, protocols);
-            ClientTransfer clientTransfer = vos.createTransfer(transfer);
-
-            clientTransfer.setFile(file);
-            if (md5 != null)
-                clientTransfer.setRequestProperty("Content-MD5", md5);
-
-            clientTransfer.runTransfer();
-
-            ExecutionPhase ep = clientTransfer.getPhase();
-            if ( ExecutionPhase.ERROR.equals(ep) )
-            {
-                ErrorSummary es = clientTransfer.getServerError();
-                throw new RuntimeException(es.getSummaryMessage());
-            }
-            else if ( ExecutionPhase.ABORTED.equals(ep) )
-                throw new RuntimeException("transfer aborted by service");
-            // else: could be COMPLETED or still EXECUTING in current cadc-vos-server impl, but
-            // in practice the job should reach COMPLETED when the transfer negotiation is done
-
-            return vos.getNode(uri.getPath());
-        }
-    }
-
+    
     @Test
-    public void testMetadataUpdates() throws Exception
-    {
+    public void testContentMD5() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/metadataIntTest-" + System.currentTimeMillis();
         VOSURI uri = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
-        try
-        {
-            File testFile1 = new File("src/test/resources/md5file1");
-            File testFile2 = new File("src/test/resources/md5file2");
-            String correctSize1 = "25";
-            String correctSize2 = "33";
-            String correctMD51 = "86bec12f968870284258e4f239e1300c";
-            String correctMD52 = "7589efa0a3af85d73b6e9d37ec5f2e7c";
-            String incorrectMD5 = "12343d07086471dbf52398083a993cf7";
+        try {
+            final File testFile1 = new File("src/test/resources/md5file1");
+            final File testFile2 = new File("src/test/resources/md5file2");
+            final String correctSize1 = "25";
+            final String correctSize2 = "33";
+            final String correctMD51 = "86bec12f968870284258e4f239e1300c";
+            final String correctMD52 = "7589efa0a3af85d73b6e9d37ec5f2e7c";
+            final String incorrectMD5 = "12343d07086471dbf52398083a993cf7";
 
-            UploadNodeAction upload = null;
-            GetNodeAction get = null;
+            TestActions.UploadNodeAction upload = null;
+            TestActions.GetNodeAction get = null;
             Node result = null;
 
             // 1. put a new file, fail -> check md5 is null
-            upload = new UploadNodeAction(vos, uri, incorrectMD5, testFile1);
+            upload = new TestActions.UploadNodeAction(vos, uri, incorrectMD5, testFile1);
             result = Subject.doAs(s, upload);
             //get = new GetNodeAction(vos, uri.getPath());
             //result = Subject.doAs(s, get);
@@ -253,20 +149,28 @@ public class MetadataIntTest
             Assert.assertEquals("Wrong Size", "0", result.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // 2. put a new file -> check md5 correct
-            upload = new UploadNodeAction(vos, uri, correctMD51, testFile1);
+            upload = new TestActions.UploadNodeAction(vos, uri, correctMD51, testFile1);
             result = Subject.doAs(s, upload);
             log.debug("expected md5: " + correctMD51 + "  actual: " + result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             Assert.assertEquals("Wrong MD5", correctMD51, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             Assert.assertEquals("Wrong Size", correctSize1, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // 3. replace a file -> check new md5 correct
-            upload = new UploadNodeAction(vos, uri, correctMD52, testFile2);
+            upload = new TestActions.UploadNodeAction(vos, uri, correctMD52, testFile2);
             result = Subject.doAs(s, upload);
             Assert.assertEquals("Wrong MD5", correctMD52, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             Assert.assertEquals("Wrong Size", correctSize2, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // this implementation does not have any rollback mechanism to restore the previous copy after a failed write
-            // 4. replace a file, fail -> check md5 is previous value
+            // 4. replace a file, fail -> check properties
+            upload = new TestActions.UploadNodeAction(vos, uri, incorrectMD5, testFile1);
+            result = Subject.doAs(s, upload);
+            //get = new GetNodeAction(vos, uri.getPath());
+            //result = Subject.doAs(s, get);
+            log.debug("MD5: " + result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5) + " (expecting null)");
+            Assert.assertNull("Wrong MD5", result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+            Assert.assertEquals("Wrong Size", "0", result.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            
             //upload = new UploadNodeAction(vos, uri, incorrectMD5, testFile1);
             //try
             //{
@@ -282,20 +186,9 @@ public class MetadataIntTest
             //result = Subject.doAs(s, get);
             //Assert.assertEquals("Wrong MD5", correctMD52, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             //Assert.assertEquals("Wrong Size", correctSize2, result.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
-        finally
-        {
-            try
-            {
-//                DeleteNodeAction delete = new DeleteNodeAction(vos, uri.getPath());
-//                Subject.doAs(s, delete);
-            }
-            catch (Throwable t)
-            {
-                // ok
-            }
-        }
-
     }
-
 }

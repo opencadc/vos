@@ -33,3 +33,17 @@ task intTest(type: Test) {
     outputs.upToDateWhen { false }
 }
 
+test {
+    testLogging {
+        events "PASSED", "FAILED", "SKIPPED"
+        // "STARTED", 
+    }
+}
+
+intTest {
+    testLogging {
+        events "PASSED", "FAILED", "SKIPPED"
+        // "STARTED",
+    }
+}
+

@@ -110,7 +110,7 @@ public class SetContainerNodeTest extends VOSNodeTest
     }
 
     @Test
-    public void updateContainerNode()
+    public void updateContainerNodeAddProperty()
     {
         try
         {
@@ -143,6 +143,25 @@ public class SetContainerNodeTest extends VOSNodeTest
             // Validate against the VOSpace schema.
             ContainerNode updatedNode = (ContainerNode) reader.read(xml);
 
+            NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
+            
+            // verify stored node
+            response = get(testNode.sampleNode);
+            assertEquals("updateContainerNode: POST response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("updateContainerNode: response from POST:\r\n" + xml);
+            
+            // Validate against the VOSpace schema.
+            updatedNode = (ContainerNode) reader.read(xml);
+
+            np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
+            
             // Updated node should have 5 properties.
             assertEquals("", (numDefaultProps + 1), updatedNode.getProperties().size());
 

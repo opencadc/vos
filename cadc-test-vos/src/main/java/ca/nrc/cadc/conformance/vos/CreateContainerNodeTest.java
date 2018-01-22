@@ -70,6 +70,9 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
@@ -123,17 +126,93 @@ public class CreateContainerNodeTest extends VOSNodeTest
             // Get the response (an XML document)
             String xml = response.getText();
             log.debug("PUT XML:\r\n" + xml);
-
-            // Create a DOM document from XML and validate against the VOSPace schema.
+            
+            // verify returned node
             NodeReader reader = new NodeReader();
-            reader.read(xml);
-
-            // Get the node from vospace
-            response = get(node.sampleNode);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            Node actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof ContainerNode);
             
             // Check accepts
             List<URI> accepts = node.sampleNode.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
+            // verify stored node
+            response = get(node.sampleNode);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            
+            actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof ContainerNode);
+            
+            // Check accepts
+            accepts = node.sampleNode.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
+            // Delete the node
+            response = delete(node.sampleNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("createContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void createContainerNodeWithProperty()
+    {
+        try
+        {
+            log.debug("createContainerNode");
+
+            // Get a ContainerNode.
+            TestNode node = getSampleContainerNode(true);
+            Assert.assertEquals("try 1 prop", 1, node.sampleNode.getProperties().size());
+            NodeProperty expected = node.sampleNode.getProperties().get(0);
+            Assert.assertNotNull("test setup", expected);
+            
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node.sampleNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("PUT XML:\r\n" + xml);
+
+            // verify returned node
+            NodeReader reader = new NodeReader();
+            Node actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof ContainerNode);
+
+            NodeProperty np = actual.findProperty(expected.getPropertyURI());
+            Assert.assertNotNull(expected.getPropertyURI(), np);
+            Assert.assertEquals(expected.getPropertyURI(), expected.getPropertyValue(), np.getPropertyValue());
+            
+            // Check accepts
+            List<URI> accepts = node.sampleNode.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
+            // verify stored node
+            response = get(node.sampleNode);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            
+            actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof ContainerNode);
+            
+            np = actual.findProperty(expected.getPropertyURI());
+            Assert.assertNotNull(expected.getPropertyURI(), np);
+            Assert.assertEquals(expected.getPropertyURI(), expected.getPropertyValue(), np.getPropertyValue());
+            
+            // Check accepts
+            accepts = node.sampleNode.accepts();
             assertNotNull("accepts should not be null", accepts);
 
             // Delete the node
@@ -149,6 +228,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
         }
     }
 
+    
     /**
      * The service SHALL throw a HTTP 409 status code including a DuplicateNode
      * fault in the entity body if a Node already exists with the same URI

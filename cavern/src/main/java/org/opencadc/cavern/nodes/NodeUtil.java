@@ -214,9 +214,14 @@ public abstract class NodeUtil {
                     "unexpected node type: " + node.getClass().getName());
         }
 
-        setPosixOwnerGroup(root, ret, owner, group);
-
-        setNodeProperties(ret, node);
+        try {
+            setPosixOwnerGroup(root, ret, owner, group);
+            setNodeProperties(ret, node);
+        } catch (IOException ex) {
+            Files.delete(ret);
+            throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
+                    + " " + node.getUri(), ex);
+        }
 
         return ret;
     }

@@ -69,27 +69,6 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.AccessControlException;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
-import java.security.cert.X509Certificate;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.CertCmdArgUtil;
@@ -97,6 +76,7 @@ import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.net.NetrcAuthenticator;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -119,6 +99,24 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.View.Parameter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import javax.security.auth.Subject;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Main method for the command-line VOSpace client.
@@ -1162,39 +1160,46 @@ public class Main implements Runnable
         URI serverUri = null;
         try
         {
-            this.subject = CertCmdArgUtil.initSubject(argMap, true);
-
+            // setup optional authentication for harvesting from a web service
+            this.subject = AuthenticationUtil.getAnonSubject();
+            if (argMap.isSet("netrc")) {
+                this.subject = AuthenticationUtil.getSubject(new NetrcAuthenticator(true));
+            } else if (argMap.isSet("cert")) {
+                // no default finding cert in known location
+                this.subject = CertCmdArgUtil.initSubject(argMap);
+            }
+            AuthMethod meth = AuthenticationUtil.getAuthMethodFromCredentials(subject);
+            log.info("authentication using: " + meth);
+            
             // check that loaded certficate chain is valid right now
             // TODO: should this be moved into CertCmdArgUtil?
             if (subject != null)
             {
                 Set<X509CertificateChain> certs = subject.getPublicCredentials(X509CertificateChain.class);
-                if (certs.size() == 0)
+                if (!certs.isEmpty())
                 {
-                    // subject without certs means something went wrong above
-                    throw new RuntimeException("BUG: failed to load certficate");
-                }
-                DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
-                X509CertificateChain chain = certs.iterator().next(); // the first one
-                Date start = null;
-                Date end = null;
-                for (X509Certificate c : chain.getChain())
-                {
-                    try
+                    DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+                    X509CertificateChain chain = certs.iterator().next(); // the first one
+                    Date start = null;
+                    Date end = null;
+                    for (X509Certificate c : chain.getChain())
                     {
-                        start = c.getNotBefore();
-                        end = c.getNotAfter();
-                        c.checkValidity();
-                    }
-                    catch(CertificateNotYetValidException exp)
-                    {
-                        log.error("certificate is not valid yet (valid from " + df.format(start) + " to " + df.format(end) + ")");
-                        System.exit(INIT_STATUS);
-                    }
-                    catch (CertificateExpiredException exp)
-                    {
-                        log.error("certificate has expired (valid from " + df.format(start) + " to " + df.format(end) + ")");
-                        System.exit(INIT_STATUS);
+                        try
+                        {
+                            start = c.getNotBefore();
+                            end = c.getNotAfter();
+                            c.checkValidity();
+                        }
+                        catch(CertificateNotYetValidException exp)
+                        {
+                            log.error("certificate is not valid yet (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                            System.exit(INIT_STATUS);
+                        }
+                        catch (CertificateExpiredException exp)
+                        {
+                            log.error("certificate has expired (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                            System.exit(INIT_STATUS);
+                        }
                     }
                 }
             }

@@ -110,7 +110,7 @@ public class SetDataNodeTest extends VOSNodeTest
     }
 
     @Test
-    public void updateDataNode()
+    public void updateDataNodeAddProperty()
     {
         try
         {
@@ -142,6 +142,19 @@ public class SetDataNodeTest extends VOSNodeTest
             // Validate against the VOSpace schema.
             DataNode updatedNode = (DataNode) reader.read(xml);
             NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            
+            // verify stored node
+            response = get(node.sampleNode);
+            assertEquals("updateDataNode: POST response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("updateDataNode: response from POST:\r\n" + xml);
+
+            // Validate against the VOSpace schema.
+            updatedNode = (DataNode) reader.read(xml);
+            np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
             Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
             
             // Delete the node

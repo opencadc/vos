@@ -115,6 +115,9 @@ public class GetAction extends FileAction {
                 syncOutput.setCode(403);
                 return;
             }
+            
+            // TODO: get node so we can put appropriate properties into HTTP headers
+            
             OutputStream out = syncOutput.getOutputStream();
             log.debug("Starting copy of file " + source);
             Files.copy(source, out);
