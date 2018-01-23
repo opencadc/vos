@@ -223,9 +223,6 @@ public class SetContainerNodeTest extends VOSNodeTest
             np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
             Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
             
-            // Node properties should be empty.
-            assertEquals("updateContainerNodeDeleteProperty: non-deleted properties", expectedNumProps, updatedNode.getProperties().size());
-            
             // get the node and verify that prop is really deleted server-side
             response = get(updatedNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());

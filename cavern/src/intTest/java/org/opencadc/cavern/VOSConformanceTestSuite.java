@@ -42,7 +42,7 @@ import org.junit.runners.Suite;
 
     SetContainerNodeTest.class,
     SetDataNodeTest.class,
-    //SetLinkNodeTest.class, // no props on symlinks in filesystem impl
+    SetLinkNodeTest.class, 
 
     MoveContainerNodeTest.class,
     MoveDataNodeTest.class,

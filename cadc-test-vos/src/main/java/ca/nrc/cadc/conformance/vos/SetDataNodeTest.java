@@ -181,7 +181,7 @@ public class SetDataNodeTest extends VOSNodeTest
             log.debug("updateDataNodeDeleteProperty");
 
             // Create a DataNode.
-            TestNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode(true);
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node.sampleNode);
