@@ -63,18 +63,19 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern.files;
 
-
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.AccessDeniedException;
@@ -85,7 +86,9 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
-
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.util.Iterator;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -108,13 +111,11 @@ public class PutAction extends FileAction {
     }
 
     @Override
-    protected InlineContentHandler getInlineContentHandler()
-    {
+    protected InlineContentHandler getInlineContentHandler() {
         return new InlineContentHandler() {
             public Content accept(String name, String contentType,
                     InputStream inputStream)
-                    throws InlineContentException, IOException
-            {
+                    throws InlineContentException, IOException {
                 InlineContentHandler.Content c = new InlineContentHandler.Content();
                 c.name = INPUT_STREAM;
                 c.value = inputStream;
@@ -128,6 +129,8 @@ public class PutAction extends FileAction {
         VOSURI nodeURI = getNodeURI();
 
         try {
+            log.debug("put: start " + nodeURI.getURI().toASCIIString());
+
             Path rootPath = Paths.get(getRoot());
             Node node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
@@ -138,9 +141,6 @@ public class PutAction extends FileAction {
                 return;
             }
 
-            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
-
             // only support data nodes for now
             if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
                 syncOutput.getOutputStream().write("Not a writable node".getBytes());
@@ -148,17 +148,50 @@ public class PutAction extends FileAction {
             }
 
             Path target = NodeUtil.nodeToPath(rootPath, node);
-
+            
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
-            log.debug("Starting copy to file: " + target);
-            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("Completed copy to file: " + target);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            DigestInputStream vis = new DigestInputStream(in, md);
+            log.debug("copy: start " + target);
+            Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("copy: done " + target);
 
-            log.debug("Restoring original permissions");
-            NodeUtil.applyPermissions(rootPath, target, owner, group);
+            String expectedMD5 = syncInput.getHeader("Content-MD5");
+            log.debug("set properties");
+            byte[] md5 = md.digest();
+            String propValue = HexUtil.toHex(md5);
+            if (expectedMD5 != null && !expectedMD5.equals(propValue)) {
+                // upload failed: do not keep corrupt data
+                log.debug("upload corrupt: " + expectedMD5 + " != " + propValue);
+                Files.delete(target);
+                // restore empty DataNode: remove props that are no longer applicable
+                Iterator<NodeProperty> i = node.getProperties().iterator();
+                while (i.hasNext()) {
+                    NodeProperty np = i.next();
+                    if (VOS.PROPERTY_URI_CONTENTMD5.equals(np.getPropertyURI())) {
+                        i.remove();
+                    }
+                }
+                NodeUtil.create(rootPath, node);
+                return;
+            }
+            
+            log.debug(nodeURI + " MD5: " + propValue);
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
+
+            NodeUtil.setNodeProperties(target, node);
+
+            // doing this last because it requires chown which is most likely to fail during experimentation
+            log.debug("restore owner & group");
+            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
+            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
+            NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
+            
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
+        } finally {
+            log.debug("put: done " + nodeURI.getURI().toASCIIString());
         }
     }
 }

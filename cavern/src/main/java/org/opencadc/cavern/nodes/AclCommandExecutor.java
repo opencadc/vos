@@ -65,70 +65,126 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern.files;
+package org.opencadc.cavern.nodes;
 
 
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.VOSURI;
-
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.security.AccessControlException;
-
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import org.apache.log4j.Logger;
 
 /**
  *
- * @author majorb
+ * @author pdowler
  */
-public class GetAction extends FileAction {
-    private static final Logger log = Logger.getLogger(GetAction.class);
+public class AclCommandExecutor {
+    private static final Logger log = Logger.getLogger(AclCommandExecutor.class);
 
-    public GetAction() {
-        super();
+    // these tools are from the acl package (fedora, ubuntu, ...)
+    // aka https://savannah.nongnu.org/projects/acl
+    private static final String GETACL = "getfacl";
+    private static final String SETACL = "setfacl";
+    private static final String FILE_RO = "r--";
+    private static final String FILE_RW = "rw-";
+    private static final String DIR_RO = "r-x";
+    private static final String DIR_RW = "rwx";
+    
+    
+    
+    private final Path path;
+    UserPrincipalLookupService users;
+    
+    public AclCommandExecutor(Path path, UserPrincipalLookupService users) { 
+        this.path = path;
+        this.users = users;
     }
-
-    @Override
-    public Direction getDirection() {
-        return Direction.pullFromVoSpace;
-    }
-
-    @Override
-    public void doAction() throws Exception {
-        try {
-            VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                // not found
-                syncOutput.setCode(404);
-                return;
-            }
-            if (!Files.isReadable(source)) {
-                // permission denied
-                syncOutput.setCode(403);
-                return;
-            }
-            
-            // TODO: get node so we can put appropriate properties into HTTP headers
-            
-            OutputStream out = syncOutput.getOutputStream();
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+    
+    public void clearACL()  throws IOException {
+        
+        String[] cmd = new String[] {
+            SETACL, "-b", toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to clear ACLs on " + path + ": "
+                + grabber.getErrorOutput(true));
         }
+    }
+    
+    public void setReadOnlyACL(GroupPrincipal group, boolean isDir) throws IOException {
+        String perm = FILE_RO;
+        if (isDir) {
+            perm = DIR_RO;
+        }
+        setACL(group, perm);
+    }
+    
+    public void setReadWriteACL(GroupPrincipal group, boolean isDir) throws IOException {
+        String perm = FILE_RW;
+        if (isDir) {
+            perm = DIR_RW;
+        }
+        setACL(group, perm);
+    }
+    
+    private void setACL(GroupPrincipal group, String perm) throws IOException {
+        String[] cmd = new String[] {
+            SETACL, "-m", "group:" + group.getName() + ":" + perm, toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to set read-only ACL on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+    }
+    
+    public GroupPrincipal getReadOnlyACL(boolean isDir) throws IOException {
+        String perm = FILE_RO;
+        if (isDir) {
+            perm = DIR_RO;
+        }
+        return getACL(perm);
+    }
+    
+    public GroupPrincipal getReadWriteACL(boolean isDir) throws IOException {
+        String perm = FILE_RW;
+        if (isDir) {
+            perm = DIR_RW;
+        }
+        return getACL(perm);
+    }
+    
+    private GroupPrincipal getACL(String perm) throws IOException {
+        String[] cmd = new String[] {
+            GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to set read-only ACL on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+        String out = grabber.getOutput(true);
+        String[] lines = out.split("[\n]");
+        for (String s : lines) {
+            String[] tokens = s.split(":");
+            if ("group".equals(tokens[0])
+                    && tokens[1].length() > 0
+                    && perm.equals(tokens[2])) {
+                //log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+                return users.lookupPrincipalByGroupName(tokens[1]);
+            }                   
+            //log.debug("getACL(" + perm + "): skip " + s);
+        }
+        //log.debug("getACL(" + perm + "): found: null");
+        return null;
+    }
+    
+    private String toAbsolutePath(Path p) {
+        return p.toAbsolutePath().toString();
     }
 }

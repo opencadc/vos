@@ -168,7 +168,7 @@ public abstract class VOSBaseTest
 
                 RegistryClient rc = new RegistryClient();
                 this.resourceURL = rc.getServiceURL(resourceIdentifier, standardID, AuthMethod.CERT);
-                log.debug("resourceURL: " + this.resourceURL.toExternalForm());
+                log.debug("resourceURL: " + this.resourceURL);
                 if (this.resourceURL == null)
                 {
                     throw new RuntimeException("No service URL found for resourceIdentifier=" +
@@ -378,7 +378,19 @@ public abstract class VOSBaseTest
     protected TestNode getSampleContainerNode()
         throws URISyntaxException
     {
-        return getSampleContainerNode("");
+        return getSampleContainerNode(false);
+    }
+    
+    protected TestNode getSampleContainerNode(String name)
+        throws URISyntaxException
+    {
+        return getSampleContainerNode(name, false);
+    }
+            
+    protected TestNode getSampleContainerNode(boolean withProp)
+        throws URISyntaxException
+    {
+        return getSampleContainerNode("", withProp);
     }
 
     /**
@@ -387,7 +399,7 @@ public abstract class VOSBaseTest
      * @return a ContainerNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected TestNode getSampleContainerNode(String name)
+    protected TestNode getSampleContainerNode(String name, boolean withProp)
         throws URISyntaxException
     {
          // List of NodeProperty
@@ -397,7 +409,9 @@ public abstract class VOSBaseTest
         String date = dateFormat.format(Calendar.getInstance().getTime());
         String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         ContainerNode node = new ContainerNode(new VOSURI(nodeName));
-        node.getProperties().add(nodeProperty);
+        if (withProp) {
+            node.getProperties().add(nodeProperty);
+        }
 
         // ContinerNode with LinkNode as parent.
         ContainerNode nodeWithLink = null;
@@ -405,7 +419,9 @@ public abstract class VOSBaseTest
         {
             nodeName = getTestSuiteNode().sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
             nodeWithLink = new ContainerNode(new VOSURI(nodeName));
-            nodeWithLink.getProperties().add(nodeProperty);
+            if (withProp) {
+                nodeWithLink.getProperties().add(nodeProperty);
+            }
         }
         return new TestNode(node, nodeWithLink);
     }
@@ -419,9 +435,20 @@ public abstract class VOSBaseTest
     protected TestNode getSampleDataNode()
         throws URISyntaxException
     {
-        return getSampleDataNode("");
+        return getSampleDataNode("", false);
     }
-
+    
+    protected TestNode getSampleDataNode(boolean withProp)
+        throws URISyntaxException
+    {
+        return getSampleDataNode("", withProp);
+    }
+    
+    protected TestNode getSampleDataNode(String name)
+        throws URISyntaxException
+    {
+        return getSampleDataNode(name, false);
+    }
     /**
      * Builds and returns a sample DataNode for use in test cases.
      *
@@ -429,7 +456,7 @@ public abstract class VOSBaseTest
      * @return a DataNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected TestNode getSampleDataNode(String name)
+    protected TestNode getSampleDataNode(String name, boolean withProp)
         throws URISyntaxException
     {
         // List of NodeProperty
@@ -441,7 +468,9 @@ public abstract class VOSBaseTest
         String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("data node name: " + nodeName);
         DataNode node = new DataNode(new VOSURI(nodeName));
-        node.getProperties().add(nodeProperty);
+        if (withProp) {
+            node.getProperties().add(nodeProperty);
+        }
         node.setBusy(NodeBusyState.notBusy);
 
         // DataNode with LinkNode as parent.
@@ -477,9 +506,14 @@ public abstract class VOSBaseTest
     protected LinkNode getSampleLinkNode(Node target)
         throws URISyntaxException
     {
-        return getSampleLinkNode("", target.getUri().getURI());
+        return getSampleLinkNode("", target.getUri().getURI(), false);
     }
 
+    protected LinkNode getSampleLinkNode(Node target, boolean withProp)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode("", target.getUri().getURI(), withProp);
+    }
 
     /**
      * Builds and returns a sample LinkNode for use in test cases.
@@ -491,10 +525,15 @@ public abstract class VOSBaseTest
     protected LinkNode getSampleLinkNode(URI target)
         throws URISyntaxException
     {
-        return getSampleLinkNode("", target);
+        return getSampleLinkNode("", target, false);
     }
 
-
+    protected LinkNode getSampleLinkNode(String name, URI target)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode(name, target, false);
+    }
+    
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
@@ -503,7 +542,7 @@ public abstract class VOSBaseTest
      * @return a LinkNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected LinkNode getSampleLinkNode(String name, URI target)
+    protected LinkNode getSampleLinkNode(String name, URI target, boolean withProp)
         throws URISyntaxException
     {
         // List of NodeProperty
@@ -516,7 +555,9 @@ public abstract class VOSBaseTest
         String nodeName = getTestSuiteNode().sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("link node name: " + nodeName);
         LinkNode node = new LinkNode(new VOSURI(nodeName), target);
-        node.getProperties().add(nodeProperty);
+        if (withProp) {
+            node.getProperties().add(nodeProperty);
+        }
         return node;
     }
 

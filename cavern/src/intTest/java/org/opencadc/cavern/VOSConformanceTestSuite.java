@@ -42,12 +42,12 @@ import org.junit.runners.Suite;
 
     SetContainerNodeTest.class,
     SetDataNodeTest.class,
-    SetLinkNodeTest.class,
+    SetLinkNodeTest.class, 
 
     MoveContainerNodeTest.class,
     MoveDataNodeTest.class,
     MoveLinkNodeTest.class,
-
+    
     SyncPullFromVOSpaceTest.class,
     SyncPushToVOSpaceTest.class,
 

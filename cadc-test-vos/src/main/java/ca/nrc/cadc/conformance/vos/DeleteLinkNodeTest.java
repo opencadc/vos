@@ -117,7 +117,8 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             }
 
             // Get a DataNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);
@@ -159,7 +160,8 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             }
 
             // Get a DataNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);
@@ -240,7 +242,8 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             }
 
             // Create a Node path /A/B
-            LinkNode node = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode("/A/B", targetNode.getUri().getURI());
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(node);

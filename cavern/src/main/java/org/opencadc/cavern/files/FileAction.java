@@ -91,7 +91,6 @@ public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     private String root;
-    private GroupPrincipal posixGroup;
     private UserPrincipalLookupService upLookupSvc;
     private PosixIdentityManager identityManager;
 
@@ -104,19 +103,9 @@ public abstract class FileAction extends RestAction {
             throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
         }
 
-        String posixGroupString = pr.getFirstPropertyValue("POSIX_GROUP");
-        if (posixGroupString == null) {
-            throw new IllegalStateException("POSIX_GROUP not configured.");
-        }
-
         Path rootPath = Paths.get(getRoot());
         this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
         this.identityManager = new PosixIdentityManager(upLookupSvc);
-        try {
-            posixGroup = this.upLookupSvc.lookupPrincipalByGroupName(posixGroupString);
-        } catch (IOException e) {
-            throw new IllegalStateException("Couldn't lookup posix group", e);
-        }
     }
 
     @Override
@@ -131,10 +120,6 @@ public abstract class FileAction extends RestAction {
 
     protected String getRoot() {
         return root;
-    }
-
-    protected GroupPrincipal getPosixGroup() {
-        return posixGroup;
     }
 
     protected UserPrincipalLookupService getUpLookupSvc() {

@@ -116,7 +116,7 @@ public class TransferRunnerTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vospace.integration", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
@@ -381,7 +381,7 @@ public class TransferRunnerTest
         }
     }
 
-    @Test
+    //@Test
     public void testDownloadLinkWithCutout()
     {
         try

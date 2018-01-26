@@ -73,6 +73,8 @@ import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
@@ -81,18 +83,16 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-
+import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
 
@@ -116,11 +116,27 @@ public class FileSystemNodePersistence implements NodePersistence {
         this.root = Paths.get(rootConfig);
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
     }
+    
+    // for testing
+    public FileSystemNodePersistence(String rootDir) {
+        this.root = Paths.get(rootDir);
+        this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
+    }
 
     @Override
     public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
+        return get(uri, false);
+    }
+
+    @Override
+    public Node get(VOSURI uri, boolean allowPartialPath) throws NodeNotFoundException, TransientException {
+        return get(uri, allowPartialPath, true);
+    }
+
+    @Override
+    public Node get(VOSURI uri, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
         try {
-            Node ret = NodeUtil.get(root, uri);
+            Node ret = NodeUtil.get(root, uri, allowPartialPath);
             if (ret == null) {
                 throw new NodeNotFoundException(uri.getPath());
             }
@@ -137,19 +153,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new RuntimeException("oops", ex);
         }
     }
-
-    @Override
-    public Node get(VOSURI vosuri, boolean bln) throws NodeNotFoundException, TransientException {
-        return get(vosuri);
-        //throw new UnsupportedOperationException("get-partial");
-    }
-
-    @Override
-    public Node get(VOSURI vosuri, boolean bln, boolean bln1) throws NodeNotFoundException, TransientException {
-        return get(vosuri);
-        //throw new UnsupportedOperationException("get-partial-resolve");
-    }
-
+    
     @Override
     public void getChildren(ContainerNode cn) throws TransientException {
         getChildren(cn, null, 100, true);
@@ -220,6 +224,15 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (node.appData != null) { // persistent node == update == not supported
             throw new UnsupportedOperationException("update of existing node not supported");
         }
+        
+        if (node instanceof LinkNode) {
+            LinkNode ln = (LinkNode) node;
+            try {
+                PathResolver.validateTargetURI(ln);
+            } catch (LinkingException ex) {
+                throw new UnsupportedOperationException("link to external resource", ex);
+            }
+        }
 
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
@@ -233,8 +246,40 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
-    public Node updateProperties(Node node, List<NodeProperty> list) throws TransientException {
-        throw new UnsupportedOperationException();
+    public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
+        // node arg is the current node, properties are the new props
+        try {
+            Path np = NodeUtil.nodeToPath(root, node);
+            for (NodeProperty prop : properties)
+            {
+                NodeProperty cur = node.findProperty(prop.getPropertyURI());
+                if (cur != null) {
+                    if (prop.isMarkedForDeletion()) { // delete
+                        //node.getProperties().remove(cur);
+                        cur.setMarkedForDeletion(true);
+                    } else { // update
+                        cur.setValue(prop.getPropertyValue());
+                    }
+                } else { // add
+                    if (!prop.isMarkedForDeletion()) {
+                        node.getProperties().add(prop);
+                    } // else: ignore delete non-existent prop
+                }
+            }
+            NodeUtil.setNodeProperties(np, node);
+            
+            // fix return node
+            Iterator<NodeProperty> iter = node.getProperties().iterator();
+            while (iter.hasNext()) {
+                NodeProperty p = iter.next();
+                if (p.isMarkedForDeletion()) {
+                    iter.remove();
+                }
+            }
+        }  catch (IOException ex) {
+            throw new RuntimeException("oops", ex);
+        }
+        return node;
     }
 
     @Override
@@ -248,11 +293,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void setFileMetadata(DataNode dn, FileMetadata fm, boolean bln) throws TransientException {
+        // callback from storage system
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void setBusyState(DataNode dn, VOS.NodeBusyState nbs, VOS.NodeBusyState nbs1) throws TransientException {
+        // callback from storage system
         throw new UnsupportedOperationException();
     }
 

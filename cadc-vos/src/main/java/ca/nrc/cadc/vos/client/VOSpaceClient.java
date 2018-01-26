@@ -294,8 +294,11 @@ public class VOSpaceClient
 
             VOSClientUtil.checkFailure(get.getThrowable());
 
+            String xml = new String(out.toByteArray(), "UTF-8");
+            log.debug("node xml:\n" + xml);
+                    
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            rtnNode = nodeReader.read(new String(out.toByteArray(), "UTF-8"));
+            rtnNode = nodeReader.read(xml);
             log.debug("getNode, returned node: " + rtnNode);
         }
         catch (IOException ex)

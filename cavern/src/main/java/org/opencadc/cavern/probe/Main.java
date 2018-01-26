@@ -69,9 +69,7 @@ package org.opencadc.cavern.probe;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
-
 import java.io.File;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -119,35 +117,37 @@ public class Main {
 
             boolean ok = true;
             String dir = am.getValue("dir");
-            String owner = am.getValue("owner");
-            String targetOwner = am.getValue("target-owner");
-            String group = am.getValue("group");
             if (dir == null) {
                 log.error("missing required argument: --dir=<test directory>");
                 ok = false;
             }
+            File baseDir = new File(dir);
+            
+            String owner = am.getValue("owner");
             if (owner == null) {
                 log.error("missing required argument: --owner=<posix username>");
                 ok = false;
             }
+            
+            String targetOwner = am.getValue("target-owner");
             if (targetOwner == null) {
                 log.error("missing required argument: --target-owner=<posix username>");
                 ok = false;
             }
 
-            File baseDir = null;
-            if (dir != null) {
-                File tmp  = new File(dir);
-                log.info("    base dir: " + tmp.getAbsolutePath());
-                log.info("      exists:" + tmp.exists());
-                log.info("is directory:" + tmp.isDirectory());
-                log.info("    readable:" + tmp.canRead());
-                log.info("    writable:" + tmp.canWrite());
-                if (tmp.exists() && tmp.isDirectory() && tmp.canRead() && tmp.canWrite()) {
-                    baseDir = tmp;
+            if (baseDir != null) {
+                log.info("    base dir: " + baseDir.getAbsolutePath());
+                log.info("      exists:" + baseDir.exists());
+                log.info("is directory:" + baseDir.isDirectory());
+                log.info("    readable:" + baseDir.canRead());
+                log.info("    writable:" + baseDir.canWrite());
+                if (baseDir.exists() && baseDir.isDirectory() && baseDir.canRead() && baseDir.canWrite()) {
+                    log.info("base dir permissions: OK");
                 } else {
-                    log.error("cannot use test directory: " + tmp.getAbsolutePath());
-                    ok = false;
+                    log.error("cannot use test directory: " + baseDir.getAbsolutePath());
+                    if (!am.isSet("views")) {
+                        ok = false;
+                    }
                 }
             }
 
@@ -157,9 +157,13 @@ public class Main {
             }
 
             FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner);
-            Boolean success = probe.call();
-            if (success == null || !success) {
-                System.exit(1);
+            if (am.isSet("views")) {
+                probe.supportedFileAttributeViews();
+            } else {
+                Boolean success = probe.call();
+                if (success == null || !success) {
+                    System.exit(1);
+                }
             }
 
         } catch (Throwable t) {

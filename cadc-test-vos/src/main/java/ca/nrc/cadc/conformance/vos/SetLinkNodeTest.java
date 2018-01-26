@@ -112,7 +112,7 @@ public class SetLinkNodeTest extends VOSNodeTest
     }
 
     @Test
-    public void updateLinkNode()
+    public void updateLinkNodeAddProperty()
     {
         try
         {
@@ -153,6 +153,17 @@ public class SetLinkNodeTest extends VOSNodeTest
             LinkNode updatedNode = (LinkNode) reader.read(xml);
 
             NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
+            
+            // verify stored node
+            response.getText();
+            log.debug("updateLinkNode: response from POST:\r\n" + xml);
+
+            // Validate against the VOSpace schema.
+            LinkNode getNode = (LinkNode) reader.read(xml);
+
+            np = getNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
             Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
             Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
             

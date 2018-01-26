@@ -71,8 +71,12 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOS;
 import com.meterware.httpunit.WebResponse;
+import java.io.ByteArrayInputStream;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -120,7 +124,8 @@ public class CreateLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);
@@ -130,17 +135,93 @@ public class CreateLinkNodeTest extends VOSNodeTest
             String xml = response.getText();
             log.debug("PUT XML:\r\n" + xml);
 
-            // Create a DOM document from XML and validate against the VOSPace schema.
-            NodeReader reader = new NodeReader();
-            reader.read(xml);
-
             // Get the node from vospace
             response = get(node);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            
+            // Create a DOM document from XML and validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            Node actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof LinkNode);
 
+            // Check accepts
+            List<URI> accepts = actual.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("createLinkNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void createLinkNodeWithProperty()
+    {
+        try
+        {
+            log.debug("createLinkNode");
+
+            if (!supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
+            // Get a LinkNode.
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode, true);
+            Assert.assertEquals("try 1 prop", 1, node.getProperties().size());
+            NodeProperty expected = node.getProperties().get(0);
+            Assert.assertNotNull("test setup", expected);
+            
+            // Add Node to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("PUT XML:\r\n" + xml);
+            
+            // Create a DOM document from XML and validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            
+            // verify returned node
+            Node actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof LinkNode);
+            
             // Check accepts
             List<URI> accepts = node.accepts();
             assertNotNull("accepts should not be null", accepts);
+            
+            NodeProperty np = actual.findProperty(expected.getPropertyURI());
+            Assert.assertNotNull(expected.getPropertyURI(), np);
+            Assert.assertEquals(expected.getPropertyURI(), expected.getPropertyValue(), np.getPropertyValue());
+            
+            // verify stored node 
+            response = get(node);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            
+            actual = reader.read(xml);
+            Assert.assertNotNull(actual);
+            Assert.assertTrue(actual  instanceof LinkNode);
+            
+            // Check accepts
+            accepts = node.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
+            np = actual.findProperty(expected.getPropertyURI());
+            Assert.assertNotNull(expected.getPropertyURI(), np);
+            Assert.assertEquals(expected.getPropertyURI(), expected.getPropertyValue(), np.getPropertyValue());
             
             // Delete the node
             response = delete(node);
@@ -173,7 +254,8 @@ public class CreateLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add Node to the VOSpace.
             WebResponse response = put(node);

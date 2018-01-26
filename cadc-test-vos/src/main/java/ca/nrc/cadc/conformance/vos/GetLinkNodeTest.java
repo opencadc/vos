@@ -151,9 +151,9 @@ public class GetLinkNodeTest extends VOSNodeTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child link node link2www
-            LinkNode link2www = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2www"), new URI("http://localhost"));
-            response = put(getNodeStandardID(), link2www, new NodeWriter());
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            //LinkNode link2www = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2www"), new URI("http://localhost"));
+            //response = put(getNodeStandardID(), link2www, new NodeWriter());
+            //assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get and validate data node C
             response = get(nodeC);
@@ -186,11 +186,11 @@ public class GetLinkNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Get and validate link node link2C
-            response = get(link2www);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-            reader.read(xml);
+            //response = get(link2www);
+            //assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            //xml = response.getText();
+            //log.debug("GET XML:\r\n" + xml);
+            //reader.read(xml);
 
             // Delete the nodes
             response = delete(nodeA.sampleNode);
@@ -226,7 +226,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
@@ -288,7 +289,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
@@ -347,7 +349,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
@@ -407,7 +410,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
@@ -469,7 +473,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
@@ -528,7 +533,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode(targetNode);
 
             // Add LinkNode to the VOSpace.
             WebResponse response = put(node);
@@ -568,7 +574,8 @@ public class GetLinkNodeTest extends VOSNodeTest
             }
 
             // Create a Node with a nonexistent parent node
-            LinkNode node = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
+            LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
+            LinkNode node = getSampleLinkNode("/A/B", targetNode.getUri().getURI());
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(node);

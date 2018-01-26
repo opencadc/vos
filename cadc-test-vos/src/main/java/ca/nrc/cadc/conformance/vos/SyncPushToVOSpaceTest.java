@@ -117,10 +117,10 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
 
     public SyncPushToVOSpaceTest()
     {
-        super(Standards.VOSPACE_SYNC_20, Standards.VOSPACE_NODES_20);
+        super(Standards.VOSPACE_SYNC_21, Standards.VOSPACE_NODES_20);
     }
 
-    @Test
+    //@Test
     public void testPushToVOSpace()
     {
         try
@@ -213,7 +213,7 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
 
             // Get a DataNode.
             TestNode dataNode = getSampleDataNode();
-            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            //dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             WebResponse response = put(getNodeStandardID(),dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -282,7 +282,7 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
         }
     }
 
-    @Test
+    //@Test
     public void viewNotSupportedFault()
     {
         try

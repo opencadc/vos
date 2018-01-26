@@ -118,7 +118,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
 
     public SyncPullFromVOSpaceTest()
     {
-        super(Standards.VOSPACE_SYNC_20, Standards.VOSPACE_NODES_20);
+        super(Standards.VOSPACE_SYNC_21, Standards.VOSPACE_NODES_20);
     }
 
     @Test
@@ -254,6 +254,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
         }
     }
 
+    @Ignore
     @Test
     public void testSyncPullWithLinkNodeExtTarget()
     {
@@ -318,6 +319,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
         }
     }
 
+    @Ignore 
     @Test
     public void testSyncPullWithLinkNodeExtVOSTarget()
     {
