@@ -709,7 +709,7 @@ public class Main implements Runnable
         if (subject != null)
         {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            proto.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
+            proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
         }
         else
         {
@@ -814,7 +814,7 @@ public class Main implements Runnable
         if (subject != null)
         {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            proto.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
+            proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
         }
         else
         {

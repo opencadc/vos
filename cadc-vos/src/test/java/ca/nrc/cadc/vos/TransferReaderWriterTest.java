@@ -357,10 +357,10 @@ public class TransferReaderWriterTest
         {
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol get = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            get.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.ANON));
+            get.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
             proto21.add(get);
             get = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            get.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
+            get.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(get);
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
@@ -372,8 +372,8 @@ public class TransferReaderWriterTest
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.ANON).toASCIIString()));
-            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.CERT).toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.SECURITY_METHOD_ANON.toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.SECURITY_METHOD_CERT.toASCIIString()));
 
             log.debug("testPushPullTransfer\n" + xml);
 
@@ -386,10 +386,10 @@ public class TransferReaderWriterTest
 
             proto21.clear();
             Protocol put = new Protocol(VOS.PROTOCOL_HTTP_PUT);
-            put.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.ANON));
+            put.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
             proto21.add(put);
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            put.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
+            put.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(put);
 
             transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
@@ -400,8 +400,8 @@ public class TransferReaderWriterTest
             writer.write(transfer, dest);
             xml = dest.toString();
 
-            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.ANON).toASCIIString()));
-            Assert.assertTrue(xml.contains(Standards.getSecurityMethod(AuthMethod.CERT).toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.SECURITY_METHOD_ANON.toASCIIString()));
+            Assert.assertTrue(xml.contains(Standards.SECURITY_METHOD_CERT.toASCIIString()));
 
             log.debug("testPushPullTransfer\n" + xml);
 
