@@ -207,25 +207,25 @@ public class TransferRunnerTest
             Protocol anonTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
 
             Protocol basic = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            basic.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.PASSWORD));
+            basic.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
 
             Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            basicTLS.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.PASSWORD));
+            basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
 
             Protocol cookie = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            cookie.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.COOKIE));
+            cookie.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
 
             Protocol cookieTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            cookieTLS.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.COOKIE));
+            cookieTLS.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
 
             Protocol token = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            token.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.TOKEN));
+            token.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
 
             Protocol tokenTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            tokenTLS.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.TOKEN));
+            tokenTLS.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
 
             Protocol certTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            certTLS.setSecurityMethod(Standards.getSecurityMethod(AuthMethod.CERT));
+            certTLS.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
 
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(anon);
