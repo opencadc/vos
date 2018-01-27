@@ -252,7 +252,7 @@ public class TransferUtil
         }
         else if (VOS.PROTOCOL_HTTPS_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTPS_PUT.equals(p.getUri()))
         {
-            if (Standards.getSecurityMethod(AuthMethod.CERT).equals(p.getSecurityMethod()))
+            if (Standards.SECURITY_METHOD_CERT.equals(p.getSecurityMethod()))
                 return true;
         }
         return false;
