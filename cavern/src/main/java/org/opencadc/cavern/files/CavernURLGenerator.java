@@ -324,9 +324,11 @@ public class CavernURLGenerator implements TransferGenerator {
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
             for (Interface ifc : interfaces) {
-                log.debug("match? " + securityMethod + " vs " + ifc.getSecurityMethod());
+                log.debug("securityMethod match? " + securityMethod + " vs " + ifc.getSecurityMethod());
+                log.debug("scheme match? " + scheme + " vs " + ifc.getAccessURL().getURL().getProtocol());
                 if (securityMethod == null && 
-                        (ifc.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(ifc.getSecurityMethod()))) {
+                        (ifc.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(ifc.getSecurityMethod()) &&
+                        ifc.getAccessURL().getURL().getProtocol().equals(scheme))) {
                     baseURLs.add(ifc.getAccessURL().getURL());
                 } else if (ifc.getSecurityMethod().equals(securityMethod)
                         && ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
