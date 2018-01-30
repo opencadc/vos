@@ -72,6 +72,8 @@ import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -85,6 +87,7 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.FileSystemNodePersistence;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -120,9 +123,11 @@ public class GetAction extends FileAction {
                 return;
             }
             
-            // set HTTP headers
-            Path rootPath = Paths.get(getRoot());
-            Node node = NodeUtil.get(rootPath, nodeURI);
+            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer) 
+            NodePersistence nodePersistence = new FileSystemNodePersistence();
+            PathResolver pathResolver = new PathResolver(nodePersistence, true);
+            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+            log.info("BM: req: " + nodeURI + " res: " + node.getUri() + " md5: " + node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);

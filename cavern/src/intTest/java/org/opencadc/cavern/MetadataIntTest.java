@@ -77,8 +77,11 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
@@ -105,6 +108,7 @@ public class MetadataIntTest {
     private static File SSL_CERT;
 
     private static VOSURI baseURI;
+    private static VOSURI linksBaseURI;
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
@@ -124,17 +128,27 @@ public class MetadataIntTest {
         String uriProp = MetadataIntTest.class.getName() + ".baseURI";
         String uri = System.getProperty(uriProp);
         log.debug(uriProp + " = " + uri);
-        if ( StringUtil.hasText(uri) )
-        {
+        if ( StringUtil.hasText(uri) ) {
             baseURI = new VOSURI(new URI(uri));
         }
-        else
+        else {
             throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
+        }
+        
+        uriProp = MetadataIntTest.class.getName() + ".linksBaseURI";
+        uri = System.getProperty(uriProp);
+        log.debug(uriProp + " = " + uri);
+        if ( StringUtil.hasText(uri) ) {
+            linksBaseURI = new VOSURI(new URI(uri));
+        }
+        else {
+            throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
+        }
     }
 
     @Test
-    public void testHeaderMetadata() throws Exception {
-        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
+    public void testFileDownloadContentMD5() throws Exception {
+        final VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/metadataIntTest-" + System.currentTimeMillis();
         final VOSURI uri = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
@@ -157,6 +171,22 @@ public class MetadataIntTest {
 
                 @Override
                 public Object run() throws Exception {
+                    
+                    // Create the symbolic link needed for the tests below
+                    Node linksDir = null;
+                    try {
+                        linksDir = vos.getNode(linksBaseURI.getPath());
+                    } catch (NodeNotFoundException notfound) {
+                    }
+                    if (linksDir == null) {
+                        linksDir = new ContainerNode(linksBaseURI);
+                        vos.createNode(linksDir);
+                    }
+                    VOSURI linkURI = new VOSURI(linksBaseURI.toString() + "/metadataLink-" + System.currentTimeMillis());
+                    LinkNode linkNode = new LinkNode(linkURI, uri.getURI());
+                    vos.createNode(linkNode);
+                    
+                    // test the md5 of the target node
                     RegistryClient rc = new RegistryClient();
                     URL syncTrans = rc.getServiceURL(
                         URI.create("ivo://canfar.net/cavern"), Standards.VOSPACE_SYNC_21, AuthMethod.CERT);
@@ -176,6 +206,25 @@ public class MetadataIntTest {
                     Assert.assertEquals("non 200 response", 200, download.getResponseCode());
                     Assert.assertEquals("wrong md5 in header", correctMD51, download.getContentMD5());
                     Assert.assertEquals("wrong size in header", correctSize1, Long.toString(download.getContentLength()));
+                    
+                    // test the md5 of the target node through the link
+                    params = new StringBuilder();
+                    params.append("TARGET=").append(URLEncoder.encode(linkURI.toString(), "UTF-8"));
+                    params.append("&");
+                    params.append("DIRECTION=").append(Direction.pullFromVoSpaceValue);
+                    params.append("&");
+                    params.append("PROTOCOL=").append(URLEncoder.encode(VOS.PROTOCOL_HTTPS_GET, "UTF-8"));
+                    transfer = new URL(syncTrans.toString() + "?" + params.toString());
+                    log.debug("Transfer URL: " + transfer);
+                    out = new ByteArrayOutputStream();
+                    download = new HttpDownload(transfer, out);
+                    download.setFollowRedirects(true);
+                    
+                    download.run();
+                    Assert.assertEquals("non 200 response", 200, download.getResponseCode());
+                    Assert.assertEquals("wrong md5 in header through link", correctMD51, download.getContentMD5());
+                    Assert.assertEquals("wrong size in header through link", correctSize1, Long.toString(download.getContentLength()));
+          
                     return null;
                 }
                 
@@ -190,7 +239,7 @@ public class MetadataIntTest {
     }
     
     @Test
-    public void testContentMD5() throws Exception {
+    public void testNodeContentMD5() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/metadataIntTest-" + System.currentTimeMillis();
         VOSURI uri = new VOSURI(vosuripath);

@@ -173,7 +173,7 @@ public class CavernURLGenerator implements TransferGenerator {
             }
 
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
-            if (baseURLs == null || baseURLs.size() == 0) {
+            if (baseURLs == null || baseURLs.isEmpty()) {
                 log.debug("no matching interfaces ");
                 return null;
             }
