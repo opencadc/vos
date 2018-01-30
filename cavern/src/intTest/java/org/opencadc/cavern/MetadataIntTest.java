@@ -92,7 +92,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
 import javax.security.auth.Subject;
@@ -114,7 +113,6 @@ public class MetadataIntTest {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
     }
 
     public MetadataIntTest() {
@@ -158,7 +156,6 @@ public class MetadataIntTest {
             final String correctMD51 = "86bec12f968870284258e4f239e1300c";
 
             TestActions.UploadNodeAction upload = null;
-            TestActions.GetNodeAction get = null;
             Node result = null;
 
             upload = new TestActions.UploadNodeAction(vos, uri, correctMD51, testFile1);
@@ -255,7 +252,6 @@ public class MetadataIntTest {
             final String incorrectMD5 = "12343d07086471dbf52398083a993cf7";
 
             TestActions.UploadNodeAction upload = null;
-            TestActions.GetNodeAction get = null;
             Node result = null;
 
             // 1. put a new file, fail -> check md5 is null

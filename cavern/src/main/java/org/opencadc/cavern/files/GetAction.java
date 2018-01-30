@@ -83,12 +83,10 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
  *
@@ -136,7 +134,6 @@ public class GetAction extends FileAction {
             syncOutput.setHeader("Content-Length", contentLength);
             syncOutput.setHeader("Content-MD5", contentMD5);
             
-            // stream the file out
             OutputStream out = syncOutput.getOutputStream();
             log.debug("Starting copy of file " + source);
             Files.copy(source, out);
