@@ -130,6 +130,7 @@ public class GetAction extends FileAction {
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
             syncOutput.setHeader("Content-Disposition", "inline; filename=" + node.getName());
+            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
             syncOutput.setHeader("Content-Encoding", contentEncoding);
             syncOutput.setHeader("Content-Length", contentLength);
             syncOutput.setHeader("Content-MD5", contentMD5);
