@@ -125,7 +125,6 @@ public class GetAction extends FileAction {
             NodePersistence nodePersistence = new FileSystemNodePersistence();
             PathResolver pathResolver = new PathResolver(nodePersistence, true);
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
-            log.info("BM: req: " + nodeURI + " res: " + node.getUri() + " md5: " + node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
