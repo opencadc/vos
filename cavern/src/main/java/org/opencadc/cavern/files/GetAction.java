@@ -69,7 +69,11 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -82,6 +86,7 @@ import java.nio.file.Path;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
  *
@@ -116,7 +121,18 @@ public class GetAction extends FileAction {
                 return;
             }
             
-            // TODO: get node so we can put appropriate properties into HTTP headers
+            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer) 
+            NodePersistence nodePersistence = new FileSystemNodePersistence();
+            PathResolver pathResolver = new PathResolver(nodePersistence, true);
+            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
+            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            syncOutput.setHeader("Content-Disposition", "inline; filename=" + node.getName());
+            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
+            syncOutput.setHeader("Content-Encoding", contentEncoding);
+            syncOutput.setHeader("Content-Length", contentLength);
+            syncOutput.setHeader("Content-MD5", contentMD5);
             
             OutputStream out = syncOutput.getOutputStream();
             log.debug("Starting copy of file " + source);
