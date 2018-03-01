@@ -316,8 +316,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             throw new RuntimeException("Cannot move nodes between authorities.");
         }
         NodeDAO dao = getDAO(src.getUri().getAuthority());
-        Node persSrc = dao.getPath(src.getUri().getPath());
-        dao.move(persSrc, dest);
+        dao.move(src, dest);
     }
 
     @Override
