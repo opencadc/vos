@@ -537,7 +537,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, dn.getUri(), destDir.getUri(), owner);
+            NodeUtil.move(root, dn.getUri(), destDir.getUri(), dn.getName(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -678,7 +678,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), owner);
+            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), srcDir.getName(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name1 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -841,7 +841,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, ln.getUri(), destDir.getUri(), owner);
+            NodeUtil.move(root, ln.getUri(), destDir.getUri(), ln.getName(), owner);
             VOSURI expected = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof LinkNode)) {

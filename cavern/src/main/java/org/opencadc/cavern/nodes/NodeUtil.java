@@ -455,10 +455,9 @@ public abstract class NodeUtil {
         return ret;
     }
 
-    public static void move(Path root, VOSURI source, VOSURI destDir,
-            UserPrincipal owner) throws IOException {
+    public static void move(Path root, VOSURI source, VOSURI destDir, String destName, UserPrincipal owner) throws IOException {
         Path sourcePath = nodeToPath(root, source);
-        VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + source.getName()));
+        VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
         Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
 
