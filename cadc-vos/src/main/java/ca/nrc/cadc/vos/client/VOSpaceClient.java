@@ -683,7 +683,7 @@ public class VOSpaceClient
             throws AccessControlException
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
-        AuthMethod am = getAuthMethod(subject);
+        AuthMethod am = AuthenticationUtil.getAuthMethodFromCredentials(subject);
 
         URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
 
@@ -718,30 +718,6 @@ public class VOSpaceClient
         }
 
         return serviceURL;
-    }
-
-    private AuthMethod getAuthMethod(Subject subject)
-    {
-        if (subject != null)
-        {
-            // web services use CDP to load a proxy cert so prefer that
-            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
-                    subject.getPublicCredentials());
-            if (privateKeyChain != null)
-                return AuthMethod.CERT;
-
-            // ui applications pass cookie(s) along
-            Set sso = subject.getPublicCredentials(SSOCookieCredential.class);
-            if ( !sso.isEmpty() )
-            {
-                return AuthMethod.COOKIE;
-            }
-
-            // AuthMethod.PASSWORD not supported
-            // AuthMethod.TOKEN not supported
-        }
-
-        return AuthMethod.ANON;
     }
 
 }
