@@ -687,29 +687,6 @@ public class VOSpaceClient
 
         URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
 
-        // now that we have a URL we can check if the cookie will actually be sent to it
-        if (AuthMethod.COOKIE.equals(am))
-        {
-            try
-            {
-                boolean domainMatch = false;
-                String domain = NetUtil.getDomainName(serviceURL);
-                for (SSOCookieCredential cc : subject.getPublicCredentials(SSOCookieCredential.class))
-                {
-                    if (cc.getDomain().equals(domain))
-                        domainMatch = true;
-                }
-                if (!domainMatch)
-                {
-                    throw new AccessControlException("no SSOCookieCredential for domain " + domain);
-                }
-            }
-            catch(IOException ex)
-            {
-                throw new RuntimeException("failure checking domain for cookie use", ex);
-            }
-        }
-
         if (serviceURL == null)
         {
             throw new RuntimeException(
