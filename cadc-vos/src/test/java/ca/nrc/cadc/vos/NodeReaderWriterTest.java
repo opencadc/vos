@@ -300,32 +300,6 @@ public class NodeReaderWriterTest
             fail(t.getMessage());
         }
     }
-    
-    @Test
-    public void writeValidDataNode21()
-    {
-        try
-        {
-            log.debug("writeValidDataNode21");
-            StringBuilder sb = new StringBuilder();
-            NodeWriter instance = new NodeWriter(XmlProcessor.VOSPACE_NS_21);
-            instance.write(dataNode, sb);
-            log.debug(sb.toString());
-            
-            // validate the XML
-            NodeReader reader = new NodeReader();
-            Node n2 = reader.read(sb.toString());
-            
-            Assert.assertEquals(VOS.VOSPACE_21, n2.version);
-
-            compareNodes(dataNode, n2);
-        }
-        catch (Exception t)
-        {
-            log.error(t);
-            fail(t.getMessage());
-        }
-    }
 
     @Test
     public void writeValidUnstructuredDataNode()

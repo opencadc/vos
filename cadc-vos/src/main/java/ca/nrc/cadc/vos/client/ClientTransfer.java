@@ -226,10 +226,10 @@ public class ClientTransfer implements Runnable
             if (schemaValidation)
             {
                 Map<String, String> extraSchemas = new HashMap<String, String>();
-                String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, ClientRecursiveSetNode.class);
+                //String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, ClientRecursiveSetNode.class);
+                //extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
+                String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21, ClientRecursiveSetNode.class);
                 extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
-                xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21, ClientRecursiveSetNode.class);
-                extraSchemas.put(XmlProcessor.VOSPACE_NS_21, xsdFile);
                 jobReader = new JobReader(extraSchemas);
             }
             else
