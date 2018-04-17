@@ -127,16 +127,16 @@ public class TransferWriter implements XmlProcessor
      */
     private Element buildRoot(Transfer transfer)
     {
-        Namespace vosNamespace = null;
-        if (transfer.version == VOS.VOSPACE_20)
-            vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
-        else if (transfer.version == VOS.VOSPACE_21)
-            vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_21);
-        else
-            throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
+        Namespace vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
 
         Element root = new Element("transfer", vosNamespace);
-        //root.addNamespaceDeclaration(vosNamespace);
+        if (transfer.version == VOS.VOSPACE_20) {
+            // don't add a version attribute, not supported in 2.0
+        } else if (transfer.version == VOS.VOSPACE_21) {
+            root.setAttribute("version", VOSPACE_MINOR_VERSION_21);
+        } else {
+            throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
+        }
 
         Element e = null;
 

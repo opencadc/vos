@@ -77,7 +77,7 @@ package ca.nrc.cadc.vos;
 public interface XmlProcessor 
 {
     static final String VOSPACE_NS_20 = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    static final String VOSPACE_NS_21 = "http://www.ivoa.net/xml/VOSpace/v2.1";
+    static final String VOSPACE_MINOR_VERSION_21 = "2.1";
     
     static final String VOSPACE_SCHEMA_RESOURCE_20 = "VOSpace-2.0.xsd";
     static final String VOSPACE_SCHEMA_RESOURCE_21 = "VOSpace-2.1.xsd";
