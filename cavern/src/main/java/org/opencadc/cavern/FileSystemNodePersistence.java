@@ -330,7 +330,10 @@ public class FileSystemNodePersistence implements NodePersistence {
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
             UserPrincipal owner = identityManager.toUserPrincipal(s);
-            NodeUtil.move(root, node.getUri(), cn.getUri(), owner);
+            // NOTE: this optional rename relies on a setName() call in InternalTransferAction (cadc-vos-server)
+            // which makes the node URI inconsistent with the node name (temporarily)
+            String destName = node.getName(); 
+            NodeUtil.move(root, node.getUri(), cn.getUri(), destName, owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }

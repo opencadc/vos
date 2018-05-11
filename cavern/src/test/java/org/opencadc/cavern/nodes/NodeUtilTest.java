@@ -591,7 +591,7 @@ public class NodeUtilTest {
 
             // move the data node to dir2
             log.debug("Moving: " + tn2.getUri() + " to " + testDir2);
-            NodeUtil.move(root, tn.getUri(), testDir2, up);
+            NodeUtil.move(root, tn.getUri(), testDir2, tn.getName(), up);
             uri = new VOSURI(URI.create(testDir2.getURI().toASCIIString() + "/file-" + name));
             log.debug("Asserting: " + uri);
             Node moved = NodeUtil.get(root, uri);
@@ -604,7 +604,7 @@ public class NodeUtilTest {
 
             // move dir2 to dir1
             log.debug("Moving: " + testDir2 + " to " + dir);
-            NodeUtil.move(root, testDir2, testDir, up);
+            NodeUtil.move(root, testDir2, testDir, testDir2.getName(), up);
             uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/" + name2));
             log.debug("Asserting: " + uri);
             moved = NodeUtil.get(root, uri);

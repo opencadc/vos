@@ -76,6 +76,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.reg.Standards;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -104,6 +106,7 @@ public class TransferReaderWriterTest
         throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
     @AfterClass

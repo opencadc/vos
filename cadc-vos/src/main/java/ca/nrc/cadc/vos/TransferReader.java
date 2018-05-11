@@ -83,6 +83,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import org.jdom2.Attribute;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -117,17 +118,19 @@ public class TransferReader implements XmlProcessor
     {
         if (enableSchemaValidation)
         {
-            String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
-            if (vospaceSchemaUrl20 == null)
-                throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_20 + " in classpath");
+            // only use the 2.1 schema now
+            //String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
+            //if (vospaceSchemaUrl20 == null)
+            //    throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_20 + " in classpath");
 
             String vospaceSchemaUrl21 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_21, TransferReader.class);
             if (vospaceSchemaUrl21 == null)
                 throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE_21 + " in classpath");
 
             this.schemaMap = new HashMap<String, String>();
-            schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl20);
-            schemaMap.put(VOSPACE_NS_21, vospaceSchemaUrl21);
+            //schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl20);
+            // (the namespace is 2.0 but the version (noted by an attribute) is 2.1)
+            schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl21);
 
             log.debug("schema validation enabled");
         }
@@ -174,13 +177,18 @@ public class TransferReader implements XmlProcessor
     {
         Element root = document.getRootElement();
         Namespace vosNS = root.getNamespace();
+        Attribute versionAttr = root.getAttribute("version");
+        
         int version;
-        if (VOSPACE_NS_20.equals(vosNS.getURI()))
+        if (VOSPACE_NS_20.equals(vosNS.getURI())) {
             version = VOS.VOSPACE_20;
-        else if (VOSPACE_NS_21.equals(vosNS.getURI()))
-            version = VOS.VOSPACE_21;
-        else
+            // Check the minor version attribute
+            if (versionAttr != null && VOSPACE_MINOR_VERSION_21.equals(versionAttr.getValue())) {
+                version = VOS.VOSPACE_21;
+            }
+        } else {
             throw new IllegalArgumentException("unexpected VOSpace namespace: " + vosNS.getURI());
+        }
 
         Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet

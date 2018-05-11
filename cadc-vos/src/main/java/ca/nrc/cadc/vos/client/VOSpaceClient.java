@@ -683,32 +683,9 @@ public class VOSpaceClient
             throws AccessControlException
     {
         Subject subject = AuthenticationUtil.getCurrentSubject();
-        AuthMethod am = getAuthMethod(subject);
+        AuthMethod am = AuthenticationUtil.getAuthMethodFromCredentials(subject);
 
         URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
-
-        // now that we have a URL we can check if the cookie will actually be sent to it
-        if (AuthMethod.COOKIE.equals(am))
-        {
-            try
-            {
-                boolean domainMatch = false;
-                String domain = NetUtil.getDomainName(serviceURL);
-                for (SSOCookieCredential cc : subject.getPublicCredentials(SSOCookieCredential.class))
-                {
-                    if (cc.getDomain().equals(domain))
-                        domainMatch = true;
-                }
-                if (!domainMatch)
-                {
-                    throw new AccessControlException("no SSOCookieCredential for domain " + domain);
-                }
-            }
-            catch(IOException ex)
-            {
-                throw new RuntimeException("failure checking domain for cookie use", ex);
-            }
-        }
 
         if (serviceURL == null)
         {
@@ -718,30 +695,6 @@ public class VOSpaceClient
         }
 
         return serviceURL;
-    }
-
-    private AuthMethod getAuthMethod(Subject subject)
-    {
-        if (subject != null)
-        {
-            // web services use CDP to load a proxy cert so prefer that
-            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
-                    subject.getPublicCredentials());
-            if (privateKeyChain != null)
-                return AuthMethod.CERT;
-
-            // ui applications pass cookie(s) along
-            Set sso = subject.getPublicCredentials(SSOCookieCredential.class);
-            if ( !sso.isEmpty() )
-            {
-                return AuthMethod.COOKIE;
-            }
-
-            // AuthMethod.PASSWORD not supported
-            // AuthMethod.TOKEN not supported
-        }
-
-        return AuthMethod.ANON;
     }
 
 }
