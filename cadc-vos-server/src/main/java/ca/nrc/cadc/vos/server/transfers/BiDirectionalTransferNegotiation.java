@@ -67,19 +67,23 @@
 
 package ca.nrc.cadc.vos.server.transfers;
 
-
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeBusyException;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -102,9 +106,29 @@ public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
     }
 
     @Override
-    public void doAction() throws TransferException, JobPersistenceException, JobNotFoundException, LinkingException, NodeNotFoundException, TransferParsingException, IOException, TransientException, URISyntaxException, NodeBusyException {
-        throw new UnsupportedOperationException(Direction.BIDIRECTIONAL.getValue());
+    public void doAction() 
+            throws TransferException, JobPersistenceException, JobNotFoundException, LinkingException, NodeNotFoundException, TransferParsingException, 
+            IOException, TransientException, URISyntaxException, NodeBusyException {
+        boolean updated = false;
+        try {
+            VOSURI target = new VOSURI(transfer.getTarget());
+
+            PathResolver resolver = new PathResolver(nodePersistence);
+
+            Node node = resolver.resolveWithReadPermissionCheck(target, authorizer, true);
+            if (!(node instanceof ContainerNode)) {
+                NodeFault f = NodeFault.InvalidArgument;
+                f.setMessage("node is not a container node");
+                throw new TransferException(f);
+            }
+            
+            updateTransferJob(node, node.getUri().getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
+        }
+        finally {
+            if (!updated) {
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
+            }
+        }
     }
-    
-    
 }

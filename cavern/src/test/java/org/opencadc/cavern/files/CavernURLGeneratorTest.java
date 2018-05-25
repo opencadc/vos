@@ -196,7 +196,7 @@ public class CavernURLGeneratorTest
             URI mountURI = Subject.doAs(s, new PrivilegedExceptionAction<URI>() {
                 @Override
                 public URI run() throws Exception {
-                    TestURIGen urlGen = new TestURIGen(ROOT);
+                    TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
                     List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
                     return urls.get(0);
                 }
@@ -215,7 +215,7 @@ public class CavernURLGeneratorTest
     public void testRoundTripSuccess() {
         try {
 
-            TestURIGen urlGen = new TestURIGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -243,7 +243,7 @@ public class CavernURLGeneratorTest
     public void testWrongDirection() {
         try {
 
-            TestURIGen urlGen = new TestURIGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -271,7 +271,7 @@ public class CavernURLGeneratorTest
     public void testInvalidSignature() {
         try {
 
-            TestURIGen urlGen = new TestURIGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -299,7 +299,7 @@ public class CavernURLGeneratorTest
     public void testMetaTampered() {
         try {
 
-            TestURIGen urlGen = new TestURIGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
             View view = null;
@@ -343,9 +343,9 @@ public class CavernURLGeneratorTest
         }
     }
 
-    class TestURIGen extends CavernURLGenerator {
+    class TestTransferGenerator extends CavernURLGenerator {
 
-        public TestURIGen(String root) {
+        public TestTransferGenerator(String root) {
             super(root);
         }
 

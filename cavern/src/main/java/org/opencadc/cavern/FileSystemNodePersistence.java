@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
@@ -87,7 +86,6 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipal;
@@ -105,11 +103,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
 
+    public static final String CONFIG_FILE = "Cavern.properties";
+    
     private PosixIdentityManager identityManager;
     private Path root;
 
     public FileSystemNodePersistence() {
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
         String rootConfig = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
         if (rootConfig == null) {
             throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");

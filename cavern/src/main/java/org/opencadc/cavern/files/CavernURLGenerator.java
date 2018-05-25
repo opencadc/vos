@@ -74,6 +74,7 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.util.RsaSignatureVerifier;
 import ca.nrc.cadc.uws.Job;
@@ -114,6 +115,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
     //private String root;
     private final FileSystemNodePersistence nodes;
+    private final String sshServerBase;
 
     public static final String KEY_SIGNATURE = "sig";
     public static final String KEY_META = "meta";
@@ -122,11 +124,15 @@ public class CavernURLGenerator implements TransferGenerator {
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
+        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
+        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
     }
 
     // for testing
     public CavernURLGenerator(String root) {
         this.nodes = new FileSystemNodePersistence(root);
+        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
+        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
     }
 
     @Override
@@ -256,10 +262,14 @@ public class CavernURLGenerator implements TransferGenerator {
     }
     
     private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, UserPrincipal caller) {
+        if (sshServerBase == null) {
+            throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in " + FileSystemNodePersistence.CONFIG_FILE);
+        }
         List<URI> ret = new ArrayList<URI>();
         StringBuilder sb = new StringBuilder();
         sb.append("sshfs:");
-        sb.append(caller.getName()).append("@proto.canfar.net").append(":");
+        sb.append(caller.getName()).append("@");
+        sb.append(sshServerBase);
         sb.append(node.getUri().getPath());
         try {
             URI u = new URI(sb.toString());
