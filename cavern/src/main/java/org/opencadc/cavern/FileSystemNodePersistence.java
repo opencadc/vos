@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
@@ -123,6 +124,10 @@ public class FileSystemNodePersistence implements NodePersistence {
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
     }
 
+    public UserPrincipal getPosixUser(Subject s) throws IOException {
+        return identityManager.toUserPrincipal(s);
+    }
+    
     @Override
     public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
         return get(uri, false);
@@ -235,8 +240,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
 
         try {
-            Subject s = AuthenticationUtil.getCurrentSubject();
-            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            UserPrincipal owner = getPosixUser(AuthenticationUtil.getCurrentSubject());
             NodeUtil.setOwner(node, owner);
             NodeUtil.create(root, node);
             return NodeUtil.get(root, node.getUri());

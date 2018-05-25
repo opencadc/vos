@@ -62,77 +62,49 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
+
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.NodeBusyException;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import org.apache.log4j.Logger;
 
 /**
- * Class to hold the direction information for a transfer.
  *
- * @author majorb
- *
+ * @author pdowler
  */
-public class Direction
-{
+public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
+    private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
 
-    // predefined direction values
-    public static final String pushToVoSpaceValue = "pushToVoSpace";
-    public static final String pullToVoSpaceValue = "pullToVoSpace";
-    public static final String pushFromVoSpaceValue = "pushFromVoSpace";
-    public static final String pullFromVoSpaceValue = "pullFromVoSpace";
-    
-    // predefined directions
-    public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
-    public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
-    public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
-    public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
+    private VOSpaceAuthorizer authorizer;
 
-    public static final Direction BIDIRECTIONAL = new Direction("ivo://cadc.nrc.ca/vospace#biDirectional");
-    
-    private String value;
-
-    /**
-     * Direction constructor;
-     * @param value
-     */
-    public Direction(String value)
+    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
     {
-        this.value = value;
-    }
-
-    /**
-     * Get the value of this direction.
-     *
-     * @return
-     */
-    public String getValue()
-    {
-        return value;
-    }
-
-    /**
-     * Return true if the values are equal, ignoring case.
-     */
-    @Override
-    public boolean equals(Object o)
-    {
-        if (o != null && o instanceof Direction)
-        {
-            String oValue = ((Direction) o).getValue();
-            if (oValue != null)
-            {
-                return oValue.equalsIgnoreCase(value);
-            }
-        }
-        return false;
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
     }
 
     @Override
-    public String toString()
-    {
-        return "Direction[" + value+  "]";
+    public void doAction() throws TransferException, JobPersistenceException, JobNotFoundException, LinkingException, NodeNotFoundException, TransferParsingException, IOException, TransientException, URISyntaxException, NodeBusyException {
+        throw new UnsupportedOperationException(Direction.BIDIRECTIONAL.getValue());
     }
+    
+    
 }

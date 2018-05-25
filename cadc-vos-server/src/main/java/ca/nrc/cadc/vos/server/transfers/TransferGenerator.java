@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2016.                            (c) 2016.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,7 +70,6 @@
 package ca.nrc.cadc.vos.server.transfers;
 
 import java.io.FileNotFoundException;
-import java.net.URL;
 import java.util.List;
 
 import ca.nrc.cadc.net.TransientException;
@@ -79,6 +78,8 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import java.net.URI;
+import java.net.URL;
 
 /**
  * An interface to vospace storage back-end for provided transfer details
@@ -86,9 +87,8 @@ import ca.nrc.cadc.vos.View;
  */
 public interface TransferGenerator
 {
-
     /**
-     * Request a list of URLs for the given transfer request information.
+     * Request a list of endpoints for the given transfer request information.
      *
      * This method returns a list of URLs to handle the case where the
      * storage system has multiple copies of a file or multiple locations
@@ -105,9 +105,7 @@ public interface TransferGenerator
      * @throws FileNotFoundException If the storage system cannot find an
      *     object for the target.
      * @throws TransientException If an unexpected error occurs.
-     *
      */
-    List<URL> getURLs(VOSURI target, Protocol protocol, View view, Job job, List<Parameter> additionalParams)
+    List<URI> getEndpoints(VOSURI target, Protocol protocol, View view, Job job, List<Parameter> additionalParams)
         throws FileNotFoundException, TransientException;
-
 }
