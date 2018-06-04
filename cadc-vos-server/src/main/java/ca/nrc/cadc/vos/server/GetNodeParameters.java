@@ -70,16 +70,20 @@ package ca.nrc.cadc.vos.server;
 
 import ca.nrc.cadc.vos.VOSURI;
 
-public class GetChildParameters {
+public class GetNodeParameters {
     public VOSURI start = null;
     public boolean hasStart = false;
     public Integer limit = null;
     public boolean resolveMetadata = false;
-    public String sortCol = null;
     private String DEFAULT_COLUMN_SORT = "name";
+    public String sortCol = DEFAULT_COLUMN_SORT;
+    public Boolean sortDesc = false;
+
+    public GetNodeParameters() {
+    }
 
     // Constructors
-    public GetChildParameters(VOSURI start, Integer limit, String sortCol, boolean resolveMetadata) {
+    public GetNodeParameters(VOSURI start, Integer limit, String sortCol, Boolean sortDesc, boolean resolveMetadata) {
 
         this.start = start;
         if (start != null) {
@@ -91,15 +95,28 @@ public class GetChildParameters {
         } else {
             this.sortCol = DEFAULT_COLUMN_SORT;
         }
+        if (sortDesc != null) {
+            this.sortDesc = sortDesc;
+        }
         this.resolveMetadata = resolveMetadata;
     }
 
-    public GetChildParameters(Integer limit) {
-        this.start = null;
-        this.hasStart = false;
+    // Constructors
+    public GetNodeParameters(VOSURI start, Integer limit) {
+
+        this.start = start;
+        if (start != null) {
+            this.hasStart = true;
+        }
         this.limit = limit;
-        this.sortCol = DEFAULT_COLUMN_SORT;
-        this.resolveMetadata = false;
+    }
+
+    public GetNodeParameters(Integer limit) {
+        this.limit = limit;
+    }
+
+    public GetNodeParameters(boolean resolveMetadata) {
+        this.resolveMetadata = resolveMetadata;
     }
 
 }

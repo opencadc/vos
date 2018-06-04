@@ -67,7 +67,7 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import ca.nrc.cadc.vos.server.GetChildParameters;
+import ca.nrc.cadc.vos.server.GetNodeParameters;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -89,12 +89,10 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.VOS.Detail;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
-import org.restlet.resource.Get;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -105,7 +103,7 @@ public class GetNodeAction extends NodeAction
 {
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
-    protected GetChildParameters childQueryParams = null;
+    protected GetNodeParameters childQueryParams = null;
 
     /**
      * Basic empty constructor.
@@ -156,7 +154,38 @@ public class GetNodeAction extends NodeAction
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
 
             // Sorting parameters
-            String sortCol = queryForm.getFirstValue(QUERY_SORT_KEY);
+            String sortColParam = queryForm.getFirstValue(QUERY_SORT_KEY);
+            String sortCol = null;
+
+            // Validate sortCol passed in against values in cadc-vos/vos.java
+            if (sortColParam != null) {
+                switch (sortColParam) {
+                    case VOS.PROPERTY_URI_DATE:
+                        sortCol = "lastModified";
+                        break;
+                    case VOS.PROPERTY_URI_CONTENTLENGTH:
+                        sortCol = "contentLength";
+                        break;
+                    case VOS.PROPERTY_URI_TITLE:
+                        sortCol = "name";
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Sort by " + sortColParam + " not supported.");
+                }
+            }
+
+            // Asc/Desc order parameter
+            String sortOrder = queryForm.getFirstValue(QUERY_ORDER_KEY);
+            boolean sortDesc = false;
+            if (sortOrder != null) {
+                if (sortOrder.equalsIgnoreCase("asc")) {
+                    sortDesc = false;
+                } else if (sortOrder.equalsIgnoreCase("desc")) {
+                    sortDesc = true;
+                } else {
+                    throw new IllegalArgumentException("Sort order parameter should be asc | desc");
+                }
+            }
 
             ContainerNode cn = (ContainerNode) serverNode;
             boolean paginate = false;
@@ -190,14 +219,14 @@ public class GetNodeAction extends NodeAction
 
             // get the children as requested
             // Build up parameter object to be passed in to getChildren below
-            GetChildParameters childParameters = nodePersistence.getQueryParameters(startURIObject, pageLimit, sortCol, resolveMetadata);
+            GetNodeParameters childParameters = nodePersistence.getQueryParameters(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
 
             start = System.currentTimeMillis();
             if (paginate)
             {
                 if (pageLimit != null && pageLimit < 1)
                 {
-                    log.debug("Get children not called becauase pageLimit < 1");
+                    log.debug("Get children not called because pageLimit < 1");
                 }
                 else
                 {

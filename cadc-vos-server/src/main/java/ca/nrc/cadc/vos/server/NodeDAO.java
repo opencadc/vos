@@ -631,11 +631,11 @@ public class NodeDAO
      */
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata) throws TransientException
     {
-        GetChildParameters params = new GetChildParameters(start, limit, null, resolveMetadata);
+        GetNodeParameters params = new GetNodeParameters(start, limit, null, false, resolveMetadata);
         getChildren(parent,params);
     }
 
-    public void getChildren(ContainerNode parent, GetChildParameters childParams) throws TransientException
+    public void getChildren(ContainerNode parent, GetNodeParameters childParams) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -1671,7 +1671,7 @@ public class NodeDAO
 
     private int deleteChildren(ContainerNode container, int batchSize, int count, boolean dryrun)
     {
-        GetChildParameters childParams =  new GetChildParameters(CHILD_BATCH_SIZE);
+        GetNodeParameters childParams =  new GetNodeParameters(CHILD_BATCH_SIZE);
         String sql = getSelectNodesByParentSQL(container, childParams);
         log.debug(sql);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
@@ -1692,7 +1692,6 @@ public class NodeDAO
 
             childParams.hasStart = true;
             sql = getSelectNodesByParentSQL(container,childParams);
-//            sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, true);
             log.debug(sql);
             args[0] = cur.getName();
             children = jdbc.query(sql, args, mapper);
@@ -1775,7 +1774,7 @@ public class NodeDAO
     private int chownChildren(ContainerNode container, Object newOwnerObj, int batchSize, int count, boolean dryrun)
     {
         String sql = null;
-        GetChildParameters childParams = new GetChildParameters(CHILD_BATCH_SIZE);
+        GetNodeParameters childParams = new GetNodeParameters(CHILD_BATCH_SIZE);
         sql = getSelectNodesByParentSQL(container,childParams);
 //        sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
@@ -1931,8 +1930,12 @@ public class NodeDAO
      * @param childParams
      * @return simple SQL statement select for use with NodeMapper
      */
-    protected String getSelectNodesByParentSQL(ContainerNode parent, GetChildParameters childParams)
+    protected String getSelectNodesByParentSQL(ContainerNode parent, GetNodeParameters childParams)
     {
+        if (childParams == null) {
+            // Get default parameters
+            childParams = new GetNodeParameters();
+        }
         StringBuilder sb = new StringBuilder();
 
         sb.append("SELECT nodeID");
@@ -1961,8 +1964,12 @@ public class NodeDAO
         if (childParams.hasStart)
             sb.append(" AND " + sortColumn + " >= ?");
 
-        if (childParams.hasStart || childParams.limit != null)
+        if (childParams.hasStart || childParams.limit != null) {
             sb.append(" ORDER BY " + sortColumn);
+
+            if ((childParams.sortDesc != null) && (childParams.sortDesc == true))
+                sb.append(" DESC ");
+        }
 
         if (childParams.limit != null)
         {
@@ -1975,7 +1982,7 @@ public class NodeDAO
             }
         }
 
-        log.info("getSelectedNodesByParentSQL: " + sb.toString());
+        log.debug("getSelectedNodesByParentSQL: " + sb.toString());
         return sb.toString();
     }
 

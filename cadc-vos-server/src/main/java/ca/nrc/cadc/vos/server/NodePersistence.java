@@ -208,7 +208,7 @@ public interface NodePersistence
      * @param childParameters
      * @throws TransientException
      */
-    void getChildren(ContainerNode parent, GetChildParameters childParameters)
+    void getChildren(ContainerNode parent, GetNodeParameters childParameters)
         throws TransientException;
 
     /**
@@ -250,7 +250,7 @@ public interface NodePersistence
      * @param resolveMetadata
      * @return
      */
-    GetChildParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean resolveMetadata);
+    GetNodeParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean sortDesc, boolean resolveMetadata);
 
     /**
      * Store the specified node.
