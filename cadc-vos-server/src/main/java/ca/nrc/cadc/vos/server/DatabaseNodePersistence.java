@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -217,26 +217,41 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     @Override
     public void getChildren(ContainerNode node) throws TransientException
     {
-        getChildren(node, null, null);
+        // TODO: clean up this before checkin s2255
+//        getChildren(node, null, null);
+
+        // Build GetChildParameter object up
+        GetChildParameters childParameters = new GetChildParameters(null, null, null, false);
+        getChildren(node, childParameters);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
         throws TransientException
     {
-        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+        // TODO: clean up this before checkin s2255
+//        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+//
+//        // enforce max limit
+//        Integer actualLimit = limit;
+//        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+//            actualLimit = maxChildLimit;
+//
+//        dao.getChildren(parent, start, actualLimit);
 
-        // enforce max limit
-        Integer actualLimit = limit;
-        if (limit == null || limit.intValue() > maxChildLimit.intValue())
-            actualLimit = maxChildLimit;
-
-        dao.getChildren(parent, start, actualLimit);
+        // Build GetChildParameter object up
+        GetChildParameters childParameters = new GetChildParameters(start, limit, null, false);
+        getChildren(parent, childParameters);
     }
 
     @Override
     public void getChildren(ContainerNode node, boolean resolveMetadata) throws TransientException
     {
-        getChildren(node, null, null, resolveMetadata);
+        // TODO: clean up this before checkin s2255
+//        getChildren(node, null, null, resolveMetadata);
+
+        // Build GetChildParameter object up
+        GetChildParameters childParameters = new GetChildParameters(null, null, null, resolveMetadata);
+        getChildren(node, childParameters);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
@@ -244,13 +259,40 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     {
         NodeDAO dao = getDAO( parent.getUri().getAuthority() );
 
-        // enforce max limit
-        Integer actualLimit = limit;
-        if (limit == null || limit.intValue() > maxChildLimit.intValue())
-            actualLimit = maxChildLimit;
+        // TODO: clean up this before checkin s2255
+//        // enforce max limit
+//        Integer actualLimit = limit;
+//        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+//            actualLimit = maxChildLimit;
+//
+//        getChildren(parent, start, actualLimit, null, resolveMetadata);
 
-        dao.getChildren(parent, start, actualLimit, resolveMetadata);
+        // Build GetChildParameter object up
+        GetChildParameters childParameters = new GetChildParameters(start, limit, null, resolveMetadata);
+        getChildren(parent, childParameters);
     }
+
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, String sortCol, boolean resolveMetadata)
+        throws TransientException
+    {
+        // Build GetChildParameter object up
+        GetChildParameters childParameters = new GetChildParameters(start, limit, sortCol, resolveMetadata);
+        getChildren(parent, childParameters);
+    }
+
+
+    public void getChildren(ContainerNode parent, GetChildParameters childParameters)
+        throws TransientException
+    {
+        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+
+        // enforce max limit
+        if (childParameters.limit == null || childParameters.limit.intValue() > maxChildLimit.intValue())
+            childParameters.limit = maxChildLimit;
+
+        dao.getChildren(parent, childParameters);
+    }
+
 
     @Override
     public void getChild(ContainerNode node, String name) throws TransientException
@@ -471,4 +513,12 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO(null);
         dao.applyPropagation(propagation);
     }
+
+    @Override
+    public GetChildParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean resolveMetadata) {
+        return new GetChildParameters(start, limit, sortCol, resolveMetadata);
+    }
+
+
+
 }

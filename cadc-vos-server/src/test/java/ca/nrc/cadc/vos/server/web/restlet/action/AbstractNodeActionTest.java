@@ -70,6 +70,7 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 
 import static org.easymock.EasyMock.createMock;
 
+import ca.nrc.cadc.vos.server.GetChildParameters;
 import java.net.URI;
 import java.net.URL;
 

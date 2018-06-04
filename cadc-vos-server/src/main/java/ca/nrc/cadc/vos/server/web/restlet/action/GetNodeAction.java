@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2018.                            (c) 2018.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,6 +67,7 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
+import ca.nrc.cadc.vos.server.GetChildParameters;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -93,6 +94,7 @@ import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
+import org.restlet.resource.Get;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -103,6 +105,7 @@ public class GetNodeAction extends NodeAction
 {
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
+    protected GetChildParameters childQueryParams = null;
 
     /**
      * Basic empty constructor.
@@ -152,6 +155,9 @@ public class GetNodeAction extends NodeAction
             String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
 
+            // Sorting parameters
+            String sortCol = queryForm.getFirstValue(QUERY_SORT_KEY);
+
             ContainerNode cn = (ContainerNode) serverNode;
             boolean paginate = false;
             VOSURI startURIObject = null;
@@ -183,6 +189,9 @@ public class GetNodeAction extends NodeAction
             }
 
             // get the children as requested
+            // Build up parameter object to be passed in to getChildren below
+            GetChildParameters childParameters = nodePersistence.getQueryParameters(startURIObject, pageLimit, sortCol, resolveMetadata);
+
             start = System.currentTimeMillis();
             if (paginate)
             {
@@ -193,7 +202,7 @@ public class GetNodeAction extends NodeAction
                 else
                 {
                     // request for a subset of children
-                    nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
+                    nodePersistence.getChildren(cn, childParameters);
                     log.debug(String.format(
                         "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
                             resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
@@ -202,7 +211,7 @@ public class GetNodeAction extends NodeAction
             else
             {
                 // get as many children as allowed
-                nodePersistence.getChildren(cn, resolveMetadata);
+                nodePersistence.getChildren(cn, childParameters);
                 log.debug(String.format(
                     "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
             }

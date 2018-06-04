@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -199,6 +199,18 @@ public interface NodePersistence
     void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException;
 
+
+    /**
+     * Load some of the children of a container. Child parameters include VOSURI start, limit,
+     * resolveMetadata, sort column name
+     *
+     * @param parent
+     * @param childParameters
+     * @throws TransientException
+     */
+    void getChildren(ContainerNode parent, GetChildParameters childParameters)
+        throws TransientException;
+
     /**
      * Load a single child of a container.
      * 
@@ -229,6 +241,16 @@ public interface NodePersistence
      */
     void getProperties(Node node)
         throws TransientException;
+
+    /**
+     * Get (create) a set of query parameters for listing node children.
+     * @param start
+     * @param limit
+     * @param sortCol
+     * @param resolveMetadata
+     * @return
+     */
+    GetChildParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean resolveMetadata);
 
     /**
      * Store the specified node.

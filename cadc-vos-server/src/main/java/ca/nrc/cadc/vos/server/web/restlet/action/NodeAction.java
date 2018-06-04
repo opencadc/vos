@@ -114,6 +114,7 @@ public abstract class NodeAction
     public static final String QUERY_PARAM_DETAIL = "detail";
     protected static final String QUERY_PARAM_URI = "uri";
     protected static final String QUERY_PARAM_LIMIT = "limit";
+    protected static final String QUERY_SORT_KEY = "sort";
 
     // some subclasses may nede to determine hostname, request path, etc
     protected Request request;
