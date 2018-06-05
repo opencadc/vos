@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -75,6 +75,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
@@ -102,7 +103,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
     }
     
     public GetContainerNodeTest()
@@ -175,6 +176,319 @@ public class GetContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+
+    @Test
+    public void getSortedContainerNode()
+    {
+        try
+        {
+            log.debug("getSortedContainerNode");
+
+            // Parent node.
+            TestNode testNode = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(testNode.sampleNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node sortA.
+            ContainerNode sortA = new ContainerNode(new VOSURI(testNode.sampleNode.getUri() + "/sortA"));
+            response = put(sortA);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node ad.
+            ContainerNode nodeAad = new ContainerNode(new VOSURI(sortA.getUri() + "/ad"));
+            response = put(nodeAad);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node ab.
+            ContainerNode nodeAab = new ContainerNode(new VOSURI(sortA.getUri() + "/ab"));
+            response = put(nodeAab);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node aa.
+            ContainerNode nodeAaa = new ContainerNode(new VOSURI(sortA.getUri() + "/aa"));
+            response = put(nodeAaa);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Request Parameters to get sort by last modified
+            // Assert: should be in reverse alphabetic order (as last node added will be
+            // the first returned theoretically.
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("sort", VOS.PROPERTY_URI_DATE);
+
+            // Get the node from vospace
+            response = get(sortA, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            // Make sure all 3 children are there
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be first created
+            Node child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAad.getUri(), child.getUri());
+
+            // Test name sort using parameter
+            parameters = new HashMap<String, String>();
+            parameters.put("sort", VOS.PROPERTY_URI_TITLE);
+
+            // Get the node from vospace
+            response = get(sortA, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader = new NodeReader();
+            validatedNode = (ContainerNode) reader.read(xml);
+
+            // Make sure all 3 children are there
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be first alphabetically
+            child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAaa.getUri(), child.getUri());
+
+
+            // Verify default sort is by name
+            response = get(sortA);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader = new NodeReader();
+            validatedNode = (ContainerNode) reader.read(xml);
+
+            // Make sure all 3 children are there
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be alphabetic (default sort)
+            child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAaa.getUri(), child.getUri());
+
+            // Delete the nodes.
+            response = delete(nodeAad);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(nodeAab);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(nodeAaa);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(sortA);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(testNode.sampleNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.debug("getSortedContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
+    @Test
+    public void getSizeSortedContainerNode()
+    {
+        try
+        {
+            log.debug("getSizeSortedContainerNode");
+
+            // Use existing node for this test. - CADCRegtest1/vopace-static-test/transfer
+            String nodeName = "vos://cadc.nrc.ca!vospace/CADCRegtest1/vospace-static-test/transfer";
+            ContainerNode node = new ContainerNode(new VOSURI(nodeName));
+
+            // Request Parameters to get sort by last modified
+            // Assert: should be in reverse alphabetic order (as last node added will be
+            // the first returned theoretically.
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("sort", VOS.PROPERTY_URI_DATE);
+
+            // Get the node from vospace
+            WebResponse response = get(node, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            // First child node listed should be first created
+            Node child = validatedNode.getNodes().get(0);
+            assertEquals("", child.getName(), "zeroLengthFile.txt");
+
+            // Test contentLength sort
+            parameters = new HashMap<String, String>();
+            parameters.put("sort", VOS.PROPERTY_URI_CONTENTLENGTH);
+            parameters.put("order", "desc");
+
+            // Get the node from vospace
+            response = get(node, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader = new NodeReader();
+            validatedNode = (ContainerNode) reader.read(xml);
+
+            // First child node listed should be first created
+            child = validatedNode.getNodes().get(0);
+            assertEquals("", child.getName(), "public_fits.fits");
+
+            log.debug("getSizeSortedContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
+    @Test
+    public void getDescSortContainerNode()
+    {
+        try
+        {
+            log.debug("getSortedContainerNode");
+
+            // Parent node.
+            TestNode testNode = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(testNode.sampleNode);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node sortA.
+            ContainerNode sortA = new ContainerNode(new VOSURI(testNode.sampleNode.getUri() + "/sortA"));
+            response = put(sortA);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Create them in a mixed order
+            // Child node ad.
+            ContainerNode nodeAad = new ContainerNode(new VOSURI(sortA.getUri() + "/ad"));
+            response = put(nodeAad);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node aa.
+            ContainerNode nodeAaa = new ContainerNode(new VOSURI(sortA.getUri() + "/aa"));
+            response = put(nodeAaa);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child node ab.
+            ContainerNode nodeAab = new ContainerNode(new VOSURI(sortA.getUri() + "/ab"));
+            response = put(nodeAab);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+
+            // Request Parameters to get sort by name, desc (name is default column)
+            // Assert: should be in reverse alphabetic order (as last node added will be
+            // the first returned theoretically.
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("order", "desc");
+
+            // Get the node from vospace
+            response = get(sortA, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be last alphabetically
+            Node child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAad.getUri(), child.getUri());
+
+
+            // Check sort by other column name works as well
+            parameters.put("sort", VOS.PROPERTY_URI_DATE);
+
+            // Get the node from vospace
+            response = get(sortA, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader = new NodeReader();
+            validatedNode = (ContainerNode) reader.read(xml);
+
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be last created
+            child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAab.getUri(), child.getUri());
+
+
+            // Verify default sort is by name, asc
+            response = get(sortA);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader = new NodeReader();
+            validatedNode = (ContainerNode) reader.read(xml);
+
+            // Node child nodes should only have a single node.
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // First child node listed should be first alphabetic
+            child = validatedNode.getNodes().get(0);
+            assertEquals("", nodeAaa.getUri(), child.getUri());
+
+            // Delete the nodes.
+            response = delete(nodeAad);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(nodeAab);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(nodeAaa);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(sortA);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(testNode.sampleNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.debug("getSortedContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
 
     /**
      * min: the returned record for the node contains minimum detail with all
@@ -551,5 +865,9 @@ public class GetContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+
+
+
     
 }

@@ -252,6 +252,20 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         dao.getChildren(parent, start, actualLimit, resolveMetadata);
     }
 
+        @Override
+        public void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
+            throws TransientException
+        {
+            // enforce max limit
+            Integer actualLimit = limit;
+            if (limit == null || limit.intValue() > maxChildLimit.intValue())
+                actualLimit = maxChildLimit;
+
+            NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+            dao.getChildren(parent, start, actualLimit, childOptions);
+        }
+
+
     @Override
     public void getChild(ContainerNode node, String name) throws TransientException
     {
