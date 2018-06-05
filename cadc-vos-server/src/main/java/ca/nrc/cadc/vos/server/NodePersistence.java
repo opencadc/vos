@@ -243,16 +243,6 @@ public interface NodePersistence
         throws TransientException;
 
     /**
-     * Get (create) a set of query parameters for listing node children.
-     * @param start
-     * @param limit
-     * @param sortCol
-     * @param resolveMetadata
-     * @return
-     */
-    GetNodeParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean sortDesc, boolean resolveMetadata);
-
-    /**
      * Store the specified node.
      *
      * @param node

@@ -504,9 +504,4 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         dao.applyPropagation(propagation);
     }
 
-    @Override
-    public GetNodeParameters getQueryParameters(VOSURI start, Integer limit, String sortCol, boolean sortDesc, boolean resolveMetadata) {
-        return new GetNodeParameters(start, limit, sortCol, sortDesc, resolveMetadata);
-    }
-
 }

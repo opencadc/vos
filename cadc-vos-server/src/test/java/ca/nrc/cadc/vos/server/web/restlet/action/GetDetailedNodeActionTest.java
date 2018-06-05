@@ -71,7 +71,6 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 
 import ca.nrc.cadc.vos.*;
 
-import ca.nrc.cadc.vos.server.GetNodeParameters;
 import org.junit.Assert;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
@@ -87,7 +86,6 @@ import static org.easymock.EasyMock.*;
 public class GetDetailedNodeActionTest extends GetNodeActionTest
 {
     final ContainerNode mockServerNode = createMock(ContainerNode.class);
-    final GetNodeParameters mockChildParameters = createMock(GetNodeParameters.class);
     final VOSURI testVOSURI = new VOSURI(URI.create(VOS_URI_PREFIX
                                                     + "/user/"));
     final List<NodeProperty> serverNodeProperties = new ArrayList<NodeProperty>();
@@ -174,8 +172,8 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(mockPartialPathAuth.getReadPermission(testVOSURI.getURI())).
                 andReturn(mockServerNode).atLeastOnce();
 
-        expect(getMockNodePersistence().getQueryParameters(null, null, null, false, true)).andReturn(mockChildParameters).once();
-        getMockNodePersistence().getChildren(mockServerNode, mockChildParameters);
+        getMockNodePersistence().getChildren(mockServerNode, true);
+
         expectLastCall().once();
 
         replay(queryForm);

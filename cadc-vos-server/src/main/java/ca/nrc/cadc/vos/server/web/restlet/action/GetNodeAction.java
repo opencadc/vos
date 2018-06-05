@@ -219,7 +219,7 @@ public class GetNodeAction extends NodeAction
 
             // get the children as requested
             // Build up parameter object to be passed in to getChildren below
-            GetNodeParameters childParameters = nodePersistence.getQueryParameters(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
+            GetNodeParameters childParameters = new GetNodeParameters(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
 
             start = System.currentTimeMillis();
             if (paginate)
