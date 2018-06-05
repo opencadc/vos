@@ -208,17 +208,8 @@ public interface NodePersistence
      * @param childOptions
      * @throws TransientException
      */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
+     void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
         throws TransientException;
-//    {
-//        // enforce max limit
-//        if (childOptions.limit == null || childOptions.limit.intValue() > maxChildLimit.intValue())
-//            childOptions.limit = maxChildLimit;
-//        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
-//        dao.getChildren(parent, childOptions);
-//    }
-//    void getChildren(ContainerNode parent, ChildOptions childOptions)
-//        throws TransientException;
 
 
     /**
