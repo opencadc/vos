@@ -68,28 +68,19 @@
 */
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.VOSURI;
 
 public class ChildOptions {
-//    public VOSURI start = null;
-//    public boolean hasStart = false;
-//    public Integer limit = null;
+
     public boolean resolveMetadata = false;
     private String DEFAULT_COLUMN_SORT = "name";
     public String sortCol = DEFAULT_COLUMN_SORT;
     public Boolean sortDesc = false;
 
+    // Constructors
     public ChildOptions() {
     }
 
-    // Constructors
-//    public ChildOptions(VOSURI start, Integer limit, String sortCol, Boolean sortDesc, boolean resolveMetadata) {
     public ChildOptions(String sortCol, Boolean sortDesc, boolean resolveMetadata) {
-//        this.start = start;
-//        if (start != null) {
-//            this.hasStart = true;
-//        }
-//        this.limit = limit;
         if (sortCol != null) {
             this.sortCol = sortCol;
         } else {
@@ -100,10 +91,4 @@ public class ChildOptions {
         }
         this.resolveMetadata = resolveMetadata;
     }
-
-    // Constructors
-    public ChildOptions(boolean resolveMetadata) {
-        this.resolveMetadata = resolveMetadata;
-    }
-
 }
