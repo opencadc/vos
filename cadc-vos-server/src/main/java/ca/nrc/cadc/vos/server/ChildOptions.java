@@ -70,26 +70,26 @@ package ca.nrc.cadc.vos.server;
 
 import ca.nrc.cadc.vos.VOSURI;
 
-public class GetNodeParameters {
-    public VOSURI start = null;
-    public boolean hasStart = false;
-    public Integer limit = null;
+public class ChildOptions {
+//    public VOSURI start = null;
+//    public boolean hasStart = false;
+//    public Integer limit = null;
     public boolean resolveMetadata = false;
     private String DEFAULT_COLUMN_SORT = "name";
     public String sortCol = DEFAULT_COLUMN_SORT;
     public Boolean sortDesc = false;
 
-    public GetNodeParameters() {
+    public ChildOptions() {
     }
 
     // Constructors
-    public GetNodeParameters(VOSURI start, Integer limit, String sortCol, Boolean sortDesc, boolean resolveMetadata) {
-
-        this.start = start;
-        if (start != null) {
-            this.hasStart = true;
-        }
-        this.limit = limit;
+//    public ChildOptions(VOSURI start, Integer limit, String sortCol, Boolean sortDesc, boolean resolveMetadata) {
+    public ChildOptions(String sortCol, Boolean sortDesc, boolean resolveMetadata) {
+//        this.start = start;
+//        if (start != null) {
+//            this.hasStart = true;
+//        }
+//        this.limit = limit;
         if (sortCol != null) {
             this.sortCol = sortCol;
         } else {
@@ -102,20 +102,7 @@ public class GetNodeParameters {
     }
 
     // Constructors
-    public GetNodeParameters(VOSURI start, Integer limit) {
-
-        this.start = start;
-        if (start != null) {
-            this.hasStart = true;
-        }
-        this.limit = limit;
-    }
-
-    public GetNodeParameters(Integer limit) {
-        this.limit = limit;
-    }
-
-    public GetNodeParameters(boolean resolveMetadata) {
+    public ChildOptions(boolean resolveMetadata) {
         this.resolveMetadata = resolveMetadata;
     }
 

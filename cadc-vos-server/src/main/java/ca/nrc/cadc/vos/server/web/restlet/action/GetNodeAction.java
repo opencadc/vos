@@ -67,7 +67,7 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import ca.nrc.cadc.vos.server.GetNodeParameters;
+import ca.nrc.cadc.vos.server.ChildOptions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -103,7 +103,7 @@ public class GetNodeAction extends NodeAction
 {
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
-    protected GetNodeParameters childQueryParams = null;
+    protected ChildOptions childQueryParams = null;
 
     /**
      * Basic empty constructor.
@@ -219,7 +219,8 @@ public class GetNodeAction extends NodeAction
 
             // get the children as requested
             // Build up parameter object to be passed in to getChildren below
-            GetNodeParameters childParameters = new GetNodeParameters(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
+//            ChildOptions childParameters = new ChildOptions(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
+            ChildOptions cOptions = new ChildOptions(sortCol, sortDesc, resolveMetadata);
 
             start = System.currentTimeMillis();
             if (paginate)
@@ -231,7 +232,7 @@ public class GetNodeAction extends NodeAction
                 else
                 {
                     // request for a subset of children
-                    nodePersistence.getChildren(cn, childParameters);
+                    nodePersistence.getChildren(cn, startURIObject, pageLimit, cOptions);
                     log.debug(String.format(
                         "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
                             resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
@@ -240,7 +241,7 @@ public class GetNodeAction extends NodeAction
             else
             {
                 // get as many children as allowed
-                nodePersistence.getChildren(cn, childParameters);
+                nodePersistence.getChildren(cn, startURIObject, pageLimit, cOptions);
                 log.debug(String.format(
                     "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
             }

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2009.                            (c) 2009.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -217,71 +217,53 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     @Override
     public void getChildren(ContainerNode node) throws TransientException
     {
-        // Call the getChildren with start & limit defined so that the limit is enforced
         getChildren(node, null, null);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
         throws TransientException
     {
+        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+
         // enforce max limit
         Integer actualLimit = limit;
         if (limit == null || limit.intValue() > maxChildLimit.intValue())
             actualLimit = maxChildLimit;
 
-        // Build GetChildParameter object up
-        GetNodeParameters childParameters = new GetNodeParameters(start, actualLimit);
-
-        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
-        dao.getChildren(parent, childParameters);
+        dao.getChildren(parent, start, actualLimit);
     }
 
     @Override
     public void getChildren(ContainerNode node, boolean resolveMetadata) throws TransientException
     {
-        // Build GetChildParameter object up - limit is null in this case
-        GetNodeParameters childParameters = new GetNodeParameters(resolveMetadata);
-        NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.getChildren(node, childParameters);
+        getChildren(node, null, null, resolveMetadata);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException
     {
-//        // enforce max limit
-//        Integer actualLimit = limit;
-//        if (limit == null || limit.intValue() > maxChildLimit.intValue())
-//            actualLimit = maxChildLimit;
-
-        //        getChildren(parent, start, actualLimit, null, resolveMetadata);
-        // Build GetChildParameter object up
-        GetNodeParameters childParameters = new GetNodeParameters(start, limit, null, false, resolveMetadata);
-        getChildren(parent, childParameters);
-    }
-//
-//    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, String sortCol, boolean sortDesc, boolean resolveMetadata)
-//        throws TransientException
-//    {
-////        // enforce max limit
-////        Integer actualLimit = limit;
-////        if (limit == null || limit.intValue() > maxChildLimit.intValue())
-////            actualLimit = maxChildLimit;
-//
-//        // Build GetChildParameter object up
-//        GetNodeParameters childParameters = new GetNodeParameters(start, limit, sortCol, sortDesc, resolveMetadata);
-//        getChildren(parent, childParameters);
-//    }
-
-
-    public void getChildren(ContainerNode parent, GetNodeParameters childParameters)
-        throws TransientException
-    {
-        // enforce max limit
-        if (childParameters.limit == null || childParameters.limit.intValue() > maxChildLimit.intValue())
-            childParameters.limit = maxChildLimit;
         NodeDAO dao = getDAO( parent.getUri().getAuthority() );
-        dao.getChildren(parent, childParameters);
+
+        // enforce max limit
+        Integer actualLimit = limit;
+        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+            actualLimit = maxChildLimit;
+
+        dao.getChildren(parent, start, actualLimit, resolveMetadata);
     }
+
+        @Override
+        public void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
+            throws TransientException
+        {
+            // enforce max limit
+            Integer actualLimit = limit;
+            if (limit == null || limit.intValue() > maxChildLimit.intValue())
+                actualLimit = maxChildLimit;
+
+            NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+            dao.getChildren(parent, start, actualLimit, childOptions);
+        }
 
 
     @Override
@@ -372,6 +354,25 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.updateNodeMetadata(node, meta, strict);
     }
+
+
+//    /**
+//     *
+//     * @param parent
+//     * @param start
+//     * @param limit
+//     * @param childOptions
+//     */
+//    @Override
+//    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
+//        throws TransientException
+//    {
+//        // enforce max limit
+//        if (childOptions.limit == null || childOptions.limit.intValue() > maxChildLimit.intValue())
+//            childOptions.limit = maxChildLimit;
+//        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+//        dao.getChildren(parent, childOptions);
+//    }
 
     /**
      * Get the current contentLength. If the property is not set, 0 is returned.
@@ -503,5 +504,4 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         NodeDAO dao = getDAO(null);
         dao.applyPropagation(propagation);
     }
-
 }
