@@ -172,8 +172,8 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(mockPartialPathAuth.getReadPermission(testVOSURI.getURI())).
                 andReturn(mockServerNode).atLeastOnce();
 
-        // ADding sort options to getChildren makes this test difficult or impossible to perform.
-        getMockNodePersistence().getChildren(mockServerNode, true);
+        // Adding sort options to getChildren makes this test difficult or impossible to perform.
+        getMockNodePersistence().getChildren(mockServerNode, null, null, true);
 
         expectLastCall().once();
 

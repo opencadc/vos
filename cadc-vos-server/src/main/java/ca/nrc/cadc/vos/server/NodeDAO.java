@@ -118,6 +118,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
@@ -614,6 +615,9 @@ public class NodeDAO
             if (sortProperty != null) {
                 // get the persistent node
                 Node startNode = this.getPath(start.getPath(), true, false);
+                if (startNode == null) {
+                    throw new IllegalArgumentException("offset child doesn't exist");
+                }
                 args = new Object[] { startNode.getPropertyValue(sortProperty.toString()) };
             }
         }
@@ -1946,7 +1950,9 @@ public class NodeDAO
                 case VOS.PROPERTY_URI_CONTENTLENGTH:
                     sortColumn = "contentLength";
                     break;
-            }
+                default:
+                    throw new UnsupportedOperationException("can't sort on column " + sortProperty);
+            } 
         }
 
         if (hasStart) {

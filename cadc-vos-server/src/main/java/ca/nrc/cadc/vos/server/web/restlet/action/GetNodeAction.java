@@ -67,7 +67,6 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import ca.nrc.cadc.vos.server.ChildOptions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -105,7 +104,6 @@ public class GetNodeAction extends NodeAction
 {
 
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
-    protected ChildOptions childQueryParams = null;
 
     /**
      * Basic empty constructor.
@@ -156,7 +154,7 @@ public class GetNodeAction extends NodeAction
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
 
             // Sorting parameters
-            String sortParam = queryForm.getFirstValue(QUERY_SORT_KEY);
+            String sortParam = queryForm.getFirstValue(QUERY_PARAM_SORT_KEY);
             URI sortParamURI = null;
 
             // Validate sortCol passed in against values in cadc-vos/vos.java
@@ -173,7 +171,7 @@ public class GetNodeAction extends NodeAction
             }
 
             // Asc/Desc order parameter
-            String sortOrderParam = queryForm.getFirstValue(QUERY_ORDER_KEY);
+            String sortOrderParam = queryForm.getFirstValue(QUERY_PARAM_ORDER_KEY);
             Boolean sortAsc = null;
             if (sortOrderParam != null) {
                 if (sortOrderParam.equalsIgnoreCase("asc")) {
@@ -186,7 +184,6 @@ public class GetNodeAction extends NodeAction
             }
 
             ContainerNode cn = (ContainerNode) serverNode;
-            boolean paginate = false;
             VOSURI startURIObject = null;
 
             // parse the pageLimit
@@ -196,11 +193,13 @@ public class GetNodeAction extends NodeAction
                 try
                 {
                     pageLimit = new Integer(pageLimitString);
-                    paginate = true;
+                    if (pageLimit < 1) {
+                        throw new NumberFormatException();
+                    }
                 }
                 catch (NumberFormatException e)
                 {
-                    throw new IllegalArgumentException("value for limit must be an integer.");
+                    throw new IllegalArgumentException("value for limit must be a positive integer.");
                 }
             }
 
@@ -212,51 +211,24 @@ public class GetNodeAction extends NodeAction
                 {
                     throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
-                paginate = true;
             }
 
             // get the children as requested
-
             start = System.currentTimeMillis();
-            if (paginate)
-            {
-                if (pageLimit != null && pageLimit < 1)
-                {
-                    log.debug("Get children not called because pageLimit < 1");
-                }
-                else
-                {
-                    // request for a subset of children
-                    if (sortParamURI == null && sortAsc == null) {
-                        nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
-                    } else if (nodePersistence instanceof PersistenceOptions) {
-                        // non-standard sorting options
-                        ((PersistenceOptions) nodePersistence).getChildren(
-                                cn, startURIObject, pageLimit, sortParamURI, sortAsc, resolveMetadata);
-                    } else {
-                        throw new IllegalArgumentException("Alternate sorting options not supported.");
-                    }
-                    log.debug(String.format(
-                        "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                            resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
-                }
+            // request for a subset of children
+            if (sortParamURI == null && sortAsc == null) {
+                nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
+            } else if (nodePersistence instanceof PersistenceOptions) {
+                // non-standard sorting options
+                ((PersistenceOptions) nodePersistence).getChildren(
+                        cn, startURIObject, pageLimit, sortParamURI, sortAsc, resolveMetadata);
+            } else {
+                throw new IllegalArgumentException("Alternate sorting options not supported.");
             }
-            else
-            {
-                // get as many children as allowed
-                if (sortParamURI == null && sortAsc == null) {
-                    nodePersistence.getChildren(cn, resolveMetadata);
-                } else if (nodePersistence instanceof PersistenceOptions) {
-                    // non-standard sorting options
-                    ((PersistenceOptions) nodePersistence).getChildren(
-                            cn, null, null, sortParamURI, sortAsc, resolveMetadata);
-                } else {
-                    throw new IllegalArgumentException("Alternate sorting options not supported.");
-                }
-                log.debug(String.format(
-                    "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
-            }
-
+            log.debug(String.format(
+                "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                    resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
+            
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
 
