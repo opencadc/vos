@@ -103,7 +103,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
     
     public GetContainerNodeTest()
@@ -236,30 +236,6 @@ public class GetContainerNodeTest extends VOSNodeTest
             // First child node listed should be first created
             Node child = validatedNode.getNodes().get(0);
             assertEquals("", nodeAad.getUri(), child.getUri());
-
-            // Test name sort using parameter
-            parameters = new HashMap<String, String>();
-            parameters.put("sort", VOS.PROPERTY_URI_TITLE);
-
-            // Get the node from vospace
-            response = get(sortA, parameters);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // Get the response (an XML document)
-            xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Validate against the VOSPace schema.
-            reader = new NodeReader();
-            validatedNode = (ContainerNode) reader.read(xml);
-
-            // Make sure all 3 children are there
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be first alphabetically
-            child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAaa.getUri(), child.getUri());
-
 
             // Verify default sort is by name
             response = get(sortA);

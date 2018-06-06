@@ -2716,7 +2716,7 @@ public class NodeDAOTest
             log.debug("testDatabaseDateRoundTrip - DONE");
         }
     }
-    
+
     private long getContentLength(Node node)
     {
         String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
@@ -2879,7 +2879,5 @@ public class NodeDAOTest
             return true;
         return false;
     }
-
-
 }
 

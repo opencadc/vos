@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
 import java.util.List;
 
 import ca.nrc.cadc.net.TransientException;
@@ -197,18 +198,6 @@ public interface NodePersistence
      * @throws TransientException
      */
     void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
-        throws TransientException;
-
-
-    /**
-     * Load some of the children of a container. Child parameters include VOSURI start, limit,
-     * resolveMetadata, sort column name
-     *
-     * @param parent
-     * @param childOptions
-     * @throws TransientException
-     */
-     void getChildren(ContainerNode parent, VOSURI start, Integer limit, ChildOptions childOptions)
         throws TransientException;
 
 

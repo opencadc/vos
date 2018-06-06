@@ -173,7 +173,7 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
                 andReturn(mockServerNode).atLeastOnce();
 
         // ADding sort options to getChildren makes this test difficult or impossible to perform.
-        getMockNodePersistence().getChildren(mockServerNode, null, null, null );
+        getMockNodePersistence().getChildren(mockServerNode, true);
 
         expectLastCall().once();
 
@@ -181,7 +181,7 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         replay(getMockRef());
         replay(getMockRequest());
         replay(getMockAbstractView());
-//        replay(getMockNodePersistence());
+        replay(getMockNodePersistence());
         replay(mockAuth);
         replay(mockServerNode);
         replay(mockPartialPathAuth);

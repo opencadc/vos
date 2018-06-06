@@ -70,6 +70,7 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 import ca.nrc.cadc.vos.server.ChildOptions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
@@ -91,6 +92,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.PersistenceOptions;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 
@@ -154,34 +156,30 @@ public class GetNodeAction extends NodeAction
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
 
             // Sorting parameters
-            String sortColParam = queryForm.getFirstValue(QUERY_SORT_KEY);
-            String sortCol = null;
+            String sortParam = queryForm.getFirstValue(QUERY_SORT_KEY);
+            URI sortParamURI = null;
 
             // Validate sortCol passed in against values in cadc-vos/vos.java
-            if (sortColParam != null) {
-                switch (sortColParam) {
+            if (sortParam != null) {
+                switch (sortParam) {
                     case VOS.PROPERTY_URI_DATE:
-                        sortCol = "lastModified";
+                    case VOS.PROPERTY_URI_CONTENTLENGTH: {
+                        sortParamURI = URI.create(sortParam);
                         break;
-                    case VOS.PROPERTY_URI_CONTENTLENGTH:
-                        sortCol = "contentLength";
-                        break;
-                    case VOS.PROPERTY_URI_TITLE:
-                        sortCol = "name";
-                        break;
+                    }
                     default:
-                        throw new IllegalArgumentException("Sort by " + sortColParam + " not supported.");
+                        throw new IllegalArgumentException("Sort by " + sortParam + " not supported.");
                 }
             }
 
             // Asc/Desc order parameter
-            String sortOrder = queryForm.getFirstValue(QUERY_ORDER_KEY);
-            boolean sortDesc = false;
-            if (sortOrder != null) {
-                if (sortOrder.equalsIgnoreCase("asc")) {
-                    sortDesc = false;
-                } else if (sortOrder.equalsIgnoreCase("desc")) {
-                    sortDesc = true;
+            String sortOrderParam = queryForm.getFirstValue(QUERY_ORDER_KEY);
+            Boolean sortAsc = null;
+            if (sortOrderParam != null) {
+                if (sortOrderParam.equalsIgnoreCase("asc")) {
+                    sortAsc = true;
+                } else if (sortOrderParam.equalsIgnoreCase("desc")) {
+                    sortAsc = false;
                 } else {
                     throw new IllegalArgumentException("Sort order parameter should be asc | desc");
                 }
@@ -218,9 +216,6 @@ public class GetNodeAction extends NodeAction
             }
 
             // get the children as requested
-            // Build up parameter object to be passed in to getChildren below
-//            ChildOptions childParameters = new ChildOptions(startURIObject, pageLimit, sortCol, sortDesc, resolveMetadata);
-            ChildOptions cOptions = new ChildOptions(sortCol, sortDesc, resolveMetadata);
 
             start = System.currentTimeMillis();
             if (paginate)
@@ -232,7 +227,15 @@ public class GetNodeAction extends NodeAction
                 else
                 {
                     // request for a subset of children
-                    nodePersistence.getChildren(cn, startURIObject, pageLimit, cOptions);
+                    if (sortParamURI == null && sortAsc == null) {
+                        nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
+                    } else if (nodePersistence instanceof PersistenceOptions) {
+                        // non-standard sorting options
+                        ((PersistenceOptions) nodePersistence).getChildren(
+                                cn, startURIObject, pageLimit, sortParamURI, sortAsc, resolveMetadata);
+                    } else {
+                        throw new IllegalArgumentException("Alternate sorting options not supported.");
+                    }
                     log.debug(String.format(
                         "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
                             resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
@@ -241,7 +244,15 @@ public class GetNodeAction extends NodeAction
             else
             {
                 // get as many children as allowed
-                nodePersistence.getChildren(cn, startURIObject, pageLimit, cOptions);
+                if (sortParamURI == null && sortAsc == null) {
+                    nodePersistence.getChildren(cn, resolveMetadata);
+                } else if (nodePersistence instanceof PersistenceOptions) {
+                    // non-standard sorting options
+                    ((PersistenceOptions) nodePersistence).getChildren(
+                            cn, null, null, sortParamURI, sortAsc, resolveMetadata);
+                } else {
+                    throw new IllegalArgumentException("Alternate sorting options not supported.");
+                }
                 log.debug(String.format(
                     "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
             }
