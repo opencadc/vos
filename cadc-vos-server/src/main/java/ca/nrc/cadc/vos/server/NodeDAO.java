@@ -118,6 +118,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
@@ -584,65 +585,49 @@ public class NodeDAO
                 catch(Throwable oops) { log.error("failed to rollback dirtyRead transaction in finally", oops); }
         }
     }
-
-    /**
-     * Load all the child nodes of the specified container.
-     *
-     * @param parent
-     */
-    public void getChildren(ContainerNode parent) throws TransientException
-    {
-        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null, true);
-    }
-
-    /**
-     * Load all the children of a container based on whether the client 
-     * wants the metadata to be resolved.
-     *
-     * @param parent
-     * @param resolveMetadata
-     */
-    public void getChildren(ContainerNode parent, boolean resolveMetadata) throws TransientException
-    {
-        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, null, null, resolveMetadata);
-    }
-
-    /**
-     * Loads some of the child nodes of the specified container.
-     * @param parent
-     * @param start
-     * @param limit
-     */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException
-    {
-        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
-        getChildren(parent, start, limit, true);
+    
+    public void getChildren(ContainerNode parent) throws TransientException {
+        this.getChildren(parent, null, null, null, true, true);
     }
     
+    public void getChildren(ContainerNode parent,  VOSURI start, Integer limit) throws TransientException {
+        this.getChildren(parent, start, limit, null, true, true);
+    }
+
     /**
-     * Loads some of the child nodes of the specified container based on 
-     * whether the client wants the metadata to be resolved.
+     * 
      * @param parent
      * @param start
      * @param limit
+     * @param sortProperty
+     * @param sortAsc
      * @param resolveMetadata
+     * @throws TransientException
      */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata) throws TransientException
+    public void getChildren(ContainerNode parent,  VOSURI start, Integer limit, URI sortProperty, Boolean sortAsc, boolean resolveMetadata) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
 
         Object[] args = null;
-        if (start != null)
+        if (start != null) {
             args = new Object[] { start.getName() };
-        else
+            if (sortProperty != null) {
+                // get the persistent node
+                Node startNode = this.getPath(start.getPath(), true, false);
+                if (startNode == null) {
+                    throw new IllegalArgumentException("offset child doesn't exist");
+                }
+                args = new Object[] { startNode.getPropertyValue(sortProperty.toString()) };
+            }
+        }
+        else {
             args = new Object[0];
+        }
 
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
-        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));        
+        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null), sortProperty, sortAsc);
         log.debug("getChildren: " + sql);
 
         TransactionStatus dirtyRead = null;
@@ -1682,7 +1667,8 @@ public class NodeDAO
                 count = deleteNode(child, batchSize, count, dryrun);
                 count = commitBatch("delete", batchSize, count, dryrun);
             }
-            sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, true);
+
+            sql = getSelectNodesByParentSQL(container,CHILD_BATCH_SIZE, true);
             log.debug(sql);
             args[0] = cur.getName();
             children = jdbc.query(sql, args, mapper);
@@ -1764,9 +1750,9 @@ public class NodeDAO
 
     private int chownChildren(ContainerNode container, Object newOwnerObj, int batchSize, int count, boolean dryrun)
     {
-        String sql = null;
-        sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
+        String sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
+
         List<Node> children = jdbc.query(sql, new Object[0], mapper);
         Object[] args = new Object[1];
         while (children.size() > 0)
@@ -1908,19 +1894,36 @@ public class NodeDAO
         sb.append(" AND name = ?");
         return sb.toString();
     }
-
+    
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
      * processed with a NodeMapper.
      *
      * @param parent The node to query for.
      * @param limit
-     * @param withStart
+     * @param hasStart
      * @return simple SQL statement select for use with NodeMapper
      */
-    protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit, boolean withStart)
+    protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit, boolean hasStart)
+    {
+        return getSelectNodesByParentSQL(parent, limit, hasStart, null, true);
+    }
+
+    /**
+     * The resulting SQL is a simple select statement. The ResultSet can be
+     * processed with a NodeMapper.
+     * 
+     * @param parent The parent
+     * @param limit Max results
+     * @param hasStart If an offset was specified
+     * @param sortProperty Alternate sort column (can be null)
+     * @param sortAsc Sort direction (can be null)
+     * @return sql string
+     */
+    protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit,  boolean hasStart, URI sortProperty, Boolean sortAsc)
     {
         StringBuilder sb = new StringBuilder();
+
         sb.append("SELECT nodeID");
         for (String col : NODE_COLUMNS)
         {
@@ -1935,17 +1938,41 @@ public class NodeDAO
             sb.append(" WHERE parentID = ");
             sb.append(getNodeID(parent));
         }
-        else
+        else {
             sb.append(" WHERE parentID IS NULL");
-        if (withStart)
-            sb.append(" AND name >= ?");
+        }
+        
+        String sortColumn = "name";
+        if (sortProperty != null) {
+            switch (sortProperty.toString()) {
+                case VOS.PROPERTY_URI_DATE:
+                    sortColumn = "lastModified";
+                    break;
+                case VOS.PROPERTY_URI_CONTENTLENGTH:
+                    sortColumn = "contentLength";
+                    break;
+                default:
+                    throw new UnsupportedOperationException("can't sort on column " + sortProperty);
+            } 
+        }
 
-        if (withStart || limit != null)
-            sb.append(" ORDER BY name");
+        if (hasStart) {
+            if (sortAsc == null || sortAsc) {
+                sb.append(" AND " + sortColumn + " >= ?");
+            } else {
+                sb.append(" AND " + sortColumn + " <= ?");
+            }
+        }
+        
+        if (hasStart || limit != null) {
+            sb.append(" ORDER BY " + sortColumn);
+            if (sortAsc != null && !sortAsc) {
+                sb.append(" DESC");
+            }
+        }
 
         if (limit != null)
         {
-
             if (nodeSchema.limitWithTop) // TOP, eg sybase
                 sb.replace(0, 6, "SELECT TOP " + limit);
             else // LIMIT, eg postgresql
@@ -1954,6 +1981,8 @@ public class NodeDAO
                 sb.append(limit);
             }
         }
+
+        log.debug("getSelectedNodesByParentSQL: " + sb.toString());
         return sb.toString();
     }
 

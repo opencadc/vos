@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2018.                            (c) 2018.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,6 +69,7 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
@@ -88,9 +89,9 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.VOS.Detail;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.PersistenceOptions;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 
@@ -152,8 +153,37 @@ public class GetNodeAction extends NodeAction
             String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
             String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
 
+            // Sorting parameters
+            String sortParam = queryForm.getFirstValue(QUERY_PARAM_SORT_KEY);
+            URI sortParamURI = null;
+
+            // Validate sortCol passed in against values in cadc-vos/vos.java
+            if (sortParam != null) {
+                switch (sortParam) {
+                    case VOS.PROPERTY_URI_DATE:
+                    case VOS.PROPERTY_URI_CONTENTLENGTH: {
+                        sortParamURI = URI.create(sortParam);
+                        break;
+                    }
+                    default:
+                        throw new IllegalArgumentException("Sort by " + sortParam + " not supported.");
+                }
+            }
+
+            // Asc/Desc order parameter
+            String sortOrderParam = queryForm.getFirstValue(QUERY_PARAM_ORDER_KEY);
+            Boolean sortAsc = null;
+            if (sortOrderParam != null) {
+                if (sortOrderParam.equalsIgnoreCase("asc")) {
+                    sortAsc = true;
+                } else if (sortOrderParam.equalsIgnoreCase("desc")) {
+                    sortAsc = false;
+                } else {
+                    throw new IllegalArgumentException("Sort order parameter should be asc | desc");
+                }
+            }
+
             ContainerNode cn = (ContainerNode) serverNode;
-            boolean paginate = false;
             VOSURI startURIObject = null;
 
             // parse the pageLimit
@@ -163,11 +193,13 @@ public class GetNodeAction extends NodeAction
                 try
                 {
                     pageLimit = new Integer(pageLimitString);
-                    paginate = true;
+                    if (pageLimit < 1) {
+                        throw new NumberFormatException();
+                    }
                 }
                 catch (NumberFormatException e)
                 {
-                    throw new IllegalArgumentException("value for limit must be an integer.");
+                    throw new IllegalArgumentException("value for limit must be a positive integer.");
                 }
             }
 
@@ -179,34 +211,24 @@ public class GetNodeAction extends NodeAction
                 {
                     throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
-                paginate = true;
             }
 
             // get the children as requested
             start = System.currentTimeMillis();
-            if (paginate)
-            {
-                if (pageLimit != null && pageLimit < 1)
-                {
-                    log.debug("Get children not called becauase pageLimit < 1");
-                }
-                else
-                {
-                    // request for a subset of children
-                    nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
-                    log.debug(String.format(
-                        "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                            resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
-                }
+            // request for a subset of children
+            if (sortParamURI == null && sortAsc == null) {
+                nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
+            } else if (nodePersistence instanceof PersistenceOptions) {
+                // non-standard sorting options
+                ((PersistenceOptions) nodePersistence).getChildren(
+                        cn, startURIObject, pageLimit, sortParamURI, sortAsc, resolveMetadata);
+            } else {
+                throw new IllegalArgumentException("Alternate sorting options not supported.");
             }
-            else
-            {
-                // get as many children as allowed
-                nodePersistence.getChildren(cn, resolveMetadata);
-                log.debug(String.format(
-                    "Get children on resolveMetadata=[%b] returned [%s] nodes.", resolveMetadata, cn.getNodes().size()));
-            }
-
+            log.debug(String.format(
+                "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                    resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
+            
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
 

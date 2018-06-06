@@ -121,8 +121,10 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
 
         expect(queryForm.getFirstValue("view")).andReturn(
                 "VIEW/REFERENCE").once();
-        expect(queryForm.getFirstValue("uri")).andReturn(null).once();
-        expect(queryForm.getFirstValue("limit")).andReturn(null).once();
+        expect(queryForm.getFirstValue("uri")).andReturn(null).atLeastOnce();
+        expect(queryForm.getFirstValue("limit")).andReturn(null).atLeastOnce();
+        expect(queryForm.getFirstValue("sort")).andReturn(null).atLeastOnce();
+        expect(queryForm.getFirstValue("order")).andReturn(null).atLeastOnce();
 
         getTestSubject().setQueryForm(queryForm);
 
@@ -170,7 +172,9 @@ public class GetDetailedNodeActionTest extends GetNodeActionTest
         expect(mockPartialPathAuth.getReadPermission(testVOSURI.getURI())).
                 andReturn(mockServerNode).atLeastOnce();
 
-        getMockNodePersistence().getChildren(mockServerNode, true);
+        // Adding sort options to getChildren makes this test difficult or impossible to perform.
+        getMockNodePersistence().getChildren(mockServerNode, null, null, true);
+
         expectLastCall().once();
 
         replay(queryForm);
