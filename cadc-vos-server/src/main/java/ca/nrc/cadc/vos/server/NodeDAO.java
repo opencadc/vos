@@ -1907,10 +1907,13 @@ public class NodeDAO
     /**
      * The resulting SQL is a simple select statement. The ResultSet can be
      * processed with a NodeMapper.
-     *
-     * @param parent The node to query for.
-     * @param childParams
-     * @return simple SQL statement select for use with NodeMapper
+     * 
+     * @param parent The parent
+     * @param limit Max results
+     * @param hasStart If an offset was specified
+     * @param sortProperty Alternate sort column (can be null)
+     * @param sortAsc Sort direction (can be null)
+     * @return sql string
      */
     protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit,  boolean hasStart, URI sortProperty, Boolean sortAsc)
     {
