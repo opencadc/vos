@@ -193,7 +193,7 @@ public class GetNodeAction extends NodeAction
                 try
                 {
                     pageLimit = new Integer(pageLimitString);
-                    if (pageLimit < 1) {
+                    if (pageLimit < 0) {
                         throw new NumberFormatException();
                     }
                 }
