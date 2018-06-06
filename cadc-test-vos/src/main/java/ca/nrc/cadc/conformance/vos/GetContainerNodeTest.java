@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -78,6 +79,8 @@ import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
+import java.text.DateFormat;
+import java.util.Date;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -230,12 +233,17 @@ public class GetContainerNodeTest extends VOSNodeTest
             NodeReader reader = new NodeReader();
             ContainerNode validatedNode = (ContainerNode) reader.read(xml);
 
-            // Make sure all 3 children are there
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be first created
-            Node child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAad.getUri(), child.getUri());
+            // Check sort is correct
+            Date childDate = null;
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getPropertyValue(VOS.PROPERTY_URI_DATE);
+                Date d = df.parse(s);
+                if (childDate != null) {
+                    Assert.assertTrue("lastModified order incorrect for " + chld.getName(), childDate.compareTo(d) <= 0);
+                }
+                childDate = d;
+            }
 
             // Verify default sort is by name
             response = get(sortA);
@@ -249,12 +257,15 @@ public class GetContainerNodeTest extends VOSNodeTest
             reader = new NodeReader();
             validatedNode = (ContainerNode) reader.read(xml);
 
-            // Make sure all 3 children are there
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be alphabetic (default sort)
-            child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAaa.getUri(), child.getUri());
+            // Check sort is correct
+            String childName = null;
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getName();
+                if (childName != null) {
+                    Assert.assertTrue("name order incorrect for " + chld.getName(), childName.compareTo(s) <= 0);
+                }
+                childName = s;
+            }
 
             // Delete the nodes.
             response = delete(nodeAad);
@@ -307,9 +318,16 @@ public class GetContainerNodeTest extends VOSNodeTest
             NodeReader reader = new NodeReader();
             ContainerNode validatedNode = (ContainerNode) reader.read(xml);
 
-            // First child node listed should be first created
-            Node child = validatedNode.getNodes().get(0);
-            assertEquals("", child.getName(), "zeroLengthFile.txt");
+            Date childDate = null;
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getPropertyValue(VOS.PROPERTY_URI_DATE);
+                Date d = df.parse(s);
+                if (childDate != null) {
+                    Assert.assertTrue("lastModified order incorrect for " + chld.getName(), childDate.compareTo(d) <= 0);
+                }
+                childDate = d;
+            }
 
             // Test contentLength sort
             parameters = new HashMap<String, String>();
@@ -328,9 +346,16 @@ public class GetContainerNodeTest extends VOSNodeTest
             reader = new NodeReader();
             validatedNode = (ContainerNode) reader.read(xml);
 
-            // First child node listed should be first created
-            child = validatedNode.getNodes().get(0);
-            assertEquals("", child.getName(), "public_fits.fits");
+            Integer childSize = null;
+
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+                Integer size = Integer.getInteger(s);
+                if (childSize != null) {
+                    Assert.assertTrue("size order incorrect for " + chld.getName(), childSize.compareTo(size) <= 0);
+                }
+                childSize = size;
+            }
 
             log.debug("getSizeSortedContainerNode passed.");
         }
@@ -396,14 +421,18 @@ public class GetContainerNodeTest extends VOSNodeTest
             NodeReader reader = new NodeReader();
             ContainerNode validatedNode = (ContainerNode) reader.read(xml);
 
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be last alphabetically
-            Node child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAad.getUri(), child.getUri());
-
+            // Check sort is correct
+            String childName = null;
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getName();
+                if (childName != null) {
+                    Assert.assertTrue("name order incorrect for " + chld.getName(), childName.compareTo(s) >= 0);
+                }
+                childName = s;
+            }
 
             // Check sort by other column name works as well
+            // order is already defined above
             parameters.put("sort", VOS.PROPERTY_URI_DATE);
 
             // Get the node from vospace
@@ -418,31 +447,16 @@ public class GetContainerNodeTest extends VOSNodeTest
             reader = new NodeReader();
             validatedNode = (ContainerNode) reader.read(xml);
 
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be last created
-            child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAab.getUri(), child.getUri());
-
-
-            // Verify default sort is by name, asc
-            response = get(sortA);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // Get the response (an XML document)
-            xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Validate against the VOSPace schema.
-            reader = new NodeReader();
-            validatedNode = (ContainerNode) reader.read(xml);
-
-            // Node child nodes should only have a single node.
-            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
-
-            // First child node listed should be first alphabetic
-            child = validatedNode.getNodes().get(0);
-            assertEquals("", nodeAaa.getUri(), child.getUri());
+            Date childDate = null;
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            for (Node chld : validatedNode.getNodes()) {
+                String s = chld.getPropertyValue(VOS.PROPERTY_URI_DATE);
+                Date d = df.parse(s);
+                if (childDate != null) {
+                    Assert.assertTrue("lastModified order incorrect for " + chld.getName(), childDate.compareTo(d) >= 0);
+                }
+                childDate = d;
+            }
 
             // Delete the nodes.
             response = delete(nodeAad);
