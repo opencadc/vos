@@ -1900,7 +1900,8 @@ public class NodeDAO
      * processed with a NodeMapper.
      *
      * @param parent The node to query for.
-     * @param childParams
+     * @param limit
+     * @param hasStart
      * @return simple SQL statement select for use with NodeMapper
      */
     protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit, boolean hasStart)

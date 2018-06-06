@@ -93,7 +93,7 @@ public interface PersistenceOptions {
      * @param start
      * @param limit
      * @param sortProperty
-     * @param sortDesc
+     * @param sortAsc
      * @param resolveMetadata
      * @throws TransientException
      */
