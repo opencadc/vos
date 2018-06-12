@@ -121,6 +121,9 @@ public class CavernURLGenerator implements TransferGenerator {
     public static final String KEY_META = "meta";
     private static final String KEY_META_NODE = "node";
     private static final String KEY_META_DIRECTION = "dir";
+    
+    private static final String PUB_KEY_FILENAME = "CavernPub.key";
+    private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
@@ -208,7 +211,7 @@ public class CavernURLGenerator implements TransferGenerator {
             metaSb.append(KEY_META_DIRECTION).append("=").append(dir.getValue());
             byte[] metaBytes = metaSb.toString().getBytes();
 
-            RsaSignatureGenerator sg = new RsaSignatureGenerator();
+            RsaSignatureGenerator sg = new RsaSignatureGenerator(PRIV_KEY_FILENAME);
             String sig;
             try {
                 byte[] sigBytes = sg.sign(new ByteArrayInputStream(metaBytes));
@@ -292,7 +295,7 @@ public class CavernURLGenerator implements TransferGenerator {
         byte[] sigBytes = Base64.decode(base64URLDecode(sig));
         byte[] metaBytes = Base64.decode(base64URLDecode(meta));
 
-        RsaSignatureVerifier sv = new RsaSignatureVerifier();
+        RsaSignatureVerifier sv = new RsaSignatureVerifier(PUB_KEY_FILENAME);
         boolean verified;
         try {
             verified = sv.verify(new ByteArrayInputStream(metaBytes), sigBytes);

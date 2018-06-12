@@ -167,7 +167,9 @@ public class CavernURLGeneratorTest
     public void initKeys() throws Exception
     {
         String keysDir = "build/resources/test";
-        RsaSignatureGenerator.genKeyPair(keysDir);
+        File pub = new File(keysDir + "/CavernPub.key");
+        File priv = new File(keysDir + "/CavernPriv.key");
+        RsaSignatureGenerator.genKeyPair(pub, priv, 1024);
         privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
         pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
         log.debug("Created pub key: " + pubFile.getAbsolutePath());
