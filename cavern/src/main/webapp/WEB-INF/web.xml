@@ -31,7 +31,6 @@
             org.opencadc.cavern
             ca.nrc.cadc.reg
             ca.nrc.cadc.rest
-            ca.nrc.cadc.log
             ca.nrc.cadc.uws
             ca.nrc.cadc.vos
             ca.nrc.cadc.net
