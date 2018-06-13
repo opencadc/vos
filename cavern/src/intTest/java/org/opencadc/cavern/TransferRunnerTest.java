@@ -329,6 +329,32 @@ public class TransferRunnerTest
     }
 
     @Test
+    public void testNegotiateMount() {
+        Protocol sp = new Protocol(VOS.PROTOCOL_SSHFS);
+        try {
+            Subject s = SSLUtil.createSubject(SSL_CERT);
+            VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
+            List<Protocol> protocols = new ArrayList<>();
+            protocols.add(sp);
+            Transfer t = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protocols);
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            Transfer trans2 = trans.getTransfer();
+            Assert.assertNotNull(trans2);
+            Assert.assertFalse("result protocols", trans2.getProtocols().isEmpty());
+            for (Protocol p : trans2.getProtocols()) {
+                log.info("found protocol: " + p);
+                Assert.assertEquals("protocol", sp, p);
+                Assert.assertNotNull("endpoint", p.getEndpoint());
+                log.info(p + " -> " + p.getEndpoint());
+                URI uri = new URI(p.getEndpoint());
+                Assert.assertEquals("sshfs", uri.getScheme());
+            }
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    @Test
     public void testDownloadLink()
     {
         try
