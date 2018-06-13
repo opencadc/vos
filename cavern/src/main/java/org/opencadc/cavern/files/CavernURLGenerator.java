@@ -67,16 +67,19 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
 import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.util.RsaSignatureVerifier;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkingException;
@@ -91,14 +94,15 @@ import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.security.InvalidKeyException;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -111,23 +115,31 @@ public class CavernURLGenerator implements TransferGenerator {
 
     //private String root;
     private final FileSystemNodePersistence nodes;
+    private final String sshServerBase;
 
     public static final String KEY_SIGNATURE = "sig";
     public static final String KEY_META = "meta";
     private static final String KEY_META_NODE = "node";
     private static final String KEY_META_DIRECTION = "dir";
+    
+    private static final String PUB_KEY_FILENAME = "CavernPub.key";
+    private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
+        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
+        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
     }
 
     // for testing
     public CavernURLGenerator(String root) {
         this.nodes = new FileSystemNodePersistence(root);
+        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
+        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
     }
 
     @Override
-    public List<URL> getURLs(VOSURI target, Protocol protocol, View view,
+    public List<URI> getEndpoints(VOSURI target, Protocol protocol, View view,
             Job job, List<Parameter> additionalParams)
             throws FileNotFoundException, TransientException {
         if (target == null) {
@@ -138,7 +150,6 @@ public class CavernURLGenerator implements TransferGenerator {
         }
 
         try {
-
             // get the node to check the type - consider changing this API
             // so that the node instead of the URI is passed in so this step
             // can be avoided.
@@ -146,13 +157,28 @@ public class CavernURLGenerator implements TransferGenerator {
             PathResolver ps = new PathResolver(nodes, true);
             Node node = ps.resolveWithReadPermissionCheck(target, null, true);
 
-            if (!(node instanceof DataNode)) {
-                throw new UnsupportedOperationException("Only DataNode transfers currently supported: " + node.getUri());
-            }
+            if (node instanceof ContainerNode) {
+                UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
+                return handleContainerMount(target, (ContainerNode) node, protocol, caller);
+            } else if (node instanceof DataNode) {
+                return handleDataNode(target, (DataNode) node, protocol);
+            } else {
+                throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
+                    + node.getUri());
+            } 
+        } catch (NodeNotFoundException ex) {
+            throw new FileNotFoundException(target.getPath());
+        } catch (IOException ex) {
+            throw new RuntimeException("OOPS: failed to resolve subject to posix user", ex);
+        } catch (LinkingException ex) {
+            throw new RuntimeException("OOPS: failed to resolve link?", ex);
+        }
+    }
 
-            String scheme = null;
-            Direction dir = null;
-
+    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol) {
+        String scheme = null;
+        Direction dir = null;
+        try {
             switch (protocol.getUri()) {
                 case VOS.PROTOCOL_HTTP_GET:
                     scheme = "http";
@@ -185,7 +211,7 @@ public class CavernURLGenerator implements TransferGenerator {
             metaSb.append(KEY_META_DIRECTION).append("=").append(dir.getValue());
             byte[] metaBytes = metaSb.toString().getBytes();
 
-            RsaSignatureGenerator sg = new RsaSignatureGenerator();
+            RsaSignatureGenerator sg = new RsaSignatureGenerator(PRIV_KEY_FILENAME);
             String sig;
             try {
                 byte[] sigBytes = sg.sign(new ByteArrayInputStream(metaBytes));
@@ -220,24 +246,41 @@ public class CavernURLGenerator implements TransferGenerator {
             log.debug("Created request path: " + path.toString());
 
             // add the request path to each of the base URLs
-            List<URL> returnList = new ArrayList<URL>(baseURLs.size());
+            List<URI> returnList = new ArrayList<URI>(baseURLs.size());
             for (URL baseURL : baseURLs) {
-                URL next;
+                URI next;
                 try {
-                    next = new URL(baseURL.toString() + path.toString());
+                    next = new URI(baseURL.toString() + path.toString());
                     log.debug("Added url: " + next);
                     returnList.add(next);
-                } catch (MalformedURLException e) {
-                    throw new IllegalStateException("Could not generate url", e);
+                } catch (URISyntaxException e) {
+                    throw new IllegalStateException("Could not generate trannsfer endpoint uri", e);
                 }
             }
 
             return returnList;
-        } catch (LinkingException ex) {
-            throw new RuntimeException("OOPS", ex);
-        } catch (NodeNotFoundException ex) {
-            throw new FileNotFoundException(target.getPath());
         }
+        finally {
+        }
+    }
+    
+    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, UserPrincipal caller) {
+        if (sshServerBase == null) {
+            throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in " + FileSystemNodePersistence.CONFIG_FILE);
+        }
+        List<URI> ret = new ArrayList<URI>();
+        StringBuilder sb = new StringBuilder();
+        sb.append("sshfs:");
+        sb.append(caller.getName()).append("@");
+        sb.append(sshServerBase);
+        sb.append(node.getUri().getPath());
+        try {
+            URI u = new URI(sb.toString());
+            ret.add(u);
+        } catch (URISyntaxException ex) {
+            throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
+        }
+        return ret;
     }
 
     public VOSURI getNodeURI(String meta, String sig, Direction direction) throws AccessControlException, IOException {
@@ -252,12 +295,12 @@ public class CavernURLGenerator implements TransferGenerator {
         byte[] sigBytes = Base64.decode(base64URLDecode(sig));
         byte[] metaBytes = Base64.decode(base64URLDecode(meta));
 
-        RsaSignatureVerifier sv = new RsaSignatureVerifier();
+        RsaSignatureVerifier sv = new RsaSignatureVerifier(PUB_KEY_FILENAME);
         boolean verified;
         try {
             verified = sv.verify(new ByteArrayInputStream(metaBytes), sigBytes);
         } catch (InvalidKeyException | RuntimeException e) {
-            log.warn("Recieved invalid signature", e);
+            log.debug("Recieved invalid signature", e);
             throw new AccessControlException("Invalid signature");
         }
         if (!verified) {

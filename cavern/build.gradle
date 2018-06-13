@@ -25,8 +25,8 @@ war {
     // Include the private key for preauthorized transfers
     from(System.getenv('A') + '/etc/') {
         into 'WEB-INF/classes/'
-        include 'RsaSignaturePriv.key'
-        include 'RsaSignaturePub.key'
+        include 'CavernPub.key'
+        include 'CavernPriv.key'
     }
 }
 
@@ -47,7 +47,7 @@ dependencies {
     compile 'xerces:xercesImpl:2.+'
     compile 'commons-net:commons-net:2.+'
 
-    compile 'org.opencadc:cadc-util:1.+'
+    compile 'org.opencadc:cadc-util:[1.1.4,2.0)'
     compile 'org.opencadc:cadc-log:1.+'
     compile 'org.opencadc:cadc-registry:[1.2.1,)'
     compile 'org.opencadc:cadc-vosi:1.+'
@@ -57,9 +57,9 @@ dependencies {
     compile 'org.opencadc:cadc-cdp:1.+'
     compile 'org.opencadc:cadc-access-control:[1.1.1,)'
     compile 'org.opencadc:cadc-access-control-identity:[1.0.3,)'
-    compile 'org.opencadc:cadc-vos:[1.0.10,)'
-    compile 'org.opencadc:cadc-vos-server:[1.0.12,)'
-    compile 'org.opencadc:cadc-wcs:1.+'
+    compile 'org.opencadc:cadc-vos:[1.1.1,)'
+    compile 'org.opencadc:cadc-vos-server:[1.1,)'
+    //compile 'org.opencadc:cadc-wcs:1.+'
     compile 'org.opencadc:cadc-dali:1.+'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'

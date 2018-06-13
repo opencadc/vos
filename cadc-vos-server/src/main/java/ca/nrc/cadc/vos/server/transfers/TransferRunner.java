@@ -281,6 +281,10 @@ public class TransferRunner implements JobRunner
                 {
                     trans = new PushFromVOSpaceAction(nodePer, jobUpdater, job, transfer);
                 }
+                else if (direction.equals(Direction.BIDIRECTIONAL))
+                {
+                    trans = new BiDirectionalTransferNegotiation(nodePer, jobUpdater, job, transfer);
+                }
                 else
                 {
                     trans = new InternalTransferAction(nodePer, jobUpdater, job, transfer);
@@ -503,26 +507,30 @@ public class TransferRunner implements JobRunner
      * @param direction
      * @return
      */
-    protected boolean isValidDirection(Direction direction, boolean customPushPull)
+    protected boolean isValidDirection(Direction direction, boolean syncParamRequest)
     {
         if (direction == null || direction.getValue() == null)
             return false;
 
-        if (customPushPull)
+        if (syncParamRequest)
         {
-            if (direction.equals(Direction.pushToVoSpace) || direction.equals(Direction.pullFromVoSpace))
+            if (direction.equals(Direction.pushToVoSpace) 
+                    || direction.equals(Direction.pullFromVoSpace)
+                    || direction.equals(Direction.BIDIRECTIONAL))
                 return true;
-            else
-                return false;
+            return false;
         }
 
         if (direction.equals(Direction.pushToVoSpace)
                 || direction.equals(Direction.pullToVoSpace)
                 || direction.equals(Direction.pullFromVoSpace)
-                || direction.equals(Direction.pushFromVoSpace) )
+                || direction.equals(Direction.pushFromVoSpace)
+                || direction.equals(Direction.BIDIRECTIONAL))
             return true;
+        
         if (direction.getValue().startsWith(VOS_PREFIX))
             return true;
+        
         return false;
     }
 

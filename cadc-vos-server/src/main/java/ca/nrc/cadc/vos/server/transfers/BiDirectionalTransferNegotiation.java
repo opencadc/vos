@@ -62,77 +62,73 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.transfers;
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeBusyException;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import org.apache.log4j.Logger;
 
 /**
- * Class to hold the direction information for a transfer.
  *
- * @author majorb
- *
+ * @author pdowler
  */
-public class Direction
-{
+public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
+    private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
 
-    // predefined direction values
-    public static final String pushToVoSpaceValue = "pushToVoSpace";
-    public static final String pullToVoSpaceValue = "pullToVoSpace";
-    public static final String pushFromVoSpaceValue = "pushFromVoSpace";
-    public static final String pullFromVoSpaceValue = "pullFromVoSpace";
-    
-    // predefined directions
-    public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
-    public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
-    public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
-    public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
+    private VOSpaceAuthorizer authorizer;
 
-    public static final Direction BIDIRECTIONAL = new Direction("ivo://cadc.nrc.ca/vospace#biDirectional");
-    
-    private String value;
-
-    /**
-     * Direction constructor;
-     * @param value
-     */
-    public Direction(String value)
+    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
     {
-        this.value = value;
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
     }
 
-    /**
-     * Get the value of this direction.
-     *
-     * @return
-     */
-    public String getValue()
-    {
-        return value;
-    }
-
-    /**
-     * Return true if the values are equal, ignoring case.
-     */
     @Override
-    public boolean equals(Object o)
-    {
-        if (o != null && o instanceof Direction)
-        {
-            String oValue = ((Direction) o).getValue();
-            if (oValue != null)
-            {
-                return oValue.equalsIgnoreCase(value);
+    public void doAction() 
+            throws TransferException, JobPersistenceException, JobNotFoundException, LinkingException, NodeNotFoundException, TransferParsingException, 
+            IOException, TransientException, URISyntaxException, NodeBusyException {
+        boolean updated = false;
+        try {
+            VOSURI target = new VOSURI(transfer.getTarget());
+
+            PathResolver resolver = new PathResolver(nodePersistence);
+
+            Node node = resolver.resolveWithReadPermissionCheck(target, authorizer, true);
+            if (!(node instanceof ContainerNode)) {
+                NodeFault f = NodeFault.InvalidArgument;
+                f.setMessage("node is not a container node");
+                throw new TransferException(f);
+            }
+            
+            updateTransferJob(node, node.getUri().getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
+        }
+        finally {
+            if (!updated) {
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
             }
         }
-        return false;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Direction[" + value+  "]";
     }
 }
