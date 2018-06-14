@@ -111,5 +111,10 @@ go
 --go
 
 create unique clustered index Node_parentID_name_index on Node(parentID, name)
+
+-- indexes to support sorting on other node columns
+create index Node_parentID_contentLength_index on Node(parentID, contentLength)
+create index Node_parentID_lastModfied_index on Node(parentID, lastModified)
+
 go
 
