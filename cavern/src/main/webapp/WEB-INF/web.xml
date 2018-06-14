@@ -207,6 +207,20 @@
       <param-value>/capabilities.xml</param-value>
     </init-param>
   </servlet>
+  
+  <!-- Credential injection -->
+  <servlet>
+    <servlet-name>CredInjection</servlet-name>
+    <servlet-class>ca.nrc.cadc.cred.util.CredInjectionServlet</servlet-class>
+    <init-param>
+        <param-name>authorized_dn</param-name>
+        <param-value>cn=servops_4a2,ou=cadc,o=hia,c=ca</param-value>
+    </init-param>
+    <init-param>
+        <param-name>authorized_uid</param-name>
+        <param-value>servops</param-value>
+    </init-param>
+  </servlet>
 
   <!-- the VOSpace Endpoints -->
   <servlet-mapping>
@@ -266,6 +280,11 @@
   <servlet-mapping>
     <servlet-name>CapabilitiesServlet</servlet-name>
     <url-pattern>/capabilities</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>CredInjection</servlet-name>
+    <url-pattern>/cinject</url-pattern>
   </servlet-mapping>
 
   <!-- Log control servlet endpoint -->
