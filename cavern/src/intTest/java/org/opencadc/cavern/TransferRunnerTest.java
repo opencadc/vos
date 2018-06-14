@@ -69,6 +69,7 @@
 
 package org.opencadc.cavern;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -96,6 +97,7 @@ import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.ClientTransfer;
@@ -117,8 +119,8 @@ public class TransferRunnerTest
     static
     {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
 
     public TransferRunnerTest() { }
@@ -163,16 +165,22 @@ public class TransferRunnerTest
     {
         VOSpaceClient vos;
         Transfer trans;
+        boolean run;
 
-        CreateTransferAction(VOSpaceClient vos, Transfer trans)
+        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run)
         {
             this.vos = vos;
             this.trans = trans;
+            this.run = run;
         }
         @Override
         public ClientTransfer run() throws Exception
         {
-            return vos.createTransfer(trans);
+            ClientTransfer ct = vos.createTransfer(trans);
+            if (run) {
+                ct.run();
+            }
+            return ct;
         }
 
     }
@@ -244,7 +252,7 @@ public class TransferRunnerTest
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, protocols);
             t.version = VOS.VOSPACE_21;
 
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
             Assert.assertEquals(VOS.VOSPACE_21, trans2.version);
             List<Protocol> plist = trans2.getProtocols();
@@ -262,9 +270,7 @@ public class TransferRunnerTest
             log.debug("certTLS: " + certTLS2.getEndpoint());
 
             Assert.assertFalse("anonTLS", plist.contains(anonTLS));
-            Assert.assertFalse("basic", plist.contains(basic));
             Assert.assertFalse("basicTLS", plist.contains(basicTLS));
-            Assert.assertFalse("cookie", plist.contains(cookie));
             Assert.assertFalse("cookieTLS", plist.contains(cookieTLS));
             Assert.assertFalse("token", plist.contains(token));
             Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
@@ -299,10 +305,12 @@ public class TransferRunnerTest
 
             List<Protocol> proto = new ArrayList<Protocol>();
             proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            
+            // https on transfer not supported
+            //proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             List<Protocol> plist = trans.getTransfer().getProtocols();
             Assert.assertNotNull(plist);
             log.debug("found: " + plist.size() + " protocols");
@@ -337,8 +345,14 @@ public class TransferRunnerTest
             List<Protocol> protocols = new ArrayList<>();
             protocols.add(sp);
             Transfer t = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protocols);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            TransferWriter tw = new TransferWriter();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            tw.write(t, out);
+            log.debug("sending transfer: " + out.toString());
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, true));
             Transfer trans2 = trans.getTransfer();
+            
+            
             Assert.assertNotNull(trans2);
             Assert.assertFalse("result protocols", trans2.getProtocols().isEmpty());
             for (Protocol p : trans2.getProtocols()) {
@@ -354,6 +368,7 @@ public class TransferRunnerTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
     @Test
     public void testDownloadLink()
     {
@@ -370,10 +385,10 @@ public class TransferRunnerTest
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
             List<Protocol> proto = new ArrayList<Protocol>();
-            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
 
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols())
             {
@@ -381,13 +396,14 @@ public class TransferRunnerTest
             }
             Subject.doAs(s, new RunnableAction(trans));
 
+            log.debug("throwable: " + trans.getThrowable());
             Assert.assertNull(trans.getThrowable());
             File result = trans.getLocalFile();
             Assert.assertNotNull(result);
             Assert.assertEquals(data.getUri().getName(), result.getName()); // download DataNode, got right name
 
             t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols())
             {
@@ -429,7 +445,7 @@ public class TransferRunnerTest
             proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             Transfer t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t));
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols())
             {

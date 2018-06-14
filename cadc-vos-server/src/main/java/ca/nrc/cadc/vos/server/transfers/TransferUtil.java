@@ -317,6 +317,7 @@ public class TransferUtil
     }
 
     // check for supported combinations of protocol + securityMethod
+    @Deprecated
     public static boolean isSupported(Protocol p)
     {
         if (VOS.PROTOCOL_HTTP_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTP_PUT.equals(p.getUri()))
