@@ -419,6 +419,9 @@ public class VOSpaceClient
         if (Direction.pullFromVoSpace.equals(trans.getDirection()))
             return createTransferSync(trans);
 
+        if (Direction.BIDIRECTIONAL.equals(trans.getDirection()))
+            return createTransferSync(trans);
+        
         return createTransferASync(trans);
     }
 
@@ -529,24 +532,23 @@ public class VOSpaceClient
             log.debug("vospaceURL: " + vospaceURL);
 
             HttpPost httpPost = null;
-        	if (transfer.isQuickTransfer())
-        	{
-        		Map<String, Object> form = new HashMap<String, Object>();
-        		form.put("TARGET", transfer.getTarget());
-        		form.put("DIRECTION", transfer.getDirection().getValue());
-        		form.put("PROTOCOL", transfer.getProtocols().iterator().
-        				next().getUri()); // try first protocol?
-        		httpPost = new HttpPost(vospaceURL, form, false);
-        	}
-        	else
-        	{
-	            // POST the Job and get the redirect location.
-	            TransferWriter writer = new TransferWriter();
-	            StringWriter sw = new StringWriter();
-	            writer.write(transfer, sw);
+            if (transfer.isQuickTransfer())
+            {
+                    Map<String, Object> form = new HashMap<String, Object>();
+                    form.put("TARGET", transfer.getTarget());
+                    form.put("DIRECTION", transfer.getDirection().getValue());
+                    form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
+                    httpPost = new HttpPost(vospaceURL, form, false);
+            }
+            else
+            {
+                // POST the Job and get the redirect location.
+                TransferWriter writer = new TransferWriter();
+                StringWriter sw = new StringWriter();
+                writer.write(transfer, sw);
 
-	            httpPost = new HttpPost(vospaceURL, sw.toString(), "text/xml", false);
-        	}
+                httpPost = new HttpPost(vospaceURL, sw.toString(), "text/xml", false);
+            }
 
             httpPost.run();
 
@@ -575,35 +577,34 @@ public class VOSpaceClient
             }
             else
             {
-	            log.debug("POST: transfer jobURL: " + redirectURL);
+                log.debug("POST: transfer jobURL: " + redirectURL);
 
 
-	            // follow the redirect to run the job
-	            log.debug("GET - opening connection: " + redirectURL.toString());
-	            ByteArrayOutputStream out = new ByteArrayOutputStream();
-	            HttpDownload get = new HttpDownload(redirectURL, out);
+                // follow the redirect to run the job
+                log.debug("GET - opening connection: " + redirectURL.toString());
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                HttpDownload get = new HttpDownload(redirectURL, out);
 
-	            get.run();
+                get.run();
 
-	            if (get.getThrowable() != null)
-	            {
-	                log.debug("Unable to run the job", get.getThrowable());
-	                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
-	            }
-	            String transDoc = new String(out.toByteArray(), "UTF-8");
+                if (get.getThrowable() != null)
+                {
+                    log.debug("Unable to run the job", get.getThrowable());
+                    throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
+                }
+                String transDoc = new String(out.toByteArray(), "UTF-8");
                 log.debug("transfer response: " + transDoc);
-	            TransferReader txfReader = new TransferReader(schemaValidation);
-	            log.debug("GET - reading content: " + redirectURL);
-	            Transfer trans = txfReader.read(transDoc, VOSURI.SCHEME);
-	            log.debug("GET - done: " + redirectURL);
-	            log.debug("negotiated transfer: " + trans);
+                TransferReader txfReader = new TransferReader(schemaValidation);
+                Transfer trans = txfReader.read(transDoc, VOSURI.SCHEME);
+                log.debug("GET - done: " + redirectURL);
+                log.debug("negotiated transfer: " + trans);
 
                 //URL jobURL = extractJobURL(vospaceURL.toString(), redirectURL);
-	            // temporary hack:
-	            URL jobURL = new URL(redirectURL.toString().substring(0, redirectURL.toString().length() - "/results/transferDetails".length()));
+                // temporary hack:
+                URL jobURL = new URL(redirectURL.toString().substring(0, redirectURL.toString().length() - "/results/transferDetails".length()));
 
                 log.debug("extracted job url: " + jobURL);
-	            return new ClientTransfer(jobURL, trans, schemaValidation);
+                return new ClientTransfer(jobURL, trans, schemaValidation);
             }
         }
         catch (MalformedURLException e)

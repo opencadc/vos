@@ -349,7 +349,7 @@ public class TransferRunnerTest
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             tw.write(t, out);
             log.debug("sending transfer: " + out.toString());
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, true));
+            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
             
             
