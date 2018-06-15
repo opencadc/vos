@@ -91,7 +91,9 @@ public class AclCommandExecutor {
     private static final String DIR_RO = "r-x";
     private static final String DIR_RW = "rwx";
     
-    
+    private static final String[] CHECK_ACL_SUPPORT = new String[] {
+        GETACL, "--help"
+    };
     
     private final Path path;
     UserPrincipalLookupService users;
@@ -99,6 +101,11 @@ public class AclCommandExecutor {
     public AclCommandExecutor(Path path, UserPrincipalLookupService users) { 
         this.path = path;
         this.users = users;
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(CHECK_ACL_SUPPORT);
+        if (grabber.getExitValue() != 0) {
+            throw new UnsupportedOperationException("getfacl/setfacl not available");
+        }
     }
     
     public void clearACL()  throws IOException {

@@ -85,6 +85,7 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.AclCommandExecutor;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -148,11 +149,24 @@ public class FileSystemProbe implements Callable<Boolean> {
         log.info("testing move symlink...");
         success = doMoveSymlink() & success;
 
+        log.info("checking ACL installation...");
+        
         log.info("END");
 
         return new Boolean(success);
     }
 
+    public boolean doCheckACL() {
+        try {
+            AclCommandExecutor acl = new AclCommandExecutor(root, users);
+            // TODO: need some config to try to set ACLs in filesystem
+            return true;
+        } catch (Exception ex) {
+            log.error("FAIL", ex);
+            return false;
+        }
+    }
+    
     public boolean doCreateDir() {
         try {
             String name = UUID.randomUUID().toString();
