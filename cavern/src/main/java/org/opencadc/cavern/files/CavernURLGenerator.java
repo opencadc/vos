@@ -201,7 +201,7 @@ public class CavernURLGenerator implements TransferGenerator {
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
             if (baseURLs == null || baseURLs.isEmpty()) {
                 log.debug("no matching interfaces ");
-                return null;
+                return new ArrayList<URI>(0);
             }
 
             // create the metadata and signature segments
@@ -373,9 +373,11 @@ public class CavernURLGenerator implements TransferGenerator {
                         (ifc.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(ifc.getSecurityMethod()) &&
                         ifc.getAccessURL().getURL().getProtocol().equals(scheme))) {
                     baseURLs.add(ifc.getAccessURL().getURL());
+                    log.debug("Added anon interface");
                 } else if (ifc.getSecurityMethod().equals(securityMethod)
                         && ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
                     baseURLs.add(ifc.getAccessURL().getURL());
+                    log.debug("Added auth interface.");
                 }
             }
         } catch (IOException e) {

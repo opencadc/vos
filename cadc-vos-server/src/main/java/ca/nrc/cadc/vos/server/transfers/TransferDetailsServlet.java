@@ -269,18 +269,19 @@ public class TransferDetailsServlet extends HttpServlet
                         transfer.getProtocols().clear();
                     }
 
-                    if (dir.equals(Direction.pushToVoSpace) || dir.equals(Direction.pullFromVoSpace))
+                    if (dir.equals(Direction.pushToVoSpace) || dir.equals(Direction.pullFromVoSpace) || dir.equals(Direction.BIDIRECTIONAL))
                     {
-                        if (transfer.version == VOS.VOSPACE_21)
-                        {
-                            ListIterator<Protocol> iter = transfer.getProtocols().listIterator();
-                            while ( iter.hasNext() )
-                            {
-                                Protocol p = iter.next();
-                                if (!TransferUtil.isSupported(p))
-                                    iter.remove();
-                            }
-                        }
+                        // this work should be done in the URL generator
+//                        if (transfer.version == VOS.VOSPACE_21)
+//                        {
+//                            ListIterator<Protocol> iter = transfer.getProtocols().listIterator();
+//                            while ( iter.hasNext() )
+//                            {
+//                                Protocol p = iter.next();
+//                                if (!TransferUtil.isSupported(p))
+//                                    iter.remove();
+//                            }
+//                        }
                         List<Parameter> additionalParams = new ArrayList<Parameter>(0);
                         List<Protocol> proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
                         Transfer result = new Transfer(transfer.getTarget(), dir, proto);
