@@ -675,7 +675,7 @@ public abstract class NodeUtil {
         List<Node> nodes = new ArrayList<Node>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
             for (Path file : stream) {
-                log.warn("[list] visit: " + file);
+                log.debug("[list] visit: " + file);
                 Node n = pathToNode(root, file, rootURI);
                 if (!nodes.isEmpty() || start == null
                         || start.getName().equals(n.getName())) {

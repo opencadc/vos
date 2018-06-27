@@ -68,6 +68,7 @@
 package org.opencadc.cavern;
 
 
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.Direction;
@@ -195,9 +196,17 @@ public final class TestActions {
         {
             View view = new View(new URI(VOS.VIEW_DEFAULT));
             List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            
+            // https nut no cert: presigned
+            //protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); 
+            
+            // https with client cert: current apache SSL termination config
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
 
             Transfer transfer = new Transfer(uri.getURI(), Direction.pushToVoSpace, view, protocols);
+            transfer.version = VOS.VOSPACE_21; // needed to write securityMethod in xml
             ClientTransfer clientTransfer = vos.createTransfer(transfer);
 
             clientTransfer.setFile(file);

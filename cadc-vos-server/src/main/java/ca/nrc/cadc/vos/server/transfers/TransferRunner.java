@@ -182,9 +182,33 @@ public class TransferRunner implements JobRunner
 
         Direction dir = new Direction(sdir);
 
-        Protocol proto = new Protocol(sproto);
         List<Protocol> plist = new ArrayList<Protocol>();
-        plist.add(proto);
+        plist.add(new Protocol(sproto));
+        
+        // also add a protocol with current securityMethod
+        AuthMethod am = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+        Protocol proto = new Protocol(sproto);
+        if (am != null) {
+            switch (am) {
+                case CERT:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+                    break;
+                case COOKIE:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
+                    break;
+                case PASSWORD:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
+                    break;
+                case TOKEN:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (proto.getSecurityMethod() != null) {
+            plist.add(proto);
+        }
 
         log.debug("createTransfer: " + target + " " + dir + " " + proto);
         return new Transfer(target.getURI(), dir, plist);
