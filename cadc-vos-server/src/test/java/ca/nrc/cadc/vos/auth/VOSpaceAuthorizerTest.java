@@ -188,7 +188,7 @@ public class VOSpaceAuthorizerTest
     {
         // create keys
         RsaSignatureGenerator.genKeyPair(getCompleteKeysDirName());
-                
+
         VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
         ContainerNode node = new ContainerNode(vos);
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
