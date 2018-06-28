@@ -187,7 +187,7 @@ public class VOSpaceAuthorizerTest
     public void testCheckDelegation() throws Exception
     {
         // create keys
-        RsaSignatureGenerator.main(new String[]{getCompleteKeysDirName()});
+        RsaSignatureGenerator.genKeyPair(getCompleteKeysDirName());
 
         VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
         ContainerNode node = new ContainerNode(vos);
