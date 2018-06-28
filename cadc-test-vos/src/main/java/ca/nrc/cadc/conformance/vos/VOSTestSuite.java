@@ -90,6 +90,7 @@ import ca.nrc.cadc.util.Log4jInit;
     CreateDataNodeTest.class,
     CreateLinkNodeTest.class,
     GetContainerNodeTest.class,
+    //GetSortContainerNodeTest.class,
     GetDataNodeTest.class,
     GetLinkNodeTest.class,
     SetContainerNodeTest.class,
