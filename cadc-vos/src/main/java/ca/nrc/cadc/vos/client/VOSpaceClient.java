@@ -113,6 +113,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
@@ -488,12 +489,15 @@ public class VOSpaceClient
         try
         {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_TRANSFERS_20);
+            
+            // TODO: figure out if the service supports VOSpace 2.1 transfer documents
+            // that include securityMethod under protocol so we can set transfer.version
+            // HACK: hard code to 2.1
+            transfer.version = VOS.VOSPACE_21;
 
-//            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
-//            URL postUrl = new URL(asyncTransUrl);
 
             HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
 
@@ -529,6 +533,13 @@ public class VOSpaceClient
         try
         {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_SYNC_21);
+            //transfer.version = VOS.VOSPACE_21;
+            //if (vospaceURL == null) {
+                // fallback to 2.0
+            //    vospaceURL = lookupServiceURL(Standards.VOSPACE_SYNC_20);
+            //    transfer.version = VOS.VOSPACE_20;
+            //}
+            
             log.debug("vospaceURL: " + vospaceURL);
 
             HttpPost httpPost = null;

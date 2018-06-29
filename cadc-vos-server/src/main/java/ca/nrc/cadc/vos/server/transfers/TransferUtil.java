@@ -235,10 +235,6 @@ public class TransferUtil
     public static List<Protocol> getTransferEndpoints(final Transfer transfer, final Job job, List<Parameter> additionalParameters)
             throws Exception
     {
-        List<Protocol> protocolList = new ArrayList<Protocol>();
-        List<Protocol> httpProtocolList = new ArrayList<Protocol>();
-        List<Protocol> httpsProtocolList = new ArrayList<Protocol>();
-
         VOSpacePluginFactory storageFactory = new VOSpacePluginFactory();
         TransferGenerator transferGenerator = storageFactory.createTransferGenerator();
 
@@ -250,36 +246,8 @@ public class TransferUtil
             additionalParameters.add(new Parameter(VOS.PROPERTY_URI_CONTENTLENGTH, transfer.getContentLength().toString()));
         }
 
-        for (Protocol protocol: transfer.getProtocols())
-        {
-            String scheme = getScheme(protocol.getUri());
-            if ( scheme != null)
-            {
-                List<Protocol> pList;
-
-                List<URI> uriList = transferGenerator.getEndpoints(target, protocol, view, job, additionalParameters);
-
-                if (scheme.equalsIgnoreCase("http"))
-                {
-                    pList = httpProtocolList;
-                }
-                else
-                {
-                    pList = httpsProtocolList;
-                }
-
-                for (URI url: uriList)
-                {
-                    Protocol np = new Protocol(protocol.getUri(), url.toString(), null);
-                    np.setSecurityMethod(protocol.getSecurityMethod());
-                    pList.add(np);
-                }
-            }
-        }
-        // give http URL's higher priority
-        protocolList.addAll(httpProtocolList);
-        protocolList.addAll(httpsProtocolList);
-
+        List<Protocol> protocolList = transferGenerator.getEndpoints(target, transfer, view, job, additionalParameters);
+        log.debug(transferGenerator.getClass().getSimpleName() + " generated: " + protocolList.size());
         return protocolList;
     }
 

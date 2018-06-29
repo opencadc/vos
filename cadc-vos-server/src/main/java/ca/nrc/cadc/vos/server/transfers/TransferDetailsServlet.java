@@ -283,7 +283,10 @@ public class TransferDetailsServlet extends HttpServlet
 //                            }
 //                        }
                         List<Parameter> additionalParams = new ArrayList<Parameter>(0);
-                        List<Protocol> proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
+                        List<Protocol> proto = new ArrayList<>(0);
+                        if (!transfer.getProtocols().isEmpty()) {
+                            proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
+                        }
                         Transfer result = new Transfer(transfer.getTarget(), dir, proto);
                         result.version = transfer.version;
                         result.setContentLength(transfer.getContentLength());

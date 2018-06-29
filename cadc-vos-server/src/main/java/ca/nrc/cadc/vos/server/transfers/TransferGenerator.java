@@ -65,47 +65,45 @@
 *  $Revision: 4 $
 *
 ************************************************************************
-*/
+ */
 
 package ca.nrc.cadc.vos.server.transfers;
-
-import java.io.FileNotFoundException;
-import java.util.List;
 
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import java.net.URI;
-import java.net.URL;
+import java.io.FileNotFoundException;
+import java.util.List;
 
 /**
  * An interface to vospace storage back-end for provided transfer details
  * in the transfer negotiation process.
  */
-public interface TransferGenerator
-{
+public interface TransferGenerator {
+
     /**
      * Request a list of endpoints for the given transfer request information.
      *
      * This method returns a list of URLs to handle the case where the
      * storage system has multiple copies of a file or multiple locations
-     * in which a file can be saved.  Returning only one URL in the list
+     * in which a file can be saved. Returning only one URL in the list
      * is a perfectly normal response though.
      *
-     * @param target The target data node.
-     * @param protocol The protocol object containing scheme, direction, and
-     *     authentication information.
+     * @param target The target data node
+     * @param transfer The transfer object with requested protocol(s)
      * @param view The view being requested (may be null)
      * @param job The UWS job associated with the transfer request.
      * @param additionalParams Any additional parameters associated with the request.
-     *
-     * @throws FileNotFoundException If the storage system cannot find an
-     *     object for the target.
+     * 
+     * @return list of protocol(s) with endpoints
+     * 
+     * @throws FileNotFoundException If the storage system cannot find an object for the target.
      * @throws TransientException If an unexpected error occurs.
      */
-    List<URI> getEndpoints(VOSURI target, Protocol protocol, View view, Job job, List<Parameter> additionalParams)
-        throws FileNotFoundException, TransientException;
+    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view, Job job, List<Parameter> additionalParams)
+            throws FileNotFoundException, TransientException;
 }
