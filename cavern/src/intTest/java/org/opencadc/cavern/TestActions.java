@@ -198,9 +198,9 @@ public final class TestActions {
             List<Protocol> protocols = new ArrayList<Protocol>();
             
             // https nut no cert: presigned
-            //protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); 
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); 
             
-            // https with client cert: current apache SSL termination config
+            // https with client cert: in case broad SSL config always requires certs
             Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);

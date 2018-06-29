@@ -86,6 +86,7 @@ import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
@@ -102,7 +103,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.security.InvalidKeyException;
-import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -139,14 +139,14 @@ public class CavernURLGenerator implements TransferGenerator {
     }
 
     @Override
-    public List<URI> getEndpoints(VOSURI target, Protocol protocol, View view,
+    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view,
             Job job, List<Parameter> additionalParams)
             throws FileNotFoundException, TransientException {
         if (target == null) {
             throw new IllegalArgumentException("target is required");
         }
-        if (protocol == null) {
-            throw new IllegalArgumentException("protocol is required");
+        if (transfer == null) {
+            throw new IllegalArgumentException("transfer is required");
         }
 
         try {
@@ -157,15 +157,25 @@ public class CavernURLGenerator implements TransferGenerator {
             PathResolver ps = new PathResolver(nodes, true);
             Node node = ps.resolveWithReadPermissionCheck(target, null, true);
 
-            if (node instanceof ContainerNode) {
-                UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
-                return handleContainerMount(target, (ContainerNode) node, protocol, caller);
-            } else if (node instanceof DataNode) {
-                return handleDataNode(target, (DataNode) node, protocol);
-            } else {
-                throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
-                    + node.getUri());
-            } 
+            List<Protocol> ret = new ArrayList<>();
+            List<URI> uris;
+            for (Protocol protocol : transfer.getProtocols()) {
+                if (node instanceof ContainerNode) {
+                    UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
+                    uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
+                } else if (node instanceof DataNode) {
+                    uris = handleDataNode(target, (DataNode) node, protocol);
+                } else {
+                    throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
+                        + node.getUri());
+                }
+                for (URI u : uris) {
+                    Protocol p = new Protocol(protocol.getUri(), u.toASCIIString(), null);
+                    p.setSecurityMethod(protocol.getSecurityMethod());
+                    ret.add(p);
+                }
+            }
+            return ret;
         } catch (NodeNotFoundException ex) {
             throw new FileNotFoundException(target.getPath());
         } catch (IOException ex) {

@@ -73,6 +73,7 @@ import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
@@ -191,21 +192,25 @@ public class CavernURLGeneratorTest
             Subject s = new Subject(false, p, new HashSet(), new HashSet()); 
             
             final VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR);
-            final Protocol protocol = new Protocol(VOS.PROTOCOL_SSHFS);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protos);
             final View view = null;
             final Job job = null;
             
-            URI mountURI = Subject.doAs(s, new PrivilegedExceptionAction<URI>() {
+            Protocol mnt = Subject.doAs(s, new PrivilegedExceptionAction<Protocol>() {
                 @Override
-                public URI run() throws Exception {
+                public Protocol run() throws Exception {
                     TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-                    List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
-                    return urls.get(0);
+                    List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+                    return result.get(0);
                 }
                 
             });
-            log.info("Transfer URI: " + mountURI);
-            Assert.assertNotNull(mountURI);
+            log.info("protocol: " + mnt);
+            Assert.assertNotNull(mnt);
+            Assert.assertEquals("mount protocol", VOS.PROTOCOL_SSHFS, mnt.getUri());
+            Assert.assertNotNull("mount endpoint", mnt.getEndpoint());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -219,12 +224,18 @@ public class CavernURLGeneratorTest
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
-            URI transferURI = urls.get(0);
-            log.debug("Transfer URI: " + transferURI);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
             Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
             String path = transferURI.getPath();
@@ -247,11 +258,19 @@ public class CavernURLGeneratorTest
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
-            URI transferURI = urls.get(0);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
             String path = transferURI.getPath();
             String[] parts = path.split("/");
             String sig = parts[4];
@@ -275,11 +294,19 @@ public class CavernURLGeneratorTest
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
-            URI transferURI = urls.get(0);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
             String path = transferURI.getPath();
             String[] parts = path.split("/");
             //String sig = parts[4];
@@ -303,12 +330,19 @@ public class CavernURLGeneratorTest
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URI> urls = urlGen.getEndpoints(nodeURI, protocol, view, job, null);
-            URI transferURI = urls.get(0);
-            log.debug("Transfer URI: " + transferURI);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
             Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
             String path = transferURI.getPath();

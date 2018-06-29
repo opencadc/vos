@@ -65,7 +65,7 @@
 *  $Revision: 5 $
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern;
 
@@ -108,74 +108,71 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
  *
  * @author pdowler
  */
-public class TransferRunnerTest
-{
+public class TransferRunnerTest {
+
     private static final Logger log = Logger.getLogger(TransferRunnerTest.class);
 
     private static File SSL_CERT;
 
     private static VOSURI nodeURI;
 
-    static
-    {
+    static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
 
-    public TransferRunnerTest() { }
+    public TransferRunnerTest() {
+    }
 
     @BeforeClass
-    public static void staticInit() throws Exception
-    {
+    public static void staticInit() throws Exception {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", TransferRunnerTest.class);
 
         String uriProp = TransferRunnerTest.class.getName() + ".baseURI";
         String uri = System.getProperty(uriProp);
         log.debug(uriProp + " = " + uri);
-        if ( StringUtil.hasText(uri) )
-        {
+        if (StringUtil.hasText(uri)) {
             nodeURI = new VOSURI(new URI(uri));
 //            nodeURI = vuri.getURI().toASCIIString();
 //            RegistryClient rc = new RegistryClient();
 //            URL vos = rc.getServiceURL(vuri.getServiceURI(), "https");
 //            baseURL = vos.toExternalForm();
-        }
-        else
+        } else {
             throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
+        }
     }
 
-    private static class GetAction implements PrivilegedExceptionAction<Node>
-    {
+    private static class GetAction implements PrivilegedExceptionAction<Node> {
+
         VOSpaceClient vos;
         String path;
-        GetAction(VOSpaceClient vos, String path)
-        {
+
+        GetAction(VOSpaceClient vos, String path) {
             this.vos = vos;
             this.path = path;
         }
+
         @Override
-        public Node run() throws Exception
-        {
+        public Node run() throws Exception {
             return vos.getNode(path);
         }
     }
 
-    private static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer>
-    {
+    private static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
+
         VOSpaceClient vos;
         Transfer trans;
         boolean run;
 
-        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run)
-        {
+        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run) {
             this.vos = vos;
             this.trans = trans;
             this.run = run;
         }
+
         @Override
-        public ClientTransfer run() throws Exception
-        {
+        public ClientTransfer run() throws Exception {
             ClientTransfer ct = vos.createTransfer(trans);
             if (run) {
                 ct.run();
@@ -185,19 +182,18 @@ public class TransferRunnerTest
 
     }
 
-    private static class DeleteAction implements PrivilegedExceptionAction<Object>
-    {
+    private static class DeleteAction implements PrivilegedExceptionAction<Object> {
+
         VOSpaceClient vos;
         String path;
 
-        DeleteAction(VOSpaceClient vos, String path)
-        {
+        DeleteAction(VOSpaceClient vos, String path) {
             this.vos = vos;
             this.path = path;
         }
+
         @Override
-        public Object run() throws Exception
-        {
+        public Object run() throws Exception {
             vos.deleteNode(path);
             return null;
         }
@@ -205,10 +201,8 @@ public class TransferRunnerTest
     }
 
     @Test
-    public void testTransferNegotiation21()
-    {
-        try
-        {
+    public void testTransferNegotiation21() {
+        try {
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
             Protocol anon = new Protocol(VOS.PROTOCOL_HTTP_GET);
@@ -264,6 +258,11 @@ public class TransferRunnerTest
             Assert.assertNotNull(anon2.getEndpoint());
             log.debug("anon: " + anon2.getEndpoint());
 
+            Protocol basic2 = findProto(basic, plist);
+            Assert.assertNotNull(basic2);
+            Assert.assertNotNull(basic2.getEndpoint());
+            log.debug("basic: " + basic2.getEndpoint());
+
             Protocol certTLS2 = findProto(certTLS, plist);
             Assert.assertNotNull(certTLS2);
             Assert.assertNotNull(certTLS2.getEndpoint());
@@ -274,29 +273,24 @@ public class TransferRunnerTest
             Assert.assertFalse("cookieTLS", plist.contains(cookieTLS));
             Assert.assertFalse("token", plist.contains(token));
             Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
-    Protocol findProto(Protocol p, List<Protocol> plist)
-    {
-        for (Protocol pp : plist)
-        {
-            if (pp.equals(p))
+    Protocol findProto(Protocol p, List<Protocol> plist) {
+        for (Protocol pp : plist) {
+            if (pp.equals(p)) {
                 return pp;
+            }
         }
         return null;
     }
 
     @Test
-    public void testPullFromVOSpace()
-    {
-        try
-        {
+    public void testPullFromVOSpace() {
+        try {
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
             VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
@@ -305,32 +299,28 @@ public class TransferRunnerTest
 
             List<Protocol> proto = new ArrayList<Protocol>();
             proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            
+
             // https on transfer not supported
             //proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
             ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             List<Protocol> plist = trans.getTransfer().getProtocols();
             Assert.assertNotNull(plist);
             log.debug("found: " + plist.size() + " protocols");
 
-            for (Protocol reqP : proto)
-            {
+            for (Protocol reqP : proto) {
                 int num = 0;
-                for (Protocol p : plist)
-                {
+                for (Protocol p : plist) {
                     log.debug(p + " : " + data.getUri() + " -> " + p.getEndpoint());
                     Assert.assertNotNull(p.getEndpoint());
-                    if ( reqP.getUri().equals(p.getUri()) )
+                    if (reqP.getUri().equals(p.getUri())) {
                         num++;
+                    }
                 }
                 Assert.assertTrue("one or more endpoints for " + reqP.getUri(), (num > 0));
             }
 
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
@@ -351,8 +341,7 @@ public class TransferRunnerTest
             log.debug("sending transfer: " + out.toString());
             ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
-            
-            
+
             Assert.assertNotNull(trans2);
             Assert.assertFalse("result protocols", trans2.getProtocols().isEmpty());
             for (Protocol p : trans2.getProtocols()) {
@@ -368,12 +357,10 @@ public class TransferRunnerTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
-    public void testDownloadLink()
-    {
-        try
-        {
+    public void testDownloadLink() {
+        try {
             VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
 
             // pre-existing data and link nodes:
@@ -390,8 +377,7 @@ public class TransferRunnerTest
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
             ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
-            for (Protocol p : trans.getTransfer().getProtocols())
-            {
+            for (Protocol p : trans.getTransfer().getProtocols()) {
                 log.debug(data.getUri() + " -> " + p.getEndpoint());
             }
             Subject.doAs(s, new RunnableAction(trans));
@@ -405,8 +391,7 @@ public class TransferRunnerTest
             t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
             trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
-            for (Protocol p : trans.getTransfer().getProtocols())
-            {
+            for (Protocol p : trans.getTransfer().getProtocols()) {
                 log.debug(data.getUri() + " -> " + p.getEndpoint());
             }
             Subject.doAs(s, new RunnableAction(trans));
@@ -415,57 +400,9 @@ public class TransferRunnerTest
             result = trans.getLocalFile();
             Assert.assertNotNull(result);
             Assert.assertEquals(link.getUri().getName(), result.getName()); // download LinkNode, got right name
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
-    //@Test
-    public void testDownloadLinkWithCutout()
-    {
-        try
-        {
-            Subject s = SSLUtil.createSubject(SSL_CERT);
-
-            VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
-
-            // pre-existing data and link nodes:
-            DataNode data = new DataNode(new VOSURI(new URI(nodeURI + "/public_fits.fits")));
-            log.debug("testDownloadLinkWithCutout: " + data.getUri().getURI().toASCIIString());
-
-            Node data2 = Subject.doAs(s, new GetAction(vos, data.getUri().getPath()));
-            Long contentLength = new Long(data2.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
-
-            LinkNode link = new LinkNode(new VOSURI(new URI(nodeURI + "/public_fitsLink.fits?cutout=[1][100:200,100:200]")), data.getUri().getURI());
-
-            List<Protocol> proto = new ArrayList<Protocol>();
-            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-
-            Transfer t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
-            trans.setFile(new File("/tmp"));
-            for (Protocol p : trans.getTransfer().getProtocols())
-            {
-                log.debug(data.getUri() + " -> " + p.getEndpoint());
-            }
-            Subject.doAs(s, new RunnableAction(trans));
-
-            Assert.assertNull(trans.getThrowable());
-            File result = trans.getLocalFile();
-            Assert.assertNotNull(result);
-            log.debug("Content length: " + contentLength.longValue());
-            log.debug("Result length: " + result.length());
-            Assert.assertTrue(contentLength.longValue() > result.length()); // downloaded cutout should be smaller than original
-            Assert.assertTrue(result.getName().startsWith(link.getUri().getName())); // Download file has cutout parameters appended to filename.
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
 }
