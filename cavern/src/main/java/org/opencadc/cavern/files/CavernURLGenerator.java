@@ -128,7 +128,12 @@ public class CavernURLGenerator implements TransferGenerator {
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
         PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
+        String sb = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
+        // make sure server bas ends with /
+        if (sb != null && !sb.endsWith("/")) {
+            sb = sb + "/";
+        }
+        this.sshServerBase = sb;
     }
 
     // for testing
@@ -283,7 +288,7 @@ public class CavernURLGenerator implements TransferGenerator {
         sb.append("sshfs:");
         sb.append(caller.getName()).append("@");
         sb.append(sshServerBase);
-        sb.append(node.getUri().getPath());
+        sb.append(node.getUri().getPath().substring(1)); // sshServerBase includes the initial /
         try {
             URI u = new URI(sb.toString());
             ret.add(u);

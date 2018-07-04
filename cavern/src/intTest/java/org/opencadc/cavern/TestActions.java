@@ -73,6 +73,7 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -97,20 +98,60 @@ public final class TestActions {
     private TestActions() { 
     }
     
+    static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
+
+        VOSpaceClient vos;
+        Transfer trans;
+        boolean run;
+
+        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run) {
+            this.vos = vos;
+            this.trans = trans;
+            this.run = run;
+        }
+
+        @Override
+        public ClientTransfer run() throws Exception {
+            ClientTransfer ct = vos.createTransfer(trans);
+            if (run) {
+                ct.run();
+            }
+            return ct;
+        }
+
+    }
+    
     static class CreateNodeAction implements PrivilegedExceptionAction<Node>
     {
         VOSpaceClient vos;
         Node node;
+        boolean checkIfExists = false;
 
         CreateNodeAction(VOSpaceClient vos, Node node)
         {
             this.vos = vos;
             this.node = node;
         }
+        
+        CreateNodeAction(VOSpaceClient vos, Node node, boolean createIfExists)
+        {
+            this.vos = vos;
+            this.node = node;
+            this.checkIfExists = createIfExists;
+        }
+        
         public Node run() throws Exception
         {
             try
             {
+                if (checkIfExists) {
+                    try {
+                        Node cur = vos.getNode(node.getUri().getPath());
+                        return cur;
+                    } catch (NodeNotFoundException ignore) {
+                        log.debug("not found: " + node.getUri() + "... creating");
+                    }
+                }
                 return vos.createNode(node);
             }
             catch (Exception ex) {

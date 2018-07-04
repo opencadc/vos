@@ -69,22 +69,6 @@
 
 package org.opencadc.cavern;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.net.URI;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.Standards;
@@ -102,6 +86,18 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.ClientTransfer;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+import javax.security.auth.Subject;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * integration tests for custom behaviour not covered by the Push/Pull tests in cadcTestVOS.
@@ -134,70 +130,9 @@ public class TransferRunnerTest {
         log.debug(uriProp + " = " + uri);
         if (StringUtil.hasText(uri)) {
             nodeURI = new VOSURI(new URI(uri));
-//            nodeURI = vuri.getURI().toASCIIString();
-//            RegistryClient rc = new RegistryClient();
-//            URL vos = rc.getServiceURL(vuri.getServiceURI(), "https");
-//            baseURL = vos.toExternalForm();
         } else {
             throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
         }
-    }
-
-    private static class GetAction implements PrivilegedExceptionAction<Node> {
-
-        VOSpaceClient vos;
-        String path;
-
-        GetAction(VOSpaceClient vos, String path) {
-            this.vos = vos;
-            this.path = path;
-        }
-
-        @Override
-        public Node run() throws Exception {
-            return vos.getNode(path);
-        }
-    }
-
-    private static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
-
-        VOSpaceClient vos;
-        Transfer trans;
-        boolean run;
-
-        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run) {
-            this.vos = vos;
-            this.trans = trans;
-            this.run = run;
-        }
-
-        @Override
-        public ClientTransfer run() throws Exception {
-            ClientTransfer ct = vos.createTransfer(trans);
-            if (run) {
-                ct.run();
-            }
-            return ct;
-        }
-
-    }
-
-    private static class DeleteAction implements PrivilegedExceptionAction<Object> {
-
-        VOSpaceClient vos;
-        String path;
-
-        DeleteAction(VOSpaceClient vos, String path) {
-            this.vos = vos;
-            this.path = path;
-        }
-
-        @Override
-        public Object run() throws Exception {
-            vos.deleteNode(path);
-            return null;
-        }
-
     }
 
     @Test
@@ -246,7 +181,7 @@ public class TransferRunnerTest {
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, protocols);
             t.version = VOS.VOSPACE_21;
 
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
             Assert.assertEquals(VOS.VOSPACE_21, trans2.version);
             List<Protocol> plist = trans2.getProtocols();
@@ -303,7 +238,7 @@ public class TransferRunnerTest {
             // https on transfer not supported
             //proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             List<Protocol> plist = trans.getTransfer().getProtocols();
             Assert.assertNotNull(plist);
             log.debug("found: " + plist.size() + " protocols");
@@ -339,7 +274,7 @@ public class TransferRunnerTest {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             tw.write(t, out);
             log.debug("sending transfer: " + out.toString());
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
 
             Assert.assertNotNull(trans2);
@@ -375,7 +310,7 @@ public class TransferRunnerTest {
             proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
 
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            ClientTransfer trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols()) {
                 log.debug(data.getUri() + " -> " + p.getEndpoint());
@@ -389,7 +324,7 @@ public class TransferRunnerTest {
             Assert.assertEquals(data.getUri().getName(), result.getName()); // download DataNode, got right name
 
             t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
-            trans = Subject.doAs(s, new CreateTransferAction(vos, t, false));
+            trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols()) {
                 log.debug(data.getUri() + " -> " + p.getEndpoint());
