@@ -67,14 +67,8 @@
 
 package org.opencadc.cavern;
 
-
-import ca.nrc.cadc.ac.User;
-import ca.nrc.cadc.ac.client.UserClient;
-import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
@@ -97,8 +91,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.Subject;
@@ -143,7 +136,17 @@ public class MountedContainerTest {
     }
     
     @Test
-    public void testConsistency() {
+    public void testConsistencyCreateViaREST() {
+        doit(true);
+    }
+    
+    @Test
+    public void testConsistencyCreateViaFS() {
+        doit(false);
+    }
+    
+    
+    private void doit(boolean createViaREST) {
         Protocol sp = new Protocol(VOS.PROTOCOL_SSHFS);
         try {
             Subject s = SSLUtil.createSubject(SSL_CERT);
@@ -183,13 +186,14 @@ public class MountedContainerTest {
                 URI uri = new URI(p.getEndpoint());
                 Assert.assertEquals("sshfs", uri.getScheme());
                 
-                Path testDir = Files.createTempDirectory(null);
+                Path testDir = Files.createTempDirectory(MountedContainerTest.class.getSimpleName());
+                testDir.toFile().deleteOnExit();
                 try {
                     log.info("mount: " + uri + " -> " + testDir.toFile().getAbsolutePath() + " ...");
                     doMount(uri, testDir);
                     log.info("mounted: " + uri + " -> " + testDir.toFile().getAbsolutePath());
                     
-                    doConsistencyCheck(vos, s, containerURI, testDir);
+                    doConsistencyCheck(vos, s, containerURI, testDir, createViaREST);
                     
                 } finally {
                     log.info("unmount: " + testDir.toFile().getAbsolutePath() + " ...");
@@ -244,7 +248,7 @@ public class MountedContainerTest {
         }
     }
     
-    private void doConsistencyCheck(VOSpaceClient vos, final Subject s, VOSURI containerURI, Path mntDir) throws Exception {
+    private void doConsistencyCheck(VOSpaceClient vos, final Subject s, VOSURI containerURI, Path mntDir, boolean createWithREST) throws Exception {
         // get numeric ID of test user
         /*
         User u = Subject.doAs(s, new PrivilegedExceptionAction<User>() {
@@ -294,11 +298,39 @@ public class MountedContainerTest {
         VOSURI uriPubLN = new VOSURI(containerURI.getURI().toASCIIString() + "/link2publicDN");
         testNodes.add(new LinkNode(uriPubLN, uriPubDN.getURI()));
         
-        for (Node node : testNodes) {
-            TestActions.CreateNodeAction doit = new TestActions.CreateNodeAction(vos, node, true);
-            Node result = Subject.doAs(s, doit);
-            Assert.assertNotNull(result);
-            log.info("created: " + result.getUri());
+        if (createWithREST) {
+            for (Node node : testNodes) {
+                TestActions.CreateNodeAction doit = new TestActions.CreateNodeAction(vos, node, true);
+                Node result = Subject.doAs(s, doit);
+                Assert.assertNotNull(result);
+                log.info("created: " + result.getUri());
+            }
+        } else {
+            // create via mounted filesystem
+            for (Node n : testNodes) {
+                StringBuilder sb = new StringBuilder();
+                if (n instanceof ContainerNode) {
+                    sb.append("mkdir ");
+                } else if (n instanceof DataNode) {
+                    sb.append("touch ");
+                } else {
+                    sb.append("ln -s ");
+                }
+                if (n instanceof LinkNode) {
+                    LinkNode nn = (LinkNode) n;
+                    sb.append(uriPubDN.getName()).append(" "); // relative target
+                }
+                sb.append(mntDir).append("/").append(n.getName());
+                
+                String scmd = sb.toString();
+                log.info("create: " + scmd);
+                String[] cmd = scmd.split(" ");
+                BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+                grabber.captureOutput(cmd);
+                if (grabber.getExitValue() != 0) {
+                    throw new IOException("FAIL: " + sb + "\n" + grabber.getErrorOutput());
+                }
+            }
         }
 
         // check consistency
@@ -309,7 +341,13 @@ public class MountedContainerTest {
             for (Node node : testNodes) {
                 // get from VOSpace API
                 TestActions.GetNodeAction get = new TestActions.GetNodeAction(vos, node.getUri().getPath());
-                Node restNode = Subject.doAs(s, get);
+                Node restNode = null;
+                try {
+                    restNode = Subject.doAs(s, get);
+                } catch (PrivilegedActionException ex) {
+                    Throwable cause = ex.getCause();
+                    log.error("failed to get node: " + node.getUri(), cause);
+                }
                 Assert.assertNotNull("rest node: " + node.getUri(), restNode);
 
                 // get from mntDir: strip path since we mounted containerURI directly on mntDir
