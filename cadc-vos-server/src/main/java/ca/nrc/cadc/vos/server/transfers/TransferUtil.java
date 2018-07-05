@@ -146,35 +146,6 @@ public class TransferUtil
         return scheme;
     }
 
-    /**
-     * Determine the HTTP operation specified in a protocol string.
-     * @param protocol One of VOS.PROTOCOL_HTTP_GET, VOS.PROTOCOL_HTTP_PUT
-     * @return "get" for HTTP_GET and "put" for HTTP_PUT
-     */
-    /*
-    public static String getOperationX(final String protocol)
-    {
-        String op = null;
-
-        if (protocol.equals(VOS.PROTOCOL_HTTP_GET) ||
-                protocol.equals(VOS.PROTOCOL_HTTPS_GET))
-        {
-            op = "get";
-        }
-        else if (protocol.equals(VOS.PROTOCOL_HTTP_PUT) ||
-                protocol.equals(VOS.PROTOCOL_HTTPS_PUT))
-        {
-            op = "put";
-        }
-        else
-        {
-            log.debug("unknown protocol: " + protocol);
-        }
-
-        return op;
-    }
-    */
-    
     public static URL getSynctransParamURL(String scheme, VOSURI uri)
     {
         return getSynctransParamURL(scheme, uri, null, null);
