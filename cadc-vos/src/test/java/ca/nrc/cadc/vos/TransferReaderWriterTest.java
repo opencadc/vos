@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -518,6 +518,35 @@ public class TransferReaderWriterTest
         }
     }
 
+    @Test
+    public void testTransferBiDirectional()
+    {
+        try
+        {
+            VOSURI containerURI = new VOSURI(baseURI + "/path/to/container");
+            List<Protocol> protos = new ArrayList<Protocol>();
+            Protocol mp = new Protocol(VOS.PROTOCOL_SSHFS, "sshfs:user@server:/path/to/container", null);
+            protos.add(mp);
+            Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL, protos);
+
+            StringWriter sw = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, sw);
+            String xml = sw.toString();
+
+            log.info("testTransferBiDirectional\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     @Test
     public void testInvalidTransferXml()

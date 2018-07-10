@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -174,12 +174,15 @@ public class TransferWriter implements XmlProcessor
                     ep.addContent(protocol.getEndpoint());
                     pr.addContent(ep);
                 }
-                // added in VOSpace-2.1
-                if (transfer.version >= VOS.VOSPACE_21 && protocol.getSecurityMethod() != null)
-                {
-                    Element es = new Element("securityMethod", vosNamespace);
-                    es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
-                    pr.addContent(es);
+                if (protocol.getSecurityMethod() != null) {
+                    // added in VOSpace-2.1
+                    if (transfer.version >= VOS.VOSPACE_21) {
+                        Element es = new Element("securityMethod", vosNamespace);
+                        es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
+                        pr.addContent(es);
+                    } else { 
+                        throw new UnsupportedOperationException("cannot specify securityMethod with VOSpace 2.0 service");
+                    }
                 }
                 root.addContent(pr);
             }

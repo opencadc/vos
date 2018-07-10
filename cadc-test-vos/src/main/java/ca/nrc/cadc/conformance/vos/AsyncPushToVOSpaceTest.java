@@ -140,8 +140,13 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
+            
             Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
-
+            transfer.version = VOS.VOSPACE_21; // includes securityMethod above
+            
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
 
@@ -201,8 +206,13 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
+            
             Transfer transfer = new Transfer(dataNode.sampleNodeWithLink.getUri().getURI(), Direction.pushToVoSpace, view, protocols);
-
+            transfer.version = VOS.VOSPACE_21; // includes securityMethod above
+            
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
 

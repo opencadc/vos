@@ -484,7 +484,14 @@ public abstract class NodeUtil {
         }
     }
 
-    private static Node pathToNode(Path root, Path p, VOSURI rootURI)
+    static Node pathToNode(Path root, Path p, VOSURI rootURI)
+            throws IOException, NoSuchFileException {
+        boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
+        return pathToNode(root, p, rootURI, getAttrs);
+    }
+    
+    // getAttrs == false needed in MountedContainerTest
+    static Node pathToNode(Path root, Path p, VOSURI rootURI, boolean getAttrs)
             throws IOException, NoSuchFileException {
         Node ret = null;
         VOSURI nuri = pathToURI(root, p, rootURI);
@@ -527,7 +534,7 @@ public abstract class NodeUtil {
             ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
         }
 
-        if (!attrs.isSymbolicLink()) {
+        if (getAttrs && !attrs.isSymbolicLink()) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(p,
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (String propName : udv.list()) {
@@ -675,7 +682,7 @@ public abstract class NodeUtil {
         List<Node> nodes = new ArrayList<Node>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
             for (Path file : stream) {
-                log.warn("[list] visit: " + file);
+                log.debug("[list] visit: " + file);
                 Node n = pathToNode(root, file, rootURI);
                 if (!nodes.isEmpty() || start == null
                         || start.getName().equals(n.getName())) {

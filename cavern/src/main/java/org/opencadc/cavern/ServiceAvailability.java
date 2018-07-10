@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -73,21 +73,18 @@ import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import ca.nrc.cadc.vosi.AvailabilityPlugin;
 import ca.nrc.cadc.vosi.AvailabilityStatus;
-import ca.nrc.cadc.vosi.WebService;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
-
 import java.io.File;
 import java.net.URI;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
-
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
-
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.probe.FileSystemProbe;
 
@@ -95,7 +92,7 @@ import org.opencadc.cavern.probe.FileSystemProbe;
  *
  * @author pdowler
  */
-public class ServiceAvailability implements WebService {
+public class ServiceAvailability implements AvailabilityPlugin {
 
     private static final Logger log = Logger.getLogger(ServiceAvailability.class);
 
@@ -110,6 +107,12 @@ public class ServiceAvailability implements WebService {
     public ServiceAvailability() {
     }
 
+    @Override
+    public void setAppName(String string) {
+        //no-op
+    }
+    
+    @Override
     public AvailabilityStatus getStatus() {
         boolean isGood = true;
         String note = "service is accepting requests";
@@ -168,6 +171,7 @@ public class ServiceAvailability implements WebService {
         return new AvailabilityStatus(isGood, null, null, null, note);
     }
 
+    @Override
     public void setState(String state) {
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
@@ -200,5 +204,4 @@ public class ServiceAvailability implements WebService {
         }
         return ret;
     }
-
 }

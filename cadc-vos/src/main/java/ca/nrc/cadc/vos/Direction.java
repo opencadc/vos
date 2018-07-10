@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -83,13 +83,15 @@ public class Direction
     public static final String pullToVoSpaceValue = "pullToVoSpace";
     public static final String pushFromVoSpaceValue = "pushFromVoSpace";
     public static final String pullFromVoSpaceValue = "pullFromVoSpace";
-
+    
     // predefined directions
     public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
     public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
     public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
     public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
 
+    public static final Direction BIDIRECTIONAL = new Direction("ivo://cadc.nrc.ca/vospace#biDirectional");
+    
     private String value;
 
     /**

@@ -68,10 +68,12 @@
 package org.opencadc.cavern;
 
 
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -96,20 +98,60 @@ public final class TestActions {
     private TestActions() { 
     }
     
+    static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
+
+        VOSpaceClient vos;
+        Transfer trans;
+        boolean run;
+
+        CreateTransferAction(VOSpaceClient vos, Transfer trans, boolean run) {
+            this.vos = vos;
+            this.trans = trans;
+            this.run = run;
+        }
+
+        @Override
+        public ClientTransfer run() throws Exception {
+            ClientTransfer ct = vos.createTransfer(trans);
+            if (run) {
+                ct.run();
+            }
+            return ct;
+        }
+
+    }
+    
     static class CreateNodeAction implements PrivilegedExceptionAction<Node>
     {
         VOSpaceClient vos;
         Node node;
+        boolean checkIfExists = false;
 
         CreateNodeAction(VOSpaceClient vos, Node node)
         {
             this.vos = vos;
             this.node = node;
         }
+        
+        CreateNodeAction(VOSpaceClient vos, Node node, boolean createIfExists)
+        {
+            this.vos = vos;
+            this.node = node;
+            this.checkIfExists = createIfExists;
+        }
+        
         public Node run() throws Exception
         {
             try
             {
+                if (checkIfExists) {
+                    try {
+                        Node cur = vos.getNode(node.getUri().getPath());
+                        return cur;
+                    } catch (NodeNotFoundException ignore) {
+                        log.debug("not found: " + node.getUri() + "... creating");
+                    }
+                }
                 return vos.createNode(node);
             }
             catch (Exception ex) {
@@ -195,9 +237,17 @@ public final class TestActions {
         {
             View view = new View(new URI(VOS.VIEW_DEFAULT));
             List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            
+            // https nut no cert: presigned
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); 
+            
+            // https with client cert: in case broad SSL config always requires certs
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
 
             Transfer transfer = new Transfer(uri.getURI(), Direction.pushToVoSpace, view, protocols);
+            transfer.version = VOS.VOSPACE_21; // needed to write securityMethod in xml
             ClientTransfer clientTransfer = vos.createTransfer(transfer);
 
             clientTransfer.setFile(file);
