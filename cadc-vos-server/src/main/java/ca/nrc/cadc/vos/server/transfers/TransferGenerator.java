@@ -88,10 +88,13 @@ public interface TransferGenerator {
     /**
      * Request a list of endpoints for the given transfer request information.
      *
-     * This method returns a list of URLs to handle the case where the
-     * storage system has multiple copies of a file or multiple locations
-     * in which a file can be saved. Returning only one URL in the list
-     * is a perfectly normal response though.
+     * This method returns a list of endpoints and thus supports the case where 
+     * the storage system has multiple copies of a file or multiple locations
+     * in which a file can be stored or retrieved from. Implementations are also
+     * responsible for filtering out unsupported  protocol/securityMethod combinations
+     * and can sort the result list in order of preference (since clients should
+     * try the endpoints in order until one works). Returning only one endpoint 
+     * in the list is a perfectly normal response.
      *
      * @param target The target data node
      * @param transfer The transfer object with requested protocol(s)
