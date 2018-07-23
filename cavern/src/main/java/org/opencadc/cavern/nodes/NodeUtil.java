@@ -75,7 +75,6 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -84,6 +83,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -218,6 +218,7 @@ public abstract class NodeUtil {
             setPosixOwnerGroup(root, ret, owner, group);
             setNodeProperties(ret, node);
         } catch (IOException ex) {
+            log.debug("CREATE FAIL", ex);
             Files.delete(ret);
             throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
                     + " " + node.getUri(), ex);
@@ -245,7 +246,15 @@ public abstract class NodeUtil {
             for (NodeProperty prop : node.getProperties()) {
                 if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
                     if (prop.isMarkedForDeletion()) {
-                        udv.delete(prop.getPropertyURI());
+                        try {
+                            udv.delete(prop.getPropertyURI());
+                        } catch (FileSystemException ex) {
+                            if (ex.getMessage().contains("No data available")) {
+                                log.debug("ignore: attempt to delete attribute that does not exist");
+                            } else {
+                                throw ex;
+                            }
+                        }
                     } else {
                         setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
                     }
@@ -375,9 +384,11 @@ public abstract class NodeUtil {
 
     private static void setAttribute(UserDefinedFileAttributeView v, String name, String value) throws IOException {
         log.debug("setAttribute: " + name + " = " + value);
-        value = value.trim();
-        ByteBuffer buf = ByteBuffer.wrap(value.getBytes(Charset.forName("UTF-8")));
-        v.write(name, buf);
+        if (value != null) {
+            value = value.trim();
+            ByteBuffer buf = ByteBuffer.wrap(value.getBytes(Charset.forName("UTF-8")));
+            v.write(name, buf);
+        } // else: do nothing
     }
 
     private static String getAttribute(UserDefinedFileAttributeView v, String name) throws IOException {
