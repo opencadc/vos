@@ -496,6 +496,11 @@ public class ClientTransfer implements Runnable
         {
             throw new IllegalArgumentException("No endpoint found");
         }
+        
+        if (localFile == null && inWrapper == null) {
+            throw new IllegalStateException("cannot perform download without a File or InputStreamStreamWrapper");
+        }
+        
         HttpDownload firstDownload = null;
         for (URL url : urls)
         {
