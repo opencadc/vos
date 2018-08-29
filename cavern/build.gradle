@@ -57,7 +57,7 @@ dependencies {
     compile 'org.opencadc:cadc-cdp:1.+'
     compile 'org.opencadc:cadc-access-control:[1.1.1,)'
     compile 'org.opencadc:cadc-access-control-identity:[1.0.3,)'
-    compile 'org.opencadc:cadc-vos:[1.1.1,)'
+    compile 'org.opencadc:cadc-vos:[1.1.2,)'
     compile 'org.opencadc:cadc-vos-server:[1.1,)'
     //compile 'org.opencadc:cadc-wcs:1.+'
     compile 'org.opencadc:cadc-dali:1.+'
