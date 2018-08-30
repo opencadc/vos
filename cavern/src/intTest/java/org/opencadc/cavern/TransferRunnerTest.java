@@ -96,6 +96,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
@@ -117,7 +118,7 @@ public class TransferRunnerTest {
 
     private static VOSURI nodeURI;
     
-    private static final String fileData = "abc";
+    private static final String FILE_DATA = "abc";
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
@@ -157,7 +158,7 @@ public class TransferRunnerTest {
             final ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             trans.setOutputStreamWrapper(new OutputStreamWrapper() {
                 public void write(OutputStream out) throws IOException {
-                    out.write(fileData.getBytes("UTF-8"));
+                    out.write(FILE_DATA.getBytes("UTF-8"));
                 }});
             Subject.doAs(s, new PrivilegedExceptionAction<Object>() {
                 public Object run() throws Exception {
@@ -247,13 +248,6 @@ public class TransferRunnerTest {
             Assert.assertFalse("token", plist.contains(token));
             Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
             
-            // check the file content
-            trans.setInputStreamWrapper(new InputStreamWrapper() {
-                public void read(InputStream inputStream) throws IOException {
-                    byte[] buf = new byte[100];
-                    Assert.assertEquals(3, inputStream.read(buf, 0, 100));
-                }});
-            trans.runTransfer();
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -302,13 +296,16 @@ public class TransferRunnerTest {
             }
             
             // check the file content
-            trans.setInputStreamWrapper(new InputStreamWrapper() {
-                public void read(InputStream inputStream) throws IOException {
-                    byte[] buf = new byte[100];
-                    Assert.assertEquals(3, inputStream.read(buf, 0, 100));
-                }});
+            final byte[] buf = new byte[100];
+            TestWrapper tw = new TestWrapper(buf);
+            trans.setInputStreamWrapper(tw);
             trans.runTransfer();
-
+            Assert.assertTrue(trans.getThrowable() == null);
+            int bytesRead = tw.size;
+            Assert.assertEquals(FILE_DATA.length(), bytesRead);
+            String result = new String(Arrays.copyOfRange(buf, 0, bytesRead));
+            Assert.assertEquals(FILE_DATA, result);
+            
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -394,4 +391,18 @@ public class TransferRunnerTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    class TestWrapper implements InputStreamWrapper {
+        
+        int size;
+        byte[] buf;
+        
+        TestWrapper(byte[] buf) {
+            this.buf = buf;
+        }
+        public void read(InputStream inputStream) throws IOException {
+            size = inputStream.read(buf, 0, 100);
+        }
+    }
+    
 }
