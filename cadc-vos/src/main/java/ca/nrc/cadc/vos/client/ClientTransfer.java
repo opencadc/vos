@@ -90,6 +90,7 @@ import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.InputStreamWrapper;
 import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -115,7 +116,8 @@ public class ClientTransfer implements Runnable
     private boolean schemaValidation;
 
     private File localFile;
-    private OutputStreamWrapper wrapper;
+    private OutputStreamWrapper outWrapper;
+    private InputStreamWrapper inWrapper;
     private List<HttpRequestProperty> httpRequestProperties;
     private int maxRetries;
     private TransferListener transListener;
@@ -277,10 +279,20 @@ public class ClientTransfer implements Runnable
     {
         if (Direction.pushToVoSpace.equals(transfer.getDirection()))
         {
-            this.wrapper = wrapper;
+            this.outWrapper = wrapper;
             return;
         }
         throw new IllegalStateException("cannot specify an OutputStreamWrapper for transfer direction " + transfer.getDirection());
+    }
+    
+    public void setInputStreamWrapper(InputStreamWrapper wrapper)
+    {
+        if (Direction.pullFromVoSpace.equals(transfer.getDirection()))
+        {
+            this.inWrapper = wrapper;
+            return;
+        }
+        throw new IllegalStateException("cannot specify an InputStreamWrapper for transfer direction " + transfer.getDirection());
     }
 
     /**
@@ -436,14 +448,14 @@ public class ClientTransfer implements Runnable
         URL url = findPutEndpoint();
         log.debug(url);
 
-        if (localFile == null && wrapper == null)
+        if (localFile == null && outWrapper == null)
             throw new IllegalStateException("cannot perform upload without a File or OutputStreamWrapper");
 
         HttpUpload upload = null;
         if (localFile != null)
             upload = new HttpUpload(localFile, url);
         else
-            upload = new HttpUpload(wrapper, url);
+            upload = new HttpUpload(outWrapper, url);
 
         log.debug("calling HttpUpload.setRequestProperties with " + httpRequestProperties.size() + " props");
         upload.setRequestProperties(httpRequestProperties);
@@ -484,15 +496,23 @@ public class ClientTransfer implements Runnable
         {
             throw new IllegalArgumentException("No endpoint found");
         }
+        
+        if (localFile == null && inWrapper == null) {
+            throw new IllegalStateException("cannot perform download without a File or InputStreamStreamWrapper");
+        }
+        
         HttpDownload firstDownload = null;
-        if (localFile == null)
-            throw new IllegalStateException(
-                    "cannot perform download without a local File");
         for (URL url : urls)
         {
             log.debug(url);
 
-            HttpDownload download = new HttpDownload(url, localFile);
+            HttpDownload download = null;
+            if (localFile != null) {
+                download = new HttpDownload(url, localFile);
+            } else {
+                download = new HttpDownload(url, inWrapper);
+            }
+
             if (firstDownload == null)
             {
                 firstDownload = download;
