@@ -146,216 +146,294 @@ public class JsonNodeWriterTest
                                           "    \"vos:properties\" : {\n" +
                                           "      \"$\" : [\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-                                          "          \"@readOnly\" : \"true\",\n" +
-                                          "          \"$\" : \"-89323123449\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
+                                          "            \"@readOnly\" : \"true\",\n" +
+                                          "            \"$\" : \"-89323123449\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-                                          "          \"@readOnly\" : \"true\",\n" +
-                                          "          \"$\" : \"2016-01-20T15:14:57.443\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
+                                          "            \"@readOnly\" : \"true\",\n" +
+                                          "            \"$\" : \"2016-01-20T15:14:57.443\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"false\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"false\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"CN=cadctest_007,OU=cadc,O=hia,C=ca\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"CN=cadctest_007,OU=cadc,O=hia,C=ca\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/OSSOS#O13AO_object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"0\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/OSSOS#O13AO_object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"0\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#1-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"20\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#1-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"20\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#13AE-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"0C\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#13AE-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"0C\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#13AO-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"16R\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#13AO-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"16R\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#3-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"3YU\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#3-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"3YU\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#39AO-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"01\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#39AO-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"01\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#4-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"FG\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#4-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"FG\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#5-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"RZ\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#5-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"RZ\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#H-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"1D\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#H-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"1D\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#L-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"07\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#L-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"07\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"05\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"05\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"0A\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"0A\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AE-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"4Q\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AE-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"4Q\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AE-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"5O\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AE-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"5O\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AO-object_count\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"10C\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AO-object_count\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"10C\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AO-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"0E\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#O13AO-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"0E\"\n" +
+                                          "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"ivo://canfar.uvic.ca/ossos#P-object_count-DRYRUN\",\n" +
-                                          "          \"@readOnly\" : \"false\",\n" +
-                                          "          \"$\" : \"06\"\n" +
+                                          "          \"property\" : {\n" +
+                                          "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#P-object_count-DRYRUN\",\n" +
+                                          "            \"@readOnly\" : \"false\",\n" +
+                                          "            \"$\" : \"06\"\n" +
+                                          "          }\n" +
                                           "        }\n" +
                                           "      ]\n" +
                                           "    },\n" +
                                           "    \"vos:nodes\" : {\n" +
                                           "      \"$\" : [\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n" +
-                                          "          \"@xsi:type\" : \"vos:ContainerNode\",\n" +
-                                          "          \"vos:properties\" : {\n" +
-                                          "            \"$\" : [\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-                                          "                \"@readOnly\" : \"true\",\n" +
-                                          "                \"$\" : \"30388581\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-                                          "                \"@readOnly\" : \"true\",\n" +
-                                          "                \"$\" : \"2015-12-17T17:44:17.897\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"false\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"true\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"CN=mtb55_5be,OU=cadc,O=hia,C=ca\"\n" +
-                                          "              }\n" +
-                                          "            ]\n" +
-                                          "          },\n" +
-                                          "          \"vos:nodes\" : {\n" +
-                                          "            \"$\" : [\n" +
-                                          "            ]\n" +
+                                          "          \"node\" : {\n" +
+                                          "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n" +
+                                          "            \"@xsi:type\" : \"vos:ContainerNode\",\n" +
+                                          "            \"vos:properties\" : {\n" +
+                                          "              \"$\" : [\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
+                                          "                    \"@readOnly\" : \"true\",\n" +
+                                          "                    \"$\" : \"30388581\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
+                                          "                    \"@readOnly\" : \"true\",\n" +
+                                          "                    \"$\" : \"2015-12-17T17:44:17.897\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"false\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"true\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"CN=mtb55_5be,OU=cadc,O=hia,C=ca\"\n" +
+                                          "                  }\n" +
+                                          "                }\n" +
+                                          "              ]\n" +
+                                          "            },\n" +
+                                          "            \"vos:nodes\" : {\n" +
+                                          "              \"$\" : [\n" +
+                                          "              ]\n" +
+                                          "            }\n" +
                                           "          }\n" +
                                           "        },\n" +
                                           "        {\n" +
-                                          "          \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n" +
-                                          "          \"@xsi:type\" : \"vos:ContainerNode\",\n" +
-                                          "          \"vos:properties\" : {\n" +
-                                          "            \"$\" : [\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-                                          "                \"@readOnly\" : \"true\",\n" +
-                                          "                \"$\" : \"3812708\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-                                          "                \"@readOnly\" : \"true\",\n" +
-                                          "                \"$\" : \"2015-12-17T17:57:32.107\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"false\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"true\"\n" +
-                                          "              },\n" +
-                                          "              {\n" +
-                                          "                \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-                                          "                \"@readOnly\" : \"false\",\n" +
-                                          "                \"$\" : \"CN=mtb55_5be,OU=cadc,O=hia,C=ca\"\n" +
-                                          "              }\n" +
-                                          "            ]\n" +
-                                          "          },\n" +
-                                          "          \"vos:nodes\" : {\n" +
-                                          "            \"$\" : [\n" +
-                                          "            ]\n" +
+                                          "          \"node\" : {\n" +
+                                          "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n" +
+                                          "            \"@xsi:type\" : \"vos:ContainerNode\",\n" +
+                                          "            \"vos:properties\" : {\n" +
+                                          "              \"$\" : [\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
+                                          "                    \"@readOnly\" : \"true\",\n" +
+                                          "                    \"$\" : \"3812708\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
+                                          "                    \"@readOnly\" : \"true\",\n" +
+                                          "                    \"$\" : \"2015-12-17T17:57:32.107\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Worker ivo://cadc.nrc.ca/gms#OSSOS-Admin\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"false\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"true\"\n" +
+                                          "                  }\n" +
+                                          "                },\n" +
+                                          "                {\n" +
+                                          "                  \"property\" : {\n" +
+                                          "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
+                                          "                    \"@readOnly\" : \"false\",\n" +
+                                          "                    \"$\" : \"CN=mtb55_5be,OU=cadc,O=hia,C=ca\"\n" +
+                                          "                  }\n" +
+                                          "                }\n" +
+                                          "              ]\n" +
+                                          "            },\n" +
+                                          "            \"vos:nodes\" : {\n" +
+                                          "              \"$\" : [\n" +
+                                          "              ]\n" +
+                                          "            }\n" +
                                           "          }\n" +
                                           "        }\n" +
                                           "      ]\n" +

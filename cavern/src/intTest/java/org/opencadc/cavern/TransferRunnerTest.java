@@ -71,6 +71,8 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.InputStreamWrapper;
+import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
@@ -88,9 +90,13 @@ import ca.nrc.cadc.vos.client.ClientTransfer;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
@@ -111,6 +117,8 @@ public class TransferRunnerTest {
     private static File SSL_CERT;
 
     private static VOSURI nodeURI;
+    
+    private static final String FILE_DATA = "abc";
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
@@ -132,6 +140,37 @@ public class TransferRunnerTest {
             nodeURI = new VOSURI(new URI(uri));
         } else {
             throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
+        }
+        
+        // upload the test file to ensure it's there for download
+        try {
+            Subject s = SSLUtil.createSubject(SSL_CERT);
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(basicTLS);
+            VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
+            DataNode data = new DataNode(new VOSURI(new URI(nodeURI + "/testFile.txt")));
+            log.debug("uploading: " + data.getUri().getURI().toASCIIString());
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pushToVoSpace, protocols);
+            t.version = VOS.VOSPACE_21;
+            
+            final ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
+            trans.setOutputStreamWrapper(new OutputStreamWrapper() {
+                public void write(OutputStream out) throws IOException {
+                    out.write(FILE_DATA.getBytes("UTF-8"));
+                }});
+            Subject.doAs(s, new PrivilegedExceptionAction<Object>() {
+                public Object run() throws Exception {
+                    trans.runTransfer();
+                    return null;
+                }});
+            if (trans.getThrowable() != null) {
+                throw trans.getThrowable();
+            }
+        } catch (Throwable t) {
+            log.error("unexpected", t);
+            Assert.fail("Failed to upload test file in test setup: " + t.getMessage());
         }
     }
 
@@ -208,6 +247,7 @@ public class TransferRunnerTest {
             Assert.assertFalse("cookieTLS", plist.contains(cookieTLS));
             Assert.assertFalse("token", plist.contains(token));
             Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
+            
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -254,7 +294,18 @@ public class TransferRunnerTest {
                 }
                 Assert.assertTrue("one or more endpoints for " + reqP.getUri(), (num > 0));
             }
-
+            
+            // check the file content
+            final byte[] buf = new byte[100];
+            TestWrapper tw = new TestWrapper(buf);
+            trans.setInputStreamWrapper(tw);
+            trans.runTransfer();
+            Assert.assertTrue(trans.getThrowable() == null);
+            int bytesRead = tw.size;
+            Assert.assertEquals(FILE_DATA.length(), bytesRead);
+            String result = new String(Arrays.copyOfRange(buf, 0, bytesRead));
+            Assert.assertEquals(FILE_DATA, result);
+            
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -340,4 +391,18 @@ public class TransferRunnerTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    class TestWrapper implements InputStreamWrapper {
+        
+        int size;
+        byte[] buf;
+        
+        TestWrapper(byte[] buf) {
+            this.buf = buf;
+        }
+        public void read(InputStream inputStream) throws IOException {
+            size = inputStream.read(buf, 0, 100);
+        }
+    }
+    
 }
