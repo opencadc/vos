@@ -127,7 +127,7 @@ public class ClientRecursiveSetNode implements Runnable
      * @param monitor monitor the job until complete (true) or just start
      *  it and return (false)
      */
-    ClientRecursiveSetNode(URL jobURL, Node node, boolean schemaValidation)
+    public ClientRecursiveSetNode(URL jobURL, Node node, boolean schemaValidation)
     {
         this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
         this.jobURL = jobURL;
