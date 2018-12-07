@@ -235,6 +235,9 @@ public class VOS
      * Standard Node Properties defined by the CADC
      */
 
+    // Pass information to the service, e.g. runid = "TEST" means the service call is a test
+    public static final String PROPERTY_URI_RUNID = "ivo://ivoa.net/vospace/core#runid";
+
     // The size of the resource
     public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
 
