@@ -71,7 +71,7 @@ import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.SyncOutput;
+import ca.nrc.cadc.rest.SyncOutput;
 import ca.nrc.cadc.uws.util.JobLogInfo;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkingException;

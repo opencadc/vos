@@ -237,7 +237,7 @@ public class TransferDetailsServlet extends HttpServlet
 
             try
             {
-                Job job = jobManager.get(jobID);
+                Job job = jobManager.get(null, jobID); // no support for multiple child services
 
                 JobInfo jobInfo = job.getJobInfo();
 

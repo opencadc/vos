@@ -69,26 +69,23 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.restlet.RestletPrincipalExtractor;
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 import java.security.Principal;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
 import org.restlet.data.Method;
 import org.restlet.resource.ServerResource;
-
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
-import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 public abstract class BaseResource extends ServerResource
 {
