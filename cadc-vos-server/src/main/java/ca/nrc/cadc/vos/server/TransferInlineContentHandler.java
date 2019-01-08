@@ -83,13 +83,14 @@ import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.web.InlineContentException;
 import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 
-public class TransferInlineContentHandler implements InlineContentHandler
+public class TransferInlineContentHandler implements UWSInlineContentHandler
 {
     private static Logger log = Logger.getLogger(TransferInlineContentHandler.class);
 
@@ -120,7 +121,7 @@ public class TransferInlineContentHandler implements InlineContentHandler
         return jobInfo;
     }
 
-    public URL accept(String name, String contentType, InputStream inputStream)
+    public Content accept(String name, String contentType, InputStream inputStream)
         throws InlineContentException, IOException
     {
         if (!contentType.equals(TEXT_XML))
@@ -147,7 +148,10 @@ public class TransferInlineContentHandler implements InlineContentHandler
         {
             throw new InlineContentException("Unable to create JobInfo from Transfer Document", e);
         }
-        return null;
+        Content content = new Content();
+        content.name = CONTENT_JOBINFO;
+        content.value = jobInfo;
+        return content;
     }
 
 }

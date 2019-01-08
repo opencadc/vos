@@ -139,7 +139,7 @@ public class TransferInlineContentHandlerTest
     {
         try
         {
-            InlineContentHandler handler = new TransferInlineContentHandler();
+            TransferInlineContentHandler handler = new TransferInlineContentHandler();
 
             TransferWriter writer = new TransferWriter();
             ByteArrayOutputStream out = new ByteArrayOutputStream();

@@ -83,12 +83,13 @@ import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.web.InlineContentException;
 import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 
-public class NodeInlineContentHandler implements InlineContentHandler
+public class NodeInlineContentHandler implements UWSInlineContentHandler
 {
     private static Logger log = Logger.getLogger(NodeInlineContentHandler.class);
     
@@ -119,7 +120,7 @@ public class NodeInlineContentHandler implements InlineContentHandler
         return jobInfo;
     }
     
-    public URL accept(String name, String contentType, InputStream inputStream)
+    public Content accept(String name, String contentType, InputStream inputStream)
         throws InlineContentException, IOException
     {
         if (!contentType.equals(TEXT_XML))
@@ -146,7 +147,10 @@ public class NodeInlineContentHandler implements InlineContentHandler
         {
             throw new InlineContentException("Unable to create JobInfo from Node Document", e);
         }
-        return null;
+        Content content = new Content();
+        content.name = CONTENT_JOBINFO;
+        content.value = jobInfo;
+        return content;
     }
     
 }
