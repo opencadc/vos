@@ -99,27 +99,7 @@ public class TransferInlineContentHandler implements UWSInlineContentHandler
 
     private static final String TEXT_XML = "text/xml";
 
-    private List<Parameter> parameterList;
-    private JobInfo jobInfo;
-
     public TransferInlineContentHandler() { }
-
-    public void setParameterList(List<Parameter> parameterList)
-    {
-        this.parameterList = parameterList;
-    }
-
-    public List<Parameter> getParameterList()
-    {
-        if (parameterList == null)
-            parameterList = new ArrayList<Parameter>();
-        return parameterList;
-    }
-
-    public JobInfo getJobInfo()
-    {
-        return jobInfo;
-    }
 
     public Content accept(String name, String contentType, InputStream inputStream)
         throws InlineContentException, IOException
@@ -142,16 +122,17 @@ public class TransferInlineContentHandler implements UWSInlineContentHandler
             TransferWriter tw = new TransferWriter();
             StringWriter sw = new StringWriter();
             tw.write(transfer, sw);
-            jobInfo = new JobInfo(sw.toString(), contentType, true);
+
+            Content content = new Content();
+            content.name = CONTENT_JOBINFO;
+            content.value = new JobInfo(sw.toString(), contentType, true);;
+            return content;
         }
         catch (TransferParsingException e)
         {
             throw new InlineContentException("Unable to create JobInfo from Transfer Document", e);
         }
-        Content content = new Content();
-        content.name = CONTENT_JOBINFO;
-        content.value = jobInfo;
-        return content;
+
     }
 
 }

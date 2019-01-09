@@ -89,36 +89,16 @@ import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 
-public class NodeInlineContentHandler implements UWSInlineContentHandler
+public class RecursiveSetNodeInlineContentHandler implements UWSInlineContentHandler
 {
-    private static Logger log = Logger.getLogger(NodeInlineContentHandler.class);
+    private static Logger log = Logger.getLogger(RecursiveSetNodeInlineContentHandler.class);
     
     // 12Kb XML Doc size limit
     private static final long DOCUMENT_SIZE_MAX = 12288L;
     
     private static final String TEXT_XML = "text/xml";
 
-    private List<Parameter> parameterList;
-    private JobInfo jobInfo;
-
-    public NodeInlineContentHandler() { }
-    
-    public void setParameterList(List<Parameter> parameterList)
-    {
-        this.parameterList = parameterList;
-    }
-
-    public List<Parameter> getParameterList()
-    {
-        if (parameterList == null)
-            parameterList = new ArrayList<Parameter>();
-        return parameterList;
-    }
-
-    public JobInfo getJobInfo()
-    {
-        return jobInfo;
-    }
+    public RecursiveSetNodeInlineContentHandler() { }
     
     public Content accept(String name, String contentType, InputStream inputStream)
         throws InlineContentException, IOException
@@ -141,16 +121,17 @@ public class NodeInlineContentHandler implements UWSInlineContentHandler
             NodeWriter tw = new NodeWriter();
             StringWriter sw = new StringWriter();
             tw.write(node, sw);
-            jobInfo = new JobInfo(sw.toString(), contentType, true);
+            
+            Content content = new Content();
+            content.name = CONTENT_JOBINFO;
+            content.value = new JobInfo(sw.toString(), contentType, true);
+            return content;
         }
         catch (NodeParsingException e)
         {
             throw new InlineContentException("Unable to create JobInfo from Node Document", e);
         }
-        Content content = new Content();
-        content.name = CONTENT_JOBINFO;
-        content.value = jobInfo;
-        return content;
+
     }
     
 }

@@ -83,6 +83,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.rest.InlineContentHandler.Content;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -168,9 +169,9 @@ public class TransferInlineContentHandlerTest
             }
             catch (IOException ignore) {}
 
-            handler.accept("filename", "text/xml", in);
+            Content content = handler.accept("filename", "text/xml", in);
 
-            JobInfo jobInfo = handler.getJobInfo();
+            JobInfo jobInfo = (JobInfo) content.value;
             Assert.assertNotNull(jobInfo.getContent());
             Assert.assertEquals("text/xml", jobInfo.getContentType());
 
