@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.net.FileContent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -77,6 +78,7 @@ import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,8 +92,6 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.SSOCookieCredential;
-import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
@@ -336,7 +336,9 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             StringBuilder nodeXML = new StringBuilder();
             nodeWriter.write(node, nodeXML);
-            HttpPost httpPost = new HttpPost(url, nodeXML.toString(), "text/xml", false);
+
+            FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
+            HttpPost httpPost = new HttpPost(url, nodeContent, false);
 
             httpPost.run();
 
@@ -375,7 +377,8 @@ public class VOSpaceClient
             nodeWriter.write(node, stringWriter);
 //            URL postUrl = new URL(asyncNodePropsUrl);
 
-            HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
+            FileContent nodeContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
+            HttpPost httpPost = new HttpPost(vospaceURL, nodeContent, false);
 
             httpPost.run();
 
@@ -499,7 +502,8 @@ public class VOSpaceClient
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
 
-            HttpPost httpPost = new HttpPost(vospaceURL, stringWriter.toString(), "text/xml", false);
+            FileContent transferContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
+            HttpPost httpPost = new HttpPost(vospaceURL, transferContent, false);
 
             httpPost.run();
 
@@ -558,7 +562,8 @@ public class VOSpaceClient
                 StringWriter sw = new StringWriter();
                 writer.write(transfer, sw);
 
-                httpPost = new HttpPost(vospaceURL, sw.toString(), "text/xml", false);
+                FileContent transferContent = new FileContent(sw.toString(), "text/xml", Charset.forName("UTF-8"));
+                httpPost = new HttpPost(vospaceURL, transferContent, false);
             }
 
             httpPost.run();
