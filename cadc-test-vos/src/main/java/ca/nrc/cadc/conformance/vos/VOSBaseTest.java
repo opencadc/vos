@@ -928,7 +928,7 @@ public abstract class VOSBaseTest
         log.debug("HTTP POST: " + resourceUrl);
 
         WebRequest request = new PostMethodWebRequest(resourceUrl);
-        request.setHeaderField("Content-Type", "multipart/form-data");
+        //request.setHeaderField("Content-Type", "multipart/form-data");
         if (parameters != null)
         {
             List<String> keyList = new ArrayList<String>(parameters.keySet());
