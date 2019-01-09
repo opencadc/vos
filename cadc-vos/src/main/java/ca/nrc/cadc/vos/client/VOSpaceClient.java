@@ -336,7 +336,7 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             StringBuilder nodeXML = new StringBuilder();
             nodeWriter.write(node, nodeXML);
-            HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
+            HttpPost httpPost = new HttpPost(url, nodeXML.toString(), "text/xml", false);
 
             httpPost.run();
 
