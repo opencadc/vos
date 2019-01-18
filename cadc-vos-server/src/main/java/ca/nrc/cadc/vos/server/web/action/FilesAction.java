@@ -67,6 +67,7 @@
 
 package ca.nrc.cadc.vos.server.web.action;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
 
@@ -84,6 +85,7 @@ import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
@@ -110,11 +112,8 @@ public class FilesAction extends RestAction {
   
         String path = syncInput.getPath();
         log.debug("path: " + path);
-        PrintWriter writer = new PrintWriter(syncOutput.getOutputStream());
         if (path == null) {
-            // not found / no root listing
-            writer.write("Not Found");
-            syncOutput.setCode(404);
+            sendError(404, "Not Found");
             return;
         }
         
@@ -128,12 +127,18 @@ public class FilesAction extends RestAction {
         authorizer.setNodePersistence(np);
         PathResolver resolver = new PathResolver(np, false);
         
-        Node node = resolver.resolveWithReadPermissionCheck(vosURI, authorizer, true);
+        Node node = null;
+        try {
+            node = resolver.resolveWithReadPermissionCheck(vosURI, authorizer, true);
+        } catch (NodeNotFoundException e) {
+            sendError(404, "Not Found");
+            return;
+        }
+        
         log.debug("node: " + node);
         // only data nodes (link nodes resolved above)
         if (!(node instanceof DataNode)) {
-            writer.write("Not a DataNode");
-            syncOutput.setCode(400);
+            sendError(400, "Not a DataNode");
             return;
         }
         
@@ -179,6 +184,12 @@ public class FilesAction extends RestAction {
         syncOutput.setHeader("Location", sb.toString());
         syncOutput.setCode(303);
         
+    }
+    
+    private void sendError(int code, String msg) throws IOException {
+        syncOutput.setCode(code);
+        syncOutput.setHeader("Content-Type", "text/plain");
+        syncOutput.getOutputStream().write(msg.getBytes());
     }
 
 }
