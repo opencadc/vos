@@ -95,6 +95,7 @@ public class Transfer
     private Direction direction;
     private View view;
     private Long contentLength;
+    private String remoteIP;
     private List<Protocol> protocols;
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
@@ -215,6 +216,14 @@ public class Transfer
     public void setContentLength(Long contentLength)
     {
         this.contentLength = contentLength;
+    }
+    
+    public String getRemoteIP() {
+        return remoteIP;
+    }
+    
+    public void setRemoteIP(String remoteIP) {
+        this.remoteIP = remoteIP;
     }
 
     /**

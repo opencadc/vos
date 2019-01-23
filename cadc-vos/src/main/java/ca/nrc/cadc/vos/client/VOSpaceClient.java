@@ -566,6 +566,9 @@ public class VOSpaceClient
                 httpPost = new HttpPost(vospaceURL, transferContent, false);
             }
 
+            if (transfer.getRemoteIP() != null) {
+                httpPost.setRequestProperty(NetUtil.FORWARDED_FOR_CLIENT_IP_HEADER, transfer.getRemoteIP());
+            }
             httpPost.run();
 
             if (httpPost.getThrowable() != null)
