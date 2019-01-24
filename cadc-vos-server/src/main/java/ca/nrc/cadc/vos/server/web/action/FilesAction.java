@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2019.                            (c) 2019.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -94,6 +94,14 @@ import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
+/**
+ * This class issues synctrans download URLs to data nodes.  It is a convenience
+ * endpoint for predictable file downloading.  It is not currently part of the
+ * VOSpace (2.1) specification but could be considered in future versions.
+ * 
+ * @author majorb
+ *
+ */
 public class FilesAction extends RestAction {
     
     protected static Logger log = Logger.getLogger(FilesAction.class);
