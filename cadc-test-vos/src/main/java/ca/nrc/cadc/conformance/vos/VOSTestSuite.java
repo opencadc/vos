@@ -114,7 +114,7 @@ public class VOSTestSuite
     public static final String baseTestNodeName;
     public static String testSuiteNodeName;
     public static String testSuiteLinkNodeName;
-    public static String userN
+    public static String userName;
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);

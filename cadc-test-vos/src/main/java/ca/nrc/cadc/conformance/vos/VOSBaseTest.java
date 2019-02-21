@@ -1050,10 +1050,6 @@ public abstract class VOSBaseTest
 
         File crt = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", VOSTestSuite.class);
         SSLUtil.initSSL(crt);
-        // Does this:
-//        X509CertificateChain chain = readPemCertificateAndKey(pemFile);
-//        SSLSocketFactory sf = getSocketFactory(chain);
-//        HttpsURLConnection.setDefaultSSLSocketFactory(sf);
         log.info("VOSBaseTest.setUp(): set up SSL cert. ");
     }
 
