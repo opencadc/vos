@@ -75,6 +75,7 @@ import java.util.Calendar;
 import java.util.UUID;
 
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -113,22 +114,10 @@ public class VOSTestSuite
     public static final String baseTestNodeName;
     public static String testSuiteNodeName;
     public static String testSuiteLinkNodeName;
-    public static String userName;
-
-
+    public static String userN
     static
     {
-        try
-        {
-            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
-
-            File crt = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", VOSTestSuite.class);
-            SSLUtil.initSSL(crt);
-        }
-        catch(Throwable t)
-        {
-            throw new RuntimeException("failed to init SSL", t);
-        }
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
 
         try
         {

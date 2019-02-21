@@ -71,7 +71,11 @@ package ca.nrc.cadc.conformance.vos;
 
 import static org.junit.Assert.assertNotNull;
 
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.util.FileUtil;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -84,7 +88,11 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.Before;
 import org.xml.sax.SAXException;
 
 import com.meterware.httpunit.GetMethodWebRequest;
@@ -1031,6 +1039,30 @@ public abstract class VOSBaseTest
         RegistryClient rc = new RegistryClient();
         URL serviceURL = rc.getServiceURL(resourceIdentifier, standard, AuthMethod.CERT);
         return serviceURL.toExternalForm();
+    }
+
+    private SSLSocketFactory originalSSLState;
+
+    @Before
+    public void setUp() throws Exception
+    {
+        originalSSLState = HttpsURLConnection.getDefaultSSLSocketFactory();
+
+        File crt = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", VOSTestSuite.class);
+        SSLUtil.initSSL(crt);
+        // Does this:
+//        X509CertificateChain chain = readPemCertificateAndKey(pemFile);
+//        SSLSocketFactory sf = getSocketFactory(chain);
+//        HttpsURLConnection.setDefaultSSLSocketFactory(sf);
+        log.info("VOSBaseTest.setUp(): set up SSL cert. ");
+    }
+
+    @After
+    public void tearDown()
+    {
+        // Revert the SSL State after test is done
+        HttpsURLConnection.setDefaultSSLSocketFactory(originalSSLState);
+        log.info("VOSBaseTest.tearDown() done");
     }
 
 }
