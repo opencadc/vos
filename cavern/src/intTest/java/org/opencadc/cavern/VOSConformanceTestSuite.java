@@ -20,7 +20,6 @@ import ca.nrc.cadc.conformance.vos.SetLinkNodeTest;
 import ca.nrc.cadc.conformance.vos.SyncPullFromVOSpaceTest;
 import ca.nrc.cadc.conformance.vos.SyncPushToVOSpaceTest;
 import ca.nrc.cadc.util.Log4jInit;
-
 import org.apache.log4j.Level;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -50,7 +49,6 @@ import org.junit.runners.Suite;
     
     SyncPullFromVOSpaceTest.class,
     SyncPushToVOSpaceTest.class,
-
     AsyncPullFromVOSpaceTest.class,
     AsyncPushToVOSpaceTest.class
 })
@@ -59,7 +57,7 @@ public class VOSConformanceTestSuite
 {
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 }

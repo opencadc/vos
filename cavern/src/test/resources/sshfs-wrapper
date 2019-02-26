@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cat $A/etc/cadcregtest1.pass | sshfs $@
+

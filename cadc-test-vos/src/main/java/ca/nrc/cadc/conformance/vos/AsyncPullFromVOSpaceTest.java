@@ -138,8 +138,13 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
+            
             Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
-
+            transfer.version = VOS.VOSPACE_21; // includes securityMethod above
+            
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
 
@@ -148,14 +153,26 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                try
-                {
-                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_GET));
+                boolean foundHTTP = false;
+                boolean foundHTTPS = false;
+                for (Protocol proto : result.transfer.getProtocols()) {
+                    String ep = proto.getEndpoint();
+                    log.info("found: " + proto.getUri() + " -> " + ep);
+                    if (ep != null) {
+                        try
+                        {
+                            new URL(ep);
+                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
+                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                        }
+                        catch (MalformedURLException e)
+                        {
+                            fail("Invalid endpoint URL: " + ep);
+                        }
+                    }
                 }
-                catch (MalformedURLException e)
-                {
-                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_GET));
-                }
+                Assert.assertTrue("found http", foundHTTP);
+                Assert.assertTrue("found https", foundHTTPS);
             }
             else
             {
@@ -199,8 +216,13 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
+            
             Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
-
+            transfer.version = VOS.VOSPACE_21; // includes securityMethod above
+            
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
 
@@ -209,14 +231,26 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                try
-                {
-                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                boolean foundHTTP = false;
+                boolean foundHTTPS = false;
+                for (Protocol proto : result.transfer.getProtocols()) {
+                    String ep = proto.getEndpoint();
+                    log.info("found: " + proto.getUri() + " -> " + ep);
+                    if (ep != null) {
+                        try
+                        {
+                            new URL(ep);
+                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
+                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                        }
+                        catch (MalformedURLException e)
+                        {
+                            fail("Invalid endpoint URL: " + ep);
+                        }
+                    }
                 }
-                catch (MalformedURLException e)
-                {
-                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
-                }
+                Assert.assertTrue("found http", foundHTTP);
+                Assert.assertTrue("found https", foundHTTPS);
             }
             else
             {
@@ -260,8 +294,13 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            protocols.add(p);
+            
             Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
-
+            transfer.version = VOS.VOSPACE_21; // includes securityMethod above
+            
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
 
@@ -270,14 +309,26 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                try
-                {
-                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                boolean foundHTTP = false;
+                boolean foundHTTPS = false;
+                for (Protocol proto : result.transfer.getProtocols()) {
+                    String ep = proto.getEndpoint();
+                    log.info("found: " + proto.getUri() + " -> " + ep);
+                    if (ep != null) {
+                        try
+                        {
+                            new URL(ep);
+                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
+                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                        }
+                        catch (MalformedURLException e)
+                        {
+                            fail("Invalid endpoint URL: " + ep);
+                        }
+                    }
                 }
-                catch (MalformedURLException e)
-                {
-                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
-                }
+                Assert.assertTrue("found http", foundHTTP);
+                Assert.assertTrue("found https", foundHTTPS);
             }
             else
             {

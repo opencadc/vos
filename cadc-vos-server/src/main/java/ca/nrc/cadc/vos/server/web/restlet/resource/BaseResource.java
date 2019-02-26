@@ -69,29 +69,23 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.restlet.RestletPrincipalExtractor;
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 import java.security.Principal;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
 import org.restlet.data.Method;
-import org.restlet.data.Parameter;
 import org.restlet.resource.ServerResource;
-
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.uws.util.RestletWebUtil;
-import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
-import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 public abstract class BaseResource extends ServerResource
 {
@@ -146,16 +140,10 @@ public abstract class BaseResource extends ServerResource
     {
         return getRequest().getResourceRef().getPath();
     }
-
-    /**
-     * Is this used?  This has been updated to check for the X-Forwarded-For header primarily, and then fallback to
-     * the immediate remote address (last known).
-     *
-     * @return      String client address IP.
-     */
+    
     protected String getRemoteAddr()
     {
-        return RestletWebUtil.getClientIP(getRequest());
+        return getRequest().getClientInfo().getAddress();
     }
     
     protected String getErrorMessage(NodeFault nodeFault)

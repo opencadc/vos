@@ -1,9 +1,10 @@
+
 /*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2009.                            (c) 2009.
+ *  (c) 2018.                            (c) 2018.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,77 +63,30 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
- *  $Revision: 4 $
  *
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.uws.util;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import org.restlet.Request;
+import org.restlet.data.Form;
+import org.restlet.data.Parameter;
+import ca.nrc.cadc.net.NetUtil;
 
-import org.apache.log4j.Logger;
+public class RestletWebUtil {
 
-import ca.nrc.cadc.io.ByteCountInputStream;
-import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.web.InlineContentException;
-import ca.nrc.cadc.uws.web.InlineContentHandler;
-import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.VOSURI;
-
-public class TransferInlineContentHandler implements UWSInlineContentHandler
-{
-    private static Logger log = Logger.getLogger(TransferInlineContentHandler.class);
-
-    // 6Kb XML Doc size limit
-    private static final long DOCUMENT_SIZE_MAX = 6144L;
-
-    private static final String TEXT_XML = "text/xml";
-
-    public TransferInlineContentHandler() { }
-
-    public Content accept(String name, String contentType, InputStream inputStream)
-        throws InlineContentException, IOException
-    {
-        if (!contentType.equals(TEXT_XML))
-            throw new IllegalArgumentException("Transfer document expected Content-Type is " + TEXT_XML + " not " + contentType);
-
-        if (inputStream == null)
-            throw new IOException("The InputStream is closed");
-
-        // wrap the input stream in a byte counter to limit bytes read
-        ByteCountInputStream sizeLimitInputStream =
-            new ByteCountInputStream(inputStream, DOCUMENT_SIZE_MAX);
-
-        try
-        {
-            TransferReader reader = new TransferReader(true);
-            Transfer transfer = reader.read(sizeLimitInputStream, VOSURI.SCHEME);
-            log.debug("Transfer: read " + sizeLimitInputStream.getByteCount() + " bytes.");
-            TransferWriter tw = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            tw.write(transfer, sw);
-
-            Content content = new Content();
-            content.name = CONTENT_JOBINFO;
-            content.value = new JobInfo(sw.toString(), contentType, true);;
-            return content;
-        }
-        catch (TransferParsingException e)
-        {
-            throw new InlineContentException("Unable to create JobInfo from Transfer Document", e);
-        }
-
+    /**
+     * Restlet request constructor that taken a path override parameters.
+     * <p>
+     *
+     * @param request The Request object.
+     */
+    public static String getClientIP(final Request request) {
+        final Form requestHeaders = (Form) request.getAttributes().get("org.restlet.http.headers");
+        final Parameter forwardedClientIP = (requestHeaders == null)
+            ? null : requestHeaders.getFirst(NetUtil.FORWARDED_FOR_CLIENT_IP_HEADER);
+        return (forwardedClientIP == null)
+            ? request.getClientInfo().getAddress() : forwardedClientIP.getValue().split(",")[0];
     }
-
 }

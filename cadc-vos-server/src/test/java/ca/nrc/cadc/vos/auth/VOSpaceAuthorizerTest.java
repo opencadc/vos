@@ -187,7 +187,7 @@ public class VOSpaceAuthorizerTest
     public void testCheckDelegation() throws Exception
     {
         // create keys
-        RsaSignatureGenerator.main(new String[]{getCompleteKeysDirName()});
+        RsaSignatureGenerator.genKeyPair(getCompleteKeysDirName());
 
         VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
         ContainerNode node = new ContainerNode(vos);
@@ -205,7 +205,7 @@ public class VOSpaceAuthorizerTest
 
         // create the delegation cookie
         DelegationToken dt = new DelegationToken(
-                new HttpPrincipal(NODE_OWNER_ID), vos.getURI(), expiry.getTime());
+                new HttpPrincipal(NODE_OWNER_ID), vos.getURI(), expiry.getTime(), null);
 
         Subject subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
@@ -235,7 +235,7 @@ public class VOSpaceAuthorizerTest
         // create the delegation cookie
         dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID),
-                vos.getParentURI().getURI(), expiry.getTime());
+                vos.getParentURI().getURI(), expiry.getTime(), null);
         subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
         subject.getPublicCredentials().add(dt);
@@ -258,7 +258,7 @@ public class VOSpaceAuthorizerTest
 
         dt = new DelegationToken(
                 new HttpPrincipal(NODE_OWNER_ID),
-                new URI("vos://cadc.nrc.ca~vospace/otherspace"), expiry.getTime());
+                new URI("vos://cadc.nrc.ca~vospace/otherspace"), expiry.getTime(), null);
         subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal(NODE_OWNER_ID));
         subject.getPublicCredentials().add(dt);

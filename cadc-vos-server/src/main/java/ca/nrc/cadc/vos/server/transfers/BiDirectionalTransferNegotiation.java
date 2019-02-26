@@ -62,51 +62,73 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
- */
+*/
 
 package ca.nrc.cadc.vos.server.transfers;
 
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeBusyException;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import java.io.FileNotFoundException;
-import java.util.List;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import org.apache.log4j.Logger;
 
 /**
- * An interface to vospace storage back-end for provided transfer details
- * in the transfer negotiation process.
+ *
+ * @author pdowler
  */
-public interface TransferGenerator {
+public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
+    private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
 
-    /**
-     * Request a list of endpoints for the given transfer request information.
-     *
-     * This method returns a list of endpoints and thus supports the case where 
-     * the storage system has multiple copies of a file or multiple locations
-     * in which a file can be stored or retrieved from. Implementations are also
-     * responsible for filtering out unsupported  protocol/securityMethod combinations
-     * and can sort the result list in order of preference (since clients should
-     * try the endpoints in order until one works). Returning only one endpoint 
-     * in the list is a perfectly normal response.
-     *
-     * @param target The target data node
-     * @param transfer The transfer object with requested protocol(s)
-     * @param view The view being requested (may be null)
-     * @param job The UWS job associated with the transfer request.
-     * @param additionalParams Any additional parameters associated with the request.
-     * 
-     * @return list of protocol(s) with endpoints
-     * 
-     * @throws FileNotFoundException If the storage system cannot find an object for the target.
-     * @throws TransientException If an unexpected error occurs.
-     */
-    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view, Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException;
+    private VOSpaceAuthorizer authorizer;
+
+    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
+    {
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
+    }
+
+    @Override
+    public void doAction() 
+            throws TransferException, JobPersistenceException, JobNotFoundException, LinkingException, NodeNotFoundException, TransferParsingException, 
+            IOException, TransientException, URISyntaxException, NodeBusyException {
+        boolean updated = false;
+        try {
+            VOSURI target = new VOSURI(transfer.getTarget());
+
+            PathResolver resolver = new PathResolver(nodePersistence);
+
+            Node node = resolver.resolveWithReadPermissionCheck(target, authorizer, true);
+            if (!(node instanceof ContainerNode)) {
+                NodeFault f = NodeFault.InvalidArgument;
+                f.setMessage("node is not a container node");
+                throw new TransferException(f);
+            }
+            
+            updateTransferJob(node, node.getUri().getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
+        }
+        finally {
+            if (!updated) {
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
+            }
+        }
+    }
 }

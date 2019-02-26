@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       Node
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -65,48 +65,39 @@
 *  $Revision: 4 $
 *
 ************************************************************************
- */
+*/
 
-package ca.nrc.cadc.vos.server.transfers;
+package ca.nrc.cadc.vos.server;
+
+import java.net.URI;
 
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import java.io.FileNotFoundException;
-import java.util.List;
 
 /**
- * An interface to vospace storage back-end for provided transfer details
- * in the transfer negotiation process.
+ * Interface to label support for additional persistence options.
+ * 
+ * This includes alternate sort columns and sort order.
+ * 
+ * @author majorb
+ *
  */
-public interface TransferGenerator {
-
+public interface PersistenceOptions {
+    
     /**
-     * Request a list of endpoints for the given transfer request information.
-     *
-     * This method returns a list of endpoints and thus supports the case where 
-     * the storage system has multiple copies of a file or multiple locations
-     * in which a file can be stored or retrieved from. Implementations are also
-     * responsible for filtering out unsupported  protocol/securityMethod combinations
-     * and can sort the result list in order of preference (since clients should
-     * try the endpoints in order until one works). Returning only one endpoint 
-     * in the list is a perfectly normal response.
-     *
-     * @param target The target data node
-     * @param transfer The transfer object with requested protocol(s)
-     * @param view The view being requested (may be null)
-     * @param job The UWS job associated with the transfer request.
-     * @param additionalParams Any additional parameters associated with the request.
+     * Load some of the children of a container. Child parameters include VOSURI start, limit,
+     * resolveMetadata, sort column name
      * 
-     * @return list of protocol(s) with endpoints
-     * 
-     * @throws FileNotFoundException If the storage system cannot find an object for the target.
-     * @throws TransientException If an unexpected error occurs.
+     * @param parent
+     * @param start
+     * @param limit
+     * @param sortProperty
+     * @param sortAsc
+     * @param resolveMetadata
+     * @throws TransientException
      */
-    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view, Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException;
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit, URI sortProperty, Boolean sortAsc, boolean resolveMetadata)
+       throws TransientException;
+
 }

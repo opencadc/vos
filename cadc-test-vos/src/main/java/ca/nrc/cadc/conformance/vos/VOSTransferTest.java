@@ -200,6 +200,8 @@ public class VOSTransferTest extends VOSBaseTest
         TransferWriter writer = new TransferWriter();
         StringWriter sw = new StringWriter();
         writer.write(transfer, sw);
+        
+        log.debug("XML: " + sw.toString());
 
         // POST the XML to the transfer endpoint.
         WebResponse response = post(sw.toString());
@@ -207,6 +209,7 @@ public class VOSTransferTest extends VOSBaseTest
 
         // Get the header Location.
         String location = response.getHeaderField("Location");
+        log.info("Location: " + location);
         assertNotNull("Location header not set", location);
         assertTrue("../results/transferDetails location expected: ",
                 location.endsWith("/results/transferDetails"));

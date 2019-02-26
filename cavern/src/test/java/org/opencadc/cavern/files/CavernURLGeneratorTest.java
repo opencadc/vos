@@ -67,11 +67,13 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
@@ -86,11 +88,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.AccessControlException;
+import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.xerces.impl.dv.util.Base64;
@@ -107,7 +112,7 @@ public class CavernURLGeneratorTest
     private static final Logger log = Logger.getLogger(CavernURLGeneratorTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
@@ -163,7 +168,9 @@ public class CavernURLGeneratorTest
     public void initKeys() throws Exception
     {
         String keysDir = "build/resources/test";
-        RsaSignatureGenerator.genKeyPair(keysDir);
+        File pub = new File(keysDir + "/CavernPub.key");
+        File priv = new File(keysDir + "/CavernPriv.key");
+        RsaSignatureGenerator.genKeyPair(pub, priv, 1024);
         privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
         pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
         log.debug("Created pub key: " + pubFile.getAbsolutePath());
@@ -175,22 +182,63 @@ public class CavernURLGeneratorTest
         pubFile.delete();
         privFile.delete();
     }
+    
+    @Test
+    public void testNegotiateMount() {
+        try {
+            Set<Principal> p = new HashSet<Principal>();
+            // unit test: this will resolve to a posix user
+            p.add(new HttpPrincipal(System.getProperty("user.name")));
+            Subject s = new Subject(false, p, new HashSet(), new HashSet()); 
+            
+            final VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protos);
+            final View view = null;
+            final Job job = null;
+            
+            Protocol mnt = Subject.doAs(s, new PrivilegedExceptionAction<Protocol>() {
+                @Override
+                public Protocol run() throws Exception {
+                    TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
+                    List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+                    return result.get(0);
+                }
+                
+            });
+            log.info("protocol: " + mnt);
+            Assert.assertNotNull(mnt);
+            Assert.assertEquals("mount protocol", VOS.PROTOCOL_SSHFS, mnt.getUri());
+            Assert.assertNotNull("mount endpoint", mnt.getEndpoint());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     @Test
     public void testRoundTripSuccess() {
         try {
 
-            TestURLGen urlGen = new TestURLGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URL> urls = urlGen.getURLs(nodeURI, protocol, view, job, null);
-            URL transferURL = urls.get(0);
-            log.debug("Transfer URL: " + transferURL);
-            Assert.assertTrue(transferURL.getPath().endsWith("/" + TEST_FILE));
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
-            String path = transferURL.getPath();
+            String path = transferURI.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
             String sig = parts[4];
@@ -204,18 +252,26 @@ public class CavernURLGeneratorTest
         }
     }
 
-    //@Test
+    @Test
     public void testWrongDirection() {
         try {
 
-            TestURLGen urlGen = new TestURLGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URL> urls = urlGen.getURLs(nodeURI, protocol, view, job, null);
-            URL transferURL = urls.get(0);
-            String path = transferURL.getPath();
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
+            String path = transferURI.getPath();
             String[] parts = path.split("/");
             String sig = parts[4];
             String meta = parts[3];
@@ -232,18 +288,26 @@ public class CavernURLGeneratorTest
         }
     }
 
-    //@Test
+    @Test
     public void testInvalidSignature() {
         try {
 
-            TestURLGen urlGen = new TestURLGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URL> urls = urlGen.getURLs(nodeURI, protocol, view, job, null);
-            URL transferURL = urls.get(0);
-            String path = transferURL.getPath();
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
+            String path = transferURI.getPath();
             String[] parts = path.split("/");
             //String sig = parts[4];
             String meta = parts[3];
@@ -260,21 +324,28 @@ public class CavernURLGeneratorTest
         }
     }
 
-    //@Test
+    @Test
     public void testMetaTampered() {
         try {
 
-            TestURLGen urlGen = new TestURLGen(ROOT);
+            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
             VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            List<Protocol> protos = new ArrayList<>();
+            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
-            List<URL> urls = urlGen.getURLs(nodeURI, protocol, view, job, null);
-            URL transferURL = urls.get(0);
-            log.debug("Transfer URL: " + transferURL);
-            Assert.assertTrue(transferURL.getPath().endsWith("/" + TEST_FILE));
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            Protocol p = result.get(0);
+            Assert.assertNotNull(p);
+            String suri = p.getEndpoint();
+            log.debug("Transfer URI: " + suri);
+            Assert.assertNotNull(suri);
+            URI transferURI = new URI(suri);
+            
+            Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
-            String path = transferURL.getPath();
+            String path = transferURI.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
             String sig = parts[4];
@@ -294,8 +365,8 @@ public class CavernURLGeneratorTest
         }
     }
 
-    //@Test
-    public void testBase64URL() {
+    @Test
+    public void testBase64URI() {
         String[] testStrings = {
             "abcde",
             "ab//de",
@@ -308,9 +379,9 @@ public class CavernURLGeneratorTest
         }
     }
 
-    class TestURLGen extends CavernURLGenerator {
+    class TestTransferGenerator extends CavernURLGenerator {
 
-        public TestURLGen(String root) {
+        public TestTransferGenerator(String root) {
             super(root);
         }
 

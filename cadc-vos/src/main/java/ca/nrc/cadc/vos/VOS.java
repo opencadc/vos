@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -218,6 +218,9 @@ public class VOS
 
     // SHALL be used as the protocol URI for a HTTPS PUT transfer
     public static final String PROTOCOL_HTTPS_PUT = "ivo://ivoa.net/vospace/core#httpsput";
+    
+    // prototype mount protocol
+    public static final String PROTOCOL_SSHFS = "ivo://cadc.nrc.ca/vospace#SSHFS";
 
     // SHALL be used as the view URI to indicate that a service will accept any view for an import operation
     public static final String VIEW_ANY = "ivo://ivoa.net/vospace/core#anyview";
@@ -231,6 +234,9 @@ public class VOS
     /*
      * Standard Node Properties defined by the CADC
      */
+
+    // Property used for identifying a transaction"
+    public static final String PROPERTY_URI_RUNID = "ivo://ivoa.net/vospace/core#runid";
 
     // The size of the resource
     public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";

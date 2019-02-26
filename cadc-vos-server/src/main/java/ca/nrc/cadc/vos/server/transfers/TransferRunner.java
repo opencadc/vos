@@ -71,7 +71,7 @@ import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.SyncOutput;
+import ca.nrc.cadc.rest.SyncOutput;
 import ca.nrc.cadc.uws.util.JobLogInfo;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkingException;
@@ -182,9 +182,33 @@ public class TransferRunner implements JobRunner
 
         Direction dir = new Direction(sdir);
 
-        Protocol proto = new Protocol(sproto);
         List<Protocol> plist = new ArrayList<Protocol>();
-        plist.add(proto);
+        plist.add(new Protocol(sproto));
+        
+        // also add a protocol with current securityMethod
+        AuthMethod am = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+        Protocol proto = new Protocol(sproto);
+        if (am != null) {
+            switch (am) {
+                case CERT:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+                    break;
+                case COOKIE:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
+                    break;
+                case PASSWORD:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
+                    break;
+                case TOKEN:
+                    proto.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (proto.getSecurityMethod() != null) {
+            plist.add(proto);
+        }
 
         log.debug("createTransfer: " + target + " " + dir + " " + proto);
         return new Transfer(target.getURI(), dir, plist);
@@ -280,6 +304,10 @@ public class TransferRunner implements JobRunner
                 else if (direction.equals(Direction.pushFromVoSpace))
                 {
                     trans = new PushFromVOSpaceAction(nodePer, jobUpdater, job, transfer);
+                }
+                else if (direction.equals(Direction.BIDIRECTIONAL))
+                {
+                    trans = new BiDirectionalTransferNegotiation(nodePer, jobUpdater, job, transfer);
                 }
                 else
                 {
@@ -503,26 +531,30 @@ public class TransferRunner implements JobRunner
      * @param direction
      * @return
      */
-    protected boolean isValidDirection(Direction direction, boolean customPushPull)
+    protected boolean isValidDirection(Direction direction, boolean syncParamRequest)
     {
         if (direction == null || direction.getValue() == null)
             return false;
 
-        if (customPushPull)
+        if (syncParamRequest)
         {
-            if (direction.equals(Direction.pushToVoSpace) || direction.equals(Direction.pullFromVoSpace))
+            if (direction.equals(Direction.pushToVoSpace) 
+                    || direction.equals(Direction.pullFromVoSpace)
+                    || direction.equals(Direction.BIDIRECTIONAL))
                 return true;
-            else
-                return false;
+            return false;
         }
 
         if (direction.equals(Direction.pushToVoSpace)
                 || direction.equals(Direction.pullToVoSpace)
                 || direction.equals(Direction.pullFromVoSpace)
-                || direction.equals(Direction.pushFromVoSpace) )
+                || direction.equals(Direction.pushFromVoSpace)
+                || direction.equals(Direction.BIDIRECTIONAL))
             return true;
+        
         if (direction.getValue().startsWith(VOS_PREFIX))
             return true;
+        
         return false;
     }
 

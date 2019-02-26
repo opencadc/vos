@@ -118,16 +118,13 @@ public class ClientRecursiveSetNode implements Runnable
     private Throwable throwable;
     private ExecutionPhase phase;
     private ErrorSummary error;
-    
-    private ClientRecursiveSetNode() { }
 
     /**
      * @param jobURL UWS job URL for the transfer job
-     * @param transfer a negotiated transfer
-     * @param monitor monitor the job until complete (true) or just start
-     *  it and return (false)
+     * @param node The node in question
+     * @param schemaValidation boolean
      */
-    ClientRecursiveSetNode(URL jobURL, Node node, boolean schemaValidation)
+    public ClientRecursiveSetNode(URL jobURL, Node node, boolean schemaValidation)
     {
         this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
         this.jobURL = jobURL;

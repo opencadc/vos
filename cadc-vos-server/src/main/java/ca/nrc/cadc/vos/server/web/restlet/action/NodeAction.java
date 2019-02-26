@@ -110,10 +110,12 @@ public abstract class NodeAction
     protected static Logger log = Logger.getLogger(NodeAction.class);
 
     // query form parameter names
-    protected static final String QUERY_PARAM_VIEW = "view";
+    public static final String QUERY_PARAM_VIEW = "view";
     public static final String QUERY_PARAM_DETAIL = "detail";
-    protected static final String QUERY_PARAM_URI = "uri";
-    protected static final String QUERY_PARAM_LIMIT = "limit";
+    public static final String QUERY_PARAM_URI = "uri";
+    public static final String QUERY_PARAM_LIMIT = "limit";
+    public static final String QUERY_PARAM_SORT_KEY = "sort";
+    public static final String QUERY_PARAM_ORDER_KEY = "order";
 
     // some subclasses may nede to determine hostname, request path, etc
     protected Request request;

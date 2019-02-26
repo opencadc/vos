@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
 import java.util.List;
 
 import ca.nrc.cadc.net.TransientException;
@@ -198,6 +199,7 @@ public interface NodePersistence
      */
     void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException;
+
 
     /**
      * Load a single child of a container.

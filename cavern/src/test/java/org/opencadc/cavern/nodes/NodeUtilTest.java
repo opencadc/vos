@@ -98,9 +98,9 @@ public class NodeUtilTest {
     private static final Logger log = Logger.getLogger(NodeUtilTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.util", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
@@ -307,6 +307,18 @@ public class NodeUtilTest {
             String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
             tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
             
+            // test property with no value
+            String nullVal = null;
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, nullVal));
+            String emptyVal = "";
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, emptyVal));
+            
+            // make sure a delete prop request doesn't fail if the prop is missing
+            NodeProperty delProp = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, nullVal);
+            delProp.setMarkedForDeletion(true);
+            tn.getProperties().add(delProp);
+            
+            
             NodeUtil.setNodeProperties(tdir, tn);
             
             tn2 = NodeUtil.get(root, uri);
@@ -318,6 +330,9 @@ public class NodeUtilTest {
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+            
+            Assert.assertEquals("null description", nullVal, tn2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertEquals("empty type", emptyVal, tn2.getPropertyValue(VOS.PROPERTY_URI_TYPE));
 
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));

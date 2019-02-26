@@ -106,7 +106,7 @@ import org.apache.log4j.Logger;
  *
  * @author pdowler
  */
-public abstract class DatabaseNodePersistence implements NodePersistence
+public abstract class DatabaseNodePersistence implements NodePersistence, PersistenceOptions
 {
     private static Logger log = Logger.getLogger(DatabaseNodePersistence.class);
 
@@ -230,7 +230,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         if (limit == null || limit.intValue() > maxChildLimit.intValue())
             actualLimit = maxChildLimit;
 
-        dao.getChildren(parent, start, actualLimit);
+        dao.getChildren(parent, start, actualLimit, null, true, true);
     }
 
     @Override
@@ -249,7 +249,20 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         if (limit == null || limit.intValue() > maxChildLimit.intValue())
             actualLimit = maxChildLimit;
 
-        dao.getChildren(parent, start, actualLimit, resolveMetadata);
+        dao.getChildren(parent, start, actualLimit, null, true, resolveMetadata);
+    }
+
+    @Override
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit, URI sortProperty, Boolean sortAsc, boolean resolveMetadata)
+        throws TransientException
+    {
+        // enforce max limit
+        Integer actualLimit = limit;
+        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+            actualLimit = maxChildLimit;
+
+        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+        dao.getChildren(parent, start, actualLimit, sortProperty, sortAsc, resolveMetadata);
     }
 
     @Override

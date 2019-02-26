@@ -42,8 +42,8 @@ test {
 
 intTest {
     testLogging {
-        events "PASSED", "FAILED", "SKIPPED"
-        // "STARTED",
+        events "PASSED", "FAILED"
+        // "SKIPPED", "STARTED",
     }
 }
 
