@@ -108,6 +108,7 @@ import ca.nrc.cadc.util.Log4jInit;
     AsyncPushToVOSpaceTest.class
 })
 
+@Deprecated
 public class VOSTestSuite
 {
 
