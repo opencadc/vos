@@ -106,8 +106,6 @@ public class ClientRecursiveSetNode implements Runnable
     private static Logger log = Logger.getLogger(ClientRecursiveSetNode.class);
     private static final long POLL_INTERVAL = 100L;
     
-    private SSLSocketFactory sslSocketFactory;
-    
     private URL jobURL;
     private Node node;
     private boolean monitorAsync;
@@ -240,11 +238,6 @@ public class ClientRecursiveSetNode implements Runnable
         }
     }
 
-    public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
-    {
-        this.sslSocketFactory = sslSocketFactory;
-    }
-
     /**
      * Set additional request headers.
      *
@@ -327,12 +320,6 @@ public class ClientRecursiveSetNode implements Runnable
     
     private void runHttpTransfer(HttpTransfer transfer)
     {
-        if (sslSocketFactory != null)
-            transfer.setSSLSocketFactory(sslSocketFactory);
-        
         transfer.run();
-        
-        if (transfer.getSSLSocketFactory() != null)
-            this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 }
