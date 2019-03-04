@@ -69,6 +69,17 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpRequestProperty;
+import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.XmlProcessor;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -79,24 +90,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.net.ssl.SSLSocketFactory;
-
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
-
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpPost;
-import ca.nrc.cadc.net.HttpRequestProperty;
-import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.xml.XmlUtil;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.XmlProcessor;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
