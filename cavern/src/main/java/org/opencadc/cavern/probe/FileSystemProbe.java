@@ -150,6 +150,7 @@ public class FileSystemProbe implements Callable<Boolean> {
         success = doMoveSymlink() & success;
 
         log.info("checking ACL installation...");
+        doCheckACL();
         
         log.info("END");
 
@@ -472,7 +473,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             log.info("[copyfile] " +  dn.getClass().getSimpleName() + " " + dn.getUri() + " " + owner);
             pth = NodeUtil.create(root, dn);
             if (pth == null || !Files.exists(pth)) {
-                log.error("[copyfile] failed to create file in fs: " + root + "/" + dn.getUri() + fail);
+                log.error("[copyfile] failed to create file in sub-directory: " + root + "/" + dn.getUri() + fail);
                 return false;
             }
 

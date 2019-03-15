@@ -68,7 +68,6 @@
 package ca.nrc.cadc.vos.server.web.action;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.URLEncoder;
 
 import org.apache.log4j.Logger;
@@ -93,6 +92,7 @@ import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
+import java.net.URI;
 
 /**
  * This class issues synctrans download URLs to data nodes.  It is a convenience
@@ -158,14 +158,17 @@ public class FilesAction extends RestAction {
         Capabilities caps = regClient.getCapabilities(vosURI.getServiceURI());
         Capability cap = caps.findCapability(Standards.VOSPACE_SYNC_21);
         Interface ifc = null;
+        // TODO: it looks like this finds the last matching interface rather than the first... ok for only interface
         for (Interface next : cap.getInterfaces()) {
-            AuthMethod am = Standards.getAuthMethod(next.getSecurityMethod());
-            if (authMethod.equals(am)) {
-                if (ifc == null) {
-                    ifc = next;
-                } else if (requestProtocol.equals(next.getAccessURL().getURL().getProtocol())) {
-                    // prefer an interface with matching protocol
-                    ifc = next;
+            for (URI sm : next.getSecurityMethods()) {
+                AuthMethod am = Standards.getAuthMethod(sm);
+                if (authMethod.equals(am)) {
+                    if (ifc == null) {
+                        ifc = next;
+                    } else if (requestProtocol.equals(next.getAccessURL().getURL().getProtocol())) {
+                        // prefer an interface with matching protocol
+                        ifc = next;
+                    }
                 }
             }
         }
