@@ -145,5 +145,24 @@ public class NodeMapperTest {
             Assert.fail("unexpected: " + t.getMessage());
         }
     }
+    
+    @Test
+    public void testBackwardsCompat() {
+        
+        try {
+            
+            String authority = null;
+            URI inURI = null;
+            
+            authority = "cadc.nrc.ca~vospace";
+            inURI = new VOSURI("vos://different.authority~vospace/path/to/file").getURI();
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(inURI.toString(), authority));
+            
+        } catch (Throwable t) {
+         
+            log.error("Unexpected error", t);
+            Assert.fail("unexpected: " + t.getMessage());
+        }
+    }
 
 }
