@@ -158,6 +158,9 @@ public class NodeMapperTest {
             inURI = new VOSURI("vos://different.authority~vospace/path/to/file").getURI();
             Assert.assertEquals(inURI, NodeMapper.extractLinkURI(inURI.toString(), authority));
             
+            inURI = new URI("http://mysite.com?query=string#fragment");
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(inURI.toString(), authority));
+            
         } catch (Throwable t) {
          
             log.error("Unexpected error", t);
