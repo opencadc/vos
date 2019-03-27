@@ -2723,7 +2723,8 @@ public class NodeDAO
             pval = null;
             if (node instanceof LinkNode)
             {
-                pval = ((LinkNode)node).getTarget().toString();
+                URI targetURI = ((LinkNode)node).getTarget();
+                pval = NodeMapper.createDBLinkString(targetURI, authority);
                 ps.setString(col, pval);
             }
             else
@@ -3030,14 +3031,7 @@ public class NodeDAO
 	            }
 	            else if (NODE_TYPE_LINK.equals(type))
 	            {
-	                URI link;
-
-	                try { link = new URI(linkStr); }
-	                catch(URISyntaxException bug)
-	                {
-	                    throw new RuntimeException("BUG - failed to create link URI", bug);
-	                }
-
+	                URI link = NodeMapper.extractLinkURI(linkStr, authority);
 	                node = new LinkNode(vos, link);
 	            }
 	            else
