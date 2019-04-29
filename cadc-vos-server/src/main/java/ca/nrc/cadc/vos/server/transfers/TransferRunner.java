@@ -55,6 +55,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
@@ -349,6 +350,12 @@ public class TransferRunner implements JobRunner
             {
                 log.debug("permission denied", ace);
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, "PermissionDenied", HttpURLConnection.HTTP_FORBIDDEN, true);
+                return;
+            }
+            catch (NotAuthenticatedException ne)
+            {
+                log.debug("not authenticated", ne);
+                sendError(job.getExecutionPhase(), ErrorType.FATAL, "NotAuthenticated", HttpURLConnection.HTTP_UNAUTHORIZED, true);
                 return;
             }
             catch (IllegalArgumentException ex)

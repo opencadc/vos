@@ -80,6 +80,7 @@ import org.restlet.data.MediaType;
 import org.restlet.data.Preference;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
@@ -386,6 +387,12 @@ public abstract class NodeAction
             }
             log.debug(faultMessage);
             return handleException(NodeFault.PermissionDenied, faultMessage, false);
+        }
+        catch (NotAuthenticatedException e)
+        {
+            String faultMessage = e.getMessage();
+            log.debug(faultMessage);
+            return handleException(NodeFault.NotAuthenticated, faultMessage, false);
         }
         catch (NodeParsingException e)
         {
