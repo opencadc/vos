@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2019.                            (c) 2019.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -88,10 +88,13 @@ public class Main {
 
     static void usage() {
         System.out.println("usage: cavern [-h|--help]");
-        System.out.println("usage: cavern [-v|--verbose|-d|--debug]");
-        System.out.println("              --dir=<test directory>");
+        System.out.println("usage: cavern [-v|--verbose|-d|--debug] [--views]");
+        
         System.out.println("              --owner=<posix username> ");
         System.out.println("              --target-owner=<posix username>)");
+        System.out.println("              --dir=<test directory>");
+        System.out.println("              --group=<test group that target-owner belongs to>");
+        
         System.out.println("Note: the target-owner owns the target of a link and should differ from");
         System.out.println("      the owner so that correct behaviour of symlinks can be verified");
     }
@@ -116,12 +119,6 @@ public class Main {
             }
 
             boolean ok = true;
-            String dir = am.getValue("dir");
-            if (dir == null) {
-                log.error("missing required argument: --dir=<test directory>");
-                ok = false;
-            }
-            File baseDir = new File(dir);
             
             String owner = am.getValue("owner");
             if (owner == null) {
@@ -134,38 +131,52 @@ public class Main {
                 log.error("missing required argument: --target-owner=<posix username>");
                 ok = false;
             }
-
-            if (baseDir != null) {
+            
+            String group = am.getValue("group");
+            if (group == null) {
+                log.error("missing required argument: --group=<posix group name>");
+                ok = false;
+            }
+            
+            File baseDir = null;
+            String dir = am.getValue("dir");
+            if (dir != null) {
+                baseDir = new File(dir);
                 log.info("    base dir: " + baseDir.getAbsolutePath());
                 log.info("      exists:" + baseDir.exists());
                 log.info("is directory:" + baseDir.isDirectory());
                 log.info("    readable:" + baseDir.canRead());
                 log.info("    writable:" + baseDir.canWrite());
-                if (baseDir.exists() && baseDir.isDirectory() && baseDir.canRead() && baseDir.canWrite()) {
-                    log.info("base dir permissions: OK");
+                if (!baseDir.exists()) {
+                    log.error("not found: " + baseDir);
+                    ok = false;
+                } else if (!baseDir.isDirectory()) {
+                    log.error("not a directory: " + baseDir);
+                    ok = false;
+                } else if (!baseDir.canRead() || !baseDir.canWrite()) {
+                    log.error("permission denied: " + baseDir);
+                    ok = false;
                 } else {
-                    log.error("cannot use test directory: " + baseDir.getAbsolutePath());
-                    if (!am.isSet("views")) {
-                        ok = false;
-                    }
+                    log.info("base dir & permissions: OK");
                 }
+            } else {
+                log.error("missing required argument: --dir=<test directory>");
+                ok = false;
             }
-
+            
             if (!ok) {
                 usage();
                 System.exit(1);
             }
+            
+            log.info("user: " + owner);
+            log.info("alt user: " + targetOwner + " [owner of target file in symlink tests]");
 
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner);
-            if (am.isSet("views")) {
-                probe.supportedFileAttributeViews();
-            } else {
-                Boolean success = probe.call();
-                if (success == null || !success) {
-                    System.exit(1);
-                }
+            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
+            Boolean success = probe.call();
+            if (success == null || !success) {
+                System.exit(1);
             }
-
         } catch (Throwable t) {
             log.error("unexpected failure", t);
             System.exit(1);

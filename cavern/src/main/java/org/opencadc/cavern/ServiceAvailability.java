@@ -135,7 +135,7 @@ public class ServiceAvailability implements AvailabilityPlugin {
             log.debug("linkTargetOwner: " + linkTargetOwner);
             File root = new File(rootPath);
 
-            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner);
+            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner, null);
             Boolean success = fsp.call();
             if (success == null || !success) {
                 return new AvailabilityStatus(false, null, null, null, "File system probe failed");

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2019.                            (c) 2019.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -98,18 +98,20 @@ public class FileSystemProbe implements Callable<Boolean> {
     private final Path root;
     private final UserPrincipal owner;
     private final UserPrincipal linkTargetOwner;
+    private URI groupURI;
     private final UserPrincipalLookupService users;
 
-    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner) throws IOException {
+    public FileSystemProbe(File baseDir, String owner, String linkTargetOwner, String group) throws IOException {
         this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
         this.users = root.getFileSystem().getUserPrincipalLookupService();
         this.owner = users.lookupPrincipalByName(owner);
         this.linkTargetOwner = users.lookupPrincipalByName(linkTargetOwner);
-    }
-
-    public void supportedFileAttributeViews() {
+        if (group != null) {
+            this.groupURI = URI.create("ivo://cadc.nrc.ca/gms?" + group);
+        }
+        
         for (String vs : root.getFileSystem().supportedFileAttributeViews()) {
-            log.warn("FileAttributeView supported: " + vs);
+            log.debug("FileAttributeView supported: " + vs);
         }
     }
     
@@ -120,16 +122,22 @@ public class FileSystemProbe implements Callable<Boolean> {
         boolean success = true;
 
         log.info("testing create file...");
-        success = doCreateFile() & success;
+        success = doCreateFile(false) & success;
+        
+        log.info("testing create directory...");
+        success = doCreateDir(false) & success;
+
+        log.info("testing create directory + child file...");
+        success = doCreateFile(true) & success;
+        
+        log.info("testing create directory + child directory...");
+        success = doCreateDir(true) & success;
+        
+        log.info("testing create symlink...");
+        success = doCreateSymlink() & success;
         
         log.info("testing set file attribute...");
         success = doSetAttribute() & success;
-
-        log.info("testing create directory...");
-        success = doCreateDir() & success;
-
-        log.info("testing create symlink...");
-        success = doCreateSymlink() & success;
 
         log.info("testing copy file...");
         success = doCopyFile() & success;
@@ -151,7 +159,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
         log.info("checking ACL installation...");
         doCheckACL();
-        
+
         log.info("END");
 
         return new Boolean(success);
@@ -159,8 +167,71 @@ public class FileSystemProbe implements Callable<Boolean> {
 
     public boolean doCheckACL() {
         try {
-            AclCommandExecutor acl = new AclCommandExecutor(root, users);
-            // TODO: need some config to try to set ACLs in filesystem
+            if (groupURI == null) {
+                log.warn("doCheckACL: groupURI not set -- skipping tests");
+                return true;
+            }
+            
+            String fail = " [FAIL]";
+            String ok = " [OK]";
+            String name = UUID.randomUUID().toString();
+            VOSURI cnURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            ContainerNode cn1 = new ContainerNode(cnURI);
+            cn1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupURI.toASCIIString()));
+            NodeUtil.setOwner(cn1, owner);
+            log.info("[acl] " +  cn1.getClass().getSimpleName() + " " + cn1.getUri() + " " + owner);
+            Path pth = NodeUtil.create(root, cn1);
+            if (pth == null || !Files.exists(pth)) {
+                log.error("[acl] failed to create directory in fs: " + root + "/" + cnURI.getPath() + fail);
+                return false;
+            }
+
+            VOSURI dnURI = new VOSURI(URI.create(cnURI.getURI().toASCIIString() + "/check-acl-test"));
+            DataNode dn1 = new DataNode(dnURI);
+            NodeUtil.setOwner(dn1, owner);
+            dn1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupURI.toASCIIString()));
+            log.info("[acl] " +  dn1.getClass().getSimpleName() + " " + dn1.getUri() + " " + owner);
+            Path fpth = NodeUtil.create(root, dn1);
+            if (fpth == null || !Files.exists(fpth)) {
+                log.error("[acl] failed to create file in fs: " + root + "/" + dnURI.getPath() + fail);
+                return false;
+            }
+            
+            // extract and check props
+            Node cn2 = NodeUtil.get(root, cnURI);
+            if (cn2 == null) {
+                log.error("[acl] failed to get ContainerNode: " + cnURI + " from " + root + fail);
+                return false;
+            }
+            NodeProperty cnrg = cn2.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            if (cnrg == null) {
+                log.error("[acl] " + VOS.PROPERTY_URI_GROUPREAD + " not found: " + cnURI);
+                return false;
+            }
+            if (groupURI.toASCIIString().equals(cnrg.getPropertyValue())) {
+                log.info("[acl] found: " + VOS.PROPERTY_URI_GROUPREAD + " = " + cnrg.getPropertyValue() + ok);
+            } else {
+                log.error("[acl] incorrect permission: " + VOS.PROPERTY_URI_GROUPREAD + " = " + cnrg.getPropertyValue() + fail);
+                return false;
+            }
+            
+            Node dn2 = NodeUtil.get(root, dnURI);
+            if (dn2 == null) {
+                log.error("[acl] failed to get DataNode: " + dnURI + " from " + root + fail);
+                return false;
+            }
+            NodeProperty dnrg = dn2.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            if (dnrg == null) {
+                log.error("[acl] " + VOS.PROPERTY_URI_GROUPREAD + " not found: " + dnURI);
+                return false;
+            }
+            if (groupURI.toASCIIString().equals(dnrg.getPropertyValue())) {
+                log.info("[acl] found: " + VOS.PROPERTY_URI_GROUPREAD + " = " + dnrg.getPropertyValue() + ok);
+            } else {
+                log.error("[acl] incorrect permission: " + VOS.PROPERTY_URI_GROUPREAD + " = " + dnrg.getPropertyValue() + fail);
+                return false;
+            }
+            
             return true;
         } catch (Exception ex) {
             log.error("FAIL", ex);
@@ -168,29 +239,45 @@ public class FileSystemProbe implements Callable<Boolean> {
         }
     }
     
-    public boolean doCreateDir() {
+    public boolean doCreateDir(boolean depth) {
         try {
+            StringBuilder sb = new StringBuilder();
+            int num = 0;
+            VOSURI parent = new VOSURI(URI.create("vos://canfar.net~cavern/"));
+            String fail = " [FAIL]";
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
-
+            VOSURI uri = new VOSURI(URI.create(parent.getURI().toASCIIString() + "/" + name));
+            
+            if (depth) {
+                // make a parent directory
+                ContainerNode n1 = new ContainerNode(uri);
+                NodeUtil.setOwner(n1, owner);
+                log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
+                Path pth = NodeUtil.create(root, n1);
+                if (pth == null || !Files.exists(pth)) {
+                    log.error("[dir] failed to create directory in fs: " + root + "/" + uri.getPath() + fail);
+                    return false;
+                }
+                uri = new VOSURI(URI.create(uri.getURI().toASCIIString() + "/create-dir-test"));
+            }
+            
             ContainerNode n1 = new ContainerNode(uri);
             NodeUtil.setOwner(n1, owner);
             log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
-
-            String fail = " [FAIL]";
+            
             Path pth = NodeUtil.create(root, n1);
             if (pth == null || !Files.exists(pth)) {
-                log.error("[dir] failed to create directory in fs: " + root + "/" + name + fail);
+                log.error("[dir] failed to create directory in fs: " + root + uri.getPath() + fail);
                 return false;
             }
 
             Node n2 = NodeUtil.get(root, uri);
             if (n2 == null) {
-                log.error("[dir] failed to get ContainerNode: " + uri + " from " + root + fail);
+                log.error("[dir] failed to get ContainerNode: " + uri + " from " + uri.getParentURI().getPath() + fail);
                 return false;
             }
 
-            int num = 0;
+
             if (!n1.getClass().equals(n2.getClass())) {
                 log.error("[dir] failed to restore node type: " + n1.getClass().getSimpleName()
                         + " != " + n2.getClass().getSimpleName());
@@ -206,8 +293,10 @@ public class FileSystemProbe implements Callable<Boolean> {
                 num++;
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("[dir] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri()).append(" -> ").append(pth).append(" ").append(owner2);
+            sb.append("[dir] ").append(n2.getClass().getSimpleName()).append(" ").append(n2.getUri());
+            sb.append(" -> ");
+            sb.append(pth).append(" ").append(owner2);
+
             if (num == 0) {
                 sb.append(" [OK]");
                 log.info(sb.toString());
@@ -223,19 +312,33 @@ public class FileSystemProbe implements Callable<Boolean> {
         }
     }
 
-    public boolean doCreateFile() {
+    public boolean doCreateFile(boolean depth) {
         try {
+            String fail = " [FAIL]";
             String name = UUID.randomUUID().toString();
             VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            
+            if (depth) {
+                // make a parent directory
+                ContainerNode n1 = new ContainerNode(uri);
+                NodeUtil.setOwner(n1, owner);
+                log.info("[dir] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
+                Path pth = NodeUtil.create(root, n1);
+                if (pth == null || !Files.exists(pth)) {
+                    log.error("[dir] failed to create directory in fs: " + root + "/" + uri.getPath() + fail);
+                    return false;
+                }
+                
+                uri = new VOSURI(URI.create(uri.getURI().toASCIIString() + "/create-file-test"));
+            }
 
             DataNode n1 = new DataNode(uri);
             NodeUtil.setOwner(n1, owner);
             log.info("[file] " +  n1.getClass().getSimpleName() + " " + n1.getUri() + " " + owner);
-
-            String fail = " [FAIL]";
+            
             Path pth = NodeUtil.create(root, n1);
             if (pth == null || !Files.exists(pth)) {
-                log.error("[file] failed to create file in fs: " + root + "/" + name + fail);
+                log.error("[file] failed to create file in fs: " + root + uri.getPath() + fail);
                 return false;
             }
 
@@ -277,7 +380,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             return false;
         }
     }
-
+    
     public boolean doCreateSymlink() {
         try {
             String name = UUID.randomUUID().toString();
