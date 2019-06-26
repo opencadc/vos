@@ -63,14 +63,14 @@ dependencies {
     compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
-    
+
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
-    
+
     testCompile 'junit:junit:[4.0,)'
     testCompile 'xerces:xercesImpl:[2.0,)'
     testCompile 'org.skyscreamer:jsonassert:[1.0,)'
     testCompile 'org.opencadc:cadc-test-uws:[1.0,)'
-    
+
     intTestCompile 'org.opencadc:cadc-test-vos:[1.0,)'
     intTestCompile 'org.opencadc:cadc-test-vosi:[1.0.2,)'
 }
