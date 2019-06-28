@@ -17,7 +17,7 @@ sourceCompatibility = 1.7
 
 group = 'org.opencadc'
 
-version = '1000'
+version = '1001'
 
 war {
     archiveName = project.name + '##' + project.version + '.war'
@@ -40,37 +40,37 @@ sourceSets {
 mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
-    compile 'log4j:log4j:1.2.+'
-    providedCompile 'javax.servlet:javax.servlet-api:3.1.+'
-    compile 'org.jdom:jdom2:2.+'
+    compile 'log4j:log4j:[1.2.0,)'
+    providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'
+    compile 'org.jdom:jdom2:[2.0,)'
     compile 'org.json:json:20160212'
-    compile 'xerces:xercesImpl:2.+'
-    compile 'commons-net:commons-net:2.+'
+    compile 'xerces:xercesImpl:[2.0,)'
+    compile 'commons-net:commons-net:[2.0,)'
 
     compile 'org.opencadc:cadc-util:[1.1.4,2.0)'
-    compile 'org.opencadc:cadc-log:1.+'
+    compile 'org.opencadc:cadc-log:[1.0,)'
     compile 'org.opencadc:cadc-registry:[1.2.1,)'
-    compile 'org.opencadc:cadc-vosi:1.+'
+    compile 'org.opencadc:cadc-vosi:[1.0,)'
     compile 'org.opencadc:cadc-rest:[1.0,)'
-    compile 'org.opencadc:cadc-uws:1.+'
+    compile 'org.opencadc:cadc-uws:[1.0,)'
     compile 'org.opencadc:cadc-uws-server:[1.0.4,)'
-    compile 'org.opencadc:cadc-cdp:1.+'
+    compile 'org.opencadc:cadc-cdp:[1.0,)'
     compile 'org.opencadc:cadc-access-control:[1.1.1,)'
     compile 'org.opencadc:cadc-access-control-identity:[1.0.3,)'
     compile 'org.opencadc:cadc-vos:[1.1.2,)'
     compile 'org.opencadc:cadc-vos-server:[1.1,)'
     //compile 'org.opencadc:cadc-wcs:1.+'
-    compile 'org.opencadc:cadc-dali:1.+'
+    compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
-    
+
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
-    
-    testCompile 'junit:junit:4.+'
-    testCompile 'xerces:xercesImpl:2.+'
-    testCompile 'org.skyscreamer:jsonassert:1.+'
-    testCompile 'org.opencadc:cadc-test-uws:1.+'
-    
-    intTestCompile 'org.opencadc:cadc-test-vos:1.+'
+
+    testCompile 'junit:junit:[4.0,)'
+    testCompile 'xerces:xercesImpl:[2.0,)'
+    testCompile 'org.skyscreamer:jsonassert:[1.0,)'
+    testCompile 'org.opencadc:cadc-test-uws:[1.0,)'
+
+    intTestCompile 'org.opencadc:cadc-test-vos:[1.0,)'
     intTestCompile 'org.opencadc:cadc-test-vosi:[1.0.2,)'
 }
