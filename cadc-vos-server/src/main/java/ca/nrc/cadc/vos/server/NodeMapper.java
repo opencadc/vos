@@ -138,6 +138,7 @@ public class NodeMapper implements RowMapper
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
         String link = null;
+        String storageID = rs.getString("storageID");
 
         Long contentLength = null;
         Object o = rs.getObject("contentLength");
@@ -184,6 +185,7 @@ public class NodeMapper implements RowMapper
         NodeID nid = new NodeID();
         nid.id = nodeID;
         nid.ownerObject = ownerObject;
+        nid.storageID = storageID;
         node.appData = nid;
 
         if (contentType != null && contentType.trim().length() > 0)

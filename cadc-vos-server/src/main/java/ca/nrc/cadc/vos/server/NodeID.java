@@ -82,20 +82,35 @@ public class NodeID
     Long id;
     Subject owner;
     Object ownerObject;
+    String storageID;
 
     public NodeID() { }
-    
+
+    /**
+     * NodeID constructor.
+     *
+     * @param id
+     * @param owner
+     * @param ownerObject
+     */
+    public NodeID(Long id, Subject owner, Object ownerObject) {
+        this(id, owner, ownerObject, null);
+    }
+
     /**
      * NodeID constructor.
      * 
      * @param id
      * @param owner
+     * @param ownerObject
+     * @param storageID
      */
-    public NodeID(Long id, Subject owner, Object ownerObject)
+    public NodeID(Long id, Subject owner, Object ownerObject, String storageID)
     {
         this.id = id;
         this.owner = owner;
         this.ownerObject = ownerObject;
+        this.storageID = storageID;
     }
     
     /**
@@ -109,6 +124,10 @@ public class NodeID
     public Subject getOwner()
     {
         return owner;
+    }
+
+    public String getStorageID() {
+        return storageID;
     }
 
     public String toString()
