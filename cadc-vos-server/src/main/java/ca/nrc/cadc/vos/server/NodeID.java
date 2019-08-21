@@ -94,23 +94,9 @@ public class NodeID
      * @param ownerObject
      */
     public NodeID(Long id, Subject owner, Object ownerObject) {
-        this(id, owner, ownerObject, null);
-    }
-
-    /**
-     * NodeID constructor.
-     * 
-     * @param id
-     * @param owner
-     * @param ownerObject
-     * @param storageID
-     */
-    public NodeID(Long id, Subject owner, Object ownerObject, String storageID)
-    {
         this.id = id;
         this.owner = owner;
         this.ownerObject = ownerObject;
-        this.storageID = storageID;
     }
     
     /**
