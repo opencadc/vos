@@ -109,6 +109,7 @@ public class RestletLogInfo extends WebServiceLogInfo
         this.method = request.getMethod().getName().toUpperCase();
         this.ip = RestletWebUtil.getClientIP(request);
         this.path = path;
+        this.serviceName = this.parseServiceName(path);
     }
 
 }
