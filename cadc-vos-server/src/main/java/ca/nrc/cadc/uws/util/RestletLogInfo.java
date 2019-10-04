@@ -89,9 +89,9 @@ public class RestletLogInfo extends WebServiceLogInfo
      * determines the path.
      * @param request
      */
-    public RestletLogInfo(Request request)
+    public RestletLogInfo(Request request, String className)
     {
-        this(request, request.getResourceRef().getPath());
+        this(request, request.getResourceRef().getPath(), className);
     }
     
     /**
@@ -103,9 +103,10 @@ public class RestletLogInfo extends WebServiceLogInfo
      * @param request       The Request object.
      * @param path          The path being logged.
      */
-    public RestletLogInfo(Request request, String path)
+    public RestletLogInfo(Request request, String path, String className)
     {
         super();
+        this.className = className;
         this.method = request.getMethod().getName().toUpperCase();
         this.ip = RestletWebUtil.getClientIP(request);
         this.path = path;
