@@ -155,7 +155,7 @@ public class TransferDetailsServlet extends HttpServlet
     {
 
         long start = System.currentTimeMillis();
-        ServletLogInfo logInfo = new ServletLogInfo(request, this.getServletName());
+        ServletLogInfo logInfo = new ServletLogInfo(request, this.getClass());
         logInfo.setJobID(parseJobID(request.getPathInfo()));
         
         Enumeration<String> paramNames = request.getParameterNames();

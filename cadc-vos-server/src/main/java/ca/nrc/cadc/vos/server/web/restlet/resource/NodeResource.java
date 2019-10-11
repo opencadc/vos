@@ -310,7 +310,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
     private Representation runPrivilegedAction(NodeAction action)
     {
         this.action = action;
-        logInfo = new RestletLogInfo(getRequest(), NodeResource.class.getName());
+        logInfo = new RestletLogInfo(getRequest(), this.getClass());
         Subject subject = getSubject();
         
         if (subject == null)
