@@ -98,7 +98,8 @@ CREATE TABLE Node (
    createdOn         DATETIME          DEFAULT getDate(),
    lastModified      DATETIME          NOT NULL,
    
-   link              TEXT              NULL
+   link              TEXT              NULL,
+   storageID         VARCHAR(32)       NULL
 )
 lock datarows
 with identity_gap = 512
