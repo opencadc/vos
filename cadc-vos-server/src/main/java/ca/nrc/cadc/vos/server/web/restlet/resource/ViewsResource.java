@@ -106,7 +106,7 @@ public class ViewsResource extends BaseResource
     public Representation represent()
     {
         long start = System.currentTimeMillis();
-        RestletLogInfo logInfo = new RestletLogInfo(getRequest(), this.getClass());
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
         try
         {
             log.debug("Enter ViewsResource.represent()");
