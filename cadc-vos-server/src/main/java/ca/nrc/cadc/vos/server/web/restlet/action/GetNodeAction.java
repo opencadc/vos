@@ -144,8 +144,8 @@ public class GetNodeAction extends NodeAction
         long start;
         long end;
 
-        System.out.println("detail: " + detailLevel);
-        System.out.println("resolve: " + resolveMetadata);
+//        System.out.println("detail: " + detailLevel);
+//        System.out.println("resolve: " + resolveMetadata);
 
         if (serverNode instanceof ContainerNode)
         {

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2019.                            (c) 2019.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -75,8 +75,8 @@ import java.io.Writer;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
-import java.util.ListIterator;
 
 import javax.security.auth.Subject;
 import javax.servlet.ServletConfig;
@@ -100,7 +100,6 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 
 public class TransferDetailsServlet extends HttpServlet
@@ -156,7 +155,17 @@ public class TransferDetailsServlet extends HttpServlet
     {
 
         long start = System.currentTimeMillis();
-        ServletLogInfo logInfo = new ServletLogInfo(request, true);
+        ServletLogInfo logInfo = new ServletLogInfo(request);
+        logInfo.setJobID(parseJobID(request.getPathInfo()));
+        
+        Enumeration<String> paramNames = request.getParameterNames();
+        while (paramNames.hasMoreElements()) {
+            String nextName = paramNames.nextElement();
+            if (nextName.equalsIgnoreCase("runid")) {
+                logInfo.setRunID(request.getParameter(nextName));
+                break;
+            }
+        }
 
         try
         {
@@ -192,6 +201,19 @@ public class TransferDetailsServlet extends HttpServlet
                 log.info(logInfo.end());
             }
         }
+    }
+
+    private String parseJobID(String path) {
+        if (path != null) {
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            if (path.endsWith("/")) {
+                path = path.substring(0, path.length() - 1);
+            }
+            return path;
+        }
+        return null;
     }
 
     class ClientTransferRunner implements PrivilegedExceptionAction<Object>
