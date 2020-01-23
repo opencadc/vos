@@ -215,6 +215,7 @@ public class NodeDAO
         "contentEncoding",
         // LinkNode uri
         "link",
+        "storageID",
         // physical file metadata
         "contentLength",
         "contentMD5"
@@ -808,6 +809,10 @@ public class NodeDAO
             NodeID nodeID = new NodeID();
             nodeID.owner = creator;
             nodeID.ownerObject = identManager.toOwner(creator);
+            if (NODE_TYPE_DATA.equals(getNodeType(node))) {
+                UUID uuid = UUID.randomUUID();
+                nodeID.storageID = uuid.toString();
+            }
             node.appData = nodeID;
 
             startTransaction();
@@ -2718,12 +2723,13 @@ public class NodeDAO
             sb.append(pval);
             sb.append(",");
 
-            log.debug("setValues:" + sb.toString());
+            //log.debug("setValues:" + sb.toString());
 
             pval = null;
             if (node instanceof LinkNode)
             {
-                pval = ((LinkNode)node).getTarget().toString();
+                URI targetURI = ((LinkNode)node).getTarget();
+                pval = NodeMapper.createDBLinkString(targetURI, authority);
                 ps.setString(col, pval);
             }
             else
@@ -2731,6 +2737,16 @@ public class NodeDAO
             col++;
             sb.append(pval);
             sb.append(",");
+
+            String storageID = nodeID.storageID;
+            if (storageID != null) {
+                ps.setString(col, storageID);
+                sb.append(storageID);
+            } else {
+                ps.setNull(col, Types.VARCHAR);
+                sb.append("null");
+            }
+            col++;
 
             if (update)
             {
@@ -2983,6 +2999,7 @@ public class NodeDAO
             String contentType = getString(rs, col++);
             String contentEncoding = getString(rs, col++);
             String linkStr = getString(rs, col++);
+            String storageID = getString(rs, col++);
 
             Long contentLength = null;
             o = rs.getObject(col++);
@@ -3030,14 +3047,7 @@ public class NodeDAO
 	            }
 	            else if (NODE_TYPE_LINK.equals(type))
 	            {
-	                URI link;
-
-	                try { link = new URI(linkStr); }
-	                catch(URISyntaxException bug)
-	                {
-	                    throw new RuntimeException("BUG - failed to create link URI", bug);
-	                }
-
+	                URI link = NodeMapper.extractLinkURI(linkStr, authority);
 	                node = new LinkNode(vos, link);
 	            }
 	            else
@@ -3048,6 +3058,7 @@ public class NodeDAO
 	            NodeID nid = new NodeID();
 	            nid.id = nodeID;
 	            nid.ownerObject = ownerObject;
+	            nid.storageID = storageID;
 	            node.appData = nid;
 
 	            if (contentType != null)

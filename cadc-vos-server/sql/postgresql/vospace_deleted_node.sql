@@ -74,7 +74,8 @@ create table DeletedNode
     nodeID        BIGINT        NOT NULL primary key clustered,
     name          VARCHAR(276)  NOT NULL,
     ownerID       VARCHAR(256)  NOT NULL,
-    lastModified  DATETIME      NOT NULL
+    lastModified  DATETIME      NOT NULL,
+    storageID     VARCHAR(32)   NULL
 )
 lock datarows
 go
@@ -84,8 +85,8 @@ CREATE TRIGGER Node_delete_trig
     FOR DELETE
     AS
     BEGIN
-        INSERT INTO DeletedNode (nodeID,name,ownerID,lastModified)
-        (SELECT nodeID,name,ownerID,getdate() FROM deleted
+        INSERT INTO DeletedNode (nodeID,name,ownerID,lastModified,storageID)
+        (SELECT nodeID,name,ownerID,getdate(),storageID FROM deleted
 		WHERE type='D' and (contentLength IS NOT NULL OR busyState='W'))
     END
 go

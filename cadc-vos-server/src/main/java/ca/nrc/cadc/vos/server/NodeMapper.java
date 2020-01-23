@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2019.                            (c) 2019.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -98,6 +98,8 @@ public class NodeMapper implements RowMapper
 {
     private static Logger log = Logger.getLogger(NodeMapper.class);
     
+    private static final String ABSOLUTE_LINK_SCHEME = "abs:";
+    
     private DateFormat dateFormat;
     private Calendar cal;
 
@@ -136,6 +138,7 @@ public class NodeMapper implements RowMapper
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
         String link = null;
+        String storageID = rs.getString("storageID");
 
         Long contentLength = null;
         Object o = rs.getObject("contentLength");
@@ -170,11 +173,8 @@ public class NodeMapper implements RowMapper
         else if (NodeDAO.NODE_TYPE_LINK.equals(type))
         {
             link = rs.getString("link");
-            try { node = new LinkNode(vos, new URI(link)); }
-            catch(URISyntaxException bug)
-            {
-                throw new RuntimeException("BUG - failed to create link URI", bug);
-            }
+            URI linkURI = extractLinkURI(link, authority);
+            node = new LinkNode(vos, linkURI);
         }
         else
         {
@@ -185,6 +185,7 @@ public class NodeMapper implements RowMapper
         NodeID nid = new NodeID();
         nid.id = nodeID;
         nid.ownerObject = ownerObject;
+        nid.storageID = storageID;
         node.appData = nid;
 
         if (contentType != null && contentType.trim().length() > 0)
@@ -243,6 +244,60 @@ public class NodeMapper implements RowMapper
         }
         log.debug("read: " + node.getUri() + "," + node.appData);
         return node;
+    }
+    
+    /**
+     * Transform a link from the DB for the API.  Absolute links
+     * will be restored as full VOS links with the current authority.
+     * 
+     * @param link
+     * @param authority
+     * @return
+     */
+    static URI extractLinkURI(String link, String authority) {
+        try {
+            if (link == null) {
+                throw new RuntimeException("Null link URI");
+            }
+            URI linkURI = null;
+            if (link.startsWith(ABSOLUTE_LINK_SCHEME)) {
+                // translate it to a VOS URI with the local authority
+                URI absURI = new URI(link);
+                linkURI = new URI(VOSURI.SCHEME, authority, absURI.getPath(),
+                    absURI.getQuery(), absURI.getFragment());
+            } else {
+                linkURI = new URI(link);
+            }
+            return linkURI;
+        } catch (URISyntaxException bug) {
+            throw new RuntimeException("BUG - failed to create link URI", bug);
+        }
+    }
+    
+    /**
+     * Transform a link URI for db persistence.  Local vos URIs will
+     * be changed to absolute path links.
+     * 
+     * @param link
+     * @param authority
+     * @return
+     */
+    static String createDBLinkString(URI link, String authority) {
+        if (link == null) {
+            return null;
+        }
+        if (link.getScheme() != null && link.getScheme().equals(VOSURI.SCHEME) &&
+                link.getAuthority().equals(authority)) {
+            String dbURI = ABSOLUTE_LINK_SCHEME + link.getPath();
+            if (link.getQuery() != null) {
+                dbURI += "?" + link.getQuery();
+            }
+            if (link.getFragment() != null) {
+                dbURI += "#" + link.getFragment();
+            }
+            return dbURI;
+        }
+        return link.toASCIIString();   
     }
 
 }

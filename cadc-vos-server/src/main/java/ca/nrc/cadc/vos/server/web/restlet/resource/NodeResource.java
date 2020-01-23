@@ -85,6 +85,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
+import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.util.RestletLogInfo;
 import ca.nrc.cadc.vos.NodeFault;
@@ -151,6 +152,13 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             String message = "Access Denied: " + e.getMessage();
             LOGGER.debug(message, e);
             nodeFault = NodeFault.PermissionDenied;
+            nodeFault.setMessage(message);
+        }
+        catch (NotAuthenticatedException e)
+        {
+            String message = "Not Authenticated: " + e.getMessage();
+            LOGGER.debug(message, e);
+            nodeFault = NodeFault.NotAuthenticated;
             nodeFault.setMessage(message);
         }
         catch (UnsupportedOperationException e)

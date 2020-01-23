@@ -67,7 +67,7 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.ac.GroupURI;
+import org.opencadc.gms.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
@@ -231,10 +231,18 @@ public abstract class NodeUtil {
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (owner != null) {
-            pv.setOwner(owner);
+            try {
+                pv.setOwner(owner);
+            } catch (IOException ex) {
+                throw new RuntimeException("failed to set owner: " + owner.getName() + " on " + p, ex);
+            }
         }
         if (group != null) {
-            pv.setGroup(group);
+            try {
+                pv.setGroup(group);
+            } catch (IOException ex) {
+                throw new RuntimeException("failed to set group: " + group.getName() + " on " + p, ex);
+            }
         }
     }
     

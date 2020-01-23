@@ -171,6 +171,13 @@ public enum NodeFault
                    "NodeLocked",
                    "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    NotAuthenticated
+    (
+        new Status(401,
+                   "NotAuthenticated",
+                   "A HTTP 401 status code with a NotAuthenticated fault in the body is thrown if the credentials provided are not valid.",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
     );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
