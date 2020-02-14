@@ -18,8 +18,6 @@ sourceCompatibility = 1.7
 group = 'org.opencadc'
 
 war {
-    //archiveName = project.name + '##' + project.version + '.war'
-    
     // Include the private key for preauthorized transfers
     from(System.getenv('A') + '/etc/') {
         into 'WEB-INF/classes/'
