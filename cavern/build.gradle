@@ -17,10 +17,8 @@ sourceCompatibility = 1.7
 
 group = 'org.opencadc'
 
-version = '1003'
-
 war {
-    archiveName = project.name + '##' + project.version + '.war'
+    //archiveName = project.name + '##' + project.version + '.war'
     
     // Include the private key for preauthorized transfers
     from(System.getenv('A') + '/etc/') {

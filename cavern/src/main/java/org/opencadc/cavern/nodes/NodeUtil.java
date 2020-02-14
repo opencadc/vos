@@ -556,6 +556,10 @@ public abstract class NodeUtil {
         if (getAttrs && !attrs.isSymbolicLink()) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(p,
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+            if (udv == null) {
+                throw new UnsupportedOperationException("file system does not support "
+                    + "user defined file attributes.");
+            }
             for (String propName : udv.list()) {
                 String propValue = getAttribute(udv, propName);
                 if (propValue != null) {
