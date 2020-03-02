@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2020.                            (c) 2020.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -95,6 +95,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
@@ -224,14 +225,16 @@ public class VOSpaceClient
 
             NodeOutputStream out = new NodeOutputStream(node);
             HttpUpload put = new HttpUpload(out, url);
-            put.setContentType("text/xml");
+            put.setRequestProperty(HttpTransfer.CONTENT_TYPE, "text/xml");
 
-            put.run();
-
-            VOSClientUtil.checkFailure(put.getThrowable());
+            try {
+                put.prepare();
+            } catch (Exception ex) {
+                VOSClientUtil.checkFailure(ex);
+            }
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            rtnNode = nodeReader.read(put.getResponseBody());
+            rtnNode = nodeReader.read(put.getInputStream());
             log.debug("createNode, created node: " + rtnNode);
         }
         catch (IOException e)
@@ -338,15 +341,17 @@ public class VOSpaceClient
             nodeWriter.write(node, nodeXML);
 
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
 
-            httpPost.run();
+            try {
+                httpPost.prepare();
+            } catch (Exception ex) {
+                VOSClientUtil.checkFailure(ex);
+            }
 
-            VOSClientUtil.checkFailure(httpPost.getThrowable());
-
-            String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
-            rtnNode = nodeReader.read(responseBody);
+            rtnNode = nodeReader.read(httpPost.getInputStream());
 
         }
         catch (IOException e)
