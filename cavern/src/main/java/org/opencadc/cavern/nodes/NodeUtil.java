@@ -702,11 +702,11 @@ public abstract class NodeUtil {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
             for (Path file : stream) {
                 log.debug("[list] visit: " + file);
-                Node n = pathToNode(root, file, rootURI);
                 if (limit != null && (limit == 0 || limit == nodes.size())) {
                     break;
                 }
                 
+                Node n = pathToNode(root, file, rootURI);
                 if (!nodes.isEmpty() || start == null
                         || start.getName().equals(n.getName())) {
                     nodes.add(n);
