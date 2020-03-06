@@ -581,7 +581,6 @@ public class NodeUtilTest {
                     log.info("[testList] found: " + nf.getUri());
                     num++;
                 }
-                
                 if (i < maxLimit) {
                     Assert.assertEquals("num siblings", i + 1, num);
                 } else {
