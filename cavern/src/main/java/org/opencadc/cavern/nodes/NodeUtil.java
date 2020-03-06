@@ -711,7 +711,6 @@ public abstract class NodeUtil {
                         || start.getName().equals(n.getName())) {
                     nodes.add(n);
                 }
-
             }
         }
         log.debug("[list] found: " + nodes.size());
