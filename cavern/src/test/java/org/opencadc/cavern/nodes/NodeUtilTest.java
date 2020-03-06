@@ -548,7 +548,7 @@ public class NodeUtilTest {
                 Assert.assertEquals(n.getUri(), nn.getUri());
                 Assert.assertNotNull("lastModified", nn.getPropertyValue(VOS.PROPERTY_URI_DATE));
 
-                // count children
+                // count children for limit == null (no limit)
                 ContainerNode parent = nn.getParent();
                 Iterator<Node> iter = NodeUtil.list(root, parent, null, null);
                 int num = 0;
@@ -558,6 +558,35 @@ public class NodeUtilTest {
                     num++;
                 }
                 Assert.assertEquals("num siblings", i + 1, num);
+
+                // count children for limit == 0 (no children)
+                int upperLimit = 0;
+                parent = nn.getParent();
+                iter = NodeUtil.list(root, parent, null, upperLimit);
+                num = 0;
+                while (iter.hasNext()) {
+                    Node nf = iter.next();
+                    log.info("[testList] found: " + nf.getUri());
+                    num++;
+                }
+                Assert.assertEquals("num siblings", upperLimit + 1, num);
+
+                // count children for when there is a max limit
+                int maxLimit = 6;
+                parent = nn.getParent();
+                iter = NodeUtil.list(root, parent, null, maxLimit);
+                num = 0;
+                while (iter.hasNext()) {
+                    Node nf = iter.next();
+                    log.info("[testList] found: " + nf.getUri());
+                    num++;
+                }
+                
+                if (i < maxLimit) {
+                    Assert.assertEquals("num siblings", i + 1, num);
+                } else {
+                    Assert.assertEquals("num siblings", maxLimit + 1, num);
+                }
             }
 
             //NodeUtil.delete(root, testURI);

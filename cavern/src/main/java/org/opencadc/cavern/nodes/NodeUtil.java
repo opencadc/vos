@@ -707,7 +707,7 @@ public abstract class NodeUtil {
                         || start.getName().equals(n.getName())) {
                     nodes.add(n);
                 }
-                if (limit != null && limit == nodes.size()) {
+                if (limit != null && (limit == 0 || limit == nodes.size() - 1)) {
                     break;
                 }
             }
