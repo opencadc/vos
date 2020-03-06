@@ -569,7 +569,7 @@ public class NodeUtilTest {
                     log.info("[testList] found: " + nf.getUri());
                     num++;
                 }
-                Assert.assertEquals("num siblings", upperLimit + 1, num);
+                Assert.assertEquals("num siblings", upperLimit, num);
 
                 // count children for when there is a max limit
                 int maxLimit = 6;
@@ -584,7 +584,7 @@ public class NodeUtilTest {
                 if (i < maxLimit) {
                     Assert.assertEquals("num siblings", i + 1, num);
                 } else {
-                    Assert.assertEquals("num siblings", maxLimit + 1, num);
+                    Assert.assertEquals("num siblings", maxLimit, num);
                 }
             }
 

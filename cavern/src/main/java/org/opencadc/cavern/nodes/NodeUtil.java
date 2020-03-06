@@ -703,13 +703,15 @@ public abstract class NodeUtil {
             for (Path file : stream) {
                 log.debug("[list] visit: " + file);
                 Node n = pathToNode(root, file, rootURI);
+                if (limit != null && (limit == 0 || limit == nodes.size())) {
+                    break;
+                }
+                
                 if (!nodes.isEmpty() || start == null
                         || start.getName().equals(n.getName())) {
                     nodes.add(n);
                 }
-                if (limit != null && (limit == 0 || limit == nodes.size() - 1)) {
-                    break;
-                }
+
             }
         }
         log.debug("[list] found: " + nodes.size());
