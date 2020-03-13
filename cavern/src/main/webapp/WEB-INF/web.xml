@@ -49,65 +49,113 @@
   <!-- async transfer servlet-->
   <servlet>
     <servlet-name>TransferServlet</servlet-name>
-    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-
+    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
-      <param-name>org.restlet.application</param-name>
-      <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
+        <param-name>get</param-name>
+        <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+        <param-name>post</param-name>
+        <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
-      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
-      </param-value>
+        <param-name>delete</param-name>
+        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
     </init-param>
-    <load-on-startup>3</load-on-startup>
+    <init-param>
+        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+        <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
+    </init-param>
   </servlet>
 
   <!-- async transfer servlet with http basic auth, restlet requires a 2nd deployment-->
   <servlet>
     <servlet-name>AuthTransferServlet</servlet-name>
-    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-
+    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
-      <param-name>org.restlet.application</param-name>
-      <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
+        <param-name>get</param-name>
+        <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+        <param-name>post</param-name>
+        <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
-      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
-      </param-value>
+        <param-name>delete</param-name>
+        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
     </init-param>
-    <load-on-startup>3</load-on-startup>
+    <init-param>
+        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+        <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
+    </init-param>
   </servlet>
+
 
   <!-- sync transfer servlet-->
   <servlet>
     <servlet-name>SyncTransferServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
+    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-      <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+        <param-name>get</param-name>
+        <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnGET</param-name>
-      <param-value>true</param-value>
+        <param-name>post</param-name>
+        <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnPOST</param-name>
-      <param-value>true</param-value>
+        <param-name>delete</param-name>
+        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
     </init-param>
     <init-param>
-      <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
-      <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler
-      </param-value>
+        <param-name>ca.nrc.cadc.uws.web.SyncPostAction.execOnPOST</param-name>
+        <param-value>true</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+        <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
+    </init-param>
+  </servlet>
+  
+  <!--  auth sync transfer servlet -->
+  <servlet>
+    <servlet-name>AuthSyncTransferServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+    <init-param>
+        <param-name>get</param-name>
+        <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
+    </init-param>
+    <init-param>
+        <param-name>post</param-name>
+        <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
+    </init-param>
+    <init-param>
+        <param-name>delete</param-name>
+        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.uws.web.SyncPostAction.execOnPOST</param-name>
+        <param-value>true</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+        <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+    </init-param>
+    <init-param>
+        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
     </init-param>
   </servlet>
 
@@ -278,7 +326,7 @@
     <url-pattern>/synctrans/*</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
-    <servlet-name>SyncTransferServlet</servlet-name>
+    <servlet-name>AuthSyncTransferServlet</servlet-name>
     <url-pattern>/auth/synctrans/*</url-pattern>
   </servlet-mapping>
 

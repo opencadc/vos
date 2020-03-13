@@ -703,16 +703,19 @@ public abstract class NodeUtil {
         }
         log.debug("[list] root: " + rootURI + " -> " + root);
         List<Node> nodes = new ArrayList<Node>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
-            for (Path file : stream) {
-                log.debug("[list] visit: " + file);
-                Node n = pathToNode(root, file, rootURI);
-                if (!nodes.isEmpty() || start == null
-                        || start.getName().equals(n.getName())) {
-                    nodes.add(n);
-                }
-                if (limit != null && limit == nodes.size()) {
-                    break;
+        if (limit == null || limit > 0) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
+                for (Path file : stream) {
+                    log.debug("[list] visit: " + file);
+                    Node n = pathToNode(root, file, rootURI);
+                    if (!nodes.isEmpty() || start == null
+                            || start.getName().equals(n.getName())) {
+                        nodes.add(n);
+                    }
+                    
+                    if (limit != null && limit == nodes.size()) {
+                        break;
+                    }
                 }
             }
         }
