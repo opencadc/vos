@@ -297,35 +297,46 @@ public abstract class NodeUtil {
             boolean isDir = (node instanceof ContainerNode);
             UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
             AclCommandExecutor acl = new AclCommandExecutor(path, users);
-            String sro = node.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
-            if (sro != null) {
-                GroupURI guri = new GroupURI(sro);
-                URI groupGMS = guri.getServiceID();
-                if (!groupGMS.equals(localGMS)) {
-                    // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                    throw new IllegalArgumentException("external group not supported: " + guri);
-                }
-                try {
-                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
-                    acl.setReadOnlyACL(gp, isDir);
-                } catch (UserPrincipalNotFoundException ex) {
-                    throw new RuntimeException("failed to find existing group: " + guri, ex);
+            
+            NodeProperty gro = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            if (gro != null) {
+                String sro = gro.getPropertyValue();
+                if (sro == null || sro.trim().length() == 0) {
+                     acl.clearACL();
+                } else {
+                    GroupURI guri = new GroupURI(sro);
+                    URI groupGMS = guri.getServiceID();
+                    if (!groupGMS.equals(localGMS)) {
+                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                        throw new IllegalArgumentException("external group not supported: " + guri);
+                    }
+                    try {
+                        GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                        acl.setReadOnlyACL(gp, isDir);
+                    } catch (UserPrincipalNotFoundException ex) {
+                        throw new RuntimeException("failed to find existing group: " + guri, ex);
+                    }
                 }
             }
             
-            String srw = node.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
-            if (srw != null) {
-                GroupURI guri = new GroupURI(srw);
-                URI groupGMS = guri.getServiceID();
-                if (!groupGMS.equals(localGMS)) {
-                    // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                    throw new IllegalArgumentException("external group not supported: " + guri);
-                }
-                try {
-                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
-                    acl.setReadWriteACL(gp, isDir);
-                } catch (UserPrincipalNotFoundException ex) {
-                    throw new RuntimeException("failed to find existing group: " + guri, ex);
+            NodeProperty grw = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            if (grw != null) {
+                String srw = grw.getPropertyValue();
+                if (srw == null || srw.trim().length() == 0) {
+                    acl.clearACL();
+                } else {
+                    GroupURI guri = new GroupURI(srw);
+                    URI groupGMS = guri.getServiceID();
+                    if (!groupGMS.equals(localGMS)) {
+                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                        throw new IllegalArgumentException("external group not supported: " + guri);
+                    }
+                    try {
+                        GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                        acl.setReadWriteACL(gp, isDir);
+                    } catch (UserPrincipalNotFoundException ex) {
+                        throw new RuntimeException("failed to find existing group: " + guri, ex);
+                    }
                 }
             }
             
