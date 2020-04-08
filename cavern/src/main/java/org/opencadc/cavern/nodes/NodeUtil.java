@@ -302,7 +302,8 @@ public abstract class NodeUtil {
             if (gro != null) {
                 String sro = gro.getPropertyValue();
                 if (sro == null || sro.trim().length() == 0) {
-                     acl.clearACL();
+                    log.debug("clearing group-read property");
+                    acl.clearACL();
                 } else {
                     GroupURI guri = new GroupURI(sro);
                     URI groupGMS = guri.getServiceID();
@@ -312,6 +313,8 @@ public abstract class NodeUtil {
                     }
                     try {
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                        log.debug("setting group-read property to: " + guri);
+                        acl.clearACL();
                         acl.setReadOnlyACL(gp, isDir);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
@@ -323,6 +326,7 @@ public abstract class NodeUtil {
             if (grw != null) {
                 String srw = grw.getPropertyValue();
                 if (srw == null || srw.trim().length() == 0) {
+                    log.debug("clearing group-write property");
                     acl.clearACL();
                 } else {
                     GroupURI guri = new GroupURI(srw);
@@ -333,6 +337,8 @@ public abstract class NodeUtil {
                     }
                     try {
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
+                        log.debug("setting group-write property to: " + guri);
+                        acl.clearACL();
                         acl.setReadWriteACL(gp, isDir);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
