@@ -1,0 +1,3 @@
+rootProject.name = 'vos'
+include 'cadc-vos', 'cadc-vos-server', 'cadc-test-vos', 'cavern'
+
