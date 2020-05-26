@@ -69,31 +69,11 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.net.FileContent;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.security.AccessControlException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpDelete;
-import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
@@ -117,6 +97,25 @@ import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
 
 /**
  * VOSpace client library. This implementation
@@ -292,7 +291,7 @@ public class VOSpaceClient
             log.debug("getNode(), URL=" + url);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpDownload get = new HttpDownload(url, out);
+            HttpGet get = new HttpGet(url, out);
 
             get.run();
 
@@ -341,7 +340,6 @@ public class VOSpaceClient
             nodeWriter.write(node, nodeXML);
 
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
 
             try {
@@ -607,7 +605,7 @@ public class VOSpaceClient
                 // follow the redirect to run the job
                 log.debug("GET - opening connection: " + redirectURL.toString());
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                HttpDownload get = new HttpDownload(redirectURL, out);
+                HttpGet get = new HttpGet(redirectURL, out);
 
                 get.run();
 
@@ -658,32 +656,6 @@ public class VOSpaceClient
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
-    }
-
-    // determine the jobURL from the service base URL and the URL to
-    // transfer details... makes assumptions about paths structure that
-    // can be simplified once we comply to spec
-    private URL extractJobURL(String baseURL, URL transferDetailsURL)
-        throws MalformedURLException
-    {
-        //log.warn("baseURL: " + baseURL);
-        URL u = new URL(baseURL);
-        String bp = u.getPath();
-        //log.warn("bp: " + bp);
-        String tu = transferDetailsURL.toExternalForm();
-        //log.warn("tu: " + tu);
-        int i = tu.indexOf(bp);
-        String jp = tu.substring(i + bp.length() + 1); // strip /
-        //log.warn("jp: " + jp);
-        String[] parts = jp.split("/");
-        // part[0] is the joblist
-        // part[1] is the jobID
-        // part[2-] is either run (current impl) or results/transferDetails (spec)
-        String jobList = parts[0];
-        String jobID = parts[1];
-        //log.warn("jobList: " + jobList);
-        //log.warn("jobID: " + jobID);
-        return new URL(baseURL + "/" + jobList + "/" + jobID);
     }
 
     private class NodeOutputStream implements OutputStreamWrapper

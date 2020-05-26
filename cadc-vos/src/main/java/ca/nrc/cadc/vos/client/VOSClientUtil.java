@@ -77,6 +77,7 @@ import org.jdom2.Document;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.Node;
@@ -158,7 +159,7 @@ public class VOSClientUtil
             {
                 throw (RuntimeException) failure;
             }
-            if (failure instanceof FileNotFoundException)
+            if (failure instanceof FileNotFoundException || failure instanceof ResourceNotFoundException)
             {
                 throw new NodeNotFoundException("not found.", failure);
             }

@@ -195,6 +195,8 @@ public class CavernURLGenerator implements TransferGenerator {
         Direction dir = null;
         try {
             switch (protocol.getUri()) {
+                /** 
+                 * HTTP not currently supported
                 case VOS.PROTOCOL_HTTP_GET:
                     scheme = "http";
                     dir = Direction.pullFromVoSpace;
@@ -203,6 +205,7 @@ public class CavernURLGenerator implements TransferGenerator {
                     scheme = "http";
                     dir = Direction.pushToVoSpace;
                     break;
+                */
                 case VOS.PROTOCOL_HTTPS_GET:
                     scheme = "https";
                     dir = Direction.pullFromVoSpace;

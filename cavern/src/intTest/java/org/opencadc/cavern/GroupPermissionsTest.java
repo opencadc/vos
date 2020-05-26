@@ -132,7 +132,7 @@ public class GroupPermissionsTest {
         }
     }
     
-    @Test
+   @Test
     public void testCreateContainerGroupReadOnly() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();

@@ -17,11 +17,7 @@ sourceCompatibility = 1.7
 
 group = 'org.opencadc'
 
-version = '1004'
-
 war {
-    archiveName = project.name + '##' + project.version + '.war'
-    
     // Include the private key for preauthorized transfers
     from(System.getenv('A') + '/etc/') {
         into 'WEB-INF/classes/'
@@ -53,12 +49,10 @@ dependencies {
     compile 'org.opencadc:cadc-vosi:[1.0,)'
     compile 'org.opencadc:cadc-rest:[1.0,)'
     compile 'org.opencadc:cadc-uws:[1.0,)'
-    compile 'org.opencadc:cadc-uws-server:[1.0.4,)'
+    compile 'org.opencadc:cadc-uws-server:[1.2.5,)'
     compile 'org.opencadc:cadc-cdp:[1.0,)'
     compile 'org.opencadc:cadc-gms:[1.0.0,)'
-    compile 'org.opencadc:cadc-access-control:[1.1.1,2.0)'
-    compile 'org.opencadc:cadc-access-control-identity:[1.0.3,2.0)'
-    compile 'org.opencadc:cadc-vos:[1.1.2,)'
+    compile 'org.opencadc:cadc-vos:[1.1.10,)'
     compile 'org.opencadc:cadc-vos-server:[1.1,)'
     //compile 'org.opencadc:cadc-wcs:1.+'
     compile 'org.opencadc:cadc-dali:[1.0,)'
@@ -66,6 +60,8 @@ dependencies {
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
 
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
+    runtime 'org.opencadc:cadc-access-control:[1.1.1,2.0)'
+    runtime 'org.opencadc:cadc-access-control-identity:[1.0.3,2.0)'
 
     testCompile 'junit:junit:[4.0,)'
     testCompile 'xerces:xercesImpl:[2.0,)'

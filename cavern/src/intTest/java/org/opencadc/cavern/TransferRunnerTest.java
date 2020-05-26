@@ -179,23 +179,24 @@ public class TransferRunnerTest {
         try {
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
-            Protocol anon = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            // Only HTTPS connections
+            //Protocol anon = new Protocol(VOS.PROTOCOL_HTTP_GET);
             Protocol anonTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
 
-            Protocol basic = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            basic.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
+            //Protocol basic = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            //basic.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
 
-            Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
+            //Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            //basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_HTTP_BASIC);
 
-            Protocol cookie = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            cookie.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
+            //Protocol cookie = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            //cookie.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
 
             Protocol cookieTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
             cookieTLS.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
 
-            Protocol token = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            token.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
+            //Protocol token = new Protocol(VOS.PROTOCOL_HTTP_GET);
+            //token.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
 
             Protocol tokenTLS = new Protocol(VOS.PROTOCOL_HTTPS_GET);
             tokenTLS.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
@@ -204,13 +205,13 @@ public class TransferRunnerTest {
             certTLS.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
 
             List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(anon);
+            //protocols.add(anon);
             protocols.add(anonTLS);
-            protocols.add(basic);
-            protocols.add(basicTLS);
-            protocols.add(cookie);
+            //protocols.add(basic);
+            //protocols.add(basicTLS);
+            //protocols.add(cookie);
             protocols.add(cookieTLS);
-            protocols.add(token);
+            //protocols.add(token);
             protocols.add(tokenTLS);
             protocols.add(certTLS);
 
@@ -227,25 +228,27 @@ public class TransferRunnerTest {
             Assert.assertNotNull(plist);
             log.debug("found: " + plist.size() + " protocols");
 
-            Protocol anon2 = findProto(anon, plist);
-            Assert.assertNotNull(anon2);
-            Assert.assertNotNull(anon2.getEndpoint());
-            log.debug("anon: " + anon2.getEndpoint());
+            //Protocol anon2 = findProto(anon, plist);
+            //Assert.assertNotNull(anon2);
+            //Assert.assertNotNull(anon2.getEndpoint());
+            //log.debug("anon: " + anon2.getEndpoint());
 
-            Protocol basic2 = findProto(basic, plist);
-            Assert.assertNotNull(basic2);
-            Assert.assertNotNull(basic2.getEndpoint());
-            log.debug("basic: " + basic2.getEndpoint());
+            //Protocol basic2 = findProto(basic, plist);
+            //Assert.assertNotNull(basic2);
+            //Assert.assertNotNull(basic2.getEndpoint());
+            //log.debug("basic: " + basic2.getEndpoint());
 
             Protocol certTLS2 = findProto(certTLS, plist);
             Assert.assertNotNull(certTLS2);
             Assert.assertNotNull(certTLS2.getEndpoint());
             log.debug("certTLS: " + certTLS2.getEndpoint());
 
-            Assert.assertFalse("anonTLS", plist.contains(anonTLS));
-            Assert.assertFalse("basicTLS", plist.contains(basicTLS));
-            Assert.assertFalse("cookieTLS", plist.contains(cookieTLS));
-            Assert.assertFalse("token", plist.contains(token));
+            Assert.assertTrue("anonTLS", plist.contains(anonTLS));
+            Assert.assertTrue("cookieTLS", plist.contains(cookieTLS));
+
+            //Assert.assertFalse("basicTLS", plist.contains(basicTLS));
+
+            //Assert.assertFalse("token", plist.contains(token));
             Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
             
         } catch (Exception unexpected) {
@@ -273,7 +276,7 @@ public class TransferRunnerTest {
             log.debug("testPullFromVOSpace: " + data.getUri().getURI().toASCIIString());
 
             List<Protocol> proto = new ArrayList<Protocol>();
-            proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             // https on transfer not supported
             //proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
@@ -358,7 +361,7 @@ public class TransferRunnerTest {
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
             List<Protocol> proto = new ArrayList<Protocol>();
-            proto.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
             ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
