@@ -2,7 +2,6 @@ language: java
 dist: trusty
 sudo: required
 jdk:
-  - openjdk7
   - oraclejdk8
 before_install:
 #  - sudo apt-get -qq update

@@ -378,13 +378,11 @@ public class CavernURLGenerator implements TransferGenerator {
 
     List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
         // find all the base endpoints
+        
+        URI serviceURI = target.getServiceURI();
         List<URL> baseURLs = new ArrayList<URL>();
         try {
-            // TODO: using registry lookup here makes this code non-testable in a dev environment
-            // when deployment is in a container because the deployed jvm has only production system
-            // properties and we modifying the RegistryClient lookup requires a server-side system property
             RegistryClient rc = new RegistryClient();
-            URI serviceURI = target.getServiceURI();
             Capabilities caps = rc.getCapabilities(serviceURI);
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
