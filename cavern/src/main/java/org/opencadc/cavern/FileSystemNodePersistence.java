@@ -86,6 +86,7 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipal;
@@ -280,7 +281,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     iter.remove();
                 }
             }
-        }  catch (IOException ex) {
+        }  catch (IOException | URISyntaxException ex) {
             throw new RuntimeException("oops", ex);
         }
         return node;

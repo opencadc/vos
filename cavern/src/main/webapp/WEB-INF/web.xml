@@ -10,7 +10,7 @@
 
   <context-param>
     <param-name>ivoa.vos.uri</param-name>
-    <param-value>vos://canfar.net~cavern</param-value>
+    <param-value>vos://cadc.nrc.ca~arbutus-cavern</param-value>
   </context-param>
 
   <context-param>

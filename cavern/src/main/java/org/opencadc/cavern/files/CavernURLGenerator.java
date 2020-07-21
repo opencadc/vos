@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
 import ca.nrc.cadc.reg.Capability;
@@ -401,7 +402,7 @@ public class CavernURLGenerator implements TransferGenerator {
                     log.debug("Added auth interface.");
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ResourceNotFoundException e) {
             throw new IllegalStateException("Error creating transfer urls", e);
         }
         return baseURLs;

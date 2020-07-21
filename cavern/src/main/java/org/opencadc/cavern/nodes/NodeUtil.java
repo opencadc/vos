@@ -80,6 +80,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
@@ -217,7 +218,7 @@ public abstract class NodeUtil {
         try {
             setPosixOwnerGroup(root, ret, owner, group);
             setNodeProperties(ret, node);
-        } catch (IOException ex) {
+        } catch (IOException | URISyntaxException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
             throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
@@ -246,7 +247,7 @@ public abstract class NodeUtil {
         }
     }
     
-    public static void setNodeProperties(Path path, Node node) throws IOException { 
+    public static void setNodeProperties(Path path, Node node) throws IOException, URISyntaxException { 
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
