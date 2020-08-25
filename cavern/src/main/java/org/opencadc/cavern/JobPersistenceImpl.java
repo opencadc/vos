@@ -67,7 +67,7 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.ACIdentityManager;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.server.MemoryJobPersistence;
 import ca.nrc.cadc.uws.server.RandomStringGenerator;
 
@@ -83,6 +83,6 @@ public class JobPersistenceImpl extends MemoryJobPersistence {
     private static final long JOB_CLEANER_INTERVAL = 30000L;
 
     public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), new ACIdentityManager(), JOB_CLEANER_INTERVAL);
+        super(new RandomStringGenerator(16), AuthenticationUtil.getIdentityManager(), JOB_CLEANER_INTERVAL);
     }
 }

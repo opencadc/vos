@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
 import ca.nrc.cadc.reg.Capability;
@@ -195,6 +196,8 @@ public class CavernURLGenerator implements TransferGenerator {
         Direction dir = null;
         try {
             switch (protocol.getUri()) {
+                /** 
+                 * HTTP not currently supported
                 case VOS.PROTOCOL_HTTP_GET:
                     scheme = "http";
                     dir = Direction.pullFromVoSpace;
@@ -203,6 +206,7 @@ public class CavernURLGenerator implements TransferGenerator {
                     scheme = "http";
                     dir = Direction.pushToVoSpace;
                     break;
+                */
                 case VOS.PROTOCOL_HTTPS_GET:
                     scheme = "https";
                     dir = Direction.pullFromVoSpace;
@@ -374,13 +378,11 @@ public class CavernURLGenerator implements TransferGenerator {
 
     List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
         // find all the base endpoints
+        
+        URI serviceURI = target.getServiceURI();
         List<URL> baseURLs = new ArrayList<URL>();
         try {
-            // TODO: using registry lookup here makes this code non-testable in a dev environment
-            // when deployment is in a container because the deployed jvm has only production system
-            // properties and we modifying the RegistryClient lookup requires a server-side system property
             RegistryClient rc = new RegistryClient();
-            URI serviceURI = target.getServiceURI();
             Capabilities caps = rc.getCapabilities(serviceURI);
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
@@ -398,8 +400,10 @@ public class CavernURLGenerator implements TransferGenerator {
                     log.debug("Added auth interface.");
                 }
             }
-        } catch (IOException e) {
-            throw new IllegalStateException("Error creating transfer urls", e);
+        } catch (ResourceNotFoundException ex) {
+            throw new IllegalStateException("CONFIG: registry lookup failure " + serviceURI, ex);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Error creating transfer urls", ex);
         }
         return baseURLs;
     }

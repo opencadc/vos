@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2020.                            (c) 2020.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,32 +69,13 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.net.FileContent;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.security.AccessControlException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpDelete;
-import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
@@ -116,6 +97,25 @@ import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
 
 /**
  * VOSpace client library. This implementation
@@ -224,14 +224,16 @@ public class VOSpaceClient
 
             NodeOutputStream out = new NodeOutputStream(node);
             HttpUpload put = new HttpUpload(out, url);
-            put.setContentType("text/xml");
+            put.setRequestProperty(HttpTransfer.CONTENT_TYPE, "text/xml");
 
-            put.run();
-
-            VOSClientUtil.checkFailure(put.getThrowable());
+            try {
+                put.prepare();
+            } catch (Exception ex) {
+                VOSClientUtil.checkFailure(ex);
+            }
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            rtnNode = nodeReader.read(put.getResponseBody());
+            rtnNode = nodeReader.read(put.getInputStream());
             log.debug("createNode, created node: " + rtnNode);
         }
         catch (IOException e)
@@ -289,7 +291,7 @@ public class VOSpaceClient
             log.debug("getNode(), URL=" + url);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpDownload get = new HttpDownload(url, out);
+            HttpGet get = new HttpGet(url, out);
 
             get.run();
 
@@ -340,13 +342,14 @@ public class VOSpaceClient
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
 
-            httpPost.run();
+            try {
+                httpPost.prepare();
+            } catch (Exception ex) {
+                VOSClientUtil.checkFailure(ex);
+            }
 
-            VOSClientUtil.checkFailure(httpPost.getThrowable());
-
-            String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
-            rtnNode = nodeReader.read(responseBody);
+            rtnNode = nodeReader.read(httpPost.getInputStream());
 
         }
         catch (IOException e)
@@ -602,7 +605,7 @@ public class VOSpaceClient
                 // follow the redirect to run the job
                 log.debug("GET - opening connection: " + redirectURL.toString());
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                HttpDownload get = new HttpDownload(redirectURL, out);
+                HttpGet get = new HttpGet(redirectURL, out);
 
                 get.run();
 
@@ -653,32 +656,6 @@ public class VOSpaceClient
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
-    }
-
-    // determine the jobURL from the service base URL and the URL to
-    // transfer details... makes assumptions about paths structure that
-    // can be simplified once we comply to spec
-    private URL extractJobURL(String baseURL, URL transferDetailsURL)
-        throws MalformedURLException
-    {
-        //log.warn("baseURL: " + baseURL);
-        URL u = new URL(baseURL);
-        String bp = u.getPath();
-        //log.warn("bp: " + bp);
-        String tu = transferDetailsURL.toExternalForm();
-        //log.warn("tu: " + tu);
-        int i = tu.indexOf(bp);
-        String jp = tu.substring(i + bp.length() + 1); // strip /
-        //log.warn("jp: " + jp);
-        String[] parts = jp.split("/");
-        // part[0] is the joblist
-        // part[1] is the jobID
-        // part[2-] is either run (current impl) or results/transferDetails (spec)
-        String jobList = parts[0];
-        String jobID = parts[1];
-        //log.warn("jobList: " + jobList);
-        //log.warn("jobID: " + jobID);
-        return new URL(baseURL + "/" + jobList + "/" + jobID);
     }
 
     private class NodeOutputStream implements OutputStreamWrapper
