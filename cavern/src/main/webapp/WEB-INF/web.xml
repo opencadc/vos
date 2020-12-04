@@ -29,6 +29,8 @@
       <param-name>logLevelPackages</param-name>
       <param-value>
             org.opencadc.cavern
+            ca.nrc.cadc.auth
+            ca.nrc.cadc.ac
             ca.nrc.cadc.rest
             ca.nrc.cadc.vos
       </param-value>
