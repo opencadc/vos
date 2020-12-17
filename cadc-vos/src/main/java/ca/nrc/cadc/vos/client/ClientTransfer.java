@@ -180,9 +180,6 @@ public class ClientTransfer implements Runnable
         if (phase != null)
             return phase;
 
-        // TODO: read just the phase in text/plain from the phaseURL
-        //URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
-
         Job job = getJob();
         ExecutionPhase ep = job.getExecutionPhase();
         if (ExecutionPhase.ABORTED.equals(ep)
@@ -190,7 +187,6 @@ public class ClientTransfer implements Runnable
                 || ExecutionPhase.ERROR.equals(ep) )
             this.phase = ep; // only set when final phase
         return ep;
-
     }
 
     public ErrorSummary getServerError()
@@ -254,6 +250,7 @@ public class ClientTransfer implements Runnable
             throw new RuntimeException("BUG: failed to create error url", bug);
         }
     }
+
     public void setFile(File file)
     {
         if (Direction.pullFromVoSpace.equals(transfer.getDirection())
@@ -580,6 +577,7 @@ public class ClientTransfer implements Runnable
             {
                 while (phase == null)
                 {
+                    log.debug("monitorAsync: phase is currently " + phase);
                     Thread.sleep(POLL_INTERVAL);
                     getPhase();
                 }

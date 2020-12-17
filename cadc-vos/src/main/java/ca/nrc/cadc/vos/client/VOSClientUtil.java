@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2020.                            (c) 2020.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,10 +69,16 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
+import java.security.AccessControlException;
+import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
@@ -90,7 +96,7 @@ import ca.nrc.cadc.vos.NodeWriter;
  */
 public class VOSClientUtil
 {
-
+    private static Logger log = Logger.getLogger(VOSClientUtil.class);
     /**
      * get the XML string of a job.
      *
@@ -151,10 +157,15 @@ public class VOSClientUtil
     }
 
     public static void checkFailure(Throwable failure)
-        throws NodeNotFoundException, RuntimeException
-    {
+        throws NodeNotFoundException, RuntimeException, ResourceAlreadyExistsException {
         if (failure != null)
         {
+            if (failure instanceof IllegalArgumentException) {
+                throw (IllegalArgumentException) failure;
+            }
+            if (failure instanceof ResourceAlreadyExistsException) {
+                throw (ResourceAlreadyExistsException) failure;
+            }
             if (failure instanceof RuntimeException)
             {
                 throw (RuntimeException) failure;
@@ -166,5 +177,47 @@ public class VOSClientUtil
             throw new IllegalStateException(failure);
         }
     }
+
+    public static void checkTransferFailure(ClientTransfer clientTransfer)
+        throws ResourceNotFoundException, IOException {
+        // check to see if anything went wrong
+        ErrorSummary errorSummary = null;
+
+        try {
+            errorSummary = clientTransfer.getServerError();
+        } catch (Exception e) {
+            log.error("error reading job", e);
+            throw new RuntimeException("Internal error, error reading job:", e);
+        }
+
+        // Check uws job results
+        if (errorSummary != null) {
+            String errorMsg = errorSummary.getSummaryMessage();
+
+            if (StringUtil.hasLength(errorMsg)) {
+                if (errorMsg.contains("Invalid Argument")) {
+                    log.debug("Invalid Argument found: " + errorMsg);
+                    throw new IllegalArgumentException(errorMsg);
+                }
+
+                // not found
+                if ("NodeNotFound".equals(errorMsg) ||
+                    errorMsg.contains("not a data node")) {
+                    log.debug("node not found");
+                    throw new ResourceNotFoundException(errorMsg);
+                }
+
+                // permission denied
+                if ("PermissionDenied".equals(errorMsg)) {
+                    throw new AccessControlException(errorMsg);
+                }
+
+                // some other fault
+                log.error("unhandled fault: " + errorMsg);
+                throw new RuntimeException("client transfer job error: " + errorMsg);
+            }
+        }
+    }
+
 
 }
