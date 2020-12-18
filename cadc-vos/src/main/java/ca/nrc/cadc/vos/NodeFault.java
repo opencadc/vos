@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2020.                            (c) 2020.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,14 +67,14 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import java.security.AccessControlException;
+import javax.naming.AuthenticationException;
 import org.restlet.data.Status;
 
 /**
  * Enumeration of type types of faults that can occur
  * with node processing.
- *
- * @author majorb
- *
  */
 public enum NodeFault
 {
@@ -223,4 +223,23 @@ public enum NodeFault
         this.serviceFailure = serviceFailure;
     }
 
+    public static void throwException(NodeFault fault, String message)
+        throws IllegalArgumentException, AccessControlException,
+        ResourceNotFoundException, AuthenticationException {
+
+        switch (fault) {
+            case InvalidArgument:
+            case DuplicateNode:
+                throw new IllegalArgumentException(message);
+            case PermissionDenied:
+                throw new AccessControlException(message);
+            case NodeNotFound:
+            case UnreadableLinkTarget:
+                throw new ResourceNotFoundException(message);
+            case NotAuthenticated:
+                throw new AuthenticationException(message);
+            default:
+                throw new RuntimeException(message);
+        }
+    }
 }

@@ -96,7 +96,7 @@ public class TransferException extends Exception
     public String getMessage()
     {
         if (fault != null)
-            return fault.getStatus().getName() + " " + fault.getMessage();
+            return fault.getStatus().getReasonPhrase() + " " + fault.getMessage();
         return super.getMessage();
     }
 }
