@@ -151,7 +151,7 @@ public abstract class BaseResource extends ServerResource
         if (nodeFault != null && nodeFault.getStatus() != null)
         {
             StringBuilder sb = new StringBuilder();
-            sb.append(nodeFault.getStatus().getReasonPhrase());
+            sb.append(nodeFault.getStatus().getName());
             sb.append(" (");
             sb.append(nodeFault.getStatus().getCode());
             sb.append(")");

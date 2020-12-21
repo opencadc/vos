@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2020.                            (c) 2020.
+ *  (c) 2010.                            (c) 2010.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,108 +67,108 @@
 
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import java.security.AccessControlException;
-import javax.naming.AuthenticationException;
 import org.restlet.data.Status;
-
+import ca.nrc.cadc.vos.VOS;
 /**
  * Enumeration of type types of faults that can occur
  * with node processing.
+ *
+ *  @author majorb
+ *
  */
 public enum NodeFault
 {
-    // IVOA Standard Faults
+    // IVOA Standard Faults - not an exhaustive list
     InternalFault
     (
         new Status(500,
-                   "InternalFault",
+                   VOS.IVOA_FAULT_INTERNAL_FAULT,
                    "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     PermissionDenied
     (
         new Status(401,
-                   "PermissionDenied",
+                    VOS.IVOA_FAULT_PERMISSION_DENIED,
                    "A HTTP 401 status code with a PermissionDenied fault in the body is thrown if the user does not have permission to perform the operation",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidURI
     (
         new Status(400,
-                   "InvalidURI",
+                    VOS.IVOA_FAULT_INVALID_URI,
                    "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NodeNotFound
     (
         new Status(404,
-                   "NodeNotFound",
+                   VOS.IVOA_FAULT_NODE_NOT_FOUND,
                    "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the specified node does not exist",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     DuplicateNode
     (
         new Status(409,
-                   "DuplicateNode",
+                   VOS.IVOA_FAULT_DUPLICATE_NODE,
                    "A HTTP 409 status code with a DuplicateFault fault in the body is thrown if the specified node already exists",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidToken
     (
         new Status(400,
-                   "InvalidToken",
+                   VOS.IVOA_FAULT_INVALID_TOKEN,
                    "A HTTP 400 status code with a InvalidToken fault in the body is thrown if ?????",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidArgument
     (
         new Status(400,
-                   "InvalidArgument",
+                   VOS.IVOA_FAULT_INVALID_ARG,
                    "A HTTP 400 status code with a InvalidArgument fault in the body is thrown if a specified value is invalid",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     TypeNotSupported
     (
         new Status(400,
-                   "TypeNotSupported",
+                   VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED,
                    "A HTTP 400 status code with a TypeNotSupported fault in the body is thrown if the type specified in xsi:type is not supported",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
-    ),
-    ContainerNotFound
-    (
-        new Status(404,
-                   "ContainerNotFound",
-                   "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
 
     // Other Faults
+    ContainerNotFound
+    (
+        new Status(404,
+                   VOS.CADC_FAULT_CONTAINER_NOT_FOUND,
+                   "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
     RequestEntityTooLarge
     (
         new Status(413,
-                   "InvalidArgument",
+                   VOS.CADC_FAULT_REQUEST_TOO_LARGE, // "InvalidArgument",
                    "A HTTP 413 status code with a InvalidArgument fault in the body is thrown if the XML document on the input stream is too large.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     UnreadableLinkTarget
     (
         new Status(404,
-                   "NodeNotFound",
+                   VOS.CADC_FAULT_UNREADABLE_LINK, // 'NodeNotFound'
                    "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     ServiceBusy
     (
         new Status(503,
-                   "ServiceBusy",
+                   VOS.CADC_FAULT_SERVICE_BUSY,
                    "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the service is too busy to handle the request.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NodeLocked
     (
         new Status(423,
-                   "NodeLocked",
+                   VOS.CADC_FAULT_NODE_LOCKED,
                    "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
@@ -223,23 +223,4 @@ public enum NodeFault
         this.serviceFailure = serviceFailure;
     }
 
-    public static void throwException(NodeFault fault, String message)
-        throws IllegalArgumentException, AccessControlException,
-        ResourceNotFoundException, AuthenticationException {
-
-        switch (fault) {
-            case InvalidArgument:
-            case DuplicateNode:
-                throw new IllegalArgumentException(message);
-            case PermissionDenied:
-                throw new AccessControlException(message);
-            case NodeNotFound:
-            case UnreadableLinkTarget:
-                throw new ResourceNotFoundException(message);
-            case NotAuthenticated:
-                throw new AuthenticationException(message);
-            default:
-                throw new RuntimeException(message);
-        }
-    }
 }

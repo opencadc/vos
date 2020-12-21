@@ -73,13 +73,12 @@ import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.VOS;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
 import java.security.AccessControlException;
-import javax.naming.AuthenticationException;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.output.Format;
@@ -181,8 +180,7 @@ public class VOSClientUtil
     }
 
     public static void checkTransferFailure(ClientTransfer clientTransfer)
-        throws ResourceNotFoundException, IllegalArgumentException,
-        AuthenticationException {
+        throws ResourceNotFoundException, IOException {
         // check to see if anything went wrong
         ErrorSummary errorSummary = null;
 
@@ -198,8 +196,27 @@ public class VOSClientUtil
             String errorMsg = errorSummary.getSummaryMessage();
 
             if (StringUtil.hasLength(errorMsg)) {
-                NodeFault nf = NodeFault.valueOf(errorMsg);
-                NodeFault.throwException(nf, errorMsg);
+                if (errorMsg.contains("Invalid Argument")
+                    || VOS.IVOA_FAULT_INVALID_ARG.equals(errorMsg)) {
+                    log.debug("Invalid Argument found: " + errorMsg);
+                    throw new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG);
+                }
+
+                // not found
+                if (VOS.IVOA_FAULT_NODE_NOT_FOUND.equals(errorMsg) ||
+                    errorMsg.contains("not a data node")) {
+                    log.debug("node not found");
+                    throw new ResourceNotFoundException(errorMsg);
+                }
+
+                // permission denied
+                if (VOS.IVOA_FAULT_PERMISSION_DENIED.equals(errorMsg)) {
+                    throw new AccessControlException(VOS.IVOA_FAULT_PERMISSION_DENIED);
+                }
+
+                // some other fault
+                log.error("unhandled fault: " + errorMsg);
+                throw new RuntimeException("client transfer job error: " + errorMsg);
             }
         }
     }

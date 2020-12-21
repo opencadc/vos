@@ -22,7 +22,7 @@ dependencies {
     compile 'xerces:xercesImpl:2.+'
     compile 'org.json:json:20160212'
     compile 'javax.servlet:javax.servlet-api:3.1.+'
-    compile 'org.restlet.jse:org.restlet:[2.0.2, )'
+    compile 'org.restlet.jse:org.restlet:2.0.2'
     compile 'org.springframework:spring-jdbc:2.5.6.SEC01'
 
     compile 'org.opencadc:cadc-util:[1.2.25,)'
