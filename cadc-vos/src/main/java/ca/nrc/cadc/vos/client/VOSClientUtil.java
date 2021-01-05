@@ -199,14 +199,14 @@ public class VOSClientUtil
                 if (errorMsg.contains("Invalid Argument")
                     || VOS.IVOA_FAULT_INVALID_ARG.equals(errorMsg)) {
                     log.debug("Invalid Argument found: " + errorMsg);
-                    throw new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG);
+                    throw new IllegalArgumentException(errorMsg);
                 }
 
                 // not found
                 if (VOS.IVOA_FAULT_NODE_NOT_FOUND.equals(errorMsg) ||
                     errorMsg.contains("not a data node")) {
                     log.debug("node not found");
-                    throw new ResourceNotFoundException(errorMsg);
+                    throw new IllegalArgumentException(errorMsg);
                 }
 
                 // permission denied
