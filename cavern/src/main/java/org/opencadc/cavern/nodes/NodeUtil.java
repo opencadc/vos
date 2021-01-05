@@ -218,7 +218,7 @@ public abstract class NodeUtil {
         try {
             setPosixOwnerGroup(root, ret, owner, group);
             setNodeProperties(ret, node);
-        } catch (IOException ex) {
+        } catch (IOException | URISyntaxException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
             throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
@@ -247,7 +247,7 @@ public abstract class NodeUtil {
         }
     }
     
-    public static void setNodeProperties(Path path, Node node) throws IOException { 
+    public static void setNodeProperties(Path path, Node node) throws IOException, URISyntaxException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
@@ -320,8 +320,6 @@ public abstract class NodeUtil {
                         log.debug("setting group-read property to: " + guri);
                         acl.clearACL();
                         acl.setReadOnlyACL(gp, isDir);
-                    } catch (URISyntaxException uriEx) {
-                        throw new IllegalArgumentException("invalid group uri: "+ sro);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
                     }
@@ -349,8 +347,6 @@ public abstract class NodeUtil {
                         log.debug("setting group-write property to: " + guri);
                         acl.clearACL();
                         acl.setReadWriteACL(gp, isDir);
-                    } catch (URISyntaxException uriEx) {
-                        throw new IllegalArgumentException("invalid group uri: "+ srw);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
                     }
