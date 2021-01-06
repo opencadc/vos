@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.nodes;
 
+import java.net.URISyntaxException;
 import org.opencadc.gms.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
@@ -217,7 +218,7 @@ public abstract class NodeUtil {
         try {
             setPosixOwnerGroup(root, ret, owner, group);
             setNodeProperties(ret, node);
-        } catch (IOException ex) {
+        } catch (IOException | URISyntaxException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
             throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
@@ -246,7 +247,7 @@ public abstract class NodeUtil {
         }
     }
     
-    public static void setNodeProperties(Path path, Node node) throws IOException { 
+    public static void setNodeProperties(Path path, Node node) throws IOException, URISyntaxException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
@@ -305,13 +306,16 @@ public abstract class NodeUtil {
                     log.debug("clearing group-read property");
                     acl.clearACL();
                 } else {
-                    GroupURI guri = new GroupURI(sro);
-                    URI groupGMS = guri.getServiceID();
-                    if (!groupGMS.equals(localGMS)) {
-                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                        throw new IllegalArgumentException("external group not supported: " + guri);
-                    }
+                    GroupURI guri = null;
+
                     try {
+                        guri = new GroupURI(sro);
+                        URI groupGMS = guri.getServiceID();
+                        if (!groupGMS.equals(localGMS)) {
+                            // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                            throw new IllegalArgumentException("external group not supported: " + guri);
+                        }
+
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
                         log.debug("setting group-read property to: " + guri);
                         acl.clearACL();
@@ -329,13 +333,16 @@ public abstract class NodeUtil {
                     log.debug("clearing group-write property");
                     acl.clearACL();
                 } else {
-                    GroupURI guri = new GroupURI(srw);
-                    URI groupGMS = guri.getServiceID();
-                    if (!groupGMS.equals(localGMS)) {
-                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                        throw new IllegalArgumentException("external group not supported: " + guri);
-                    }
+                    GroupURI guri = null;
+
                     try {
+                        guri = new GroupURI(srw);
+                        URI groupGMS = guri.getServiceID();
+                        if (!groupGMS.equals(localGMS)) {
+                            // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
+                            throw new IllegalArgumentException("external group not supported: " + guri);
+                        }
+
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
                         log.debug("setting group-write property to: " + guri);
                         acl.clearACL();
