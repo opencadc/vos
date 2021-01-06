@@ -202,11 +202,17 @@ public class VOSClientUtil
                     throw new IllegalArgumentException(errorMsg);
                 }
 
-                // not found
-                if (VOS.IVOA_FAULT_NODE_NOT_FOUND.equals(errorMsg) ||
-                    errorMsg.contains("not a data node")) {
-                    log.debug("node not found");
+                // not a data node
+                if (errorMsg.contains("not a data node")) {
+                    log.debug("not a data node");
                     throw new IllegalArgumentException(errorMsg);
+                }
+
+                // not not found
+                if (VOS.IVOA_FAULT_NODE_NOT_FOUND.equals(errorMsg) ||
+                    errorMsg.contains("node not found")) {
+                    log.debug("node not found");
+                    throw new ResourceNotFoundException(errorMsg);
                 }
 
                 // permission denied
