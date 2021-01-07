@@ -290,4 +290,43 @@ public class VOS
         PROPERTY_URI_WRITABLE
     };
 
+    /*
+    * List of IVOA Standard Faults
+     */
+    // 500 erors
+    public static final String IVOA_FAULT_INTERNAL_FAULT = "InternalFault";
+
+    // 400 faults
+    public static final String IVOA_FAULT_INVALID_URI = "InvalidURI";
+    public static final String IVOA_FAULT_INVALID_ARG = "InvalidArgument";
+    public static final String IVOA_FAULT_INVALID_TOKEN = "InvalidToken";
+    public static final String IVOA_FAULT_TYPE_NOT_SUPPORTED = "TypeNotSupported";
+    // 401
+    public static final String IVOA_FAULT_PERMISSION_DENIED = "PermissionDenied";
+
+    // 404 faults
+    public static final String IVOA_FAULT_NODE_NOT_FOUND = "NodeNotFound";
+    public static final String IVOA_FAULT_CONTAINER_NOT_FOUND = "ContainerNotFound";
+    // 409
+    public static final String IVOA_FAULT_DUPLICATE_NODE = "DuplicateNode";
+
+    /**
+     * List of CADC defined faults
+     */
+    // 401
+    public static final String CADC_FAULT_NOT_AUTHENTICATED = "NotAuthenticated";
+    // 404
+    public static final String CADC_FAULT_UNREADABLE_LINK = "UnreadableLinkTarget";
+    public static final String CADC_FAULT_CONTAINER_NOT_FOUND = "ContainerNotFound";
+    // 413
+    public static final String CADC_FAULT_REQUEST_TOO_LARGE = "RequestEntityToolarge";
+    // 423
+    public static final String CADC_FAULT_NODE_LOCKED = "NodeLocked";
+    // 503
+    public static final String CADC_FAULT_SERVICE_BUSY = "ServiceBusy";
+
+
+    //
+
+
 }

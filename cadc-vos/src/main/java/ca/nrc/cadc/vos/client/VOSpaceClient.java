@@ -79,6 +79,7 @@ import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -232,6 +233,14 @@ public class VOSpaceClient
                 VOSClientUtil.checkFailure(ex);
             }
 
+            if (put.failure != null) {
+                // Errors not blurted as exceptions by
+                // HttpUpload will be stored in 'failure.'
+                // These need to be reported as well
+                log.debug("HttpUpload failure for createNode: ", put.failure);
+                VOSClientUtil.checkFailure(put.failure);
+            }
+
             NodeReader nodeReader = new NodeReader(schemaValidation);
             rtnNode = nodeReader.read(put.getInputStream());
             log.debug("createNode, created node: " + rtnNode);
@@ -250,6 +259,11 @@ public class VOSpaceClient
         {
             log.debug("failed to create node", e);
             throw new IllegalStateException("Node not found", e);
+        }
+        catch (ResourceAlreadyExistsException e)
+        {
+            log.debug("failed to create node", e);
+            throw new IllegalStateException("Node already exists", e);
         }
         return rtnNode;
     }
@@ -314,6 +328,11 @@ public class VOSpaceClient
             log.debug("failed to get node", e);
             throw new IllegalStateException("failed to get node", e);
         }
+        catch (ResourceAlreadyExistsException e)
+        {
+            log.debug("failed to get node", e);
+            throw new IllegalStateException("failed to get node", e);
+        }
         return rtnNode;
     }
 
@@ -364,6 +383,11 @@ public class VOSpaceClient
         {
             throw new IllegalStateException("Node not found", e);
         }
+        catch (ResourceAlreadyExistsException e)
+        {
+            log.debug("failed to set node", e);
+            throw new IllegalStateException("failed to set node", e);
+        }
         return rtnNode;
     }
 
@@ -407,6 +431,11 @@ public class VOSpaceClient
         {
             log.debug("Node not found", e);
             throw new RuntimeException(e);
+        }
+        catch (ResourceAlreadyExistsException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new IllegalStateException("failed to create transfer", e);
         }
     }
 
@@ -476,6 +505,12 @@ public class VOSpaceClient
             log.debug("Node not found", e);
             throw new RuntimeException(e);
         }
+        catch (ResourceAlreadyExistsException e)
+        {
+            log.debug("failed to delete node", e);
+            throw new IllegalStateException("failed to delete node", e);
+        }
+
     }
 
     protected RegistryClient getRegistryClient()
@@ -516,6 +551,7 @@ public class VOSpaceClient
                 throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
             }
 
+            // Check uws job results
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
 

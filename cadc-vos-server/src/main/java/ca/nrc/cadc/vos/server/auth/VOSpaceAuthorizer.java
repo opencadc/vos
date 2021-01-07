@@ -70,6 +70,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -401,7 +402,7 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Given the groupURI, determine if the user identified by the subject
      * has membership.
-     * @param groupURI The group or list of groups
+     * @param groupProp The group or list of groups for a Node
      * @param subject The user's subject
      * @return True if the user is a member
      */
@@ -436,7 +437,7 @@ public class VOSpaceAuthorizer implements Authorizer
                         if (isMember)
                             return true;
                     }
-                    catch (IllegalArgumentException e)
+                    catch (URISyntaxException e)
                     {
                         LOG.warn("skipping invalid group URI: " + groupURI, e);
                     }
