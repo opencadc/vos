@@ -9,12 +9,12 @@ Because the source of all data and metadata in Cavern is the file system, users 
 ```
 > gradle clean build
 
-> docker build -t cavern-tomcat:latest -f Dockerfile .
+> docker build -t cavern-tomcat:0.1 -f Dockerfile .
 ```
 
 ## running it
 ```
-docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat cavern-tomcat:latest
+docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat cavern-tomcat:0.1
 ```
 
 ## configuration

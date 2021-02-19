@@ -108,6 +108,7 @@ public class GroupPermissionsTest {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
     }
 
     public GroupPermissionsTest() {

@@ -23,13 +23,12 @@
     <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
     <init-param>
       <param-name>logLevel</param-name>
-      <param-value>debug</param-value>
+      <param-value>info</param-value>
     </init-param>
     <init-param>
       <param-name>logLevelPackages</param-name>
       <param-value>
             org.opencadc.cavern
-            ca.nrc.cadc.auth
             ca.nrc.cadc.ac
             ca.nrc.cadc.rest
             ca.nrc.cadc.vos
