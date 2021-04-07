@@ -1,14 +1,15 @@
 plugins {
     id 'maven'
     id 'maven-publish'
-    id 'com.jfrog.bintray' version '1.8.4'
     id 'war'
     id 'application'
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
     mavenLocal()
+    // tmp to resolve org.restlet.jse
+    jcenter()
 }
 
 apply from: 'intTest.gradle'
@@ -54,7 +55,6 @@ dependencies {
     compile 'org.opencadc:cadc-gms:[1.0.0,)'
     compile 'org.opencadc:cadc-vos:[1.1.10,)'
     compile 'org.opencadc:cadc-vos-server:[1.1,)'
-    //compile 'org.opencadc:cadc-wcs:1.+'
     compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
