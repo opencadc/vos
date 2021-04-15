@@ -166,6 +166,7 @@ public class CavernURLGenerator implements TransferGenerator {
             List<Protocol> ret = new ArrayList<>();
             List<URI> uris;
             for (Protocol protocol : transfer.getProtocols()) {
+                log.debug("addressing protocol: " + protocol);
                 if (node instanceof ContainerNode) {
                     UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
                     uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
@@ -220,6 +221,11 @@ public class CavernURLGenerator implements TransferGenerator {
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
             if (baseURLs == null || baseURLs.isEmpty()) {
                 log.debug("no matching interfaces ");
+                return new ArrayList<URI>(0);
+            }
+            
+            if (dir == null) {
+                log.debug("no matching protocols");
                 return new ArrayList<URI>(0);
             }
 
@@ -400,10 +406,8 @@ public class CavernURLGenerator implements TransferGenerator {
                     log.debug("Added auth interface.");
                 }
             }
-        } catch (ResourceNotFoundException ex) {
-            throw new IllegalStateException("CONFIG: registry lookup failure " + serviceURI, ex);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Error creating transfer urls", ex);
+        } catch (IOException | ResourceNotFoundException e) {
+            throw new IllegalStateException("Error creating transfer urls", e);
         }
         return baseURLs;
     }

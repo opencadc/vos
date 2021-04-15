@@ -8,12 +8,12 @@ Because the source of all data and metadata in Cavern is the file system, users 
 ```
 > gradle clean build
 
-> docker build -t cavern-tomcat:latest -f Dockerfile .
+> docker build -t cavern-tomcat:0.1 -f Dockerfile .
 ```
 
 ## running it
 ```
-docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat cavern-tomcat:latest
+docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat cavern-tomcat:0.1
 ```
 
 ## configuration
@@ -26,5 +26,3 @@ The following files are expected to be in /path/to/external/config:
 * LocalAuthority.properties
 
 For the SSS connection to LDAP to operate, the directory /var/lib/sss/pipes must be mapped to the same /var/lib/sss/pipes directory seen by the SSS daemon, either through a volume mount or some other means.  See the access control git hub project mentioned above for more information.
-
-

@@ -84,7 +84,7 @@ public class VosiAvailabilityTest extends AvailabilityTest
 
     public VosiAvailabilityTest()
     {
-        super(URI.create("ivo://canfar.net/cavern"));
+        super(URI.create("ivo://cadc.nrc.ca/arbutus-cavern"));
     }
 }
 
