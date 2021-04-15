@@ -68,7 +68,7 @@ dependencies {
 
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
     runtime 'org.opencadc:cadc-access-control:[1.1.22,)'
-    runtime 'org.opencadc:cadc-access-control-identity:[1.0.9,)'
+    runtime 'org.opencadc:cadc-access-control-identity:[1.0.8,)'
 
     testCompile 'junit:junit:[4.0,)'
     testCompile 'xerces:xercesImpl:[2.0,)'
