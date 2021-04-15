@@ -26,5 +26,5 @@ jobs:
       run: cd cadc-test-vos && ../gradlew --info clean build javadoc install
       
     - name: build and test cavern
-      run: cd cavern && ../gradlew --info clean build
+      run: cd cavern && ../gradlew --info clean assemble
       

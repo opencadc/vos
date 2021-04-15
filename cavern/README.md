@@ -5,7 +5,6 @@ Cavern is a VOSpace 2.1 compliant service where both the data and metadata are b
 Because the source of all data and metadata in Cavern is the file system, users may interact with that file system directly (through, for example, a volume mount) and cavern will reflect any changes that were made. 
 
 ## building
-
 ```
 > gradle clean build
 
