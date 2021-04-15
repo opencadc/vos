@@ -5,7 +5,6 @@ Cavern is a VOSpace 2.1 compliant service where both the data and metadata are b
 Because the source of all data and metadata in Cavern is the file system, users may interact with that file system directly (through, for example, a volume mount) and cavern will reflect any changes that were made. 
 
 ## building
-
 ```
 > gradle clean build
 
@@ -27,3 +26,5 @@ The following files are expected to be in /path/to/external/config:
 * LocalAuthority.properties
 
 For the SSS connection to LDAP to operate, the directory /var/lib/sss/pipes must be mapped to the same /var/lib/sss/pipes directory seen by the SSS daemon, either through a volume mount or some other means.  See the access control git hub project mentioned above for more information.
+
+
