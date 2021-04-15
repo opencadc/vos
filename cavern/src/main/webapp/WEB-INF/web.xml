@@ -10,7 +10,7 @@
 
   <context-param>
     <param-name>ivoa.vos.uri</param-name>
-    <param-value>vos://canfar.net~cavern</param-value>
+    <param-value>vos://cadc.nrc.ca~arbutus-cavern</param-value>
   </context-param>
 
   <context-param>
@@ -23,12 +23,13 @@
     <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
     <init-param>
       <param-name>logLevel</param-name>
-      <param-value>debug</param-value>
+      <param-value>info</param-value>
     </init-param>
     <init-param>
       <param-name>logLevelPackages</param-name>
       <param-value>
             org.opencadc.cavern
+            ca.nrc.cadc.ac
             ca.nrc.cadc.rest
             ca.nrc.cadc.vos
       </param-value>
