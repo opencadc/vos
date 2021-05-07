@@ -8,8 +8,9 @@ Because the source of all data and metadata in Cavern is the file system, users 
 ```
 > gradle clean build
 
-> docker build -t cavern-tomcat:0.1 -f Dockerfile .
+> docker build -t bucket.canfar.net/cavern-tomcat:latest -f Dockerfile .
 ```
+Then, update VERSION with the approripate tages and run ./apply-version.sh
 
 ## running it
 ```
