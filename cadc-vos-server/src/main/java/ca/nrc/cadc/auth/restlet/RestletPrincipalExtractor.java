@@ -70,9 +70,12 @@
 package ca.nrc.cadc.auth.restlet;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
+import ca.nrc.cadc.auth.BearerTokenPrincipal;
+import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.SignedToken;
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.InvalidDelegationTokenException;
+import ca.nrc.cadc.auth.InvalidSignedTokenException;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PrincipalExtractor;
 import ca.nrc.cadc.auth.SSLUtil;
@@ -88,6 +91,7 @@ import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -106,10 +110,6 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
 
     private final Request request;
     private X509CertificateChain chain;
-    private DelegationToken token;
-
-    private List<SSOCookieCredential> cookieCredentialList;
-    private Set<Principal> cookiePrincipals = new HashSet<>(); // identities extracted from cookie
     private Set<Principal> principals = new HashSet<>();
 
     /**
@@ -157,20 +157,25 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
             }
         }
 
-        if (token == null) {
-            Form headers = (Form) getRequest().getAttributes().get("org.restlet.http.headers");
-            String tokenValue = headers.getFirstValue(AuthenticationUtil.AUTH_HEADER, true);
-            if (StringUtil.hasText(tokenValue)) {
-                try {
-                    this.token = DelegationToken.parse(tokenValue, request.getResourceRef().getPath());
-                } catch (InvalidDelegationTokenException ex) {
-                    log.debug("invalid DelegationToken: " + tokenValue, ex);
-                    throw new NotAuthenticatedException("invalid delegation token. " + ex.getMessage());
-                } catch (RuntimeException ex) {
-                    log.debug("invalid DelegationToken: " + tokenValue, ex);
-                    throw new NotAuthenticatedException("invalid delegation token. " + ex.getMessage());
-                } finally {
-                }
+        Form headers = (Form) getRequest().getAttributes().get("org.restlet.http.headers");
+
+        // custom header (deprecated)
+        String cadcTokenHeader = headers.getFirstValue(AuthenticationUtil.AUTH_HEADER);
+        if (cadcTokenHeader != null) {
+            AuthorizationTokenPrincipal principal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTH_HEADER, cadcTokenHeader);
+            principals.add(principal);
+        }
+
+        // authorization header
+        String[] authTokens = headers.getValuesArray(AuthenticationUtil.AUTHORIZATION_HEADER);
+        for (String authToken : authTokens) {
+            if (BearerTokenPrincipal.isBearerToken(authToken)) {
+                // deprecated in favour of the common token handling mechanism below
+                BearerTokenPrincipal bearerTokenPrincipal = new BearerTokenPrincipal(authToken);
+                principals.add(bearerTokenPrincipal);
+            } else {
+                AuthorizationTokenPrincipal principal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER, authToken);
+                principals.add(principal);
             }
         }
 
@@ -179,10 +184,7 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
         if (StringUtil.hasText(httpUser)) // user from HTTP AUTH
         {
             principals.add(new HttpPrincipal(httpUser));
-        } else if (token != null) // user from token
-        {
-            principals.add(token.getUser());
-        }
+        } 
 
         Series<Cookie> cookies = getRequest().getCookies();
         log.debug("cookie count: " + cookies.size());
@@ -198,20 +200,9 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
             if (SSOCookieManager.DEFAULT_SSO_COOKIE_NAME.equals(
                     ssoCookie.getName())
                     && StringUtil.hasText(ssoCookie.getValue())) {
-                SSOCookieManager ssoCookieManager = new SSOCookieManager();
-                try {
-                    DelegationToken cookieToken = ssoCookieManager.parse(
-                            ssoCookie.getValue());
-
-                    cookiePrincipals = cookieToken.getIdentityPrincipals();
-                    principals.addAll(cookiePrincipals);
-
-                    cookieCredentialList = ssoCookieManager.getSSOCookieCredentials(ssoCookie.getValue(),
-                            NetUtil.getDomainName(getRequest().getResourceRef().toUrl()));
-                } catch (InvalidDelegationTokenException | IOException e) {
-                    log.debug("Cannot use SSO Cookie. Reason: " + e.getMessage());
-                    throw new NotAuthenticatedException("invalid cookie. " + e.getMessage());
-                }
+                
+                CookiePrincipal cookiePrincipal = new CookiePrincipal(ssoCookie.getName(), ssoCookie.getValue());
+                principals.add(cookiePrincipal);
             }
         }
     }
@@ -224,11 +215,6 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
     public Set<Principal> getPrincipals() {
         init();
         return principals;
-    }
-
-    public DelegationToken getDelegationToken() {
-        init();
-        return token;
     }
 
     /**
@@ -256,10 +242,5 @@ public class RestletPrincipalExtractor implements PrincipalExtractor {
 
     public Request getRequest() {
         return request;
-    }
-
-    @Override
-    public List<SSOCookieCredential> getSSOCookieCredentials() {
-        return cookieCredentialList;
     }
 }

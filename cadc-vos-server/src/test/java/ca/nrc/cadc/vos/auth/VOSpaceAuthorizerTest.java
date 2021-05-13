@@ -89,7 +89,7 @@ import junit.framework.Assert;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
-import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.SignedToken;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
@@ -204,7 +204,7 @@ public class VOSpaceAuthorizerTest
         expiry.add(Calendar.HOUR, 10);
 
         // create the delegation cookie
-        DelegationToken dt = new DelegationToken(
+        SignedToken dt = new SignedToken(
                 new HttpPrincipal(NODE_OWNER_ID), vos.getURI(), expiry.getTime(), null);
 
         Subject subject = new Subject();
@@ -233,7 +233,7 @@ public class VOSpaceAuthorizerTest
         voSpaceAuthorizer.setNodePersistence(np);
 
         // create the delegation cookie
-        dt = new DelegationToken(
+        dt = new SignedToken(
                 new HttpPrincipal(NODE_OWNER_ID),
                 vos.getParentURI().getURI(), expiry.getTime(), null);
         subject = new Subject();
@@ -256,7 +256,7 @@ public class VOSpaceAuthorizerTest
         voSpaceAuthorizer = new VOSpaceAuthorizer();
         voSpaceAuthorizer.setNodePersistence(np);
 
-        dt = new DelegationToken(
+        dt = new SignedToken(
                 new HttpPrincipal(NODE_OWNER_ID),
                 new URI("vos://cadc.nrc.ca~vospace/otherspace"), expiry.getTime(), null);
         subject = new Subject();

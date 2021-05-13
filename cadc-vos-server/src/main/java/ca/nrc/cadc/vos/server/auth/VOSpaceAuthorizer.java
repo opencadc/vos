@@ -92,7 +92,7 @@ import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.ac.client.GMSClient;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.SignedToken;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.net.TransientException;
@@ -655,8 +655,8 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private void checkDelegation(Node node, Subject subject) throws AccessControlException
     {
-        Set<DelegationToken> tokens = subject.getPublicCredentials(DelegationToken.class);
-        for (DelegationToken token : tokens)
+        Set<SignedToken> tokens = subject.getPublicCredentials(SignedToken.class);
+        for (SignedToken token : tokens)
         {
             VOSURI scope = new VOSURI(token.getScope());
             VOSURI tmp = node.getUri();
