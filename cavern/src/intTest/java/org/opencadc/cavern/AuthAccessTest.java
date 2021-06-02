@@ -300,9 +300,9 @@ public class AuthAccessTest
             HttpGet get = new HttpGet(url, bos);
             get.setRequestProperty("authorization", "Basic Y2FkY3JlZ3Rlc3QxOnh5eg=="); // cadcregtest1:xyz
             get.run();
-            Assert.assertEquals(403, get.getResponseCode());
+            Assert.assertEquals(401, get.getResponseCode());
             Assert.assertNotNull(get.getThrowable());
-            Assert.assertTrue( (get.getThrowable() instanceof AccessControlException) );
+            Assert.assertTrue( (get.getThrowable() instanceof NotAuthenticatedException) );
         }
         catch(Exception unexpected)
         {
