@@ -84,6 +84,6 @@ public class VosiCapabilitiesTest extends CapabilitiesTest
 
     public VosiCapabilitiesTest()
     {
-        super(URI.create("ivo://cadc.nrc.ca/arbutus-cavern"));
+        super(URI.create("ivo://cadc.nrc.ca/arc"));
     }
 }

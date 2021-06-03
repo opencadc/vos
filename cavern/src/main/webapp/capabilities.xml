@@ -116,7 +116,7 @@
   </capability>
    -->
   
-  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/archive#file-1.0">
+  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/cavernhive#file-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/files</accessURL>
     </interface>

@@ -185,7 +185,7 @@ public class MetadataIntTest {
                     // test the md5 of the target node
                     RegistryClient rc = new RegistryClient();
                     URL syncTrans = rc.getServiceURL(
-                        URI.create("ivo://cadc.nrc.ca/arbutus-cavern"), Standards.VOSPACE_SYNC_21, AuthMethod.CERT);
+                        URI.create("ivo://cadc.nrc.ca/arc"), Standards.VOSPACE_SYNC_21, AuthMethod.CERT);
                     StringBuilder params = new StringBuilder();
                     params.append("TARGET=").append(URLEncoder.encode(uri.toString(), "UTF-8"));
                     params.append("&");
