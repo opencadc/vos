@@ -105,7 +105,7 @@ public class NodeOutputFormatTest
     
     static final String VOSACE_SCHEMA = "http://www.ivoa.net/xml/VOSpace/v2.0";
     
-    static final String VOSPACE_NODES = "ivo://cadc.nrc.ca/arbutus-cavern";
+    static final String VOSPACE_NODES = "ivo://cadc.nrc.ca/arc";
     
     static final String XML = "text/xml";
     static final String JSON = "application/json";
@@ -176,7 +176,7 @@ public class NodeOutputFormatTest
             
             String vosuri = node.getString("@uri");
             Assert.assertNotNull(vosuri);
-            Assert.assertEquals("vos://cadc.nrc.ca~arbutus-cavern", vosuri);
+            Assert.assertEquals("vos://cadc.nrc.ca~arc", vosuri);
         }
         catch(Exception ex)
         {

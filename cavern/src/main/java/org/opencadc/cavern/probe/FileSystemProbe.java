@@ -181,7 +181,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             String fail = " [FAIL]";
             String ok = " [OK]";
             String name = UUID.randomUUID().toString();
-            VOSURI cnURI = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name));
+            VOSURI cnURI = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
             ContainerNode cn1 = new ContainerNode(cnURI);
             cn1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupURI.toASCIIString()));
             NodeUtil.setOwner(cn1, owner);
@@ -249,7 +249,7 @@ public class FileSystemProbe implements Callable<Boolean> {
         try {
             final StringBuilder sb = new StringBuilder();
             int num = 0;
-            VOSURI parent = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/"));
+            VOSURI parent = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/"));
             String fail = " [FAIL]";
             String name = UUID.randomUUID().toString();
             VOSURI uri = new VOSURI(URI.create(parent.getURI().toASCIIString() + "/" + name));
@@ -322,7 +322,7 @@ public class FileSystemProbe implements Callable<Boolean> {
         try {
             String fail = " [FAIL]";
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name));
+            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
             
             if (depth) {
                 // make a parent directory
@@ -390,8 +390,8 @@ public class FileSystemProbe implements Callable<Boolean> {
     public boolean doCreateSymlink() {
         try {
             String name = UUID.randomUUID().toString();
-            VOSURI turi = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name));
-            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/link-to-" + name));
+            VOSURI turi = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/link-to-" + name));
 
             Node tn = new DataNode(turi);
             NodeUtil.setOwner(tn, linkTargetOwner);
@@ -486,7 +486,7 @@ public class FileSystemProbe implements Callable<Boolean> {
     public boolean doSetAttribute() {
         try {
             String name = UUID.randomUUID().toString();
-            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name));
+            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
             String origMD5 = "74808746f32f28650559885297f76efa";
             
             DataNode n1 = new DataNode(uri);
@@ -550,9 +550,9 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -588,7 +588,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.copy(root, dn.getUri(), destDir.getUri(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name3));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name3));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
                 log.error("[copyfile action] copy+get failed to retrieve copied node, copied: " + copied.getClass().getSimpleName()
@@ -624,9 +624,9 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -662,7 +662,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.move(root, dn.getUri(), destDir.getUri(), dn.getName(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name3));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
                 log.error("[movefile action] move+get failed to retrieve moved node, moved: " + moved.getClass().getSimpleName()
@@ -690,8 +690,8 @@ public class FileSystemProbe implements Callable<Boolean> {
         try {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
-            VOSURI dn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI dn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
+            VOSURI dn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI dn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
 
             DataNode src = new DataNode(dn1uri);
             DataNode dest = new DataNode(dn2uri);
@@ -711,7 +711,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
                 log.error("[renameFile] failed to retrieve moved node, moved: " + moved.getClass().getSimpleName()
@@ -740,9 +740,9 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -778,7 +778,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.copy(root, srcDir.getUri(), destDir.getUri(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name1 + "/" + name3));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name1 + "/" + name3));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
                 log.error("[copydir action] copy+get failed to retrieve copied node, copied: " + copied.getClass().getSimpleName()
@@ -814,9 +814,9 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -852,7 +852,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), srcDir.getName(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name1 + "/" + name3));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name1 + "/" + name3));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof DataNode)) {
                 log.error("[movedir action] move+get failed to retrieve moved node, moved: " + moved.getClass().getSimpleName()
@@ -882,8 +882,8 @@ public class FileSystemProbe implements Callable<Boolean> {
         try {
             String name1 = UUID.randomUUID().toString();
             String name2 = UUID.randomUUID().toString();
-            VOSURI dn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI dn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
+            VOSURI dn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI dn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
 
             ContainerNode src = new ContainerNode(dn1uri);
             ContainerNode dest = new ContainerNode(dn2uri);
@@ -903,7 +903,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
             Node moved = NodeUtil.get(root, expected);
             if (moved == null || !(moved instanceof ContainerNode)) {
                 log.error("[renameDir] failed to retrieve moved node, moved: " + moved.getClass().getSimpleName()
@@ -933,10 +933,10 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
             String name4 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
-            VOSURI lnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name4));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
+            VOSURI lnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name4));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -981,7 +981,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.copy(root, ln.getUri(), destDir.getUri(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name4));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof DataNode)) {
                 log.error("[copysymlink action] copy+get failed to retrieve copied symlink, copied: " + copied.getClass().getSimpleName()
@@ -1018,10 +1018,10 @@ public class FileSystemProbe implements Callable<Boolean> {
             String name2 = UUID.randomUUID().toString();
             String name3 = UUID.randomUUID().toString();
             String name4 = UUID.randomUUID().toString();
-            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1));
-            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2));
-            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name3));
-            VOSURI lnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name1 + "/" + name4));
+            VOSURI cn1uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1));
+            VOSURI cn2uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI dnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name3));
+            VOSURI lnuri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name1 + "/" + name4));
 
             ContainerNode srcDir = new ContainerNode(cn1uri);
             ContainerNode destDir = new ContainerNode(cn2uri);
@@ -1066,7 +1066,7 @@ public class FileSystemProbe implements Callable<Boolean> {
 
             int num = 0;
             NodeUtil.move(root, ln.getUri(), destDir.getUri(), ln.getName(), owner);
-            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arbutus-cavern/" + name2 + "/" + name4));
+            VOSURI expected = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected);
             if (copied == null || !(copied instanceof LinkNode)) {
                 log.error("[movesymlink action] move+get failed to retrieve copied symlink, copied: " + copied.getClass().getSimpleName()
