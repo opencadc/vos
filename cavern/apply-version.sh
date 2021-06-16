@@ -1,7 +1,7 @@
 #!/bin/bash
 . VERSION && echo "tags: $TAGS"
 for t in $TAGS; do
-   docker image tag bucket.canfar.net/cavern-tomcat:latest bucket.canfar.net/cavern-tomcat:$t
+   docker image tag images.canfar.net/skaha-system/cavern:latest images.canfar.net/skaha-system/cavern:$t
 done
 unset TAGS
-docker image list bucket.canfar.net/cavern-tomcat
+docker image list images.canfar.net/skaha-system/cavern
