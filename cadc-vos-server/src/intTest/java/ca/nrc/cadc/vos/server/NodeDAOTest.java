@@ -99,6 +99,8 @@ import ca.nrc.cadc.auth.X500IdentityManager;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.db.IntRowMapper;
+import ca.nrc.cadc.db.LongRowMapper;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.Log4jInit;
@@ -251,15 +253,15 @@ public class NodeDAOTest
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
         String sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID IS NULL";
-        int topLevel = jdbc.queryForInt(sql);
+        int topLevel = jdbc.queryForObject(sql, new IntRowMapper());
         Assert.assertEquals("number of top-level nodes", 2, topLevel);
 
         sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID = " + ((NodeID)top.appData).id;
-        int accessible = jdbc.queryForInt(sql);
+        int accessible = jdbc.queryForObject(sql, new IntRowMapper());
         Assert.assertEquals("number of directly accessible children ", 0, accessible);
 
         sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID is not null and parentID not in (select nodeID from "+nodeSchema.nodeTable+")" ;
-        int orphans = jdbc.queryForInt(sql);
+        int orphans = jdbc.queryForObject(sql, new IntRowMapper());
         Assert.assertEquals("number of orphans", 0, orphans);
     }
 
@@ -1928,7 +1930,7 @@ public class NodeDAOTest
             // perform the metadata update
             nodeDAO.updateNodeMetadata(dataNode, meta, true);
 
-            int delta = jdbc.queryForInt("select delta from Node where name='" + dataNode.getName() + "'");
+            int delta = jdbc.queryForObject("select delta from Node where name='" + dataNode.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 6, delta);
         }
         catch(Exception unexpected)
@@ -1984,7 +1986,7 @@ public class NodeDAOTest
 
             nodeDAO.delete(dataNode);
 
-            int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
+            int delta = jdbc.queryForObject("select delta from Node where name='" + containerNode.getName() + "'", new IntRowMapper());
             // delta should now be 7-2
             Assert.assertEquals("Wrong delta", 5, delta);
         }
@@ -2049,10 +2051,10 @@ public class NodeDAOTest
 
             nodeDAO.move(dataNode, containerNode2);
 
-            int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
+            int delta = jdbc.queryForObject("select delta from Node where name='" + containerNode.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 2, delta);
 
-            delta = jdbc.queryForInt("select delta from Node where name='" + containerNode2.getName() + "'");
+            delta = jdbc.queryForObject("select delta from Node where name='" + containerNode2.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 22, delta);
         }
         catch(Exception unexpected)
@@ -2105,11 +2107,11 @@ public class NodeDAOTest
 
             // grab the nodeIDs for assertion
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
-            Long dataNodeID = jdbc.queryForLong(sql);
+            Long dataNodeID = jdbc.queryForObject(sql, new LongRowMapper());
             sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
-            Long containerNodeID = jdbc.queryForLong(sql);
+            Long containerNodeID = jdbc.queryForObject(sql, new LongRowMapper());
             sql = "select nodeID from Node where name='" + rootContainer.getName() + "'";
-            Long rootNodeID = jdbc.queryForLong(sql);
+            Long rootNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
             Assert.assertTrue("Wrong number of oustanding propagations", propagations.size() == 2);
@@ -2260,13 +2262,13 @@ public class NodeDAOTest
 
             // ensure the contentLength is zero to start
             String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            Long contentLength = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+            Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNull("null content length", contentLength);
 
             // ensure the data node delta is zero to start
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            Long delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            Long delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNull("null delta", delta);
 
             // manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2285,13 +2287,14 @@ public class NodeDAOTest
 
             // ensure the contentLength is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            contentLength = jdbc.queryForLong(sql);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
 
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull("delta", delta);
+            Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // ensure the md5sum is correct
             sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
@@ -2300,7 +2303,7 @@ public class NodeDAOTest
 
             // get the nodeID
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
-            long nodeID = jdbc.queryForLong(sql);
+            long nodeID = jdbc.queryForObject(sql, new LongRowMapper());
             log.debug("nodeID is " + nodeID);
 
             // get the propagation
@@ -2319,23 +2322,30 @@ public class NodeDAOTest
 
             // ensure the data node content length is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            contentLength = jdbc.queryForLong(sql);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
 
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            // null or 0
+            if (delta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            }
 
             // ensure the container node content length is correct
             sql = "select contentLength from Node where name='" + containerName + "'";
-            contentLength = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
+            // null or 0
+            if (contentLength != null) {
+                Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            }
 
             // ensure the container node delta is correct
             sql = "select delta from Node where name='" + containerName + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container delta", Long.valueOf(10L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull("delta", delta);
+            Assert.assertEquals("Wrong container delta", 10L, delta.longValue());
 
         }
         catch(Exception unexpected)
@@ -2385,13 +2395,13 @@ public class NodeDAOTest
 
             // ensure the contentLength is zero to start
             String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            Long contentLength = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+            Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNull("Wrong content length", contentLength);
 
             // ensure the data node delta is zero to start
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            Long delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            Long delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNull("null delta", delta);
 
             // manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2410,8 +2420,9 @@ public class NodeDAOTest
 
             // ensure the contentLength is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            contentLength = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull(contentLength);
+            Assert.assertEquals("Wrong content length", 10L, contentLength.longValue());
 
             // ensure the md5sum is correct
             sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
@@ -2420,8 +2431,9 @@ public class NodeDAOTest
 
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // start the replace--manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2440,7 +2452,7 @@ public class NodeDAOTest
 
             // ensure the contentLength is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            contentLength = jdbc.queryForLong(sql);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
 
             // ensure the md5sum is correct
@@ -2450,12 +2462,13 @@ public class NodeDAOTest
 
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(15L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong delta", 15L, delta.longValue());
 
             // get the nodeID
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
-            long nodeID = jdbc.queryForLong(sql);
+            long nodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             // get the propagation
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
@@ -2472,23 +2485,30 @@ public class NodeDAOTest
 
             // ensure the data node content length is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
-            contentLength = jdbc.queryForLong(sql);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
 
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            // null or 0
+            if (delta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            }
 
             // ensure the container node content length is correct
             sql = "select contentLength from Node where name='" + containerName + "'";
-            contentLength = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            contentLength = jdbc.queryForObject(sql, new LongRowMapper());
+            // null or 0
+            if (contentLength != null) {
+                Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            }
 
             // ensure the container node delta is correct
             sql = "select delta from Node where name='" + containerName + "'";
-            delta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container delta", Long.valueOf(15L), delta);
+            delta = jdbc.queryForObject(sql, new LongRowMapper());
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong container delta", 15L, delta.longValue());
 
         }
         catch(Exception unexpected)
@@ -2546,23 +2566,23 @@ public class NodeDAOTest
 
             // propagate data node
             String sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
-            long parentNodeID = jdbc.queryForLong(sql);
+            long parentNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
-            long dataNodeID = jdbc.queryForLong(sql);
+            long dataNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             NodeSizePropagation np = new NodeSizePropagation(dataNodeID, NodeDAO.NODE_TYPE_DATA, parentNodeID);
             nodeDAO.applyPropagation(np);
 
             sql = "select delta from Node where name='" + containerNode.getName() + "'";
-            long actualDelta = jdbc.queryForLong(sql);
+            long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong container delta", 5L, actualDelta);
 
             // delete data node
             nodeDAO.delete(dataNode);
 
             // assert right container size
-            actualDelta = jdbc.queryForLong(sql);
+            actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong container delta", 0L, actualDelta);
 
         }
@@ -2619,15 +2639,19 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, false);
 
             String sql = "select delta from Node where name='" + containerNode.getName() + "'";
-            long actualDelta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+            Long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
+            
+            Assert.assertNull("null container delta", actualDelta);
 
             // delete data node
             nodeDAO.delete(dataNode);
 
             // assert right delta size
-            actualDelta = jdbc.queryForLong(sql);
-            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+            actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
+            // null or 0
+            if (actualDelta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), actualDelta);
+            }
 
         }
         catch(Exception unexpected)

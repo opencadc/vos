@@ -109,6 +109,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.db.LongRowMapper;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
@@ -118,7 +119,6 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
@@ -925,7 +925,7 @@ public class NodeDAO
 
                     // Note: if node size is null, the jdbc template
                     // will return zero.
-                    Long sizeDifference = jdbc.queryForLong(sql);
+                    Long sizeDifference = jdbc.queryForObject(sql, new LongRowMapper());
                     prof.checkpoint("getSelectContentLengthSQL");
 
                     // delete the node only if it is not busy
@@ -1403,7 +1403,7 @@ public class NodeDAO
                 sql = this.getSelectContentLengthForDeleteSQL(src);
 
                 // Note: if contentLength is null, jdbc template will return zero.
-                contentLength = jdbc.queryForLong(sql);
+                contentLength = jdbc.queryForObject(sql, new LongRowMapper());
                 prof.checkpoint("getSelectContentLengthSQL");
             }
 
@@ -1616,7 +1616,7 @@ public class NodeDAO
         {
             // Note: if node size is null, the jdbc template
             // will return zero.
-            sizeDifference = jdbc.queryForLong(sql);
+            sizeDifference = jdbc.queryForObject(sql, new LongRowMapper());
             prof.checkpoint("getSelectContentLengthSQL");
         }
 
