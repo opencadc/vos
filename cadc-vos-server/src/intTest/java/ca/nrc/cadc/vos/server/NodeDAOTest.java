@@ -2263,12 +2263,12 @@ public class NodeDAOTest
             // ensure the contentLength is zero to start
             String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
             Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+            Assert.assertNull("null content length", contentLength);
 
             // ensure the data node delta is zero to start
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             Long delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            Assert.assertNull("null delta", delta);
 
             // manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2293,7 +2293,8 @@ public class NodeDAOTest
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+            Assert.assertNotNull("delta", delta);
+            Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // ensure the md5sum is correct
             sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
@@ -2327,17 +2328,24 @@ public class NodeDAOTest
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            // null or 0
+            if (delta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            }
 
             // ensure the container node content length is correct
             sql = "select contentLength from Node where name='" + containerName + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            // null or 0
+            if (contentLength != null) {
+                Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            }
 
             // ensure the container node delta is correct
             sql = "select delta from Node where name='" + containerName + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container delta", Long.valueOf(10L), delta);
+            Assert.assertNotNull("delta", delta);
+            Assert.assertEquals("Wrong container delta", 10L, delta.longValue());
 
         }
         catch(Exception unexpected)
@@ -2388,12 +2396,12 @@ public class NodeDAOTest
             // ensure the contentLength is zero to start
             String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
             Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong content length", Long.valueOf(0L), contentLength);
+            Assert.assertNull("Wrong content length", contentLength);
 
             // ensure the data node delta is zero to start
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             Long delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            Assert.assertNull("null delta", delta);
 
             // manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2413,7 +2421,8 @@ public class NodeDAOTest
             // ensure the contentLength is correct
             sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
+            Assert.assertNotNull(contentLength);
+            Assert.assertEquals("Wrong content length", 10L, contentLength.longValue());
 
             // ensure the md5sum is correct
             sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
@@ -2423,7 +2432,8 @@ public class NodeDAOTest
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(10L), delta);
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // start the replace--manually set the busy state
             sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
@@ -2453,7 +2463,8 @@ public class NodeDAOTest
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(15L), delta);
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong delta", 15L, delta.longValue());
 
             // get the nodeID
             sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
@@ -2480,17 +2491,24 @@ public class NodeDAOTest
             // ensure the data node delta is correct
             sql = "select delta from Node where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            // null or 0
+            if (delta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), delta);
+            }
 
             // ensure the container node content length is correct
             sql = "select contentLength from Node where name='" + containerName + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            // null or 0
+            if (contentLength != null) {
+                Assert.assertEquals("Wrong container content length", Long.valueOf(0L), contentLength);
+            }
 
             // ensure the container node delta is correct
             sql = "select delta from Node where name='" + containerName + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container delta", Long.valueOf(15L), delta);
+            Assert.assertNotNull(delta);
+            Assert.assertEquals("Wrong container delta", 15L, delta.longValue());
 
         }
         catch(Exception unexpected)
@@ -2621,15 +2639,19 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, false);
 
             String sql = "select delta from Node where name='" + containerNode.getName() + "'";
-            long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+            Long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
+            
+            Assert.assertNull("null container delta", actualDelta);
 
             // delete data node
             nodeDAO.delete(dataNode);
 
             // assert right delta size
             actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
-            Assert.assertEquals("Wrong container delta", 0L, actualDelta);
+            // null or 0
+            if (actualDelta != null) {
+                Assert.assertEquals("Wrong delta", Long.valueOf(0L), actualDelta);
+            }
 
         }
         catch(Exception unexpected)
