@@ -60,7 +60,7 @@ dependencies {
     compile 'org.opencadc:cadc-cdp:[1.0,)'
     compile 'org.opencadc:cadc-gms:[1.0.0,)'
     compile 'org.opencadc:cadc-vos:[1.1.10,)'
-    compile 'org.opencadc:cadc-vos-server:[1.2,)'
+    compile 'org.opencadc:cadc-vos-server:[1.2.1,)'
     compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'

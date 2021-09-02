@@ -14,7 +14,7 @@ Then, update VERSION with the approripate tages and run ./apply-version.sh
 
 ## running it
 ```
-docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat cavern-tomcat:0.1
+docker run -d --volume=/path/to/external/config:/config:ro --name cavern-tomcat images.canfar.net/skaha-system/cavern:latest
 ```
 
 ## configuration
