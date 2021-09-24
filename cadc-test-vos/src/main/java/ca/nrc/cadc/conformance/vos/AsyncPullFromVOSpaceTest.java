@@ -153,8 +153,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -162,8 +161,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -171,8 +169,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
@@ -231,8 +228,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -240,8 +236,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -249,8 +244,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
@@ -309,8 +303,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -318,8 +311,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -327,8 +319,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
