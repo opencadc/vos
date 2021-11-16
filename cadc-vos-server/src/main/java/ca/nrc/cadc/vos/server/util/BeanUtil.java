@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos.server.util;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 
 public class BeanUtil
 {
@@ -103,12 +104,8 @@ public class BeanUtil
      * @return The base VOS URI.
      */
     public static String getVosUriBase() {
-        String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
-        if (uriBase == null) {
-            // default to vault
-            return "vos://cadc.nrc.ca!vault";
-        }
-        return uriBase;
+        LocalServiceURI localServiceURI = new LocalServiceURI();
+        return localServiceURI.getURI().toString();
     }
 
 

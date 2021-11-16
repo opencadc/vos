@@ -89,26 +89,23 @@ public class LocalServiceURI
 {
     private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
-    private static final String LOCAL_PROP_FILE = LocalServiceURI.class.getSimpleName() + ".properties";
-    private static final String URI_KEY = "serviceURI";
-
     private URI serviceURI;
 
     public LocalServiceURI()
     {
-        try
-        {
-            URL propFile = LocalServiceURI.class.getClassLoader().getResource(LOCAL_PROP_FILE);
-            Properties props = new Properties();
-            props.load(propFile.openStream());
-            String uriString = props.getProperty(URI_KEY);
-            this.serviceURI = new URI(uriString);
+        try {
+            String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            if (uriBase == null) {
+                // default to vault
+                log.warn("Missing system property 'ca.nrc.cadc.vos.server.vosUriBase', defaulting to vos://cadc.nrc.ca!vault");
+                serviceURI = new URI("vos://cadc.nrc.ca!vault");
+            } else {
+                serviceURI = new URI(uriBase);
+            }
+        } catch (Throwable t) {
+            log.warn("Exception creating LocalServiceURI", t);
         }
-        catch (Exception e)
-        {
-            log.warn("Unable to read local service URI from " + LOCAL_PROP_FILE +
-                    "\n    Reason: " + e.getMessage(), e);
-        }
+        
     }
 
     public URI getURI()
