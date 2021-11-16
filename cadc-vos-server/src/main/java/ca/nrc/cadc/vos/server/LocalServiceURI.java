@@ -70,6 +70,8 @@
 package ca.nrc.cadc.vos.server;
 
 
+import ca.nrc.cadc.vos.VOSURI;
+
 import java.net.URI;
 import java.net.URL;
 import java.util.Properties;
@@ -97,15 +99,14 @@ public class LocalServiceURI
             String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
             if (uriBase == null) {
                 // default to vault
-                log.warn("Missing system property 'ca.nrc.cadc.vos.server.vosUriBase', defaulting to vos://cadc.nrc.ca!vault");
-                serviceURI = new URI("vos://cadc.nrc.ca!vault");
-            } else {
-                serviceURI = new URI(uriBase);
+                log.debug("Missing system property 'ca.nrc.cadc.vos.server.vosUriBase', defaulting to vos://cadc.nrc.ca!vault");
+                uriBase = "vos://cadc.nrc.ca!vault";
             }
+            VOSURI vosURI = new VOSURI(uriBase);
+            serviceURI = vosURI.getServiceURI();
         } catch (Throwable t) {
             log.warn("Exception creating LocalServiceURI", t);
         }
-        
     }
 
     public URI getURI()
