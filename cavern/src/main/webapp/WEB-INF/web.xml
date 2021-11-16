@@ -9,11 +9,6 @@
   <display-name>cavern</display-name>
 
   <context-param>
-    <param-name>ivoa.vos.uri</param-name>
-    <param-value>vos://cadc.nrc.ca~arc</param-value>
-  </context-param>
-
-  <context-param>
     <param-name>VOSpaceStylesheetReference</param-name>
     <param-value>/cavern/vospace.xsl</param-value>
   </context-param>

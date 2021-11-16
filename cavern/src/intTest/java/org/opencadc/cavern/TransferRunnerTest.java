@@ -223,6 +223,7 @@ public class TransferRunnerTest {
 
             ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
+            log.debug("transfer result: " + trans2);
             Assert.assertEquals(VOS.VOSPACE_21, trans2.version);
             List<Protocol> plist = trans2.getProtocols();
             Assert.assertNotNull(plist);
@@ -249,7 +250,7 @@ public class TransferRunnerTest {
             //Assert.assertFalse("basicTLS", plist.contains(basicTLS));
 
             //Assert.assertFalse("token", plist.contains(token));
-            Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
+            Assert.assertTrue("tokenTLS", plist.contains(tokenTLS));
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);

@@ -78,9 +78,6 @@ public class BeanUtil
     
     private static final Logger log = Logger.getLogger(BeanUtil.class);
     
-    public static final String IVOA_VOS_URI =
-            "ivoa.vos.uri";
-    
     public static final String VOS_NODE_PERSISTENCE =
             "ca.nrc.cadc.vos.NodePersistence";
     
@@ -98,6 +95,20 @@ public class BeanUtil
     public BeanUtil(final String className)
     {
         this.className = className;
+    }
+    
+    /**
+     * Get the base of the VOS URI for this running service.
+     * 
+     * @return The base VOS URI.
+     */
+    public static String getVosUriBase() {
+        String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+        if (uriBase == null) {
+            // default to vault
+            return "vos://cadc.nrc.ca!vault";
+        }
+        return uriBase;
     }
 
 

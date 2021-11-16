@@ -122,7 +122,7 @@ public class ExternalCertIntTest
                 public Object run() throws Exception
                 {
                     // node uri to a public file
-                    VOSURI vosURI = new VOSURI("vos://cadc.nrc.ca~vospace/CADCAuthtest1/a1");
+                    VOSURI vosURI = new VOSURI("vos://cadc.nrc.ca~arc/home/cadcauthtest1/atest");
                     VOSpaceClient c = new VOSpaceClient(vosURI.getServiceURI());
 
                     View view = new View(new URI(VOS.VIEW_DEFAULT));

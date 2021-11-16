@@ -165,6 +165,14 @@ public class AclCommandExecutor {
         return getACL(perm);
     }
     
+//    public GroupPrincipal getDefaultReadOnlyACL() throws IOException {
+//        
+//    }
+//    
+//    public GroupPrincipal getDefaultReadWriteACL() throws IOException {
+//        
+//    }
+    
     private GroupPrincipal getACL(String perm) throws IOException {
         String[] cmd = new String[] {
             GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
