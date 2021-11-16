@@ -72,6 +72,7 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -146,7 +147,7 @@ public class GroupPermissionsTest {
         }
     }
     
-   @Test
+    @Test
     public void testCreateContainerGroupReadOnly() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
@@ -257,4 +258,145 @@ public class GroupPermissionsTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testCreateChildContainerNodeInheritReadGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
+        String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/inherit-containerNode-gro");
+            ContainerNode expected = new ContainerNode(uri);
+            expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, testGroup.getURI().toASCIIString()));
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI childURI = new VOSURI(uri.getURI().toASCIIString() + "/child-containernode-gro");
+            ContainerNode expectedChild = new ContainerNode(childURI);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expectedChild));
+            
+            Node actualChild = Subject.doAs(s, new TestActions.GetNodeAction(vos, childURI.getPath()));
+            Assert.assertNotNull("created", actualChild);
+            np = actualChild.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testCreateChildContainerNodeInheritReadWriteGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
+        String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/inherit-containerNode-gro");
+            ContainerNode expected = new ContainerNode(uri);
+            expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, testGroup.getURI().toASCIIString()));
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI childURI = new VOSURI(uri.getURI().toASCIIString() + "/child-containernode-gro");
+            ContainerNode expectedChild = new ContainerNode(childURI);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expectedChild));
+            
+            Node actualChild = Subject.doAs(s, new TestActions.GetNodeAction(vos, childURI.getPath()));
+            Assert.assertNotNull("created", actualChild);
+            np = actualChild.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testCreateChildDataNodeInheritReadGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
+        String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/inherit-containerNode-gro");
+            ContainerNode expected = new ContainerNode(uri);
+            expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, testGroup.getURI().toASCIIString()));
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI childURI = new VOSURI(uri.getURI().toASCIIString() + "/child-containernode-gro");
+            DataNode expectedChild = new DataNode(childURI);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expectedChild));
+            
+            Node actualChild = Subject.doAs(s, new TestActions.GetNodeAction(vos, childURI.getPath()));
+            Assert.assertNotNull("created", actualChild);
+            np = actualChild.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testCreateChildDataNodeInheritReadWriteGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
+        String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/inherit-containerNode-gro");
+            ContainerNode expected = new ContainerNode(uri);
+            expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, testGroup.getURI().toASCIIString()));
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI childURI = new VOSURI(uri.getURI().toASCIIString() + "/child-containernode-gro");
+            DataNode expectedChild = new DataNode(childURI);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expectedChild));
+            
+            Node actualChild = Subject.doAs(s, new TestActions.GetNodeAction(vos, childURI.getPath()));
+            Assert.assertNotNull("created", actualChild);
+            np = actualChild.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }
