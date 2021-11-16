@@ -79,12 +79,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 
 /**
- * Class that simply tells the service what the currently running
- * serviceID is.  This information is retrieved from the file
- * LocalServiceURI.properties read from the classpath.  The format
- * of the file should be, for example:
- *
- * serviceURI = ivo://cadc.nrc.ca/vospace
+ * Class used to retrieve the serviceURI of the running vospace instance. 
  *
  */
 public class LocalServiceURI
@@ -105,7 +100,7 @@ public class LocalServiceURI
             VOSURI vosURI = new VOSURI(uriBase);
             serviceURI = vosURI.getServiceURI();
         } catch (Throwable t) {
-            log.warn("Exception creating LocalServiceURI", t);
+            log.error("Exception creating LocalServiceURI", t);
         }
     }
 
