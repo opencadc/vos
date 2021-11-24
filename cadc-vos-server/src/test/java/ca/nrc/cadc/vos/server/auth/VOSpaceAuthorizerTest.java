@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.auth;
+package ca.nrc.cadc.vos.server.auth;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
@@ -84,9 +84,9 @@ import java.util.TimeZone;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
-import junit.framework.Assert;
-
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Test;
 
 import ca.nrc.cadc.auth.SignedToken;
@@ -95,6 +95,8 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -108,12 +110,14 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  */
 public class VOSpaceAuthorizerTest
 {
+    private static final Logger log = Logger.getLogger(VOSpaceAuthorizerTest.class);
+    
     private String NODE_OWNER = "cn=cadc authtest1 10627,ou=cadc,o=hia";
     private String NODE_OWNER_ID = "cadcauthtest1";
 
     static
     {
-        Log4jInit.setLevel(VOSpaceAuthorizerTest.class.getPackage().getName(), Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
 
     @Test
@@ -281,6 +285,60 @@ public class VOSpaceAuthorizerTest
         }
 
         verify(np);
+    }
+    
+    @Test
+    public void testReadMask() throws Exception {
+        try {
+            VOSpaceAuthorizer vauth = new VOSpaceAuthorizer();
+            VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
+            Node n = null;
+            
+            n = new DataNode(vos);
+            Assert.assertTrue("no mask", vauth.applyMaskOnGroupRead(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "abcd"));
+            Assert.assertTrue("invalid mask", vauth.applyMaskOnGroupRead(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "r--"));
+            Assert.assertTrue("allow read", vauth.applyMaskOnGroupRead(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "-wx"));
+            Assert.assertFalse("disallow read", vauth.applyMaskOnGroupRead(n));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testWriteMask() throws Exception {
+        try {
+            VOSpaceAuthorizer vauth = new VOSpaceAuthorizer();
+            VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
+            Node n = null;
+            
+            n = new DataNode(vos);
+            Assert.assertTrue("no mask", vauth.applyMaskOnGroupWrite(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "abcd"));
+            Assert.assertTrue("invalid mask", vauth.applyMaskOnGroupWrite(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "rw-"));
+            Assert.assertTrue("allow write", vauth.applyMaskOnGroupWrite(n));
+            
+            n = new DataNode(vos);
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "r-x"));
+            Assert.assertFalse("disallow write", vauth.applyMaskOnGroupWrite(n));
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
 
