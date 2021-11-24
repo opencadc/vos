@@ -78,6 +78,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 public class LocalServiceURITest
 {
@@ -89,17 +90,48 @@ public class LocalServiceURITest
     }
 
     @Test
-    public void testExampleServiceURI()
+    public void testDefault()
     {
+        String orig = System.getProperty(BeanUtil.VOS_BASE_URI_PROP);
         try
         {
+            System.clearProperty(BeanUtil.VOS_BASE_URI_PROP);
             LocalServiceURI localServiceURI = new LocalServiceURI();
-            Assert.assertEquals(new URI("ivo://example.org/vospace"), localServiceURI.getURI());
+            Assert.assertEquals(new URI("ivo://cadc.nrc.ca/vault"), localServiceURI.getURI());
         }
         catch (Throwable t)
         {
             log.error("unexpected throwable", t);
             Assert.fail("unexpected throwable: " + t.getMessage());
+        } finally {
+            if (orig == null) {
+                System.clearProperty(BeanUtil.VOS_BASE_URI_PROP);
+            } else {
+                System.setProperty(BeanUtil.VOS_BASE_URI_PROP, orig);
+            }
+        }
+    }
+    
+    @Test
+    public void testConfigured()
+    {
+        String orig = System.getProperty(BeanUtil.VOS_BASE_URI_PROP);
+        try
+        {
+            System.setProperty(BeanUtil.VOS_BASE_URI_PROP, "vos://cadc.nrc.ca~anothervos");
+            LocalServiceURI localServiceURI = new LocalServiceURI();
+            Assert.assertEquals(new URI("ivo://cadc.nrc.ca/anothervos"), localServiceURI.getURI());
+        }
+        catch (Throwable t)
+        {
+            log.error("unexpected throwable", t);
+            Assert.fail("unexpected throwable: " + t.getMessage());
+        } finally {
+            if (orig == null) {
+                System.clearProperty(BeanUtil.VOS_BASE_URI_PROP);
+            } else {
+                System.setProperty(BeanUtil.VOS_BASE_URI_PROP, orig);
+            }
         }
     }
 }

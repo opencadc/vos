@@ -150,7 +150,7 @@ public class AclCommandExecutor {
     }
     
     public GroupPrincipal getReadOnlyACL(boolean isDir) throws IOException {
-        String perm = FILE_RO;
+        String perm = FILE_RO.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RO;
         }
@@ -158,7 +158,7 @@ public class AclCommandExecutor {
     }
     
     public GroupPrincipal getReadWriteACL(boolean isDir) throws IOException {
-        String perm = FILE_RW;
+        String perm = FILE_RW.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RW;
         }
@@ -180,7 +180,7 @@ public class AclCommandExecutor {
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
         if (grabber.getExitValue() != 0) {
-            throw new IOException("failed to set read-only ACL on " + path + ": "
+            throw new IOException("failed to get read-only ACL on " + path + ": "
                 + grabber.getErrorOutput(true));
         }
         String out = grabber.getOutput(true);
@@ -189,13 +189,13 @@ public class AclCommandExecutor {
             String[] tokens = s.split(":");
             if ("group".equals(tokens[0])
                     && tokens[1].length() > 0
-                    && perm.equals(tokens[2])) {
-                //log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+                    && tokens[2].startsWith(perm)) {
+                log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
                 return users.lookupPrincipalByGroupName(tokens[1]);
             }                   
-            //log.debug("getACL(" + perm + "): skip " + s);
+            log.debug("getACL(" + perm + "): skip " + s);
         }
-        //log.debug("getACL(" + perm + "): found: null");
+        log.debug("getACL(" + perm + "): found: null");
         return null;
     }
     

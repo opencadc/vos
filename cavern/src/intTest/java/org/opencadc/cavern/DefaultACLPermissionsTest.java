@@ -89,10 +89,19 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
 
 /**
+ * This test relies on the two base directories having default ACLs set to
+ * group-readOnly and group-readWrite respectively.  That currently must
+ * be done in a linux terminal. For example:
+ * 
+ * setfacl -d -m group:the-group-name:r-x read-only-dir
+ * setfacl -d -m group:the-group-name:rwx read-write-dir
+ * 
+ * TODO: Turn this into an unit test that execs the above commands first.
  *
  * @author majorb
  */
@@ -102,7 +111,8 @@ public class DefaultACLPermissionsTest {
 
     private static File SSL_CERT;
 
-    private static VOSURI baseURI;
+    private static VOSURI roBaseURI;
+    private static VOSURI rwBaseURI;
     private static GroupURI testGroup;
 
     static {
@@ -119,7 +129,8 @@ public class DefaultACLPermissionsTest {
     public static void staticInit() throws Exception {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", MetadataIntTest.class);
 
-        String uriProp = DefaultACLPermissionsTest.class.getName() + ".baseURI";
+        String uriROProp = DefaultACLPermissionsTest.class.getName() + ".baseURI.readOnly";
+        String uriRWProp = DefaultACLPermissionsTest.class.getName() + ".baseURI.readWrite";
         if (log.isDebugEnabled()) {
             Properties props = System.getProperties();
             Set<Object> keys = props.keySet();
@@ -129,16 +140,23 @@ public class DefaultACLPermissionsTest {
                 log.debug("System prop: " + key + "=" + props.getProperty((String) key));
             }
         }
-        String uri = System.getProperty(uriProp);
-        log.debug(uriProp + " = " + uri);
-        if (StringUtil.hasText(uri)) {
-            baseURI = new VOSURI(new URI(uri));
+        String roUri = System.getProperty(uriROProp);
+        log.debug(uriROProp + " = " + roUri);
+        if (StringUtil.hasText(roUri)) {
+            roBaseURI = new VOSURI(new URI(roUri));
         } else {
-            throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
+            throw new IllegalStateException("expected system property " + uriROProp + " = <base vos URI>, found: " + roUri);
+        }
+        String rwUri = System.getProperty(uriRWProp);
+        log.debug(uriRWProp + " = " + rwUri);
+        if (StringUtil.hasText(rwUri)) {
+            rwBaseURI = new VOSURI(new URI(rwUri));
+        } else {
+            throw new IllegalStateException("expected system property " + uriRWProp + " = <base vos URI>, found: " + rwUri);
         }
         
         String testGroupProp = DefaultACLPermissionsTest.class.getName() + ".testGroup";
-        uri = System.getProperty(testGroupProp);
+        String uri = System.getProperty(testGroupProp);
         log.debug(testGroupProp + " = " + uri);
         if (StringUtil.hasText(uri)) {
             testGroup = new GroupURI(new URI(uri));
@@ -149,18 +167,17 @@ public class DefaultACLPermissionsTest {
     }
     
     @Test
-    public void testCreateChildContainerNodeDefaultReadGroup() throws Exception {
-        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
-        String vosuripath = baseURI.toString() + "/defaultPermissionsTest-" + System.currentTimeMillis();
+    public void testCreateChildContainerNodeDefaultReadOnlyGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
         try {
-            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/defaults-containerNode-gro");
-            ContainerNode expected = new ContainerNode(uri);
+            ContainerNode expected = new ContainerNode(turi);
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
             
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
             Assert.assertNotNull("created", actual);
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
@@ -174,17 +191,16 @@ public class DefaultACLPermissionsTest {
     
     @Test
     public void testCreateChildContainerNodeDefaultReadWriteGroup() throws Exception {
-        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
-        String vosuripath = baseURI.toString() + "/defaultPermissionsTest-" + System.currentTimeMillis();
+        VOSpaceClient vos = new VOSpaceClient(rwBaseURI.getServiceURI());
+        String vosuripath = rwBaseURI.toString() + "/rw-containernode-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
         try {
-            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/defaults-containerNode-grw");
-            ContainerNode expected = new ContainerNode(uri);
+            ContainerNode expected = new ContainerNode(turi);
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
             
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
             Assert.assertNotNull("created", actual);
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             Assert.assertNotNull(np);
@@ -197,18 +213,17 @@ public class DefaultACLPermissionsTest {
     }
     
     @Test
-    public void testCreateChildDataNodeDefaultReadGroup() throws Exception {
-        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
-        String vosuripath = baseURI.toString() + "/defaultPermissionsTest-" + System.currentTimeMillis();
+    public void testCreateChildDataNodeDefaultReadOnlyGroup() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-datanode-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
         try {
-            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/defaults-dataNode-gro");
-            DataNode expected = new DataNode(uri);
+            DataNode expected = new DataNode(turi);
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
             
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
             Assert.assertNotNull("created", actual);
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
@@ -222,17 +237,16 @@ public class DefaultACLPermissionsTest {
     
     @Test
     public void testCreateChildDataNodeDefaultReadWriteGroup() throws Exception {
-        VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
-        String vosuripath = baseURI.toString() + "/defaultPermissionsTest-" + System.currentTimeMillis();
+        VOSpaceClient vos = new VOSpaceClient(rwBaseURI.getServiceURI());
+        String vosuripath = rwBaseURI.toString() + "/rw-datanode-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
         try {
-            VOSURI uri = new VOSURI(turi.getURI().toASCIIString() + "/defaults-dataNode-grw");
-            DataNode expected = new DataNode(uri);
+            DataNode expected = new DataNode(turi);
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
             
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, uri.getPath()));
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
             Assert.assertNotNull("created", actual);
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             Assert.assertNotNull(np);
@@ -244,4 +258,137 @@ public class DefaultACLPermissionsTest {
         }
     }
     
+    @Test
+    public void testContainerNodeTwoLevelsDeep() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            ContainerNode expected = new ContainerNode(turi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
+            ContainerNode child = new ContainerNode(curi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
+            
+            actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, curi.getPath()));
+            Assert.assertNotNull("created", actual);
+            np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testDataNodeTwoLevelsDeep() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            ContainerNode expected = new ContainerNode(turi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
+            DataNode child = new DataNode(curi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
+            
+            actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, curi.getPath()));
+            Assert.assertNotNull("created", actual);
+            np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testUpdateContainerNode() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            ContainerNode expected = new ContainerNode(turi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            actual.getProperties().add(new NodeProperty("key", "value"));
+            Node updated = Subject.doAs(s, new TestActions.UpdateNodeAction(vos, actual));
+            
+            Assert.assertNotNull("created", updated);
+            np = updated.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            np = updated.findProperty("key");
+            Assert.assertNotNull(np);
+            Assert.assertEquals("value", np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testUpdateDataNode() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosuripath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        try {
+            DataNode expected = new DataNode(turi);
+            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+            
+            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+            Assert.assertNotNull("created", actual);
+            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            
+            actual.getProperties().add(new NodeProperty("key", "value"));
+            Node updated = Subject.doAs(s, new TestActions.UpdateNodeAction(vos, actual));
+            
+            Assert.assertNotNull("created", updated);
+            np = updated.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(np);
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            np = updated.findProperty("key");
+            Assert.assertNotNull(np);
+            Assert.assertEquals("value", np.getPropertyValue());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 }

@@ -78,6 +78,8 @@ public class BeanUtil
     
     private static final Logger log = Logger.getLogger(BeanUtil.class);
     
+    public static final String VOS_BASE_URI_PROP = "ca.nrc.cadc.vos.server.vosUriBase";
+    
     public static final String VOS_NODE_PERSISTENCE =
             "ca.nrc.cadc.vos.NodePersistence";
     
@@ -103,7 +105,7 @@ public class BeanUtil
      * @return The base VOS URI.
      */
     public static String getVosUriBase() {
-        String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+        String uriBase = System.getProperty(VOS_BASE_URI_PROP);
         if (uriBase == null) {
             // default to vault
             return "vos://cadc.nrc.ca!vault";
