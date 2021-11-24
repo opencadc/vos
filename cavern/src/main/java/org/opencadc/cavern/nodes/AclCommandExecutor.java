@@ -165,13 +165,29 @@ public class AclCommandExecutor {
         return getACL(perm);
     }
     
-//    public GroupPrincipal getDefaultReadOnlyACL() throws IOException {
-//        
-//    }
-//    
-//    public GroupPrincipal getDefaultReadWriteACL() throws IOException {
-//        
-//    }
+    public String getMask() throws IOException {
+        String[] cmd = new String[] {
+            GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to get ACL mask on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+        String out = grabber.getOutput(true);
+        String[] lines = out.split("[\n]");
+        for (String s : lines) {
+            String[] tokens = s.split(":");
+            if ("mask".equals(tokens[0])) {
+                log.debug("getMask(): found " + s + " -> " + tokens[2]);
+                return tokens[2];
+            }                   
+            log.debug("getMask(): skip " + s);
+        }
+        log.debug("getMask(): found: null");
+        return null;
+    }
     
     private GroupPrincipal getACL(String perm) throws IOException {
         String[] cmd = new String[] {
@@ -180,7 +196,7 @@ public class AclCommandExecutor {
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
         if (grabber.getExitValue() != 0) {
-            throw new IOException("failed to get read-only ACL on " + path + ": "
+            throw new IOException("failed to get ACL on " + path + ": "
                 + grabber.getErrorOutput(true));
         }
         String out = grabber.getOutput(true);

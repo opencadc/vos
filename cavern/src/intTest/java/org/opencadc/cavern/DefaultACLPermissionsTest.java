@@ -182,6 +182,9 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -205,6 +208,9 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("rwx", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -229,6 +235,10 @@ public class DefaultACLPermissionsTest {
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
             
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r--", mask.getPropertyValue());
+            
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -250,7 +260,10 @@ public class DefaultACLPermissionsTest {
             Assert.assertNotNull("created", actual);
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             Assert.assertNotNull(np);
-            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());            
+            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());        
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("rw-", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -274,6 +287,9 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
             VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
             ContainerNode child = new ContainerNode(curi);
@@ -284,6 +300,9 @@ public class DefaultACLPermissionsTest {
             np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -307,8 +326,11 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
-            VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
+            VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "data-child");
             DataNode child = new DataNode(curi);
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
             
@@ -317,6 +339,9 @@ public class DefaultACLPermissionsTest {
             np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r--", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -340,6 +365,9 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
             actual.getProperties().add(new NodeProperty("key", "value"));
             Node updated = Subject.doAs(s, new TestActions.UpdateNodeAction(vos, actual));
@@ -351,6 +379,9 @@ public class DefaultACLPermissionsTest {
             np = updated.findProperty("key");
             Assert.assertNotNull(np);
             Assert.assertEquals("value", np.getPropertyValue());
+            mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r-x", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -361,7 +392,7 @@ public class DefaultACLPermissionsTest {
     @Test
     public void testUpdateDataNode() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
-        String vosuripath = roBaseURI.toString() + "/ro-containernode-" + System.currentTimeMillis();
+        String vosuripath = roBaseURI.toString() + "/ro-datanode-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
@@ -374,6 +405,9 @@ public class DefaultACLPermissionsTest {
             NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             Assert.assertNotNull(np);
             Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r--", mask.getPropertyValue());
             
             actual.getProperties().add(new NodeProperty("key", "value"));
             Node updated = Subject.doAs(s, new TestActions.UpdateNodeAction(vos, actual));
@@ -385,6 +419,9 @@ public class DefaultACLPermissionsTest {
             np = updated.findProperty("key");
             Assert.assertNotNull(np);
             Assert.assertEquals("value", np.getPropertyValue());
+            mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+            Assert.assertNotNull(mask);
+            Assert.assertEquals("r--", mask.getPropertyValue());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
