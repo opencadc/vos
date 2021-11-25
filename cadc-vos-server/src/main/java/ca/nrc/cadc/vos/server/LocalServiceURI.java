@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server;
 
 
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 import java.net.URI;
 import java.net.URL;
@@ -91,7 +92,7 @@ public class LocalServiceURI
     public LocalServiceURI()
     {
         try {
-            String uriBase = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            String uriBase = System.getProperty(BeanUtil.VOS_BASE_URI_PROP);
             if (uriBase == null) {
                 // default to vault
                 log.debug("Missing system property 'ca.nrc.cadc.vos.server.vosUriBase', defaulting to vos://cadc.nrc.ca!vault");
