@@ -580,7 +580,7 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (applyMaskOnGroupWrite(node)) {
+                if (applyMaskOnGroupReadWrite(node)) {
                     if (hasMembership(groupWrite, subject)) {
                         return true; // OK
                     }
@@ -621,7 +621,7 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (applyMaskOnGroupWrite(node)) {
+                if (applyMaskOnGroupReadWrite(node)) {
                     if (hasMembership(groupWrite, subject)) {
                         return true; // OK
                     }
@@ -656,7 +656,7 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Return false if mask blocks write
      */
-    boolean applyMaskOnGroupWrite(Node n) {
+    boolean applyMaskOnGroupReadWrite(Node n) {
         NodeProperty np = n.findProperty(VOS.PROPERTY_URI_GROUPMASK);
         if (np == null || np.getPropertyValue() == null) {
             return true;
@@ -667,7 +667,7 @@ public class VOSpaceAuthorizer implements Authorizer
             LOG.debug("invalid mask format: " + mask);
             return true;
         }
-        if (mask.charAt(1) == 'w') {
+        if (mask.charAt(0) == 'r' && mask.charAt(1) == 'w') {
             LOG.debug("mask allows write: " + mask);
             return true;
         }

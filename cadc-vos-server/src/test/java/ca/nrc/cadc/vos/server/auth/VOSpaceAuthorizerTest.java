@@ -322,19 +322,19 @@ public class VOSpaceAuthorizerTest
             Node n = null;
             
             n = new DataNode(vos);
-            Assert.assertTrue("no mask", vauth.applyMaskOnGroupWrite(n));
+            Assert.assertTrue("no mask", vauth.applyMaskOnGroupReadWrite(n));
             
             n = new DataNode(vos);
             n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "abcd"));
-            Assert.assertTrue("invalid mask", vauth.applyMaskOnGroupWrite(n));
+            Assert.assertTrue("invalid mask", vauth.applyMaskOnGroupReadWrite(n));
             
             n = new DataNode(vos);
             n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "rw-"));
-            Assert.assertTrue("allow write", vauth.applyMaskOnGroupWrite(n));
+            Assert.assertTrue("allow write", vauth.applyMaskOnGroupReadWrite(n));
             
             n = new DataNode(vos);
             n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, "r-x"));
-            Assert.assertFalse("disallow write", vauth.applyMaskOnGroupWrite(n));
+            Assert.assertFalse("disallow write", vauth.applyMaskOnGroupReadWrite(n));
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
