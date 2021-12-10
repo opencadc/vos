@@ -69,44 +69,56 @@
 
 package ca.nrc.cadc.vos.server;
 
-
+import ca.nrc.cadc.util.MultiValuedProperties;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 import java.net.URI;
-import java.net.URL;
-import java.util.Properties;
+import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
 
 /**
- * Class used to retrieve the serviceURI of the running vospace instance. 
+ * Class used to retrieve the resourceID and base VOS URI of the running
+ * VOSpace instance.
  *
  */
-public class LocalServiceURI
-{
+public class LocalServiceURI {
     private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
-    private URI serviceURI;
+    private static final String CONFIG_FILE = "VOSpaceWS.properties";
+    private static final String RESOURCE_ID_KEY = "resourceID";
 
-    public LocalServiceURI()
-    {
+    private URI resourceID;
+    private VOSURI vosURIBase;
+
+    public LocalServiceURI() {
+        PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
+        MultiValuedProperties mvp = pr.getAllProperties();
+        if (mvp == null) {
+            throw new RuntimeException("Cannot load config file: " + CONFIG_FILE);
+        }
+        String id = mvp.getFirstPropertyValue(RESOURCE_ID_KEY);
+        if (id == null) {
+            throw new RuntimeException("Cannot find value for " + RESOURCE_ID_KEY + " in " + CONFIG_FILE);
+        }
         try {
-            String uriBase = System.getProperty(BeanUtil.VOS_BASE_URI_PROP);
-            if (uriBase == null) {
-                // default to vault
-                log.debug("Missing system property 'ca.nrc.cadc.vos.server.vosUriBase', defaulting to vos://cadc.nrc.ca!vault");
-                uriBase = "vos://cadc.nrc.ca!vault";
-            }
-            VOSURI vosURI = new VOSURI(uriBase);
-            serviceURI = vosURI.getServiceURI();
-        } catch (Throwable t) {
-            log.error("Exception creating LocalServiceURI", t);
+            resourceID = new URI(id);
+            log.debug("VOSpace resourceID: " + resourceID);
+            String name = resourceID.getPath().substring(1);  // remove slash
+            String vosuri = "vos://" + resourceID.getAuthority() + "~" + name;
+            vosURIBase = new VOSURI(vosuri);
+            log.debug("VOSpace URI base: " + vosURIBase);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Invalid " + RESOURCE_ID_KEY + " in " + CONFIG_FILE, e);
         }
     }
 
-    public URI getURI()
-    {
-        return serviceURI;
+    public URI getURI() {
+        return resourceID;
+    }
+    
+    public VOSURI getVOSBase() {
+        return vosURIBase;
     }
 }
