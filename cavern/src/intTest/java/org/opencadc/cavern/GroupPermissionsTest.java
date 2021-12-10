@@ -72,6 +72,7 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -146,7 +147,7 @@ public class GroupPermissionsTest {
         }
     }
     
-   @Test
+    @Test
     public void testCreateContainerGroupReadOnly() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
@@ -257,4 +258,5 @@ public class GroupPermissionsTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
 }

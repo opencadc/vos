@@ -78,6 +78,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.PropertiesReader;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 public class LocalServiceURITest
 {
@@ -87,19 +90,23 @@ public class LocalServiceURITest
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
     }
-
+    
     @Test
-    public void testExampleServiceURI()
+    public void testConfigured()
     {
         try
         {
+            System.setProperty(PropertiesReader.CONFIG_DIR_SYSTEM_PROPERTY, "build/resources/test");
             LocalServiceURI localServiceURI = new LocalServiceURI();
             Assert.assertEquals(new URI("ivo://example.org/vospace"), localServiceURI.getURI());
+            Assert.assertEquals(new VOSURI(new URI("vos://example.org~vospace")), localServiceURI.getVOSBase());
         }
         catch (Throwable t)
         {
             log.error("unexpected throwable", t);
             Assert.fail("unexpected throwable: " + t.getMessage());
+        } finally {
+            System.clearProperty(PropertiesReader.CONFIG_DIR_SYSTEM_PROPERTY);
         }
     }
 }

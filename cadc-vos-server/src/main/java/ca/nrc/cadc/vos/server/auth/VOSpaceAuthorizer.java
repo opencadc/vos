@@ -561,8 +561,11 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupRead != null && groupRead.getPropertyValue() != null)
             {
-                if (hasMembership(groupRead, subject))
-                    return true; // OK
+                if (applyMaskOnGroupRead(node)) {
+                    if (hasMembership(groupRead, subject)) {
+                        return true; // OK
+                    }
+                }
             }
 
             // the GROUPWRITE property means the user has read+write permission
@@ -577,8 +580,11 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (hasMembership(groupWrite, subject))
-                    return true; // OK
+                if (applyMaskOnGroupReadWrite(node)) {
+                    if (hasMembership(groupWrite, subject)) {
+                        return true; // OK
+                    }
+                }
             }
         }
 
@@ -615,11 +621,58 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (hasMembership(groupWrite, subject))
-                    return true; // OK
+                if (applyMaskOnGroupReadWrite(node)) {
+                    if (hasMembership(groupWrite, subject)) {
+                        return true; // OK
+                    }
+                }
             }
         }
         return false;
+    }
+    
+    /**
+     * Return false if mask blocks read
+     */
+    boolean applyMaskOnGroupRead(Node n) {
+        NodeProperty np = n.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        if (np == null || np.getPropertyValue() == null) {
+            return true;
+        }
+        String mask = np.getPropertyValue();
+        // format is rwx, each of which can also be -
+        if (mask.length() != 3) {
+            LOG.debug("invalid mask format: " + mask);
+            return true;
+        }
+        if (mask.charAt(0) == 'r') {
+            LOG.debug("mask allows read: " + mask);
+            return true;
+        }
+        LOG.debug("mask disallows read: " + mask);
+        return false;  
+    }
+    
+    /**
+     * Return false if mask blocks write
+     */
+    boolean applyMaskOnGroupReadWrite(Node n) {
+        NodeProperty np = n.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        if (np == null || np.getPropertyValue() == null) {
+            return true;
+        }
+        String mask = np.getPropertyValue();
+        // format is rwx, each of which can also be -
+        if (mask.length() != 3) {
+            LOG.debug("invalid mask format: " + mask);
+            return true;
+        }
+        if (mask.charAt(0) == 'r' && mask.charAt(1) == 'w') {
+            LOG.debug("mask allows write: " + mask);
+            return true;
+        }
+        LOG.debug("mask disallows write: " + mask);
+        return false;  
     }
 
     public void setDisregardLocks(boolean disregardLocks)

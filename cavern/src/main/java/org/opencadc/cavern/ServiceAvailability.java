@@ -139,7 +139,12 @@ public class ServiceAvailability implements AvailabilityPlugin {
             log.debug("linkTargetOwner: " + linkTargetOwner);
             File root = new File(rootPath);
 
-            FileSystemProbe fsp = new FileSystemProbe(root, owner, linkTargetOwner, null);
+            String baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            if (baseURI == null) {
+                return new AvailabilityStatus(false, null, null, null, "Missing system property: ca.nrc.cadc.vos.server.vosUriBase");
+            }
+            
+            FileSystemProbe fsp = new FileSystemProbe(root, baseURI, owner, linkTargetOwner, null);
             Boolean success = fsp.call();
             if (success == null || !success) {
                 return new AvailabilityStatus(false, null, null, null, "File system probe failed");

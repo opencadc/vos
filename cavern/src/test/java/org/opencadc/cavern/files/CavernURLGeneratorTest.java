@@ -112,13 +112,15 @@ public class CavernURLGeneratorTest
     private static final Logger log = Logger.getLogger(CavernURLGeneratorTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
     static final String OWNER = System.getProperty("user.name");
     static String TEST_DIR = "dir-" + UUID.randomUUID().toString();
     static String TEST_FILE = "file-" + UUID.randomUUID().toString();
+    
+    static String baseURI;
 
     File pubFile, privFile;
 
@@ -141,6 +143,11 @@ public class CavernURLGeneratorTest
 
             Files.createDirectories(dir, PosixFilePermissions.asFileAttribute(dirPerms));
             Files.createFile(node, PosixFilePermissions.asFileAttribute(filePerms));
+            
+            baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            if (baseURI == null) {
+                throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -191,7 +198,7 @@ public class CavernURLGeneratorTest
             p.add(new HttpPrincipal(System.getProperty("user.name")));
             Subject s = new Subject(false, p, new HashSet(), new HashSet()); 
             
-            final VOSURI nodeURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR);
+            final VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protos);
@@ -223,9 +230,9 @@ public class CavernURLGeneratorTest
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
@@ -257,9 +264,9 @@ public class CavernURLGeneratorTest
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
@@ -293,9 +300,9 @@ public class CavernURLGeneratorTest
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
@@ -329,9 +336,9 @@ public class CavernURLGeneratorTest
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
             View view = null;
             Job job = null;
@@ -350,7 +357,7 @@ public class CavernURLGeneratorTest
             String[] parts = path.split("/");
             String sig = parts[4];
             //String meta = parts[3];
-            VOSURI altURI = new VOSURI("vos://cadc.nrc.ca~arc/" + TEST_DIR + "/fakeFile");
+            VOSURI altURI = new VOSURI(baseURI + "/" + TEST_DIR + "/fakeFile");
             String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
             try {
                 VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);

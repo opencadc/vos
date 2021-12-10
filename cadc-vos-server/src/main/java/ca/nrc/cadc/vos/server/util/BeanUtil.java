@@ -72,14 +72,14 @@ package ca.nrc.cadc.vos.server.util;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 
 public class BeanUtil
 {
     
     private static final Logger log = Logger.getLogger(BeanUtil.class);
     
-    public static final String IVOA_VOS_URI =
-            "ivoa.vos.uri";
+    public static final String VOS_BASE_URI_PROP = "ca.nrc.cadc.vos.server.vosUriBase";
     
     public static final String VOS_NODE_PERSISTENCE =
             "ca.nrc.cadc.vos.NodePersistence";
@@ -98,6 +98,16 @@ public class BeanUtil
     public BeanUtil(final String className)
     {
         this.className = className;
+    }
+    
+    /**
+     * Get the base of the VOS URI for this running service.
+     * 
+     * @return The base VOS URI.
+     */
+    public static String getVosUriBase() {
+        LocalServiceURI localServiceURI = new LocalServiceURI();
+        return localServiceURI.getVOSBase().toString();
     }
 
 

@@ -107,6 +107,8 @@ public class NodeUtilTest {
 
     static final String OWNER = System.getProperty("user.name");
     static final String GROUP = System.getProperty("user.name");
+    
+    static String baseURI;
 
     static {
         try {
@@ -117,6 +119,12 @@ public class NodeUtilTest {
         } catch (IOException ex) {
             throw new RuntimeException("TEST SETUP: failed to create test dir: " + ROOT, ex);
         }
+        
+        baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+        if (baseURI == null) {
+            throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
+        }
+            
     }
 
     public NodeUtilTest() {
@@ -138,7 +146,7 @@ public class NodeUtilTest {
     //@Test
     public void testGetRoot() {
         try {
-            VOSURI uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc"));
+            VOSURI uri = new VOSURI(URI.create(baseURI));
             Path root = FileSystems.getDefault().getPath(ROOT);
 
             Node rootNode = NodeUtil.get(root, uri);
@@ -148,7 +156,7 @@ public class NodeUtilTest {
             Assert.assertTrue(rootNode.getUri().isRoot());
             Assert.assertTrue(rootNode.isPublic());
 
-            uri = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/"));
+            uri = new VOSURI(URI.create(baseURI + "/"));
             root = FileSystems.getDefault().getPath(ROOT);
 
             rootNode = NodeUtil.get(root, uri);
@@ -169,7 +177,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCreateDir-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -215,7 +223,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCreateFile-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -270,7 +278,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testSetProperties-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -347,7 +355,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testNoSuchGroupFail-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -379,7 +387,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testExternalGroupFail-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -411,7 +419,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCreateLink-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -472,7 +480,7 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
             String name = "testCreatePath-" + UUID.randomUUID().toString();
-            VOSURI testURI = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testURI = new VOSURI(URI.create(baseURI + "/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
             Path dir = doCreate(root, n, up);
@@ -525,7 +533,7 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
             String name = "testList-" + UUID.randomUUID().toString();
-            VOSURI testURI = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testURI = new VOSURI(URI.create(baseURI + "/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
             Path dir = doCreate(root, n, up);
@@ -601,7 +609,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testMove-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -612,7 +620,7 @@ public class NodeUtilTest {
 
             // make move target dir
             String name2 = "testMove-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -676,7 +684,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCopyFile-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -687,7 +695,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -736,7 +744,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCopyDirectory-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -747,7 +755,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = "testCopyDirectory-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -827,7 +835,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testCopyDirectoryWithLinks-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -848,7 +856,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = "testCopyDirectoryWithLinks-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://cadc.nrc.ca~arc/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);

@@ -125,7 +125,7 @@ public class FilesAction extends RestAction {
             return;
         }
         
-        String vosURIPrefix = initParams.get(BeanUtil.IVOA_VOS_URI);
+        String vosURIPrefix = BeanUtil.getVosUriBase();
         String nodeURI = vosURIPrefix + "/" + path;
         VOSURI vosURI = new VOSURI(nodeURI);
         

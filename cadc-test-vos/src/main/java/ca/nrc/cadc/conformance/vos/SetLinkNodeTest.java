@@ -118,7 +118,7 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("updateLinkNode");
 
-            if (!supportLinkNodes)
+            if (!supportLinkNodes || !supportLinkNodeProperties)
             {
                 log.info("LinkNodes not supported, skipping test.");
                 return;
@@ -190,7 +190,7 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("updateLinkNodeDeleteProperty");
 
-            if (!supportLinkNodes)
+            if (!supportLinkNodes || !supportLinkNodeProperties)
             {
                 log.info("LinkNodes not supported, skipping test.");
                 return;
@@ -410,7 +410,7 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("invalidArgumentFault");
 
-            if (supportLinkNodes)
+            if (!supportLinkNodes || !supportLinkNodeProperties)
             {
                 log.debug("LinkNodes not supported, skipping test.");
                 return;

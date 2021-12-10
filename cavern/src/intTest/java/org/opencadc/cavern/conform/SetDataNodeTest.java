@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2021.                            (c) 2021.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -64,105 +64,12 @@
  *
  ************************************************************************
  */
+package org.opencadc.cavern.conform;
 
-package ca.nrc.cadc.vos.server.web.restlet.resource;
+/**
+ * @author majorb
+ *
+ */
+public class SetDataNodeTest extends ca.nrc.cadc.conformance.vos.SetDataNodeTest {
 
-
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import org.junit.Ignore;
-import org.junit.Test;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.data.Form;
-
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
-
-
-public class NodeResourceTest extends AbstractCADCVOSTest<NodeResource>
-{
-    private Context mockContext = createMock(Context.class);
-    private Application mockApplication = createMock(Application.class);
-    private Form mockForm = createMock(Form.class);
-
-
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception If anything goes awry.
-     */
-    @Override
-    protected void initializeTestSubject() throws Exception
-    {
-        final ConcurrentMap<String, Object> attributes =
-                new ConcurrentHashMap<String, Object>();
-        expect(getMockApplication().getContext()).andReturn(getMockContext()).
-                once();
-        expect(getMockContext().getAttributes()).andReturn(attributes).once();
-
-        replay(getMockApplication(), getMockContext());
-
-        setTestSubject(new NodeResource()
-        {
-            /**
-             * Returns the resource reference's optional query.
-             *
-             * @return The resource reference's optional query.
-             * @see org.restlet.data.Reference#getQueryAsForm()
-             */
-            @Override
-            public Form getQuery()
-            {
-                return getMockForm();
-            }
-
-            /**
-             * Returns the parent application. If it wasn't set,
-             * it attempts to retrieve
-             * the current one via {@link org.restlet.Application#getCurrent
-             * ()} if it
-             * exists, or instantiates a new one as a last resort.
-             *
-             * @return The parent application if it exists, or a new one.
-             */
-            @Override
-            public Application getApplication()
-            {
-                return getMockApplication();
-            }
-        });
-
-        verify(getMockApplication(), getMockContext());
-        reset(getMockApplication(), getMockContext());
-    }
-
-    @Ignore
-    @Test
-    public void testPerformNodeAction()
-    {
-        // TODO: Write unit tests for perform node action
-    }
-
-
-    public Form getMockForm()
-    {
-        return mockForm;
-    }
-
-    public Context getMockContext()
-    {
-        return mockContext;
-    }
-
-    public Application getMockApplication()
-    {
-        return mockApplication;
-    }
 }

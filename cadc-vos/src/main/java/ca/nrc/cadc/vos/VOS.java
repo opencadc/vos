@@ -257,6 +257,10 @@ public class VOS
     // The groups who can write to the resource
     public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
     public static final String PROPERTY_DELIM_GROUPWRITE = " ";
+    
+    // If not null, the mask that must be applied to the values of groupread and groupwrite to
+    // determine the effective permissions
+    public static final String PROPERTY_URI_GROUPMASK = "ivo://ivoa.net/vospace/core#groupmask";
 
     // Flag indicating if the Node is public (true/false)
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";

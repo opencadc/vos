@@ -69,50 +69,56 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.util.MultiValuedProperties;
+import ca.nrc.cadc.util.PropertiesReader;
+import ca.nrc.cadc.vos.VOSURI;
 
 import java.net.URI;
-import java.net.URL;
-import java.util.Properties;
+import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
 
 /**
- * Class that simply tells the service what the currently running
- * serviceID is.  This information is retrieved from the file
- * LocalServiceURI.properties read from the classpath.  The format
- * of the file should be, for example:
- *
- * serviceURI = ivo://cadc.nrc.ca/vospace
+ * Class used to retrieve the resourceID and base VOS URI of the running
+ * VOSpace instance.
  *
  */
-public class LocalServiceURI
-{
+public class LocalServiceURI {
     private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
-    private static final String LOCAL_PROP_FILE = LocalServiceURI.class.getSimpleName() + ".properties";
-    private static final String URI_KEY = "serviceURI";
+    private static final String CONFIG_FILE = "VOSpaceWS.properties";
+    private static final String RESOURCE_ID_KEY = "resourceID";
 
-    private URI serviceURI;
+    private URI resourceID;
+    private VOSURI vosURIBase;
 
-    public LocalServiceURI()
-    {
-        try
-        {
-            URL propFile = LocalServiceURI.class.getClassLoader().getResource(LOCAL_PROP_FILE);
-            Properties props = new Properties();
-            props.load(propFile.openStream());
-            String uriString = props.getProperty(URI_KEY);
-            this.serviceURI = new URI(uriString);
+    public LocalServiceURI() {
+        PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
+        MultiValuedProperties mvp = pr.getAllProperties();
+        if (mvp == null) {
+            throw new RuntimeException("Cannot load config file: " + CONFIG_FILE);
         }
-        catch (Exception e)
-        {
-            log.warn("Unable to read local service URI from " + LOCAL_PROP_FILE +
-                    "\n    Reason: " + e.getMessage(), e);
+        String id = mvp.getFirstPropertyValue(RESOURCE_ID_KEY);
+        if (id == null) {
+            throw new RuntimeException("Cannot find value for " + RESOURCE_ID_KEY + " in " + CONFIG_FILE);
+        }
+        try {
+            resourceID = new URI(id);
+            log.debug("VOSpace resourceID: " + resourceID);
+            String name = resourceID.getPath().substring(1);  // remove slash
+            String vosuri = "vos://" + resourceID.getAuthority() + "~" + name;
+            vosURIBase = new VOSURI(vosuri);
+            log.debug("VOSpace URI base: " + vosURIBase);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Invalid " + RESOURCE_ID_KEY + " in " + CONFIG_FILE, e);
         }
     }
 
-    public URI getURI()
-    {
-        return serviceURI;
+    public URI getURI() {
+        return resourceID;
+    }
+    
+    public VOSURI getVOSBase() {
+        return vosURIBase;
     }
 }
