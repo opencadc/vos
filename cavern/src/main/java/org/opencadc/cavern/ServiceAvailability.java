@@ -72,6 +72,8 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.PropertiesReader;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vosi.AvailabilityPlugin;
 import ca.nrc.cadc.vosi.AvailabilityStatus;
@@ -139,12 +141,12 @@ public class ServiceAvailability implements AvailabilityPlugin {
             log.debug("linkTargetOwner: " + linkTargetOwner);
             File root = new File(rootPath);
 
-            String baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            VOSURI baseURI = new LocalServiceURI().getVOSBase();
             if (baseURI == null) {
-                return new AvailabilityStatus(false, null, null, null, "Missing system property: ca.nrc.cadc.vos.server.vosUriBase");
+                return new AvailabilityStatus(false, null, null, null, "Missing resourceID in VOSpaceWS.properties");
             }
             
-            FileSystemProbe fsp = new FileSystemProbe(root, baseURI, owner, linkTargetOwner, null);
+            FileSystemProbe fsp = new FileSystemProbe(root, baseURI.toString(), owner, linkTargetOwner, null);
             Boolean success = fsp.call();
             if (success == null || !success) {
                 return new AvailabilityStatus(false, null, null, null, "File system probe failed");
