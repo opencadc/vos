@@ -126,7 +126,8 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
         URI target = new URI("vos://example.com!vospace/mydir/myfile");
-        Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
+        Transfer trans = new Transfer(target, Direction.pullFromVoSpace);
+        trans.setProtocols(pe);
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {
             @Override
@@ -159,7 +160,9 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
         URI target = new URI("vos://example.com!vospace/mydir/myfile");
-        Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
+        Transfer trans = new Transfer(target, Direction.pullFromVoSpace);
+        trans.setProtocols(pe);
+
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {
             @Override
@@ -194,7 +197,8 @@ public class ClientTransferTest
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
         pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
         URI target = new URI("vos://example.com!vospace/mydir/myfile");
-        Transfer trans = new Transfer(target, Direction.pullFromVoSpace, pe);
+        Transfer trans = new Transfer(target, Direction.pullFromVoSpace);
+        trans.setProtocols(pe);
         ClientTransfer ct = new ClientTransfer(new URL("http://someexample.com"), trans, false)
         {
             @Override

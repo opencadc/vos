@@ -106,7 +106,7 @@ public class TransferReaderWriterTest
         throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
 
     @AfterClass
@@ -136,7 +136,7 @@ public class TransferReaderWriterTest
         Assert.assertNotNull(transfer1);
         Assert.assertNotNull(transfer2);
 
-        Assert.assertEquals("target", transfer1.getTarget(), transfer2.getTarget());
+        Assert.assertEquals("target", transfer1.getTargets().get(0), transfer2.getTargets().get(0));
 
         Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
 
@@ -176,7 +176,8 @@ public class TransferReaderWriterTest
     {
         try
         {
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -192,7 +193,8 @@ public class TransferReaderWriterTest
             compareTransfers(transfer, transfer2);
 
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.setProtocols(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -218,7 +220,8 @@ public class TransferReaderWriterTest
     {
         try
         {
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -234,7 +237,8 @@ public class TransferReaderWriterTest
             compareTransfers(transfer, transfer2);
 
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.setProtocols(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -261,7 +265,9 @@ public class TransferReaderWriterTest
         try
         {
             View view = new View(new URI(VOS.VIEW_ANY));
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(protocols);
+            transfer.setView(view);
             log.debug("testTransferWithViewAndNoParameters: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -296,7 +302,9 @@ public class TransferReaderWriterTest
                     "[]{}/;,+=-'\"@#$%^"));
             view.setParameters(params);
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(protocols);
+            transfer.setView(view);
             log.debug("testTransferWithViewParameters: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -331,7 +339,8 @@ public class TransferReaderWriterTest
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, pe);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(pe);
             log.debug("testTransferWithProtocolEndpoints: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -366,7 +375,8 @@ public class TransferReaderWriterTest
             get.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(get);
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.setProtocols(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -395,7 +405,8 @@ public class TransferReaderWriterTest
             put.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(put);
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.setProtocols(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -430,7 +441,8 @@ public class TransferReaderWriterTest
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto21.add(put);
 
-            Transfer transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            Transfer transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.setProtocols(proto21);
             transfer.setContentLength(666L);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushTransferContentLengthParam: " + transfer);
@@ -465,6 +477,12 @@ public class TransferReaderWriterTest
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
             Transfer transfer = new Transfer(target, dest.getURI(), false);
+
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto21.add(put);
+            transfer.setProtocols(proto21);
+
             log.debug("testTransferMoveNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -497,6 +515,12 @@ public class TransferReaderWriterTest
         {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
             Transfer transfer = new Transfer(target, dest.getURI(), true);
+
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto21.add(put);
+            transfer.setProtocols(proto21);
+
             log.debug("testTransferCopyNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -527,7 +551,8 @@ public class TransferReaderWriterTest
             List<Protocol> protos = new ArrayList<Protocol>();
             Protocol mp = new Protocol(VOS.PROTOCOL_SSHFS, "sshfs:user@server:/path/to/container", null);
             protos.add(mp);
-            Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL, protos);
+            Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL);
+            transfer.setProtocols(protos);
 
             StringWriter sw = new StringWriter();
             TransferWriter writer = new TransferWriter();

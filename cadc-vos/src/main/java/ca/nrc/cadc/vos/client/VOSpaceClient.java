@@ -588,11 +588,15 @@ public class VOSpaceClient
             HttpPost httpPost = null;
             if (transfer.isQuickTransfer())
             {
-                    Map<String, Object> form = new HashMap<String, Object>();
-                    form.put("TARGET", transfer.getTarget());
-                    form.put("DIRECTION", transfer.getDirection().getValue());
-                    form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
-                    httpPost = new HttpPost(vospaceURL, form, false);
+                Map<String, Object> form = new HashMap<String, Object>();
+                // how will quick transfer be represented? A single item?
+                // TODO: will need to check if this is the best/safest way
+                // a quick transfer *should* be only one target, so getting
+                // the first element of the targetList should work
+                form.put("TARGET", transfer.getTargets().get(0));
+                form.put("DIRECTION", transfer.getDirection().getValue());
+                form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
+                httpPost = new HttpPost(vospaceURL, form, false);
             }
             else
             {
@@ -630,7 +634,11 @@ public class VOSpaceClient
             	// create a new transfer with a protocol with an end point
             	List<Protocol> prots = new ArrayList<Protocol>();
             	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
-            	Transfer trf = new Transfer(transfer.getTarget(), transfer.getDirection(), prots);
+            	// TODO: grabbing single item is assuming a quick transfer
+                // is only ever going to be a single target - Is this assumption correct?
+            	Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());
+            	trf.setProtocols(prots);
+
             	return new ClientTransfer(null, trf, false);
             }
             else

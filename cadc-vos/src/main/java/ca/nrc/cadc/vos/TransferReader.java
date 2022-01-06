@@ -192,12 +192,13 @@ public class TransferReader implements XmlProcessor
 
         Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet
+        // TODO: change this so it supports reading multiple targets - Jan 2022 - HJ
         URI target = new URI(root.getChildText("target", vosNS));
 
-        if (targetScheme != null && !targetScheme.equalsIgnoreCase(target.getScheme()))
-            throw new IllegalArgumentException("Target scheme must be: " + targetScheme);
+        if (targetScheme != null && !targetScheme.equalsIgnoreCase(target.getScheme())) {
+            throw new IllegalArgumentException("Target scheme must be: " + targetScheme + ", found: " + target.getScheme());
+        }
 
-        // TODO: get view nodes and uri attribute
         View view = null;
         Parameter param = null;
         List views = root.getChildren("view", vosNS);
@@ -223,7 +224,12 @@ public class TransferReader implements XmlProcessor
         if (keepBytesStr != null)
             keepBytes = keepBytesStr.equalsIgnoreCase("true");
 
-        Transfer ret = new Transfer(target, direction, view, protocols, keepBytes);
+
+        Transfer ret = new Transfer(target, direction);
+        ret.setView(view);
+        ret.setProtocols(protocols);
+        ret.setKeepBytes(keepBytes);
+
         ret.version = version;
 
         // optional param(s) added in VOSpace-2.1

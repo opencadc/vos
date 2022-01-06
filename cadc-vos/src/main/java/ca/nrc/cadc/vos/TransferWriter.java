@@ -74,6 +74,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import java.net.URI;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -138,13 +139,17 @@ public class TransferWriter implements XmlProcessor
             throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
         }
 
-        Element e = null;
+        // TODO: what happens if there is no target? Can the code get to here in that state? Jan 2022 - HJ
 
-        e = new Element("target", vosNamespace);
-        e.addContent(transfer.getTarget().toASCIIString());
-        root.addContent(e);
+        // Add the targets to the xml document
+        for (URI target : transfer.getTargets())
+        {
+            Element t = new Element("target", vosNamespace);
+            t.addContent(target.toASCIIString());
+            root.addContent(t);
+        }
 
-        e = new Element("direction", vosNamespace);
+        Element e = new Element("direction", vosNamespace);
         e.addContent(transfer.getDirection().getValue());
         root.addContent(e);
 

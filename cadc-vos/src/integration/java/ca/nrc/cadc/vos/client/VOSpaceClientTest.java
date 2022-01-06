@@ -375,13 +375,18 @@ public class VOSpaceClientTest
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         URI vosURI = new URI(VOS_URI + slashPath1);
+        List<URI> targetList = new ArrayList<URI>();
+        targetList.add(vosURI);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
 
         // upload
-        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+        Transfer transfer = new Transfer(targetList, Direction.pushToVoSpace, dview, protocols);
+        // TODO: keep or remove depending on whether single URI ctors retained for Transfer - Jan 2022 - HJ
+//        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+
         ClientTransfer clientTransfer = client.createTransfer(transfer);
         clientTransfer.setFile(testFile);
         clientTransfer.run();
@@ -392,7 +397,7 @@ public class VOSpaceClientTest
         log.debug(file.getCanonicalPath());
 
         // download
-        Transfer trans2 = new Transfer(vosURI, Direction.pullFromVoSpace, dview, protocols);
+        Transfer trans2 = new Transfer(targetList, Direction.pullFromVoSpace, dview, protocols);
         ClientTransfer txRtn = client.createTransfer(trans2);
         txRtn.setFile(file);
         txRtn.run();
@@ -418,13 +423,15 @@ public class VOSpaceClientTest
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         URI vosURI = new URI(VOS_URI + slashPath1);
+        List<URI> targetList = new ArrayList<URI>();
+        targetList.add(vosURI);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
 
         // upload
-        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+        Transfer transfer = new Transfer(targetList, Direction.pushToVoSpace, dview, protocols);
         transfer.setQuickTransfer(true);
         ClientTransfer clientTransfer = client.createTransfer(transfer);
         clientTransfer.setFile(testFile);
