@@ -116,7 +116,8 @@ public class Transfer {
     }
 
     /**
-     * Ctor for Transfer. Caller must call getProtocols().add(...) and getTargets().add(...)
+     * Ctor for Transfer. Use this for setting up transfers using multiple targets.
+     * Caller must call getProtocols().add(...) and getTargets().add(...)
      * @param direction - Direction of transfer (to or from VOSpace)
      */
     public Transfer(Direction direction) {
@@ -133,7 +134,6 @@ public class Transfer {
         this.targets.add(target);
         this.direction = direction;
     }
-
 
     /**
      * Transfer uses the CADC quick transfer feature
@@ -236,6 +236,12 @@ public class Transfer {
     {
         return targets;
     }
+
+    public void setTargets(List<URI> targets) {
+        // Overwrites whatever might have been there
+        this.targets = targets;
+    }
+
 
     public View getView()
     {

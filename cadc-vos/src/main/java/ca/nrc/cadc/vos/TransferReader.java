@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -96,8 +96,7 @@ import org.jdom2.Namespace;
  *
  * @author pdowler
  */
-public class TransferReader implements XmlProcessor
-{
+public class TransferReader implements XmlProcessor {
     private static Logger log = Logger.getLogger(TransferReader.class);
 
     protected Map<String, String> schemaMap;
@@ -105,7 +104,9 @@ public class TransferReader implements XmlProcessor
     /**
      * Constructor. XML Schema validation is enabled by default.
      */
-    public TransferReader() { this(true); }
+    public TransferReader() {
+        this(true);
+    }
 
     /**
      * Constructor. XML schema validation may be disabled, in which case the client
@@ -114,10 +115,8 @@ public class TransferReader implements XmlProcessor
      *
      * @param enableSchemaValidation
      */
-    public TransferReader(boolean enableSchemaValidation)
-    {
-        if (enableSchemaValidation)
-        {
+    public TransferReader(boolean enableSchemaValidation) {
+        if (enableSchemaValidation) {
             // only use the 2.1 schema now
             //String vospaceSchemaUrl20 = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
             //if (vospaceSchemaUrl20 == null)
@@ -133,52 +132,43 @@ public class TransferReader implements XmlProcessor
             schemaMap.put(VOSPACE_NS_20, vospaceSchemaUrl21);
 
             log.debug("schema validation enabled");
-        }
-        else
+        } else {
             log.debug("schema validation disabled");
+        }
     }
 
     public Transfer read(Reader reader, String targetScheme)
-        throws IOException, TransferParsingException
-    {
-        try
-        {
+        throws IOException, TransferParsingException {
+        try {
             // TODO: investigate creating a SAXBuilder once and re-using it
             // as long as we can detect concurrent access (a la java collections)
             Document doc = XmlUtil.buildDocument(reader, schemaMap);
             return parseTransfer(doc, targetScheme);
-        }
-        catch(JDOMException ex)
-        {
+        } catch (JDOMException ex) {
             throw new TransferParsingException("failed to parse XML", ex);
-        }
-        catch(URISyntaxException ex)
-        {
+        } catch (URISyntaxException ex) {
             throw new TransferParsingException("invalid URI in transfer document", ex);
         }
     }
 
     public Transfer read(InputStream in, String targetScheme)
-        throws IOException, TransferParsingException
-    {
+        throws IOException, TransferParsingException {
         InputStreamReader reader = new InputStreamReader(in);
         return read(reader, targetScheme);
     }
 
     public Transfer read(String string, String targetScheme)
-        throws IOException, TransferParsingException
-    {
+        throws IOException, TransferParsingException {
         StringReader reader = new StringReader(string);
         return read(reader, targetScheme);
     }
 
     private Transfer parseTransfer(Document document, String targetScheme)
-        throws URISyntaxException
-    {
+        throws URISyntaxException {
         Element root = document.getRootElement();
         Namespace vosNS = root.getNamespace();
         Attribute versionAttr = root.getAttribute("version");
-        
+
         int version;
         if (VOSPACE_NS_20.equals(vosNS.getURI())) {
             version = VOS.VOSPACE_20;
@@ -192,25 +182,19 @@ public class TransferReader implements XmlProcessor
 
         Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet
-        // TODO: change this so it supports reading multiple targets - Jan 2022 - HJ
-        URI target = new URI(root.getChildText("target", vosNS));
 
-        if (targetScheme != null && !targetScheme.equalsIgnoreCase(target.getScheme())) {
-            throw new IllegalArgumentException("Target scheme must be: " + targetScheme + ", found: " + target.getScheme());
-        }
+        List<URI> targets = parseTargets(root, vosNS);
+        validateTargets(targets, targetScheme);
 
         View view = null;
         Parameter param = null;
         List views = root.getChildren("view", vosNS);
-        if (views != null && views.size() > 0)
-        {
+        if (views != null && views.size() > 0) {
             Element v = (Element) views.get(0);
             view = new View(new URI(v.getAttributeValue("uri")));
             List params = v.getChildren("param", vosNS);
-            if (params != null)
-            {
-                for (Object o : params)
-                {
+            if (params != null) {
+                for (Object o : params) {
                     Element p = (Element) o;
                     param = new Parameter(new URI(p.getAttributeValue("uri")), p.getText());
                     view.getParameters().add(param);
@@ -224,8 +208,8 @@ public class TransferReader implements XmlProcessor
         if (keepBytesStr != null)
             keepBytes = keepBytesStr.equalsIgnoreCase("true");
 
-
-        Transfer ret = new Transfer(target, direction);
+        Transfer ret = new Transfer(direction);
+        ret.setTargets(targets);
         ret.setView(view);
         ret.setProtocols(protocols);
         ret.setKeepBytes(keepBytes);
@@ -233,66 +217,58 @@ public class TransferReader implements XmlProcessor
         ret.version = version;
 
         // optional param(s) added in VOSpace-2.1
-        if (version >= VOS.VOSPACE_21)
-        {
+        if (version >= VOS.VOSPACE_21) {
             List<Element> params = root.getChildren("param", vosNS);
-            for (Element pe : params)
-            {
+            for (Element pe : params) {
                 String uri = pe.getAttributeValue("uri");
-                if (VOS.PROPERTY_URI_CONTENTLENGTH.equals(uri))
-                {
-                    try
-                    {
+                if (VOS.PROPERTY_URI_CONTENTLENGTH.equals(uri)) {
+                    try {
                         ret.setContentLength(new Long(pe.getText()));
-                    }
-                    catch(NumberFormatException ex)
-                    {
+                    } catch (NumberFormatException ex) {
                         throw new IllegalArgumentException("invalid " + VOS.PROPERTY_URI_CONTENTLENGTH
                             + ": " + pe.getText());
                     }
-                }
-                else
+                } else {
                     log.debug("skip unknown param: " + uri);
+                }
             }
         }
 
         return ret;
     }
 
-    private Direction parseDirection(Element root, Namespace vosNS)
-    {
+    private Direction parseDirection(Element root, Namespace vosNS) {
         Direction rtn = null;
         String strDirection = root.getChildText("direction", vosNS);
 
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
 
-        if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.getValue()))
+        if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.getValue())) {
             rtn = Direction.pullFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.getValue()))
+        } else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.getValue())) {
             rtn = Direction.pullToVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pushFromVoSpace.getValue()))
+        } else if (strDirection.equalsIgnoreCase(Direction.pushFromVoSpace.getValue())) {
             rtn = Direction.pushFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pushToVoSpace.getValue()))
-            rtn = Direction.pushToVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.BIDIRECTIONAL.getValue()))
+        } else if(strDirection.equalsIgnoreCase(Direction.pushToVoSpace.getValue())) {
+            rtn =Direction.pushToVoSpace;
+        } else if (strDirection.equalsIgnoreCase(Direction.BIDIRECTIONAL.getValue())) {
             rtn = Direction.BIDIRECTIONAL;
-        else
-            rtn = new Direction(strDirection);
+        } else {
+            rtn=new Direction(strDirection);
+        }
         return rtn;
     }
 
-    private List<Protocol> parseProtocols(Element root, Namespace vosNS, int version)
-    {
+    private List<Protocol> parseProtocols(Element root, Namespace vosNS, int version) {
         List<Protocol> rtn = null;
-        //Element e = root.getChild("protocols", NS);
         List prots = root.getChildren("protocol", vosNS);
-        if (prots != null && prots.size() > 0)
-        {
+
+        if (prots != null && prots.size() > 0) {
             rtn = new ArrayList<Protocol>(prots.size());
-            for (Object obj : prots)
-            {
+            for (Object obj : prots) {
                 Element eProtocol = (Element) obj;
+
                 String uri = eProtocol.getAttributeValue("uri");
                 Protocol p = new Protocol(uri);
 
@@ -302,18 +278,14 @@ public class TransferReader implements XmlProcessor
                     p.setEndpoint(endpoint);
 
                 // optional securityMethod added in VOSpace-2.1
-                if (version >= VOS.VOSPACE_21)
-                {
+                if (version >= VOS.VOSPACE_21) {
                     Element eSec = eProtocol.getChild("securityMethod", vosNS);
-                    if (eSec != null)
-                    {
+                    if (eSec != null) {
                         String secVal = eSec.getAttributeValue("uri");
-                        try
-                        {
+                        try {
                             p.setSecurityMethod(new URI(secVal));
                         }
-                        catch(URISyntaxException ex)
-                        {
+                        catch (URISyntaxException ex) {
                             throw new IllegalArgumentException("invalid securityMethod: " + secVal, ex);
                         }
                     }
@@ -323,4 +295,29 @@ public class TransferReader implements XmlProcessor
         }
         return rtn;
     }
+
+    private List<URI> parseTargets(Element root, Namespace vosNS) throws URISyntaxException {
+        List<URI> rtn = null;
+        List targs = root.getChildren("target", vosNS);
+
+        if (targs != null && targs.size() > 0) {
+            rtn = new ArrayList<URI>(targs.size());
+            for (Object obj : targs) {
+                Element eTarget = (Element) obj;
+                URI target = new URI(eTarget.getText());
+                log.debug("target: " + target);
+                rtn.add(target);
+            }
+        }
+        return rtn;
+    }
+
+    private void validateTargets(List<URI> targetList, String targetScheme) {
+        for (URI t: targetList) {
+            if (targetScheme != null && !targetScheme.equalsIgnoreCase(t.getScheme())) {
+                throw new IllegalArgumentException("Target scheme must be: " + targetScheme + ", found: " + t.getScheme());
+            }
+        }
+    }
+
 }
