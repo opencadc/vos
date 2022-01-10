@@ -588,11 +588,12 @@ public class VOSpaceClient
             HttpPost httpPost = null;
             if (transfer.isQuickTransfer())
             {
+                // Assumption: quick transfer will be a single target
+                if (transfer.getTargets().size() != 1) {
+                    throw new IllegalArgumentException("Quick transfer only supports single targets.");
+                }
+
                 Map<String, Object> form = new HashMap<String, Object>();
-                // how will quick transfer be represented? A single item?
-                // TODO: will need to check if this is the best/safest way
-                // a quick transfer *should* be only one target, so getting
-                // the first element of the targetList should work
                 form.put("TARGET", transfer.getTargets().get(0));
                 form.put("DIRECTION", transfer.getDirection().getValue());
                 form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
@@ -634,11 +635,14 @@ public class VOSpaceClient
             	// create a new transfer with a protocol with an end point
             	List<Protocol> prots = new ArrayList<Protocol>();
             	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
-            	// TODO: grabbing single item is assuming a quick transfer
-                // is only ever going to be a single target - Is this assumption correct?
-            	Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());
-            	trf.setProtocols(prots);
 
+            	// Assumption: quick transfer will be a single target
+                if (transfer.getTargets().size() != 1) {
+                    throw new IllegalArgumentException("Quick transfer only supports single targets.");
+                }
+
+                Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());
+                trf.setProtocols(prots);
             	return new ClientTransfer(null, trf, false);
             }
             else

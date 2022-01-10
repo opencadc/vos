@@ -98,8 +98,6 @@ public class Transfer {
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
 
-//    protected Transfer() { }
-    
     /**
      * Constructor for internal vospace move and copy operations.
      *
