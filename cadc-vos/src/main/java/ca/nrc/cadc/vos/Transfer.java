@@ -88,11 +88,11 @@ public class Transfer {
      */
     public int version = VOS.VOSPACE_20;
 
-    private List<URI> targets = new ArrayList<URI>();
-    private Direction direction;
+    public List<URI> targets = new ArrayList<URI>();
+    public List<Protocol> protocols = new ArrayList<Protocol>();
 
+    private Direction direction;
     private View view;
-    private List<Protocol> protocols = new ArrayList<Protocol>();
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
     private Long contentLength;
@@ -227,25 +227,9 @@ public class Transfer {
         return direction;
     }
 
-    public List<URI> getTargets()
-    {
-        return targets;
-    }
-
-    public void setTargets(List<URI> targets) {
-        // Overwrites whatever might have been there
-        this.targets = targets;
-    }
-
-
     public View getView()
     {
         return view;
-    }
-
-    public List<Protocol> getProtocols()
-    {
-        return protocols;
     }
 
     public boolean isKeepBytes()
@@ -293,10 +277,6 @@ public class Transfer {
 
     public void setView(View view) {
         this.view = view;
-    }
-
-    public void setProtocols(List<Protocol> protocols) {
-        this.protocols = protocols;
     }
 
     public void setKeepBytes(boolean keepBytes) {

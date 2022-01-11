@@ -136,7 +136,7 @@ public class TransferWriter implements XmlProcessor {
         }
 
         // Add the targets to the xml document
-        for (URI target : transfer.getTargets()) {
+        for (URI target : transfer.targets) {
             Element t = new Element("target", vosNamespace);
             t.addContent(target.toASCIIString());
             root.addContent(t);
@@ -158,9 +158,9 @@ public class TransferWriter implements XmlProcessor {
             root.addContent(e);
         }
 
-        if (transfer.getProtocols() != null) {
+        if (transfer.protocols != null) {
 
-            for (Protocol protocol : transfer.getProtocols()) {
+            for (Protocol protocol : transfer.protocols) {
                 Element pr = new Element("protocol", vosNamespace);
                 pr.setAttribute("uri", protocol.getUri());
                 if (protocol.getEndpoint() != null) {

@@ -209,9 +209,9 @@ public class TransferReader implements XmlProcessor {
             keepBytes = keepBytesStr.equalsIgnoreCase("true");
 
         Transfer ret = new Transfer(direction);
-        ret.setTargets(targets);
+        ret.targets = targets;
         ret.setView(view);
-        ret.setProtocols(protocols);
+        ret.protocols = protocols;
         ret.setKeepBytes(keepBytes);
 
         ret.version = version;
