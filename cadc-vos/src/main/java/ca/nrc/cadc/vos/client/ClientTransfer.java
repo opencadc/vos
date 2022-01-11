@@ -395,7 +395,7 @@ public class ClientTransfer implements Runnable
     {
         // Handle errors by parsing url, getting job and looking at phase/error summary.
         // Zero protocols in resulting transfer indicates that an error was encountered.
-        if (transfer.protocols == null || transfer.protocols.size() == 0)
+        if (transfer.getProtocols().size() == 0)
         {
             log.debug("Found zero protocols in returned transfer, checking "
                     + "job for error details.");

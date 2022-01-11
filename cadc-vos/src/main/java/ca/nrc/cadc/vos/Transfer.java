@@ -88,9 +88,8 @@ public class Transfer {
      */
     public int version = VOS.VOSPACE_20;
 
-    public List<URI> targets = new ArrayList<URI>();
-    public List<Protocol> protocols = new ArrayList<Protocol>();
-
+    private List<URI> targets = new ArrayList<URI>();
+    private List<Protocol> protocols = new ArrayList<Protocol>();
     private Direction direction;
     private View view;
     private boolean keepBytes = true;
@@ -283,4 +282,11 @@ public class Transfer {
         this.keepBytes = keepBytes;
     }
 
+    public List<URI> getTargets() {
+        return targets;
+    }
+
+    public List<Protocol> getProtocols() {
+        return protocols;
+    }
 }

@@ -137,11 +137,11 @@ public class TransferReaderWriterTest
 //            Assert.assertEquals("target", transfer1.getTargets().get(i), transfer2.getTargets().get(i));
 //        }
 
-        if (transfer1.targets != null) {
-            Assert.assertNotNull("no targets found in transfer2", transfer2.targets);
-            Assert.assertEquals("target list size doesn't match", transfer1.targets.size(), transfer2.targets.size());
-            Assert.assertTrue("target list content doesn't match", transfer1.targets.containsAll(transfer2.targets));
-            Assert.assertTrue("target list content doesn't match", transfer2.targets.containsAll(transfer1.targets));
+        if (transfer1.getTargets() != null) {
+            Assert.assertNotNull("no targets found in transfer2", transfer2.getTargets());
+            Assert.assertEquals("target list size doesn't match", transfer1.getTargets().size(), transfer2.getTargets().size());
+            Assert.assertTrue("target list content doesn't match", transfer1.getTargets().containsAll(transfer2.getTargets()));
+            Assert.assertTrue("target list content doesn't match", transfer2.getTargets().containsAll(transfer1.getTargets()));
         }
 
         Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
@@ -164,22 +164,19 @@ public class TransferReaderWriterTest
             Assert.assertNull("view", transfer2.getView());
         }
 
-        if (transfer1.protocols != null) {
-            Assert.assertNotNull("protocols", transfer2.protocols);
-            Assert.assertEquals("protocols size", transfer1.protocols.size(), transfer2.protocols.size());
-            Assert.assertTrue("protocols content", transfer1.protocols.containsAll(transfer2.protocols));
-            Assert.assertTrue("protocols content", transfer2.protocols.containsAll(transfer1.protocols));
-            // Transfer.equals(Object) compares all fields
-        } else {
-            Assert.assertNull("protocols", transfer2.protocols);
-        }
+        // Compare protocol lists
+        Assert.assertNotNull("protocols", transfer2.getProtocols());
+        Assert.assertEquals("protocols size", transfer1.getProtocols().size(), transfer2.getProtocols().size());
+        Assert.assertTrue("protocols content", transfer1.getProtocols().containsAll(transfer2.getProtocols()));
+        Assert.assertTrue("protocols content", transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+
     }
 
     //@Test
     public void testPushPullTransfer() {
         try {
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -196,7 +193,7 @@ public class TransferReaderWriterTest
 
 
             transfer = new Transfer(target, Direction.pushToVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -221,7 +218,7 @@ public class TransferReaderWriterTest
         // test new schema compat with 2.0 content
         try {
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -238,7 +235,7 @@ public class TransferReaderWriterTest
 
 
             transfer = new Transfer(target, Direction.pushToVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -263,7 +260,7 @@ public class TransferReaderWriterTest
         try {
             View view = new View(new URI(VOS.VIEW_ANY));
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             transfer.setView(view);
             log.debug("testTransferWithViewAndNoParameters: " + transfer);
 
@@ -297,7 +294,7 @@ public class TransferReaderWriterTest
             view.setParameters(params);
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = protocols;
+            transfer.getProtocols().addAll(protocols);
             transfer.setView(view);
             log.debug("testTransferWithViewParameters: " + transfer);
 
@@ -331,7 +328,7 @@ public class TransferReaderWriterTest
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = pe;
+            transfer.getProtocols().addAll(pe);
             log.debug("testTransferWithProtocolEndpoints: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -365,7 +362,7 @@ public class TransferReaderWriterTest
             proto21.add(get);
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
-            transfer.protocols = proto21;
+            transfer.getProtocols().addAll(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -395,7 +392,7 @@ public class TransferReaderWriterTest
             proto21.add(put);
 
             transfer = new Transfer(target, Direction.pushToVoSpace);
-            transfer.protocols = proto21;
+            transfer.getProtocols().addAll(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -429,7 +426,7 @@ public class TransferReaderWriterTest
             proto21.add(put);
 
             Transfer transfer = new Transfer(target, Direction.pushToVoSpace);
-            transfer.protocols = proto21;
+            transfer.getProtocols().addAll(proto21);
             transfer.setContentLength(666L);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushTransferContentLengthParam: " + transfer);
@@ -466,7 +463,7 @@ public class TransferReaderWriterTest
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto21.add(put);
-            transfer.protocols = proto21;
+            transfer.getProtocols().addAll(proto21);
 
             log.debug("testTransferMoveNode: " + transfer);
 
@@ -501,7 +498,7 @@ public class TransferReaderWriterTest
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto21.add(put);
-            transfer.protocols = proto21;
+            transfer.getProtocols().addAll(proto21);
 
             log.debug("testTransferCopyNode: " + transfer);
 
@@ -531,7 +528,7 @@ public class TransferReaderWriterTest
             Protocol mp = new Protocol(VOS.PROTOCOL_SSHFS, "sshfs:user@server:/path/to/container", null);
             protos.add(mp);
             Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL);
-            transfer.protocols = protos;
+            transfer.getProtocols().addAll(protos);
 
             StringWriter sw = new StringWriter();
             TransferWriter writer = new TransferWriter();
@@ -585,8 +582,8 @@ public class TransferReaderWriterTest
             URI secondTarget = new URI(baseURI + "/mydir/myfile2");
             targetList.add(secondTarget);
 
-            transfer.targets = targetList;
-            transfer.protocols = protocols;
+            transfer.getTargets().addAll(targetList);
+            transfer.getProtocols().addAll(protocols);
             transfer.setView(view);
             log.debug("testTransferWithViewAndNoParametersMultTarget before writing: " + transfer);
 

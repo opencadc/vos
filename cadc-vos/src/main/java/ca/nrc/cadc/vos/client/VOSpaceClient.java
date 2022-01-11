@@ -589,14 +589,14 @@ public class VOSpaceClient
             if (transfer.isQuickTransfer())
             {
                 // Assumption: quick transfer will be a single target
-                if (transfer.targets == null || transfer.targets.size() != 1) {
+                if (transfer.getTargets().size() != 1) {
                     throw new IllegalArgumentException("Quick transfer only supports single targets.");
                 }
 
                 Map<String, Object> form = new HashMap<String, Object>();
-                form.put("TARGET", transfer.targets.get(0));
+                form.put("TARGET", transfer.getTargets().get(0));
                 form.put("DIRECTION", transfer.getDirection().getValue());
-                form.put("PROTOCOL", transfer.protocols.iterator().next().getUri()); // try first protocol?
+                form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
                 httpPost = new HttpPost(vospaceURL, form, false);
             }
             else
@@ -634,15 +634,15 @@ public class VOSpaceClient
             	log.debug("Quick transfer URL: " + redirectURL);
             	// create a new transfer with a protocol with an end point
             	List<Protocol> prots = new ArrayList<Protocol>();
-            	prots.add(new Protocol(transfer.protocols.iterator().next().getUri(), redirectURL.toString(), null));
+            	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
 
             	// Assumption: quick transfer will be a single target
-                if (transfer.targets == null || transfer.targets.size() != 1) {
+                if (transfer.getTargets().size() != 1) {
                     throw new IllegalArgumentException("Quick transfer only supports single targets.");
                 }
 
-                Transfer trf = new Transfer(transfer.targets.get(0), transfer.getDirection());
-                trf.protocols = prots;
+                Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());
+                trf.getProtocols().addAll(prots);
             	return new ClientTransfer(null, trf, false);
             }
             else

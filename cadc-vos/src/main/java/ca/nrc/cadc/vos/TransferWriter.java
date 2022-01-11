@@ -136,7 +136,7 @@ public class TransferWriter implements XmlProcessor {
         }
 
         // Add the targets to the xml document
-        for (URI target : transfer.targets) {
+        for (URI target : transfer.getTargets()) {
             Element t = new Element("target", vosNamespace);
             t.addContent(target.toASCIIString());
             root.addContent(t);
@@ -158,29 +158,28 @@ public class TransferWriter implements XmlProcessor {
             root.addContent(e);
         }
 
-        if (transfer.protocols != null) {
 
-            for (Protocol protocol : transfer.protocols) {
-                Element pr = new Element("protocol", vosNamespace);
-                pr.setAttribute("uri", protocol.getUri());
-                if (protocol.getEndpoint() != null) {
-                    Element ep = new Element("endpoint", vosNamespace);
-                    ep.addContent(protocol.getEndpoint());
-                    pr.addContent(ep);
-                }
-                if (protocol.getSecurityMethod() != null) {
-                    // added in VOSpace-2.1
-                    if (transfer.version >= VOS.VOSPACE_21) {
-                        Element es = new Element("securityMethod", vosNamespace);
-                        es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
-                        pr.addContent(es);
-                    } else { 
-                        throw new UnsupportedOperationException("cannot specify securityMethod with VOSpace 2.0 service");
-                    }
-                }
-                root.addContent(pr);
+        for (Protocol protocol : transfer.getProtocols()) {
+            Element pr = new Element("protocol", vosNamespace);
+            pr.setAttribute("uri", protocol.getUri());
+            if (protocol.getEndpoint() != null) {
+                Element ep = new Element("endpoint", vosNamespace);
+                ep.addContent(protocol.getEndpoint());
+                pr.addContent(ep);
             }
+            if (protocol.getSecurityMethod() != null) {
+                // added in VOSpace-2.1
+                if (transfer.version >= VOS.VOSPACE_21) {
+                    Element es = new Element("securityMethod", vosNamespace);
+                    es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
+                    pr.addContent(es);
+                } else {
+                    throw new UnsupportedOperationException("cannot specify securityMethod with VOSpace 2.0 service");
+                }
+            }
+            root.addContent(pr);
         }
+
 
         e = new Element("keepBytes", vosNamespace);
         e.addContent(Boolean.toString(transfer.isKeepBytes()));

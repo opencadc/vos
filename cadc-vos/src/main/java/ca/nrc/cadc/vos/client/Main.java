@@ -723,7 +723,7 @@ public class Main implements Runnable
         File fileToUpload = new File(source);
 
         Transfer transfer = new Transfer(destination, Direction.pushToVoSpace);
-        transfer.protocols = protocols;
+        transfer.getProtocols().addAll(protocols);
         transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
@@ -827,7 +827,7 @@ public class Main implements Runnable
         protocols.add(proto);
 
         Transfer transfer = new Transfer(source, Direction.pullFromVoSpace);
-        transfer.protocols = protocols;
+        transfer.getProtocols().addAll(protocols);
         transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
