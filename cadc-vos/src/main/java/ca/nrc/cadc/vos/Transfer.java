@@ -88,7 +88,7 @@ public class Transfer {
      */
     public int version = VOS.VOSPACE_20;
 
-    private List<URI> targets;
+    private List<URI> targets = new ArrayList<URI>();
     private Direction direction;
 
     private View view;
@@ -106,7 +106,6 @@ public class Transfer {
      * @param keepBytes true for copy, false for move
      */
     public Transfer(URI target, URI destination, boolean keepBytes) {
-        this.targets = new ArrayList<URI>();
         this.targets.add(target);
         this.direction = new Direction(destination.toASCIIString());
         this.keepBytes = keepBytes;
@@ -128,7 +127,6 @@ public class Transfer {
      * @param direction - Direction of transfer (to or from VOSpace)
      */
     public Transfer(URI target, Direction direction) {
-        this.targets = new ArrayList<URI>();
         this.targets.add(target);
         this.direction = direction;
     }
