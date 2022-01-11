@@ -92,11 +92,11 @@ public class Transfer {
     private Direction direction;
 
     private View view;
-    private Long contentLength;
-    private String remoteIP;
-    private List<Protocol> protocols;
+    private List<Protocol> protocols = new ArrayList<Protocol>();
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
+    private Long contentLength;
+    private String remoteIP;
 
     /**
      * Constructor for internal vospace move and copy operations.
@@ -109,7 +109,6 @@ public class Transfer {
         this.targets.add(target);
         this.direction = new Direction(destination.toASCIIString());
         this.keepBytes = keepBytes;
-        this.protocols = new ArrayList<Protocol>();
     }
 
     /**
