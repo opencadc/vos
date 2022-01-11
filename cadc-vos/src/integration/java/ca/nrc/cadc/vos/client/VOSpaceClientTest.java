@@ -375,17 +375,16 @@ public class VOSpaceClientTest
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         URI vosURI = new URI(VOS_URI + slashPath1);
-        List<URI> targetList = new ArrayList<URI>();
-        targetList.add(vosURI);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
 
         // upload
-        Transfer transfer = new Transfer(targetList, Direction.pushToVoSpace, dview, protocols);
-        // TODO: keep or remove depending on whether single URI ctors retained for Transfer - Jan 2022 - HJ
-//        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace);
+        transfer.setView(dview);
+        transfer.setProtocols(protocols);
+
 
         ClientTransfer clientTransfer = client.createTransfer(transfer);
         clientTransfer.setFile(testFile);
