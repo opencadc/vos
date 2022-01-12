@@ -183,9 +183,8 @@ public class TransferReader implements XmlProcessor {
         Direction direction = parseDirection(root, vosNS);
         // String serviceUrl; // not in XML yet
 
-        List<URI> targets = parseTargets(root, vosNS);
-        validateTargets(targets, targetScheme);
-
+        List<URI> targets = parseTargets(root, vosNS, targetScheme);
+        
         View view = null;
         Parameter param = null;
         List views = root.getChildren("view", vosNS);
@@ -296,7 +295,7 @@ public class TransferReader implements XmlProcessor {
         return rtn;
     }
 
-    private List<URI> parseTargets(Element root, Namespace vosNS) throws URISyntaxException {
+    private List<URI> parseTargets(Element root, Namespace vosNS, String targetScheme) throws URISyntaxException {
         List<URI> rtn = null;
         List targs = root.getChildren("target", vosNS);
 
@@ -306,18 +305,15 @@ public class TransferReader implements XmlProcessor {
                 Element eTarget = (Element) obj;
                 URI target = new URI(eTarget.getText());
                 log.debug("target: " + target);
+
+                // validate the scheme matches targetScheme
+                if (targetScheme != null && !targetScheme.equalsIgnoreCase(target.getScheme())) {
+                    throw new IllegalArgumentException("Target scheme must be: " + targetScheme + ", found: " + target.getScheme());
+                }
                 rtn.add(target);
             }
         }
         return rtn;
-    }
-
-    private void validateTargets(List<URI> targetList, String targetScheme) {
-        for (URI t: targetList) {
-            if (targetScheme != null && !targetScheme.equalsIgnoreCase(t.getScheme())) {
-                throw new IllegalArgumentException("Target scheme must be: " + targetScheme + ", found: " + t.getScheme());
-            }
-        }
     }
 
 }
