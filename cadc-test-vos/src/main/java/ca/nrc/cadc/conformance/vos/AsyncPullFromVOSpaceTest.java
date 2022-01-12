@@ -142,7 +142,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -217,7 +219,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -292,7 +296,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -373,7 +379,8 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -417,7 +424,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -464,7 +473,8 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol("http://localhost/path"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);

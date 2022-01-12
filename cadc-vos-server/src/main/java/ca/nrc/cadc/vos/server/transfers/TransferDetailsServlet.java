@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2019.                            (c) 2019.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -291,6 +291,17 @@ public class TransferDetailsServlet extends HttpServlet
                         transfer.getProtocols().clear();
                     }
 
+                    // CADC-10640: even though there is a list of targets in the Transfer
+                    // class, currently none of the VOSpace services work with more than one target.
+                    // When tar and zip views are supported, this will change, and the check for
+                    // count of targets will depend on the Direction and View provided
+                    if (transfer.getTargets().isEmpty()) {
+                        throw new UnsupportedOperationException("No targets found.");
+                    }
+                    if (transfer.getTargets().size() > 1) {
+                        throw new UnsupportedOperationException("More than one target found. (" + transfer.getTargets().size() + ")");
+                    }
+
                     if (dir.equals(Direction.pushToVoSpace) || dir.equals(Direction.pullFromVoSpace) || dir.equals(Direction.BIDIRECTIONAL))
                     {
                         // this work should be done in the URL generator
@@ -309,7 +320,9 @@ public class TransferDetailsServlet extends HttpServlet
                         if (!transfer.getProtocols().isEmpty()) {
                             proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
                         }
-                        Transfer result = new Transfer(transfer.getTarget(), dir, proto);
+                        // This is save for now because of the check above (CADC-10640)
+                        Transfer result = new Transfer(transfer.getTargets().get(0), dir);
+                        result.getProtocols().addAll(proto);
                         result.version = transfer.version;
                         result.setContentLength(transfer.getContentLength());
 

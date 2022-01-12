@@ -201,7 +201,9 @@ public class CavernURLGeneratorTest
             final VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL);
+            trans.getProtocols().addAll(protos);
+
             final View view = null;
             final Job job = null;
             
@@ -233,7 +235,8 @@ public class CavernURLGeneratorTest
             VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -267,7 +270,8 @@ public class CavernURLGeneratorTest
             VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -303,7 +307,8 @@ public class CavernURLGeneratorTest
             VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -339,7 +344,8 @@ public class CavernURLGeneratorTest
             VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);

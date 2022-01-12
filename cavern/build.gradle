@@ -6,8 +6,8 @@ plugins {
 }
 
 repositories {
-    mavenCentral()
     mavenLocal()
+    mavenCentral()
     // tmp to resolve org.restlet.jse
     jcenter()
 }
@@ -59,8 +59,8 @@ dependencies {
     compile 'org.opencadc:cadc-uws-server:[1.2.5,)'
     compile 'org.opencadc:cadc-cdp:[1.0,)'
     compile 'org.opencadc:cadc-gms:[1.0.0,)'
-    compile 'org.opencadc:cadc-vos:[1.1.13,)'
-    compile 'org.opencadc:cadc-vos-server:[1.2.3,)'
+    compile 'org.opencadc:cadc-vos:[2.0,)'
+    compile 'org.opencadc:cadc-vos-server:[1.2.4,)'
     compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'

@@ -209,7 +209,14 @@ public class TransferUtil
         VOSpacePluginFactory storageFactory = new VOSpacePluginFactory();
         TransferGenerator transferGenerator = storageFactory.createTransferGenerator();
 
-        VOSURI target = new VOSURI(transfer.getTarget());
+        // CADC-10640: For now, only 1 target is supported for all vospace functions.
+        // When zip & tar views are supported, there will be more than one, and this code
+        // section will have to adjust. For now, it will check there is something in the
+        // list and use the first entry.
+        if (transfer.getTargets().isEmpty()) {
+            throw new IllegalArgumentException(("No targets found in transfer."));
+        }
+        VOSURI target = new VOSURI(transfer.getTargets().get(0));
         View view = createView(transfer, additionalParameters);
 
         if (transfer.getContentLength() != null)
@@ -282,6 +289,23 @@ public class TransferUtil
         if (ns.endsWith("/") && ns.length() > 1)
             ns = ns.substring(0, ns.length() - 1);
         return ns;
+    }
+
+    /**
+     * Check target list size in transfer provided.
+     * @param transfer
+     * @throws TransferException
+     */
+    public static void confirmSingleTarget(Transfer transfer) throws TransferException {
+        int targetListSize = transfer.getTargets().size();
+        if (targetListSize > 1) {
+            throw new TransferException("TooManyTargets (" + targetListSize + ")");
+        }
+
+        if (targetListSize == 0) {
+            throw new TransferException("NoTargetsFound");
+        }
+
     }
 
 

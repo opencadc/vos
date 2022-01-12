@@ -164,6 +164,8 @@ public abstract class VOSpaceTransfer
         }
     }
 
+
+
     protected void updateTransferJob(Node target, URI resolvedPath, ExecutionPhase end)
         throws JobNotFoundException, JobPersistenceException, IOException, TransientException
     {
