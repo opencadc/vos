@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -77,11 +77,8 @@ import org.apache.log4j.Logger;
 
 /**
  * Data structure for the VOSpace transfer job description.
- *
- * @author pdowler
  */
-public class Transfer
-{
+public class Transfer {
     private static Logger log = Logger.getLogger(Transfer.class);
 
     /**
@@ -91,76 +88,45 @@ public class Transfer
      */
     public int version = VOS.VOSPACE_20;
 
-    private URI target;
+    private List<URI> targets = new ArrayList<URI>();
+    private List<Protocol> protocols = new ArrayList<Protocol>();
     private Direction direction;
     private View view;
-    private Long contentLength;
-    private String remoteIP;
-    private List<Protocol> protocols;
     private boolean keepBytes = true;
     private boolean quickTransfer = false;
-
-    protected Transfer() { }
-
-    /**
-     * Constructor for copying a node.
-     * @param target
-     * @param direction
-     * @param protocols
-     */
-    public Transfer(URI target, Direction direction, List<Protocol> protocols)
-    {
-        this.target = target;
-        this.direction = direction;
-        this.protocols = protocols;
-        if (this.protocols == null)
-            this.protocols = new ArrayList<Protocol>();
-    }
+    private Long contentLength;
+    private String remoteIP;
 
     /**
      * Constructor for internal vospace move and copy operations.
      *
-     * @param target
-     * @param destination
+     * @param target - URI of target of transfer
+     * @param destination - URI of destination of transfer
      * @param keepBytes true for copy, false for move
      */
-    public Transfer(URI target, URI destination, boolean keepBytes)
-    {
-        this.target = target;
+    public Transfer(URI target, URI destination, boolean keepBytes) {
+        this.targets.add(target);
         this.direction = new Direction(destination.toASCIIString());
         this.keepBytes = keepBytes;
-        this.protocols = new ArrayList<Protocol>();
     }
 
     /**
-     * Constructor for copying a node with a specific view.
-     *
-     * @param target
-     * @param direction
-     * @param view
-     * @param protocols
+     * Ctor for Transfer. Use this for setting up transfers using multiple targets.
+     * Caller must call getProtocols().add(...) and getTargets().add(...)
+     * @param direction - Direction of transfer (to or from VOSpace)
      */
-    public Transfer(URI target, Direction direction, View view, List<Protocol> protocols)
-    {
-        this.target = target;
+    public Transfer(Direction direction) {
         this.direction = direction;
-        this.view = view;
-        this.protocols = protocols;
-        if (this.protocols == null)
-            this.protocols = new ArrayList<Protocol>();
     }
 
-    // complete ctor for use by TransferReader
-    Transfer(URI target, Direction direction, View view,
-            List<Protocol> protocols, boolean keepBytes)
-    {
-        this.target = target;
+    /**
+     * Ctor for Transfer. Caller must call getProtocols().add(...)
+     * @param target - URI of target of transfer
+     * @param direction - Direction of transfer (to or from VOSpace)
+     */
+    public Transfer(URI target, Direction direction) {
+        this.targets.add(target);
         this.direction = direction;
-        this.view = view;
-        this.protocols = protocols;
-        this.keepBytes = keepBytes;
-        if (this.protocols == null)
-            this.protocols = new ArrayList<Protocol>();
     }
 
     /**
@@ -176,29 +142,23 @@ public class Transfer
      * Enable/Disable CADC quick transfer feature
      * @param quickTransfer True if enable quick transfer, false otherwise
      */
-    public void setQuickTransfer(boolean quickTransfer)
-    {
+    public void setQuickTransfer(boolean quickTransfer) {
     	this.quickTransfer = quickTransfer;
     }
 
-    public String getEndpoint()
-    {
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
+    public String getEndpoint() {
+        if (this.protocols != null) {
+            for (Protocol p : this.protocols) {
                 return p.getEndpoint();
             }
         }
         return null;
     }
-    public String getEndpoint(String strProtocol)
-    {
+
+    public String getEndpoint(String strProtocol) {
         String rtn = null;
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
+        if (this.protocols != null) {
+            for (Protocol p : this.protocols) {
                 if (p.getUri().equalsIgnoreCase(strProtocol)) {
                     rtn = p.getEndpoint();
                     break;
@@ -233,13 +193,10 @@ public class Transfer
      * @param strProtocol
      * @return
      */
-    public List<String> getAllEndpoints(String strProtocol)
-    {
+    public List<String> getAllEndpoints(String strProtocol) {
         List<String> rtn = new ArrayList<String>();
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
+        if (this.protocols != null) {
+            for (Protocol p : this.protocols) {
                 if (p.getUri().equalsIgnoreCase(strProtocol)) {
                     rtn.add(p.getEndpoint());
                 }
@@ -254,38 +211,24 @@ public class Transfer
      * in the given order.
      * @return
      */
-    public List<String> getAllEndpoints()
-    {
+    public List<String> getAllEndpoints() {
         List<String> rtn = new ArrayList<String>();
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
+        if (this.protocols != null) {
+            for (Protocol p : this.protocols) {
                 rtn.add(p.getEndpoint());
             }
         }
         return rtn;
     }
 
-
     public Direction getDirection()
     {
         return direction;
     }
 
-    public URI getTarget()
-    {
-        return target;
-    }
-
     public View getView()
     {
         return view;
-    }
-
-    public List<Protocol> getProtocols()
-    {
-        return protocols;
     }
 
     public boolean isKeepBytes()
@@ -294,20 +237,23 @@ public class Transfer
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Transfer[");
-        sb.append(target);
-        sb.append(",");
+
+        // approaching targets the same as protocol list for now.
+        if (targets != null) {
+            for (URI target : targets) {
+                sb.append(target);
+                sb.append(",");
+            }
+        }
         sb.append(direction);
         sb.append(",");
         sb.append(view);
 
-        if (protocols != null)
-        {
-            for (Protocol p : protocols)
-            {
+        if (protocols != null) {
+            for (Protocol p : protocols) {
                 sb.append(",");
                 sb.append(p);
             }
@@ -316,4 +262,31 @@ public class Transfer
         return sb.toString();
     }
 
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public void setDirection(Direction direction) {
+        this.direction = direction;
+    }
+
+    public void setView(View view) {
+        this.view = view;
+    }
+
+    public void setKeepBytes(boolean keepBytes) {
+        this.keepBytes = keepBytes;
+    }
+
+    public List<URI> getTargets() {
+        return targets;
+    }
+
+    public List<Protocol> getProtocols() {
+        return protocols;
+    }
 }

@@ -102,9 +102,7 @@ public class TransferReaderWriterTest
     private URI target;
 
     @BeforeClass
-    public static void setUpBeforeClass()
-        throws Exception
-    {
+    public static void setUpBeforeClass() throws Exception {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
@@ -116,9 +114,7 @@ public class TransferReaderWriterTest
      * @throws java.lang.Exception
      */
     @Before
-    public void setUp()
-        throws Exception
-    {
+    public void setUp() throws Exception {
         target = new URI(baseURI + "/mydir/myfile");
         protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
@@ -131,52 +127,56 @@ public class TransferReaderWriterTest
     @After
     public void tearDown() throws Exception {}
 
-    public void compareTransfers(Transfer transfer1, Transfer transfer2)
-    {
+    public void compareTransfers(Transfer transfer1, Transfer transfer2) {
         Assert.assertNotNull(transfer1);
         Assert.assertNotNull(transfer2);
 
-        Assert.assertEquals("target", transfer1.getTarget(), transfer2.getTarget());
+//        int targetListSize = transfer1.getTargets().size();
+//        for (int i=0; i < targetListSize; i++) {
+//            // TODO: can the order of targets in the read & write be guaranteed same? Jan 2022 - HJ
+//            Assert.assertEquals("target", transfer1.getTargets().get(i), transfer2.getTargets().get(i));
+//        }
+
+        if (transfer1.getTargets() != null) {
+            Assert.assertNotNull("no targets found in transfer2", transfer2.getTargets());
+            Assert.assertEquals("target list size doesn't match", transfer1.getTargets().size(), transfer2.getTargets().size());
+            Assert.assertTrue("target list content doesn't match", transfer1.getTargets().containsAll(transfer2.getTargets()));
+            Assert.assertTrue("target list content doesn't match", transfer2.getTargets().containsAll(transfer1.getTargets()));
+        }
 
         Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
 
         Assert.assertEquals("keepBytes", transfer1.isKeepBytes(), transfer2.isKeepBytes());
 
-        if (transfer1.getContentLength() != null)
+        if (transfer1.getContentLength() != null) {
             Assert.assertEquals("contentLength", transfer1.getContentLength(), transfer2.getContentLength());
-        else
+        } else {
             Assert.assertNull("contentLength", transfer2.getContentLength());
+        }
 
-
-        if (transfer1.getView() != null)
-        {
+        if (transfer1.getView() != null) {
             Assert.assertNotNull("view", transfer2.getView());
             Assert.assertEquals("view uri", transfer1.getView().getURI(), transfer2.getView().getURI());
             Assert.assertEquals("view param size", transfer1.getView().getParameters().size(), transfer2.getView().getParameters().size());
             Assert.assertTrue("view params", transfer1.getView().getParameters().containsAll(transfer2.getView().getParameters()));
             Assert.assertTrue("view params", transfer2.getView().getParameters().containsAll(transfer1.getView().getParameters()));
+        } else {
+            Assert.assertNull("view", transfer2.getView());
         }
-        else
-             Assert.assertNull("view", transfer2.getView());
 
-        if (transfer1.getProtocols() != null)
-        {
-            Assert.assertNotNull("protocols", transfer2.getProtocols());
-            Assert.assertEquals("protocols size", transfer1.getProtocols().size(), transfer2.getProtocols().size());
-            Assert.assertTrue("protocols content", transfer1.getProtocols().containsAll(transfer2.getProtocols()));
-            Assert.assertTrue("protocols content", transfer2.getProtocols().containsAll(transfer1.getProtocols()));
-            // Transfer.equals(Object) compares all fields
-        }
-        else
-            Assert.assertNull("protocols", transfer2.getProtocols());
+        // Compare protocol lists
+        Assert.assertNotNull("protocols", transfer2.getProtocols());
+        Assert.assertEquals("protocols size", transfer1.getProtocols().size(), transfer2.getProtocols().size());
+        Assert.assertTrue("protocols content", transfer1.getProtocols().containsAll(transfer2.getProtocols()));
+        Assert.assertTrue("protocols content", transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+
     }
 
     //@Test
-    public void testPushPullTransfer()
-    {
-        try
-        {
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+    public void testPushPullTransfer() {
+        try {
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -192,7 +192,8 @@ public class TransferReaderWriterTest
             compareTransfers(transfer, transfer2);
 
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -205,8 +206,7 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             unexpected.printStackTrace();
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -214,11 +214,11 @@ public class TransferReaderWriterTest
     }
 
     @Test
-    public void testPushPullTransfer21() // test new schema compat with 2.0 content
-    {
-        try
-        {
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+    public void testPushPullTransfer21() {
+        // test new schema compat with 2.0 content
+        try {
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -234,7 +234,8 @@ public class TransferReaderWriterTest
             compareTransfers(transfer, transfer2);
 
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.getProtocols().addAll(protocols);
             log.debug("testPushPullTransfer: " + transfer);
 
             dest = new StringWriter();
@@ -247,8 +248,7 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             unexpected.printStackTrace();
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -256,12 +256,12 @@ public class TransferReaderWriterTest
     }
 
     @Test
-    public void testTransferWithViewAndNoParameters()
-    {
-        try
-        {
+    public void testTransferWithViewAndNoParameters() {
+        try {
             View view = new View(new URI(VOS.VIEW_ANY));
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             log.debug("testTransferWithViewAndNoParameters: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -276,18 +276,15 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testTransferWithViewParameters()
-    {
-        try
-        {
+    public void testTransferWithViewParameters() {
+        try {
             View view = new View(new URI(VOS.VIEW_ANY));
             List<Parameter> params = new ArrayList<Parameter>();
             params.add(new Parameter(new URI(VOS.VIEW_ANY), "cutoutParameter1"));
@@ -296,7 +293,9 @@ public class TransferReaderWriterTest
                     "[]{}/;,+=-'\"@#$%^"));
             view.setParameters(params);
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             log.debug("testTransferWithViewParameters: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -311,18 +310,15 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testTransferWithProtocolEndpoints()
-    {
-        try
-        {
+    public void testTransferWithProtocolEndpoints() {
+        try {
             List<Protocol> pe = new ArrayList<Protocol>();
             pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/123", null));
             pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/124", null));
@@ -331,7 +327,8 @@ public class TransferReaderWriterTest
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/333", null));
             pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "http://example.com/someplace/122", null));
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, pe);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(pe);
             log.debug("testTransferWithProtocolEndpoints: " + transfer);
 
             StringWriter dest = new StringWriter();
@@ -346,18 +343,16 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testPushPullTransferSecurityMethod() // VOSpace-2.1
-    {
-        try
-        {
+    public void testPushPullTransferSecurityMethod() {
+        // VOSpace-2.1
+        try {
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol get = new Protocol(VOS.PROTOCOL_HTTP_GET);
             get.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
@@ -366,7 +361,8 @@ public class TransferReaderWriterTest
             get.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(get);
 
-            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, proto21);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -395,7 +391,8 @@ public class TransferReaderWriterTest
             put.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             proto21.add(put);
 
-            transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.getProtocols().addAll(proto21);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushPullTransferSecurityMethod: " + transfer);
 
@@ -412,25 +409,24 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testPushTransferContentLengthParam() // VOSpace-2.1
-    {
-        try
-        {
+    public void testPushTransferContentLengthParam() {
+        // VOSpace-2.1
+        try {
             List<Protocol> proto21 = new ArrayList<Protocol>();
             Protocol put = new Protocol(VOS.PROTOCOL_HTTP_PUT);
             proto21.add(put);
             put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto21.add(put);
 
-            Transfer transfer = new Transfer(target, Direction.pushToVoSpace, proto21);
+            Transfer transfer = new Transfer(target, Direction.pushToVoSpace);
+            transfer.getProtocols().addAll(proto21);
             transfer.setContentLength(666L);
             transfer.version = VOS.VOSPACE_21; // swugly test
             log.debug("testPushTransferContentLengthParam: " + transfer);
@@ -451,20 +447,24 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testTransferMoveNode()
-    {
-        try
-        {
+    public void testTransferMoveNode() {
+        try {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
+            // This ctor is used for setting up a move
             Transfer transfer = new Transfer(target, dest.getURI(), false);
+
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto21.add(put);
+            transfer.getProtocols().addAll(proto21);
+
             log.debug("testTransferMoveNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -479,24 +479,27 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
-        finally
-        {
+        finally {
             log.debug("testTransferMoveNode - DONE");
         }
     }
 
     @Test
-    public void testTransferCopyNode()
-    {
-        try
-        {
+    public void testTransferCopyNode() {
+        try {
             VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
+            // This ctor is used for setting up a copy
             Transfer transfer = new Transfer(target, dest.getURI(), true);
+
+            List<Protocol> proto21 = new ArrayList<Protocol>();
+            Protocol put = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            proto21.add(put);
+            transfer.getProtocols().addAll(proto21);
+
             log.debug("testTransferCopyNode: " + transfer);
 
             StringWriter sw = new StringWriter();
@@ -511,23 +514,21 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testTransferBiDirectional()
-    {
-        try
-        {
+    public void testTransferBiDirectional() {
+        try {
             VOSURI containerURI = new VOSURI(baseURI + "/path/to/container");
             List<Protocol> protos = new ArrayList<Protocol>();
             Protocol mp = new Protocol(VOS.PROTOCOL_SSHFS, "sshfs:user@server:/path/to/container", null);
             protos.add(mp);
-            Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL, protos);
+            Transfer transfer = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL);
+            transfer.getProtocols().addAll(protos);
 
             StringWriter sw = new StringWriter();
             TransferWriter writer = new TransferWriter();
@@ -541,16 +542,14 @@ public class TransferReaderWriterTest
 
             compareTransfers(transfer, transfer2);
         }
-        catch(Exception unexpected)
-        {
+        catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testInvalidTransferXml()
-    {
+    public void testInvalidTransferXml() {
         StringBuffer sb = new StringBuffer();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         sb.append("<vos:transfer></vos:transfer>");
@@ -559,14 +558,51 @@ public class TransferReaderWriterTest
         log.debug(xml);
 
         TransferReader reader = new TransferReader();
-        try
-        {
+        try {
             Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
             Assert.fail("Did not handle invalid Transfer XML properly");
         }
-        catch(Exception expected)
-        {
+        catch (Exception expected) {
             // expected
         }
     }
+
+    // Multiple target test
+
+    @Test
+    public void testTransferWithViewAndNoParametersMultTarget() {
+        try {
+            View view = new View(new URI(VOS.VIEW_ANY));
+            // This ctor is to be used for multiple targets
+            Transfer transfer = new Transfer(Direction.pullFromVoSpace);
+
+            // Create list of targets
+            List<URI> targetList = new ArrayList<URI>();
+            targetList.add(target);
+            URI secondTarget = new URI(baseURI + "/mydir/myfile2");
+            targetList.add(secondTarget);
+
+            transfer.getTargets().addAll(targetList);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
+            log.debug("testTransferWithViewAndNoParametersMultTarget before writing: " + transfer);
+
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+            log.debug("testTransferWithViewAndNoParametersMultTarget XML from TransferWriter:\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml, VOSURI.SCHEME);
+            log.debug("testTransferWithViewAndNoParametersMultTarget transfer from TransferReader:\n" + transfer2);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
 }

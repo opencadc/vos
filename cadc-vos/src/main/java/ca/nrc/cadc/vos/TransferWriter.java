@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -74,6 +74,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import java.net.URI;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -86,8 +87,7 @@ import org.jdom2.output.XMLOutputter;
  *
  * @author Sailor Zhang
  */
-public class TransferWriter implements XmlProcessor
-{
+public class TransferWriter implements XmlProcessor {
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TransferWriter.class);
 
@@ -101,8 +101,7 @@ public class TransferWriter implements XmlProcessor
      * @throws IOException if the writer fails to write.
      */
     public void write(Transfer trans, OutputStream out)
-        throws IOException
-    {
+        throws IOException {
         write(trans, new OutputStreamWriter(out));
     }
 
@@ -114,8 +113,7 @@ public class TransferWriter implements XmlProcessor
      * @throws IOException if the writer fails to write.
      */
     public void write(Transfer trans, Writer writer)
-        throws IOException
-    {
+        throws IOException {
         Element root = buildRoot(trans);
         write(root, writer);
     }
@@ -125,8 +123,7 @@ public class TransferWriter implements XmlProcessor
      * @param transfer
      * @return root element
      */
-    private Element buildRoot(Transfer transfer)
-    {
+    private Element buildRoot(Transfer transfer) {
         Namespace vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
 
         Element root = new Element("transfer", vosNamespace);
@@ -138,22 +135,21 @@ public class TransferWriter implements XmlProcessor
             throw new IllegalArgumentException("invalid VOSpace version code: " + transfer.version);
         }
 
-        Element e = null;
+        // Add the targets to the xml document
+        for (URI target : transfer.getTargets()) {
+            Element t = new Element("target", vosNamespace);
+            t.addContent(target.toASCIIString());
+            root.addContent(t);
+        }
 
-        e = new Element("target", vosNamespace);
-        e.addContent(transfer.getTarget().toASCIIString());
-        root.addContent(e);
-
-        e = new Element("direction", vosNamespace);
+        Element e = new Element("direction", vosNamespace);
         e.addContent(transfer.getDirection().getValue());
         root.addContent(e);
 
         e = new Element("view", vosNamespace);
-        if (transfer.getView() != null)
-        {
+        if (transfer.getView() != null) {
             e.setAttribute("uri", transfer.getView().getURI().toString());
-            for (View.Parameter param : transfer.getView().getParameters())
-            {
+            for (View.Parameter param : transfer.getView().getParameters()) {
                 Element pm = new Element("param", vosNamespace);
                 pm.setAttribute("uri", param.getUri().toString());
                 pm.setText(param.getValue());
@@ -162,39 +158,35 @@ public class TransferWriter implements XmlProcessor
             root.addContent(e);
         }
 
-        if (transfer.getProtocols() != null)
-        {
-            for (Protocol protocol : transfer.getProtocols())
-            {
-                Element pr = new Element("protocol", vosNamespace);
-                pr.setAttribute("uri", protocol.getUri());
-                if (protocol.getEndpoint() != null)
-                {
-                    Element ep = new Element("endpoint", vosNamespace);
-                    ep.addContent(protocol.getEndpoint());
-                    pr.addContent(ep);
-                }
-                if (protocol.getSecurityMethod() != null) {
-                    // added in VOSpace-2.1
-                    if (transfer.version >= VOS.VOSPACE_21) {
-                        Element es = new Element("securityMethod", vosNamespace);
-                        es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
-                        pr.addContent(es);
-                    } else { 
-                        throw new UnsupportedOperationException("cannot specify securityMethod with VOSpace 2.0 service");
-                    }
-                }
-                root.addContent(pr);
+
+        for (Protocol protocol : transfer.getProtocols()) {
+            Element pr = new Element("protocol", vosNamespace);
+            pr.setAttribute("uri", protocol.getUri());
+            if (protocol.getEndpoint() != null) {
+                Element ep = new Element("endpoint", vosNamespace);
+                ep.addContent(protocol.getEndpoint());
+                pr.addContent(ep);
             }
+            if (protocol.getSecurityMethod() != null) {
+                // added in VOSpace-2.1
+                if (transfer.version >= VOS.VOSPACE_21) {
+                    Element es = new Element("securityMethod", vosNamespace);
+                    es.setAttribute("uri", protocol.getSecurityMethod().toASCIIString());
+                    pr.addContent(es);
+                } else {
+                    throw new UnsupportedOperationException("cannot specify securityMethod with VOSpace 2.0 service");
+                }
+            }
+            root.addContent(pr);
         }
+
 
         e = new Element("keepBytes", vosNamespace);
         e.addContent(Boolean.toString(transfer.isKeepBytes()));
         root.addContent(e);
 
         // added in VOSpace-2.1
-        if (transfer.version >= VOS.VOSPACE_21 && transfer.getContentLength() != null)
-        {
+        if (transfer.version >= VOS.VOSPACE_21 && transfer.getContentLength() != null) {
             e = new Element("param", vosNamespace);
             e.setAttribute("uri", VOS.PROPERTY_URI_CONTENTLENGTH);
             e.addContent(transfer.getContentLength().toString());
@@ -213,8 +205,7 @@ public class TransferWriter implements XmlProcessor
      */
     @SuppressWarnings("unchecked")
     protected void write(Element root, Writer writer)
-        throws IOException
-    {
+        throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
         Document document = new Document(root);

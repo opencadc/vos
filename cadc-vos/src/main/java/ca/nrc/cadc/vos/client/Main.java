@@ -722,7 +722,9 @@ public class Main implements Runnable
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
 
-        Transfer transfer = new Transfer(destination, Direction.pushToVoSpace, view, protocols);
+        Transfer transfer = new Transfer(destination, Direction.pushToVoSpace);
+        transfer.getProtocols().addAll(protocols);
+        transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
         transfer.setContentLength(fileToUpload.length());
@@ -824,7 +826,9 @@ public class Main implements Runnable
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(proto);
 
-        Transfer transfer = new Transfer(source, Direction.pullFromVoSpace, view, protocols);
+        Transfer transfer = new Transfer(source, Direction.pullFromVoSpace);
+        transfer.getProtocols().addAll(protocols);
+        transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
         ClientTransfer clientTransfer = client.createTransfer(transfer);

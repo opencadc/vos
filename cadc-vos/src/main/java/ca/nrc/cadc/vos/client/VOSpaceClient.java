@@ -588,11 +588,20 @@ public class VOSpaceClient
             HttpPost httpPost = null;
             if (transfer.isQuickTransfer())
             {
-                    Map<String, Object> form = new HashMap<String, Object>();
-                    form.put("TARGET", transfer.getTarget());
-                    form.put("DIRECTION", transfer.getDirection().getValue());
-                    form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
-                    httpPost = new HttpPost(vospaceURL, form, false);
+                // Assumption: quick transfer will be a single target
+                if (transfer.getTargets().size() == 0) {
+                    throw new IllegalArgumentException("No target found for quick transfer.");
+                }
+
+                if (transfer.getTargets().size() > 1) {
+                    throw new IllegalArgumentException("Quick transfer supports 1 target. Found " + transfer.getTargets().size());
+                }
+
+                Map<String, Object> form = new HashMap<String, Object>();
+                form.put("TARGET", transfer.getTargets().get(0));
+                form.put("DIRECTION", transfer.getDirection().getValue());
+                form.put("PROTOCOL", transfer.getProtocols().iterator().next().getUri()); // try first protocol?
+                httpPost = new HttpPost(vospaceURL, form, false);
             }
             else
             {
@@ -630,7 +639,18 @@ public class VOSpaceClient
             	// create a new transfer with a protocol with an end point
             	List<Protocol> prots = new ArrayList<Protocol>();
             	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
-            	Transfer trf = new Transfer(transfer.getTarget(), transfer.getDirection(), prots);
+
+            	// Assumption: quick transfer will be a single target
+                if (transfer.getTargets().size() == 0) {
+                    throw new IllegalArgumentException("No target found for quick transfer.");
+                }
+
+                if (transfer.getTargets().size() > 1) {
+                    throw new IllegalArgumentException("Quick transfer supports 1 target. Found " + transfer.getTargets().size());
+                }
+
+                Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());
+                trf.getProtocols().addAll(prots);
             	return new ClientTransfer(null, trf, false);
             }
             else
