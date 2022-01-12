@@ -589,8 +589,8 @@ public class VOSpaceClient
             if (transfer.isQuickTransfer())
             {
                 // Assumption: quick transfer will be a single target
-                if (transfer.getTargets().size() != 1) {
-                    throw new IllegalArgumentException("Quick transfer only supports single targets.");
+                if (transfer.getTargets().size() < 1) {
+                    throw new IllegalArgumentException("No target found for quick transfer");
                 }
 
                 Map<String, Object> form = new HashMap<String, Object>();
@@ -637,8 +637,8 @@ public class VOSpaceClient
             	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
 
             	// Assumption: quick transfer will be a single target
-                if (transfer.getTargets().size() != 1) {
-                    throw new IllegalArgumentException("Quick transfer only supports single targets.");
+                if (transfer.getTargets().size() < 1) {
+                    throw new IllegalArgumentException("No target found for quick transfer.");
                 }
 
                 Transfer trf = new Transfer(transfer.getTargets().get(0), transfer.getDirection());

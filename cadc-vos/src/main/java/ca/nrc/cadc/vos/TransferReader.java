@@ -184,7 +184,7 @@ public class TransferReader implements XmlProcessor {
         // String serviceUrl; // not in XML yet
 
         List<URI> targets = parseTargets(root, vosNS, targetScheme);
-        
+
         View view = null;
         Parameter param = null;
         List views = root.getChildren("view", vosNS);
