@@ -210,7 +210,10 @@ public class TransferReader implements XmlProcessor {
         Transfer ret = new Transfer(direction);
         ret.getTargets().addAll(targets);
         ret.setView(view);
-        ret.getProtocols().addAll(protocols);
+        if (protocols != null) {
+            // parseProtocols() above can potentially return null
+            ret.getProtocols().addAll(protocols);
+        }
         ret.setKeepBytes(keepBytes);
 
         ret.version = version;
