@@ -203,7 +203,6 @@ public class CavernURLGeneratorTest
             protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
             final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL);
             trans.getProtocols().addAll(protos);
-
             final View view = null;
             final Job job = null;
             
