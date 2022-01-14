@@ -322,12 +322,9 @@ public class TransferRunner implements JobRunner
             {
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, ex.getMessage(), HttpURLConnection.HTTP_BAD_REQUEST, true);
             }
-            catch (NodeNotFoundException ignore)
+            catch (NodeNotFoundException nfe)
             {
-                // Assertion: if the code gets to here there will be at least one
-                // target available to access
-                VOSURI vosURI = new VOSURI(transfer.getTargets().get(0));
-                log.debug("Node not found: " + vosURI.getName());
+                log.debug("Node not found: " + nfe.getMessage());
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, "NodeNotFound", HttpURLConnection.HTTP_NOT_FOUND, true);
                 return;
             }

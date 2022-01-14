@@ -320,7 +320,7 @@ public class TransferDetailsServlet extends HttpServlet
                         if (!transfer.getProtocols().isEmpty()) {
                             proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
                         }
-                        // This is save for now because of the check above (CADC-10640)
+                        // This is safe for now because of the check above (CADC-10640)
                         Transfer result = new Transfer(transfer.getTargets().get(0), dir);
                         result.getProtocols().addAll(proto);
                         result.version = transfer.version;
