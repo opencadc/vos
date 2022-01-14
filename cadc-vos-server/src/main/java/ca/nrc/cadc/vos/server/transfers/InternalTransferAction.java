@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2011.                            (c) 2011.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -133,8 +133,17 @@ public class InternalTransferAction  extends VOSpaceTransfer
             log.debug(job.getID() + ": QUEUED -> EXECUTING [OK]");
             job.setExecutionPhase(ep);
 
+            // Even though Transfer.java supports multiple targets, this type of negotiation does not.
+            int targetListSize = transfer.getTargets().size();
+            if (targetListSize > 1) {
+                throw new UnsupportedOperationException("Move/Copy supports a single target (found " + targetListSize + ")");
+            }
+            if (targetListSize == 0) {
+                throw new UnsupportedOperationException("Move/Copy requires a target (found " + targetListSize + ")");
+            }
+
             // move or copy?
-            VOSURI srcURI = new VOSURI(transfer.getTarget());
+            VOSURI srcURI = new VOSURI(transfer.getTargets().get(0));
             VOSURI destURI = new VOSURI(transfer.getDirection().getValue());
             if (transfer.isKeepBytes()) // copy
             {

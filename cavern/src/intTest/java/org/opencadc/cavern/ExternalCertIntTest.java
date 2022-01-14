@@ -135,7 +135,9 @@ public class ExternalCertIntTest
                     List<Protocol> protocols = new ArrayList<Protocol>();
                     protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
-                    Transfer transfer = new Transfer(vosURI.getURI(), Direction.pullFromVoSpace, view, protocols);
+                    Transfer transfer = new Transfer(vosURI.getURI(), Direction.pullFromVoSpace);
+                    transfer.setView(view);
+                    transfer.getProtocols().addAll(protocols);
                     ClientTransfer clientTransfer = c.createTransfer(transfer);
                     clientTransfer.run();
 

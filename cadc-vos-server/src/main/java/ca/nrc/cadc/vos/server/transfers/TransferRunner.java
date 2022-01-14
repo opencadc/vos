@@ -212,7 +212,9 @@ public class TransferRunner implements JobRunner
         }
 
         log.debug("createTransfer: " + target + " " + dir + " " + proto);
-        return new Transfer(target.getURI(), dir, plist);
+        Transfer ret = new Transfer(target.getURI(), dir);
+        ret.getProtocols().addAll(plist);
+        return ret;
     }
 
     private List<Parameter> getAdditionalParameters(List<Parameter> params)
@@ -286,8 +288,6 @@ public class TransferRunner implements JobRunner
             VOSpaceAuthorizer partialPathVOSpaceAuthorizer = new VOSpaceAuthorizer(true);
             partialPathVOSpaceAuthorizer.setNodePersistence(nodePer);
 
-            VOSURI vosURI = new VOSURI(transfer.getTarget());
-
             try
             {
                 if (direction.equals(Direction.pushToVoSpace))
@@ -322,9 +322,9 @@ public class TransferRunner implements JobRunner
             {
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, ex.getMessage(), HttpURLConnection.HTTP_BAD_REQUEST, true);
             }
-            catch (NodeNotFoundException ignore)
+            catch (NodeNotFoundException nfe)
             {
-                log.debug("Node not found: " + vosURI.getName());
+                log.debug("Node not found: " + nfe.getMessage());
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, "NodeNotFound", HttpURLConnection.HTTP_NOT_FOUND, true);
                 return;
             }

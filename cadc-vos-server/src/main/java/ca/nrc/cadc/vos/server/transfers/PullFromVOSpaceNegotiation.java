@@ -119,10 +119,17 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer
         boolean updated = false;
         try
         {
-            VOSURI target = new VOSURI(transfer.getTarget());
+            // Even though Transfer.java supports multiple targets, this type
+            // of transfer does not yet. When view=zip | tar is implemented,
+            // this is likely to change.
+            // This call confirms a single target exists or throws TransferException.
+            TransferUtil.confirmSingleTarget(transfer);
+
+            VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             PathResolver resolver = new PathResolver(nodePersistence);
 
+            // TODO: change this to check all targets provided in the transfer
             // careful to capture a link to data node so we can get the right filename in the transfer
             Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
             Node actualNode = apparentNode;

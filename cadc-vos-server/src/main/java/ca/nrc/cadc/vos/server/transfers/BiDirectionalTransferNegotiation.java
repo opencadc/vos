@@ -111,7 +111,11 @@ public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
             IOException, TransientException, URISyntaxException, NodeBusyException {
         boolean updated = false;
         try {
-            VOSURI target = new VOSURI(transfer.getTarget());
+            // Even though Transfer.java supports multiple targets, this type
+            // of transfer does not.
+            // This call confirms a single target exists or throws TransferException.
+            TransferUtil.confirmSingleTarget(transfer);
+            VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             PathResolver resolver = new PathResolver(nodePersistence);
 

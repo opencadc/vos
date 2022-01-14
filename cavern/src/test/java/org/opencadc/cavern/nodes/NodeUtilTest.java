@@ -98,7 +98,7 @@ public class NodeUtilTest {
     private static final Logger log = Logger.getLogger(NodeUtilTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
