@@ -167,7 +167,8 @@ public class MountedContainerTest {
             // mount test container
             List<Protocol> protocols = new ArrayList<>();
             protocols.add(sp);
-            Transfer t = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL, protocols);
+            Transfer t = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL);
+            t.getProtocols().addAll(protocols);
             TransferWriter tw = new TransferWriter();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             tw.write(t, out);
