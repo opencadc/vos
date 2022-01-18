@@ -8,8 +8,9 @@ plugins {
 repositories {
     mavenCentral()
     mavenLocal()
-    // tmp hack: org.restlet.jse dependency
-    jcenter()
+    maven {
+        url "https://maven.restlet.talend.com"
+    }
 }
 
 apply from: '../opencadc.gradle'
