@@ -68,6 +68,7 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
@@ -386,17 +387,35 @@ public class TransferRunner implements JobRunner {
 
             // standard redirect
             StringBuilder sb = new StringBuilder();
-            sb.append("/").append(job.getID()).append("/results/transferDetails");
+            sb.append("/");
+            URI standard = null;
+
             try {
+                if (TransferUtil.isPackageTransfer(trans)) {
+                    // Grab the standard that matches the package type requested
+                    standard = TransferUtil.getStandardForPackageType(trans);
+
+                    // package view is redirected to /vault/pkg/<jobid>
+                    sb.append(job.getID());
+                } else {
+                    // standard transfer redirect
+                    standard = Standards.VOSPACE_TRANSFERS_20;
+
+                    // redirected to /vault/synctrans/<jobid>/results/transferDetails
+                    sb.append(job.getID()).append("/results/transferDetails");
+                }
+
                 AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-                URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20, authMethod);
+                URL serviceURL = regClient.getServiceURL(serviceURI, standard, authMethod);
                 URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);
                 syncOutput.setHeader("Location", loc);
                 syncOutput.setResponseCode(HttpURLConnection.HTTP_SEE_OTHER);
                 return;
-            } catch (MalformedURLException bug) {
+            } catch (MalformedURLException | UnsupportedOperationException bug) {
+                // UnsupportedOperationException comes from TransferUtil.getStandardForPackageType,
+                // if an unsupported package type is requested
                 throw new RuntimeException("BUG: failed to create valid transferDetails URL", bug);
             }
         }

@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2011.                            (c) 2011.
+ *  (c) 2021.                            (c) 2021.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -83,12 +83,14 @@ import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Date;
 import org.apache.log4j.Logger;
 
 /**
@@ -98,11 +100,27 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
     private static final Logger log = Logger.getLogger(PullFromVOSpaceNegotiation.class);
 
     private VOSpaceAuthorizer authorizer;
+    private boolean isPackageViewTransfer = false;
+
+    public boolean isPackageView() {
+        return isPackageViewTransfer;
+    }
+
 
     public PullFromVOSpaceNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
         this.authorizer = new VOSpaceAuthorizer(true);
         authorizer.setNodePersistence(nodePersistence);
+    }
+
+    @Override
+    public void validateView() throws TransferException, Exception {
+        if (TransferUtil.isPackageTransfer(transfer)) {
+            // There is no representation for the package view in View.properties
+            isPackageViewTransfer = true;
+        } else {
+            super.validateView();
+        }
     }
 
     @Override
@@ -112,6 +130,14 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
         IOException, TransientException, URISyntaxException {
         boolean updated = false;
         try {
+
+            if (isPackageViewTransfer == true) {
+                // changing job to PENDING here
+                // TODO: this might need to happen in TransferRunner.doRedirect instead..
+                jobUpdater.setPhase(job.getID(),job.getExecutionPhase(), ExecutionPhase.PENDING, new Date());
+                return;
+            }
+
             // Even though Transfer.java supports multiple targets, this type
             // of transfer does not yet. When view=zip | tar is implemented,
             // this is likely to change.

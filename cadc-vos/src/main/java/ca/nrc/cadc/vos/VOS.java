@@ -231,6 +231,9 @@ public class VOS
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
     public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
 
+    // CADC package view property
+    public static final String VIEW_PACKAGE = "ivo://cadc.nrc.ca/vospace/view/pkg";
+
     /*
      * Standard Node Properties defined by the CADC
      */
@@ -268,6 +271,9 @@ public class VOS
     // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
     public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
 
+    // property to designate an accept header value
+    public static final String PROPERTY_URI_ACCEPT = "ivo://cadc.nrc.ca/vospace/core#accept";
+
     /*
      * CADC Node Properties
      */
@@ -279,6 +285,9 @@ public class VOS
 
     // Flag indicating that the Node passed a write-permission check
     public static final String PROPERTY_URI_WRITABLE = "ivo://cadc.nrc.ca/vospace/core#writable";
+
+
+
 
     /*
      * List of properties that are read-only by the user
