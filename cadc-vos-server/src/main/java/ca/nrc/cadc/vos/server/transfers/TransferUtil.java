@@ -312,37 +312,11 @@ public class TransferUtil
     public static boolean isPackageTransfer(Transfer transfer) {
         boolean isPackageRequest = false;
         if (transfer.getView() != null) {
-            if (VOS.VIEW_PACKAGE.equals(transfer.getView().getURI().toString())) {
+            if (Standards.PKG_10.equals(transfer.getView().getURI().toString())) {
                isPackageRequest = true;
             }
         }
         return isPackageRequest;
     }
-
-    public static URI getStandardForPackageType(Transfer transfer) {
-        URI standard = null;
-        View view = transfer.getView();
-
-        if (isPackageTransfer(transfer)) {
-            List<View.Parameter> params = view.getParameters();
-            for (int i=0; i < params.size(); i++) {
-                View.Parameter p = view.getParameters().get(i);
-                String paramValue = p.getUri().toString();
-                if (VOS.PROPERTY_URI_ACCEPT.equals(paramValue)) {
-                    if (p.getValue().contains("tar")) {
-                        standard = Standards.PKG_10;
-                    } else if (paramValue.contains("zip")) {
-                        standard = Standards.PKG_ZIP_10;
-                    } else {
-                        throw new UnsupportedOperationException("package type not supported: " + paramValue);
-                    }
-                }
-            }
-
-        }
-
-        return standard;
-    }
-
 
 }

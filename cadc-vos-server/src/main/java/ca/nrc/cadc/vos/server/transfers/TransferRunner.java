@@ -392,8 +392,7 @@ public class TransferRunner implements JobRunner {
 
             try {
                 if (TransferUtil.isPackageTransfer(trans)) {
-                    // Grab the standard that matches the package type requested
-                    standard = TransferUtil.getStandardForPackageType(trans);
+                    standard = Standards.PKG_10;
 
                     // package view is redirected to /vault/pkg/<jobid>
                     sb.append(job.getID());

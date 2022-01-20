@@ -231,8 +231,6 @@ public class VOS
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
     public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
 
-    // CADC package view property
-    public static final String VIEW_PACKAGE = "ivo://cadc.nrc.ca/vospace/view/pkg";
 
     /*
      * Standard Node Properties defined by the CADC
@@ -272,7 +270,7 @@ public class VOS
     public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
 
     // property to designate an accept header value
-    public static final String PROPERTY_URI_ACCEPT = "ivo://cadc.nrc.ca/vospace/core#accept";
+    public static final String PROPERTY_URI_ACCEPT = "ivo://ivoa.net/vospace/core#accept";
 
     /*
      * CADC Node Properties
