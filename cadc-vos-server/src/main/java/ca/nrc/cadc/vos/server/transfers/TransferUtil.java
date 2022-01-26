@@ -230,6 +230,51 @@ public class TransferUtil
         return protocolList;
     }
 
+    /**
+     * Generate a Protocol list with endpoints set to /vault/pkg/<jobid>. One entry for every protocol in
+     * the transfer provided. Use the jobID from the job provided.
+     * @param transfer
+     * @param job
+     * @return
+     * @throws MalformedURLException
+     * @throws MalformedURLException
+     */
+    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
+        throws MalformedURLException, IllegalArgumentException {
+
+        // package view is redirected to /vault/pkg/<jobid>
+        // making an endpoint for each protocol provided
+
+        List<Protocol> protocolList = transfer.getProtocols();
+
+        if (!protocolList.isEmpty()) {
+
+            StringBuilder sb = new StringBuilder();
+            String jobID = job.getID();
+            sb.append("/").append(jobID);
+
+            RegistryClient regClient = new RegistryClient();
+            LocalServiceURI localServiceURI = new LocalServiceURI();
+            URI serviceURI = localServiceURI.getURI();
+            AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+            URL serviceURL = regClient.getServiceURL(serviceURI, Standards.PKG_10, authMethod);
+            if (serviceURL == null) {
+                throw new RuntimeException("Couldn't get serviceURL for URI: " + serviceURI.toString());
+            }
+            URL location = new URL(serviceURL.toExternalForm() + sb.toString());
+            String loc = location.toExternalForm();
+            log.debug("Package endpoint: " + loc);
+
+            for (Protocol p : protocolList) {
+                p.setEndpoint(loc);
+            }
+        }
+
+        // return the list even if it is empty
+        return protocolList;
+    }
+
+
     private static View createView(Transfer transfer, List<Parameter> additionalParameters) throws Exception
     {
         // create the appropriate view object
@@ -312,7 +357,7 @@ public class TransferUtil
     public static boolean isPackageTransfer(Transfer transfer) {
         boolean isPackageRequest = false;
         if (transfer.getView() != null) {
-            if (Standards.PKG_10.equals(transfer.getView().getURI().toString())) {
+            if (Standards.PKG_10.equals(transfer.getView().getURI())) {
                isPackageRequest = true;
             }
         }

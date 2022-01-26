@@ -102,11 +102,6 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
     private VOSpaceAuthorizer authorizer;
     private boolean isPackageViewTransfer = false;
 
-    public boolean isPackageView() {
-        return isPackageViewTransfer;
-    }
-
-
     public PullFromVOSpaceNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
         this.authorizer = new VOSpaceAuthorizer(true);
@@ -114,9 +109,13 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
     }
 
     @Override
-    public void validateView() throws TransferException, Exception {
+    public void validateView() throws IllegalArgumentException,
+            TransferException, Exception {
+        // There is no representation for the package view in View.properties,
+        // so this function needs to do some extra work for this instance.
+        // For all other View values, the standard validation is performed.
+
         if (TransferUtil.isPackageTransfer(transfer)) {
-            // There is no representation for the package view in View.properties
             isPackageViewTransfer = true;
         } else {
             super.validateView();
@@ -131,10 +130,10 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
         boolean updated = false;
         try {
 
-            if (isPackageViewTransfer == true) {
+            if (isPackageViewTransfer) {
                 // changing job to PENDING here
-                // TODO: this might need to happen in TransferRunner.doRedirect instead..
-                jobUpdater.setPhase(job.getID(),job.getExecutionPhase(), ExecutionPhase.PENDING, new Date());
+                updateTransferJob(null, null, ExecutionPhase.PENDING);
+                updated = true;
                 return;
             }
 

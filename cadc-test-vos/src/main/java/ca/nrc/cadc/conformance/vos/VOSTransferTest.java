@@ -124,9 +124,11 @@ public class VOSTransferTest extends VOSBaseTest
         throws IOException, SAXException, JDOMException, ParseException
     {
         // Get the transfer XML.
-        TransferWriter writer = new TransferWriter();
-        StringWriter sw = new StringWriter();
-        writer.write(transfer, sw);
+//        TransferWriter writer = new TransferWriter();
+//        StringWriter sw = new StringWriter();
+//        writer.write(transfer, sw);
+        StringWriter sw = getTransferXML(transfer);
+
 
         // POST the XML to the transfer endpoint.
         WebResponse response = post(sw.toString());
@@ -196,10 +198,12 @@ public class VOSTransferTest extends VOSBaseTest
     protected TransferResult doSyncTransfer(Transfer transfer)
         throws IOException, SAXException, TransferParsingException
     {
-        // Get the transfer XML.
-        TransferWriter writer = new TransferWriter();
-        StringWriter sw = new StringWriter();
-        writer.write(transfer, sw);
+//        // Get the transfer XML.
+//        TransferWriter writer = new TransferWriter();
+//        StringWriter sw = new StringWriter();
+//        writer.write(transfer, sw);
+
+        StringWriter sw = getTransferXML(transfer);
         
         log.debug("XML: " + sw.toString());
 
@@ -208,26 +212,31 @@ public class VOSTransferTest extends VOSBaseTest
         assertEquals("POST response code should be 303", 303, response.getResponseCode());
 
         // Get the header Location.
-        String location = response.getHeaderField("Location");
-        log.info("Location: " + location);
-        assertNotNull("Location header not set", location);
-        assertTrue("../results/transferDetails location expected: ",
-                location.endsWith("/results/transferDetails"));
+//        String location = response.getHeaderField("Location");
+//        log.info("Location: " + location);
+//        assertNotNull("Location header not set", location);
+//        assertTrue("../results/transferDetails location expected: ",
+//                location.endsWith("/results/transferDetails"));
 
-        // Parse out the path to the Job.
-        int index = location.indexOf("/results/transferDetails");
-        String jobPath = location.substring(0, index);
+        String location = verifyLocation(response);
+
+//        // Parse out the path to the Job.
+//        int index = location.indexOf("/results/transferDetails");
+//        String jobPath = location.substring(0, index);
+        String jobPath = getJobPath(location);
 
         // Follow all the redirects.
-        response = get(location);
-        while (303 == response.getResponseCode())
-        {
-            location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            log.debug("New location: " + location);
-            response = get(location);
-        }
-        assertEquals("GET response code should be 200", 200, response.getResponseCode());
+//        response = get(location);
+//        while (303 == response.getResponseCode())
+//        {
+//            location = response.getHeaderField("Location");
+//            assertNotNull("Location header not set", location);
+//            log.debug("New location: " + location);
+//            response = get(location);
+//        }
+//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+        response = followRedirects(location);
 
         // Get the Transfer XML.
         String xml = response.getText();
@@ -236,16 +245,57 @@ public class VOSTransferTest extends VOSBaseTest
         // Create a Transfer from Transfer XML.
         TransferReader reader = new TransferReader();
         transfer = reader.read(xml, VOSURI.SCHEME);
+        // Job not returned here because it is a sync transfer
         return new TransferResult(transfer, null, jobPath);
     }
 
-    protected TransferResult doAsyncTransfer(Transfer transfer)
-        throws IOException, SAXException, JDOMException, ParseException, InterruptedException, TransferParsingException
-    {
+    protected WebResponse followRedirects(String location) throws IOException, SAXException {
+        WebResponse resp = get(location);
+        while (303 == resp.getResponseCode())
+        {
+            location = resp.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            log.debug("New location: " + location);
+            resp = get(location);
+        }
+        assertEquals("GET response code should be 200", 200, resp.getResponseCode());
+        return resp;
+    }
+
+    protected String getJobPath(String location) {
+        // Parse out the path to the Job.
+        int index = location.indexOf("/results/transferDetails");
+        return location.substring(0, index);
+    }
+
+    protected String verifyLocation(WebResponse response) {
+        // Get the header Location.
+        String location = response.getHeaderField("Location");
+        log.info("Location: " + location);
+        assertNotNull("Location header not set", location);
+        assertTrue("../results/transferDetails location expected: ",
+            location.endsWith("/results/transferDetails"));
+        return location;
+    }
+
+    protected StringWriter getTransferXML(Transfer transfer) throws IOException {
         // Get the transfer XML.
         TransferWriter writer = new TransferWriter();
         StringWriter sw = new StringWriter();
         writer.write(transfer, sw);
+        return sw;
+    }
+
+
+    protected TransferResult doAsyncTransfer(Transfer transfer)
+        throws IOException, SAXException, JDOMException, ParseException, InterruptedException, TransferParsingException
+    {
+//        // Get the transfer XML.
+//        TransferWriter writer = new TransferWriter();
+//        StringWriter sw = new StringWriter();
+//        writer.write(transfer, sw);
+
+        StringWriter sw = getTransferXML(transfer);
 
         // POST the XML to the transfer endpoint.
         WebResponse response = post(sw.toString());

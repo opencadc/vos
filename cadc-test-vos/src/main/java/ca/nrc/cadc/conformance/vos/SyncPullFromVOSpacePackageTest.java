@@ -78,22 +78,34 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 import com.meterware.httpunit.WebResponse;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URI;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom2.JDOMException;
 import org.junit.Assert;
 import org.junit.Test;
+import org.xml.sax.SAXException;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -106,7 +118,7 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
     }
 
     public SyncPullFromVOSpacePackageTest()
@@ -115,60 +127,49 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
     }
 
     @Test
-    public void testPullFromVOSpacePackage()
+    public void testPullFromVOSpaceTarPackage()
     {
         try
         {
-            log.debug("testPullFromVOSpacePackage");
+            log.debug("testPullFromVOSpaceTarPackage");
 
-            // Get a DataNode.
-            TestNode dataNode = getSampleDataNode();
-            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(getNodeStandardID(),dataNode.sampleNode, new NodeWriter());
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            URI testURI1 = new URI("vos://cadc.nrc.ca~vospace/pkgTestURI1");
+            URI testURI2 = new URI("vos://cadc.nrc.ca~vospace/pkgTestURI2");
 
             // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+
+            List<URI> targets = new ArrayList<URI>();
+            targets.add(testURI1);
+            targets.add(testURI2);
+
+            Transfer transfer = new Transfer(Direction.pullFromVoSpace);
+            transfer.getTargets().addAll(targets);
             transfer.getProtocols().addAll(protocols);
+
             // Add package view for tar file
-            View packageView = new View(new URI(VOS.VIEW_PACKAGE));
+            View packageView = new View(new URI(Standards.PKG_10.toString()));
             packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
             transfer.setView(packageView);
 
-            // Start the transfer.
-            TransferResult result = doSyncTransfer(transfer);
+            TransferResult result = doPkgTransfer(transfer);
 
-            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
-            assertNotNull("protocols", result.transfer.getProtocols());
+            // Job phase should be PENDING.
+            assertEquals("Job phase should be PENDING", ExecutionPhase.PENDING, result.job.getExecutionPhase());
 
-            // Get the Job.
-            response = get(result.location);
-            assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
+            // Check the protocol objects to make sure endpoints are added
+            List<Protocol> protocolList = result.transfer.getProtocols();
 
-            // Job phase should be EXECUTING.
-            JobReader jobReader = new JobReader();
-            Job job = jobReader.read(new StringReader(response.getText()));
-            assertEquals("Job phase should be EXECUTING", ExecutionPhase.PENDING, job.getExecutionPhase());
-
-            // Invalid Protocol should not be returned.
-            assertTrue("has some protocols", !result.transfer.getProtocols().isEmpty());
-            String endpoint = null;
-            for (Protocol p : result.transfer.getProtocols())
-            {
-                String expectedEndpoint = "/vault/pkg/" + job.getID();
-                endpoint = p.getEndpoint();
-                log.debug("expected endpoint: " + expectedEndpoint + ", found: " + endpoint);
-                Assert.assertEquals(expectedEndpoint, endpoint);
+            for (Protocol p: protocolList) {
+                // Check url quality - don't worry about jobID matching for now
+                String endpoint = p.getEndpoint();
+                log.debug("endpoint: " + endpoint);
+                Assert.assertTrue("invalid endpoint returned: " + endpoint, endpoint.contains("/pkg/"));
             }
 
-//            // Delete the node
-//            response = delete(getNodeStandardID(), dataNode.sampleNode);
-//            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-
-            log.info("testPullFromVOSpace passed.");
+            log.info("testPullFromVOSpaceTarPackage passed.");
         }
         catch (Exception unexpected)
         {
@@ -176,5 +177,139 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+
+//    @Test
+    public void testBadPullFromVOSpacePkgNoProtocols()
+    {
+        try
+        {
+            log.debug("testBadPullFromVOSpacePkgNoProtocols");
+
+            // This test doesn't need data nodes created, it should only be manipulating the Job
+            URI testURI1 = new URI("vos://cadc.test/pkgTestURI1");
+            URI testURI2 = new URI("vos://cadc.test/pkgTestURI2");
+
+            List<URI> targets = new ArrayList<URI>();
+            targets.add(testURI1);
+            targets.add(testURI2);
+
+            // Create the Transfer.
+            Transfer transfer = new Transfer(Direction.pullFromVoSpace);
+            transfer.getTargets().addAll(targets);
+            // Forget adding protocols
+
+            // Add package view for tar file
+            View packageView = new View(new URI(Standards.PKG_10.toString()));
+            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
+            transfer.setView(packageView);
+
+            TransferResult result = doPkgTransfer(transfer);
+
+            // The job will have finished successfully, so Job phase should be PENDING.
+            assertEquals("Job phase should be PENDING", ExecutionPhase.PENDING, result.job.getExecutionPhase());
+
+            // Check the protocol objects to make sure NO endpoints are added
+            // If no protocols are provided this should happen
+            List<Protocol> protocolList = result.transfer.getProtocols();
+            Assert.assertTrue("protocol list should be empty: " + protocolList.size(), protocolList.isEmpty());
+
+            log.info("testBadPullFromVOSpacePkgNoProtocols passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+//    @Test
+    public void testBadPullFromVOSpaceTarPkgNoTargets()
+    {
+        try
+        {
+            log.debug("testBadPullFromVOSpaceTarPkgNoTargets");
+
+            // Create the Transfer.
+            Transfer transfer = new Transfer(Direction.pullFromVoSpace);
+
+            // Forget to add the targets. Highly unlikely to happen, but testing anyway
+            // Add protocols
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            transfer.getProtocols().addAll(protocols);
+
+            // Add package view for tar file
+            View packageView = new View(new URI(Standards.PKG_10.toString()));
+            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
+            transfer.setView(packageView);
+
+            // Start the transfer.
+            StringWriter sw = getTransferXML(transfer);
+            log.debug("XML: " + sw.toString());
+
+            // POST the XML to the transfer endpoint.
+            WebResponse response = post(sw.toString());
+            assertEquals("POST response code should be 500", 500, response.getResponseCode());
+
+//            // Job phase should be ERROR.
+//            assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
+
+            // Nothing to clean up
+            log.info("testBadPullFromVOSpaceTarPkgNoTargets passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
+    protected TransferResult doPkgTransfer(Transfer transfer)
+        throws IOException, SAXException, JDOMException, ParseException, TransferParsingException {
+        // Get the transfer XML.
+        StringWriter sw = getTransferXML(transfer);
+        log.debug("XML: " + sw.toString());
+
+        // POST the XML to the transfer endpoint.
+        WebResponse response = post(sw.toString());
+        assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+        String location = verifyLocation(response);
+        String jobPath = getJobPath(location);
+
+        // There are a few redirects to get to the end
+        // goes through xfer apparently...
+        response = followRedirects(location);
+
+//        while (303 == response.getResponseCode())
+//        {
+//            location = response.getHeaderField("Location");
+//            assertNotNull("Location header not set", location);
+//            log.debug("New location: " + location);
+//            response = get(location);
+//        }
+//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
+//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+        // that response object should have a transfer document in it with the protocol endpoints added
+
+        log.debug("last GET text: " + response.getText());
+        TransferReader tr = new TransferReader();
+        Transfer augmented = tr.read(response.getText(),VOSURI.SCHEME);
+
+        // Get the UWS job that was just created/updated
+        WebResponse jobResponse = get(jobPath);
+        log.debug("jobPath response text: " + jobResponse.getText());
+
+        // Job phase should be whatever is passed in to check.
+        JobReader jobReader = new JobReader();
+        Job job = jobReader.read(new StringReader(jobResponse.getText()));
+
+        return new TransferResult(augmented, job, jobPath);
+    }
+
 
 }

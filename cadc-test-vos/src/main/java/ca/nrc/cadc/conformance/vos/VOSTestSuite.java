@@ -103,6 +103,7 @@ import ca.nrc.cadc.util.Log4jInit;
     DeleteDataNodeTest.class,
     DeleteLinkNodeTest.class,
     SyncPullFromVOSpaceTest.class,
+    SyncPullFromVOSpacePackageTest.class,
     SyncPushToVOSpaceTest.class,
     AsyncPullFromVOSpaceTest.class,
     AsyncPushToVOSpaceTest.class

@@ -387,25 +387,11 @@ public class TransferRunner implements JobRunner {
 
             // standard redirect
             StringBuilder sb = new StringBuilder();
-            sb.append("/");
-            URI standard = null;
+            sb.append("/").append(job.getID()).append("/results/transferDetails");
 
             try {
-                if (TransferUtil.isPackageTransfer(trans)) {
-                    standard = Standards.PKG_10;
-
-                    // package view is redirected to /vault/pkg/<jobid>
-                    sb.append(job.getID());
-                } else {
-                    // standard transfer redirect
-                    standard = Standards.VOSPACE_TRANSFERS_20;
-
-                    // redirected to /vault/synctrans/<jobid>/results/transferDetails
-                    sb.append(job.getID()).append("/results/transferDetails");
-                }
-
                 AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-                URL serviceURL = regClient.getServiceURL(serviceURI, standard, authMethod);
+                URL serviceURL = regClient.getServiceURL(serviceURI,  Standards.VOSPACE_TRANSFERS_20, authMethod);
                 URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);

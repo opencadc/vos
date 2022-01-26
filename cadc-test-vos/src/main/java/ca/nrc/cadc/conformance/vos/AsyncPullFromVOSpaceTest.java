@@ -106,7 +106,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
     }
 
     public AsyncPullFromVOSpaceTest()

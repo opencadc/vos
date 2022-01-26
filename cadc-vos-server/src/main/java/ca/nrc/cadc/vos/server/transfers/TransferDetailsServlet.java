@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server.transfers;
 
+import ca.nrc.cadc.reg.Standards;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -169,7 +170,6 @@ public class TransferDetailsServlet extends HttpServlet
 
         try
         {
-
             log.info(logInfo.start());
 
             Subject subject = AuthenticationUtil.getSubject(request);
@@ -274,6 +274,13 @@ public class TransferDetailsServlet extends HttpServlet
                     TransferReader reader = new TransferReader();
                     Transfer transfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
                     Direction dir = transfer.getDirection();
+
+                    // Check early to see if this is a package transfer request
+                    boolean isPackageTransfer = false;
+                    if (transfer.getView().getURI().equals(Standards.PKG_10)) {
+                        isPackageTransfer = true;
+                    }
+
                     // if data node path is not in the results, transfer
                     // cannot happen so remove protocols in the transfer
                     boolean dataNodeFound = false;
@@ -287,18 +294,18 @@ public class TransferDetailsServlet extends HttpServlet
                     }
                     if (!dataNodeFound)
                     {
-                        // clear protocol list
-                        transfer.getProtocols().clear();
+                        if (!isPackageTransfer) {
+                            // clear protocol list
+                            transfer.getProtocols().clear();
+                        }
                     }
 
-                    // CADC-10640: even though there is a list of targets in the Transfer
-                    // class, currently none of the VOSpace services work with more than one target.
-                    // When tar and zip views are supported, this will change, and the check for
-                    // count of targets will depend on the Direction and View provided
                     if (transfer.getTargets().isEmpty()) {
                         throw new UnsupportedOperationException("No targets found.");
                     }
-                    if (transfer.getTargets().size() > 1) {
+
+                    if (transfer.getTargets().size() > 1 && !isPackageTransfer) {
+                        // Multiple targets are currently only supported for package transfers
                         throw new UnsupportedOperationException("More than one target found. (" + transfer.getTargets().size() + ")");
                     }
 
@@ -317,14 +324,22 @@ public class TransferDetailsServlet extends HttpServlet
 //                        }
                         List<Parameter> additionalParams = new ArrayList<Parameter>(0);
                         List<Protocol> proto = new ArrayList<>(0);
-                        if (!transfer.getProtocols().isEmpty()) {
+
+                        if (isPackageTransfer) {
+                            proto = TransferUtil.getPackageEndpoints(transfer, job);
+                        } else if (!transfer.getProtocols().isEmpty()) {
                             proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
                         }
-                        // This is safe for now because of the check above (CADC-10640)
-                        Transfer result = new Transfer(transfer.getTargets().get(0), dir);
-                        result.getProtocols().addAll(proto);
+                        // Set up the base transfer result. Targets are added in next conditional section
+                        Transfer result = new Transfer(dir);
+
+                        // Bring over transfer information that hasn't changed
+                        result.getTargets().addAll(transfer.getTargets());
                         result.version = transfer.version;
                         result.setContentLength(transfer.getContentLength());
+
+                        // Add protocol list with endpoints just built
+                        result.getProtocols().addAll(proto);
 
                         response.setContentType("text/xml");
                         Writer out = response.getWriter();
