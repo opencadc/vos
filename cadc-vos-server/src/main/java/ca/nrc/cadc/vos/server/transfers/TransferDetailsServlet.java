@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2021.                            (c) 2021.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.server.transfers;
 
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.vos.View;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -105,7 +106,7 @@ import ca.nrc.cadc.vos.VOSURI;
 
 public class TransferDetailsServlet extends HttpServlet
 {
-    private static final long serialVersionUID = 201005130927L;
+    private static final long serialVersionUID = 2022026164700L;
 
     private static Logger log = Logger.getLogger(TransferDetailsServlet.class);
 
@@ -277,7 +278,8 @@ public class TransferDetailsServlet extends HttpServlet
 
                     // Check early to see if this is a package transfer request
                     boolean isPackageTransfer = false;
-                    if (transfer.getView().getURI().equals(Standards.PKG_10)) {
+                    View transferView = transfer.getView();
+                    if (transferView != null && transferView.getURI().equals(Standards.PKG_10)) {
                         isPackageTransfer = true;
                     }
 
@@ -300,6 +302,8 @@ public class TransferDetailsServlet extends HttpServlet
                         }
                     }
 
+                    // Perform a bit of validation, and determine if this is a package
+                    // transfer or not as the handling is a little different
                     if (transfer.getTargets().isEmpty()) {
                         throw new UnsupportedOperationException("No targets found.");
                     }

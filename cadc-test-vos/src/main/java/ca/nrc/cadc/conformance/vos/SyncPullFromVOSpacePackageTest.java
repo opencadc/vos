@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2021.                            (c) 2021.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,29 +70,21 @@
 package ca.nrc.cadc.conformance.vos;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
 import com.meterware.httpunit.WebResponse;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -112,25 +104,20 @@ import org.xml.sax.SAXException;
  *
  * @author jeevesh
  */
-public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
-{
+public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
     private static Logger log = Logger.getLogger(SyncPullFromVOSpacePackageTest.class);
 
-    static
-    {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
+    static {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
 
-    public SyncPullFromVOSpacePackageTest()
-    {
+    public SyncPullFromVOSpacePackageTest() {
         super(Standards.VOSPACE_SYNC_21, Standards.VOSPACE_NODES_20);
     }
 
     @Test
-    public void testPullFromVOSpaceTarPackage()
-    {
-        try
-        {
+    public void testPullFromVOSpaceTarPackage() {
+        try {
             log.debug("testPullFromVOSpaceTarPackage");
 
             URI testURI1 = new URI("vos://cadc.nrc.ca~vospace/pkgTestURI1");
@@ -170,21 +157,17 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
             }
 
             log.info("testPullFromVOSpaceTarPackage passed.");
-        }
-        catch (Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
 
-//    @Test
-    public void testBadPullFromVOSpacePkgNoProtocols()
-    {
-        try
-        {
-            log.debug("testBadPullFromVOSpacePkgNoProtocols");
+    @Test
+    public void testPullFromVOSpacePkgNoProtocols() {
+        try {
+            log.debug("testPullFromVOSpacePkgNoProtocols");
 
             // This test doesn't need data nodes created, it should only be manipulating the Job
             URI testURI1 = new URI("vos://cadc.test/pkgTestURI1");
@@ -214,20 +197,16 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
             List<Protocol> protocolList = result.transfer.getProtocols();
             Assert.assertTrue("protocol list should be empty: " + protocolList.size(), protocolList.isEmpty());
 
-            log.info("testBadPullFromVOSpacePkgNoProtocols passed.");
-        }
-        catch (Exception unexpected)
-        {
+            log.info("testPullFromVOSpacePkgNoProtocols passed.");
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
-//    @Test
-    public void testBadPullFromVOSpaceTarPkgNoTargets()
-    {
-        try
-        {
+    @Test
+    public void testBadPullFromVOSpaceTarPkgNoTargets() {
+        try {
             log.debug("testBadPullFromVOSpaceTarPkgNoTargets");
 
             // Create the Transfer.
@@ -253,14 +232,9 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
             WebResponse response = post(sw.toString());
             assertEquals("POST response code should be 500", 500, response.getResponseCode());
 
-//            // Job phase should be ERROR.
-//            assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
-
             // Nothing to clean up
             log.info("testBadPullFromVOSpaceTarPkgNoTargets passed.");
-        }
-        catch (Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
@@ -282,29 +256,20 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest
 
         // There are a few redirects to get to the end
         // goes through xfer apparently...
-        response = followRedirects(location);
+        response = get(location);
+        response = followRedirects(location, response);
 
-//        while (303 == response.getResponseCode())
-//        {
-//            location = response.getHeaderField("Location");
-//            assertNotNull("Location header not set", location);
-//            log.debug("New location: " + location);
-//            response = get(location);
-//        }
-//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
-//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-        // that response object should have a transfer document in it with the protocol endpoints added
-
+        // Build up the objects needed for the outgoing TransferResult
+        // followRedirects response object should have a transfer document in it with the protocol endpoints added
         log.debug("last GET text: " + response.getText());
         TransferReader tr = new TransferReader();
         Transfer augmented = tr.read(response.getText(),VOSURI.SCHEME);
 
-        // Get the UWS job that was just created/updated
+        // Get the UWS job that was just created/updated (jobPath will be
+        // similar to /vault/transfer/<jobid>
         WebResponse jobResponse = get(jobPath);
         log.debug("jobPath response text: " + jobResponse.getText());
 
-        // Job phase should be whatever is passed in to check.
         JobReader jobReader = new JobReader();
         Job job = jobReader.read(new StringReader(jobResponse.getText()));
 

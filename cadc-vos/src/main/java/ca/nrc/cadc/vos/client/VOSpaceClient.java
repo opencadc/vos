@@ -649,7 +649,6 @@ public class VOSpaceClient
             {
                 log.debug("POST: transfer jobURL: " + redirectURL);
 
-
                 // follow the redirect to run the job
                 log.debug("GET - opening connection: " + redirectURL.toString());
                 ByteArrayOutputStream out = new ByteArrayOutputStream();

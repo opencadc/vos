@@ -83,14 +83,12 @@ import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Date;
 import org.apache.log4j.Logger;
 
 /**
@@ -131,8 +129,12 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
         try {
 
             if (isPackageViewTransfer) {
-                // changing job to PENDING here
+                // Set job back to PENDING so next service in the chain can pick it up
+                // (in this case /vault/pkg/<jobid>
                 updateTransferJob(null, null, ExecutionPhase.PENDING);
+
+                // Set this value so in the finally clause updateTransferJob() is not
+                // run again.
                 updated = true;
                 return;
             }

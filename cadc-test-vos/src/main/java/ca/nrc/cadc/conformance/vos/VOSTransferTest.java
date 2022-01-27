@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -124,11 +124,7 @@ public class VOSTransferTest extends VOSBaseTest
         throws IOException, SAXException, JDOMException, ParseException
     {
         // Get the transfer XML.
-//        TransferWriter writer = new TransferWriter();
-//        StringWriter sw = new StringWriter();
-//        writer.write(transfer, sw);
         StringWriter sw = getTransferXML(transfer);
-
 
         // POST the XML to the transfer endpoint.
         WebResponse response = post(sw.toString());
@@ -140,13 +136,8 @@ public class VOSTransferTest extends VOSBaseTest
 
         // Follow all the redirects.
         response = get(location);
-        while (303 == response.getResponseCode())
-        {
-            location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            log.debug("New location: " + location);
-            response = get(location);
-        }
+        // Get the location and follow all the redirects.
+        response = followRedirects(location, response);
 
         // read the response job doc.
         String xml = response.getText();
@@ -198,11 +189,7 @@ public class VOSTransferTest extends VOSBaseTest
     protected TransferResult doSyncTransfer(Transfer transfer)
         throws IOException, SAXException, TransferParsingException
     {
-//        // Get the transfer XML.
-//        TransferWriter writer = new TransferWriter();
-//        StringWriter sw = new StringWriter();
-//        writer.write(transfer, sw);
-
+        // Get the transfer XML.
         StringWriter sw = getTransferXML(transfer);
         
         log.debug("XML: " + sw.toString());
@@ -211,32 +198,15 @@ public class VOSTransferTest extends VOSBaseTest
         WebResponse response = post(sw.toString());
         assertEquals("POST response code should be 303", 303, response.getResponseCode());
 
-        // Get the header Location.
-//        String location = response.getHeaderField("Location");
-//        log.info("Location: " + location);
-//        assertNotNull("Location header not set", location);
-//        assertTrue("../results/transferDetails location expected: ",
-//                location.endsWith("/results/transferDetails"));
-
+        // Get and verify the header Location.
         String location = verifyLocation(response);
 
-//        // Parse out the path to the Job.
-//        int index = location.indexOf("/results/transferDetails");
-//        String jobPath = location.substring(0, index);
+        // Parse out the path to the Job.
         String jobPath = getJobPath(location);
 
-        // Follow all the redirects.
-//        response = get(location);
-//        while (303 == response.getResponseCode())
-//        {
-//            location = response.getHeaderField("Location");
-//            assertNotNull("Location header not set", location);
-//            log.debug("New location: " + location);
-//            response = get(location);
-//        }
-//        assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-        response = followRedirects(location);
+        // Get the locaion and follow all the redirects.
+        response = get(location);
+        response = followRedirects(location, response);
 
         // Get the Transfer XML.
         String xml = response.getText();
@@ -245,56 +215,17 @@ public class VOSTransferTest extends VOSBaseTest
         // Create a Transfer from Transfer XML.
         TransferReader reader = new TransferReader();
         transfer = reader.read(xml, VOSURI.SCHEME);
+
         // Job not returned here because it is a sync transfer
         return new TransferResult(transfer, null, jobPath);
     }
 
-    protected WebResponse followRedirects(String location) throws IOException, SAXException {
-        WebResponse resp = get(location);
-        while (303 == resp.getResponseCode())
-        {
-            location = resp.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            log.debug("New location: " + location);
-            resp = get(location);
-        }
-        assertEquals("GET response code should be 200", 200, resp.getResponseCode());
-        return resp;
-    }
-
-    protected String getJobPath(String location) {
-        // Parse out the path to the Job.
-        int index = location.indexOf("/results/transferDetails");
-        return location.substring(0, index);
-    }
-
-    protected String verifyLocation(WebResponse response) {
-        // Get the header Location.
-        String location = response.getHeaderField("Location");
-        log.info("Location: " + location);
-        assertNotNull("Location header not set", location);
-        assertTrue("../results/transferDetails location expected: ",
-            location.endsWith("/results/transferDetails"));
-        return location;
-    }
-
-    protected StringWriter getTransferXML(Transfer transfer) throws IOException {
-        // Get the transfer XML.
-        TransferWriter writer = new TransferWriter();
-        StringWriter sw = new StringWriter();
-        writer.write(transfer, sw);
-        return sw;
-    }
 
 
     protected TransferResult doAsyncTransfer(Transfer transfer)
         throws IOException, SAXException, JDOMException, ParseException, InterruptedException, TransferParsingException
     {
-//        // Get the transfer XML.
-//        TransferWriter writer = new TransferWriter();
-//        StringWriter sw = new StringWriter();
-//        writer.write(transfer, sw);
-
+        // Get the transfer XML.
         StringWriter sw = getTransferXML(transfer);
 
         // POST the XML to the transfer endpoint.
@@ -306,13 +237,15 @@ public class VOSTransferTest extends VOSBaseTest
         assertNotNull("Location header not set", location);
 
         // Follow the redirect.
-        while (303 == response.getResponseCode())
-        {
-            location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            log.debug("New location: " + location);
-            response = get(location);
-        }
+        // TOOD: remove this and other commmented code when the functions are proven to work
+//        while (303 == response.getResponseCode())
+//        {
+//            location = response.getHeaderField("Location");
+//            assertNotNull("Location header not set", location);
+//            log.debug("New location: " + location);
+//            response = get(location);
+//        }
+        response = followRedirects( location, response);
 
         // read the response job doc.
         String xml = response.getText();
@@ -395,6 +328,42 @@ public class VOSTransferTest extends VOSBaseTest
         }
 
         return new TransferResult(transfer, job, location);
+    }
+
+    protected WebResponse followRedirects(String location, WebResponse resp) throws IOException, SAXException {
+        while (303 == resp.getResponseCode())
+        {
+            location = resp.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            log.debug("New location: " + location);
+            resp = get(location);
+        }
+        assertEquals("GET response code should be 200", 200, resp.getResponseCode());
+        return resp;
+    }
+
+    protected String getJobPath(String location) {
+        // Parse out the path to the Job.
+        int index = location.indexOf("/results/transferDetails");
+        return location.substring(0, index);
+    }
+
+    protected String verifyLocation(WebResponse response) {
+        // Get the header Location.
+        String location = response.getHeaderField("Location");
+        log.info("Location: " + location);
+        assertNotNull("Location header not set", location);
+        assertTrue("../results/transferDetails location expected: ",
+            location.endsWith("/results/transferDetails"));
+        return location;
+    }
+
+    protected StringWriter getTransferXML(Transfer transfer) throws IOException {
+        // Get the transfer XML.
+        TransferWriter writer = new TransferWriter();
+        StringWriter sw = new StringWriter();
+        writer.write(transfer, sw);
+        return sw;
     }
 
     protected class TransferResult
