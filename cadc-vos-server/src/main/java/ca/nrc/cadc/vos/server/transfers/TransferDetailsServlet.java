@@ -344,6 +344,7 @@ public class TransferDetailsServlet extends HttpServlet
 
                         // Add protocol list with endpoints just built
                         result.getProtocols().addAll(protos);
+                        result.setView(transfer.getView());
 
                         response.setContentType("text/xml");
                         Writer out = response.getWriter();
