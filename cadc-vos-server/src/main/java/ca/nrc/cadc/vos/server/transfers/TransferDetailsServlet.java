@@ -327,12 +327,12 @@ public class TransferDetailsServlet extends HttpServlet
 //                            }
 //                        }
                         List<Parameter> additionalParams = new ArrayList<Parameter>(0);
-                        List<Protocol> proto = new ArrayList<>(0);
+                        List<Protocol> protos = new ArrayList<>(0);
 
                         if (isPackageTransfer) {
-                            proto = TransferUtil.getPackageEndpoints(transfer, job);
+                            protos = TransferUtil.getPackageEndpoints(transfer, job);
                         } else if (!transfer.getProtocols().isEmpty()) {
-                            proto = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
+                            protos = TransferUtil.getTransferEndpoints(transfer, job, additionalParams);
                         }
                         // Set up the base transfer result. Targets are added in next conditional section
                         Transfer result = new Transfer(dir);
@@ -343,7 +343,7 @@ public class TransferDetailsServlet extends HttpServlet
                         result.setContentLength(transfer.getContentLength());
 
                         // Add protocol list with endpoints just built
-                        result.getProtocols().addAll(proto);
+                        result.getProtocols().addAll(protos);
 
                         response.setContentType("text/xml");
                         Writer out = response.getWriter();

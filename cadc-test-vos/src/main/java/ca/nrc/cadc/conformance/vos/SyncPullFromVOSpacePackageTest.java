@@ -108,7 +108,8 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
     private static Logger log = Logger.getLogger(SyncPullFromVOSpacePackageTest.class);
 
     static {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server.transfers", Level.DEBUG);
     }
 
     public SyncPullFromVOSpacePackageTest() {
@@ -203,43 +204,6 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
-    @Test
-    public void testBadPullFromVOSpaceTarPkgNoTargets() {
-        try {
-            log.debug("testBadPullFromVOSpaceTarPkgNoTargets");
-
-            // Create the Transfer.
-            Transfer transfer = new Transfer(Direction.pullFromVoSpace);
-
-            // Forget to add the targets. Highly unlikely to happen, but testing anyway
-            // Add protocols
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            transfer.getProtocols().addAll(protocols);
-
-            // Add package view for tar file
-            View packageView = new View(new URI(Standards.PKG_10.toString()));
-            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
-            transfer.setView(packageView);
-
-            // Start the transfer.
-            StringWriter sw = getTransferXML(transfer);
-            log.debug("XML: " + sw.toString());
-
-            // POST the XML to the transfer endpoint.
-            WebResponse response = post(sw.toString());
-            assertEquals("POST response code should be 500", 500, response.getResponseCode());
-
-            // Nothing to clean up
-            log.info("testBadPullFromVOSpaceTarPkgNoTargets passed.");
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
 
     protected TransferResult doPkgTransfer(Transfer transfer)
         throws IOException, SAXException, JDOMException, ParseException, TransferParsingException {

@@ -69,6 +69,11 @@
 
 package ca.nrc.cadc.vos.server.transfers;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Capabilities;
+import ca.nrc.cadc.reg.Capability;
+import ca.nrc.cadc.reg.Interface;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -76,6 +81,9 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.security.auth.Subject;
@@ -240,12 +248,15 @@ public class TransferUtil
      * @throws MalformedURLException
      */
     public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
-        throws MalformedURLException, IllegalArgumentException {
+        throws IOException, IllegalArgumentException, ResourceNotFoundException {
 
         // package view is redirected to /vault/pkg/<jobid>
         // making an endpoint for each protocol provided
 
         List<Protocol> protocolList = transfer.getProtocols();
+        List<Protocol> augmentedList = new ArrayList<>();
+        // Sort the protocols
+        Collections.sort(protocolList, new ProtocolComparator());
 
         if (!protocolList.isEmpty()) {
 
@@ -257,21 +268,40 @@ public class TransferUtil
             LocalServiceURI localServiceURI = new LocalServiceURI();
             URI serviceURI = localServiceURI.getURI();
             AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-            URL serviceURL = regClient.getServiceURL(serviceURI, Standards.PKG_10, authMethod);
-            if (serviceURL == null) {
+
+            // get capabilities list
+            // For each protocol get the right entry.
+            Capabilities caps = regClient.getCapabilities(serviceURI);
+            if (caps == null) {
                 throw new RuntimeException("Couldn't get serviceURL for URI: " + serviceURI.toString());
             }
-            URL location = new URL(serviceURL.toExternalForm() + sb.toString());
-            String loc = location.toExternalForm();
-            log.debug("Package endpoint: " + loc);
 
-            for (Protocol p : protocolList) {
-                p.setEndpoint(loc);
+            Capability cap = caps.findCapability(Standards.PKG_10);
+            if (cap == null) {
+                throw new RuntimeException("Couldn't get capabilities for URI: " + serviceURI.toString());
             }
-        }
+
+            // Get the interface that matches the current authMethod
+            Interface intf = cap.findInterface(authMethod);
+
+            if (intf != null) {
+                URL url = intf.getAccessURL().getURL();
+                URL location = new URL(url.toExternalForm() + sb.toString());
+                String loc = location.toExternalForm();
+                // go through each protocol and see which one the interface matches
+                for (Protocol p: protocolList) {
+                    if (getScheme(p.getUri()).equals(url.getProtocol())) {
+                            log.debug("setting package endpoint " + loc + " for protocol: " + url.getProtocol());
+                            p.setEndpoint(loc);
+                            augmentedList.add(p);
+                        }
+                    }
+
+                }
+            }
 
         // return the list even if it is empty
-        return protocolList;
+        return augmentedList;
     }
 
 
@@ -363,5 +393,55 @@ public class TransferUtil
         }
         return isPackageRequest;
     }
+
+    private static final List<String> PROTOCOL_PREF = Arrays.asList(
+        VOS.PROTOCOL_HTTPS_GET,
+        VOS.PROTOCOL_HTTP_GET,
+        VOS.PROTOCOL_HTTPS_PUT,
+        VOS.PROTOCOL_HTTP_PUT,
+        VOS.PROTOCOL_SSHFS);
+
+    private static final List<URI> SECURITY_METHOD_PREF = Arrays.asList(
+        Standards.SECURITY_METHOD_ANON,
+        Standards.SECURITY_METHOD_CERT,
+        Standards.SECURITY_METHOD_COOKIE,
+        Standards.SECURITY_METHOD_TOKEN,
+        Standards.SECURITY_METHOD_HTTP_BASIC);
+
+    public static class ProtocolComparator implements Comparator<Protocol> {
+
+        @Override
+        public int compare(Protocol lhs, Protocol rhs) {
+            // http before https
+            int i1 = PROTOCOL_PREF.indexOf(lhs.getUri());
+            int i2 = PROTOCOL_PREF.indexOf(rhs.getUri());
+            if (i1 < i2) {
+                return -1;
+            } else if (i1 > i2) {
+                return 1;
+            } // else: same protocol
+
+            // anon before auth
+            URI lhsURI = lhs.getSecurityMethod();
+            URI rhsURI = rhs.getSecurityMethod();
+            if (lhs.getSecurityMethod() == null) {
+                lhsURI = Standards.SECURITY_METHOD_ANON;
+            } else if (rhs.getSecurityMethod() == null) {
+                rhsURI = Standards.SECURITY_METHOD_ANON;
+            }
+            // explicit
+            i1 = SECURITY_METHOD_PREF.indexOf(lhsURI);
+            i2 = SECURITY_METHOD_PREF.indexOf(rhsURI);
+            if (i1 < i2) {
+                return -1;
+            } else if (i1 > i2) {
+                return 1;
+            } // else: same securityMethod
+
+            // leave order alone
+            return 0;
+        }
+    }
+
 
 }

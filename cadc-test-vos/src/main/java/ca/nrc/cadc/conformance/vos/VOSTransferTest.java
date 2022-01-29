@@ -237,14 +237,6 @@ public class VOSTransferTest extends VOSBaseTest
         assertNotNull("Location header not set", location);
 
         // Follow the redirect.
-        // TOOD: remove this and other commmented code when the functions are proven to work
-//        while (303 == response.getResponseCode())
-//        {
-//            location = response.getHeaderField("Location");
-//            assertNotNull("Location header not set", location);
-//            log.debug("New location: " + location);
-//            response = get(location);
-//        }
         response = followRedirects( location, response);
 
         // read the response job doc.

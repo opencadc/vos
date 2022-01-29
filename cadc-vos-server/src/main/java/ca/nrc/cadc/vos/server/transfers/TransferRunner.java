@@ -398,9 +398,7 @@ public class TransferRunner implements JobRunner {
                 syncOutput.setHeader("Location", loc);
                 syncOutput.setResponseCode(HttpURLConnection.HTTP_SEE_OTHER);
                 return;
-            } catch (MalformedURLException | UnsupportedOperationException bug) {
-                // UnsupportedOperationException comes from TransferUtil.getStandardForPackageType,
-                // if an unsupported package type is requested
+            } catch (MalformedURLException bug) {
                 throw new RuntimeException("BUG: failed to create valid transferDetails URL", bug);
             }
         }
