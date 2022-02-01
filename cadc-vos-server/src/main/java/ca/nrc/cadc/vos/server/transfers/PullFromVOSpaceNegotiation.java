@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos.server.transfers;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
@@ -83,12 +84,15 @@ import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
 
 /**
@@ -133,6 +137,20 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
                 // (in this case /vault/pkg/<jobid>
                 updateTransferJob(null, null, ExecutionPhase.PENDING);
 
+                // Add responseFormat parameter to the job, using the parameter
+                // type from the view
+                Parameter p = TransferUtil.viewParam2JobParam(VOS.PROPERTY_URI_FORMAT,
+                    "responseFormat", transfer);
+
+                if (p != null) {
+                    // View parameter with uri=VOS.PROPERTY_URI_FORMAT found
+                    List<Parameter> params = new ArrayList<>();
+                    params.add(p);
+
+                    // need job id here, and uws parameter made from transfer view paramter
+                    jobUpdater.addParameters(job.getID(), params);
+                }
+
                 // Set this value so in the finally clause updateTransferJob() is not
                 // run again.
                 updated = true;
@@ -140,8 +158,7 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
             }
 
             // Even though Transfer.java supports multiple targets, this type
-            // of transfer does not yet. When view=zip | tar is implemented,
-            // this is likely to change.
+            // of transfer does not yet.
             // This call confirms a single target exists or throws TransferException.
             TransferUtil.confirmSingleTarget(transfer);
 
@@ -149,7 +166,11 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
 
             PathResolver resolver = new PathResolver(nodePersistence);
 
-            // TODO: change this to check all targets provided in the transfer
+            // In future: change this to check all targets provided in the transfer
+            // Check at line 163 ensures this part of the code will only be arrived at
+            // if one target is given. Supporting multiple targets for anything other
+            // than zip|tar packages is considered outside scope
+            // of CADC-10509 - supporting package delivery.
             // careful to capture a link to data node so we can get the right filename in the transfer
             Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
             Node actualNode = apparentNode;

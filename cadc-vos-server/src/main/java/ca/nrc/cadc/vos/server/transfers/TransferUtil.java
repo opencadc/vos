@@ -394,6 +394,24 @@ public class TransferUtil
         return isPackageRequest;
     }
 
+    public static Parameter viewParam2JobParam(String viewParamURI, String paramName, Transfer transfer) {
+        View v = transfer.getView();
+        Parameter uwsParam = null;
+
+        if (v != null) {
+            for (View.Parameter p: v.getParameters()) {
+                if (p.getUri().toString().equals(viewParamURI)) {
+                    log.debug("found View param" + viewParamURI + ": " + p.getValue());
+                    uwsParam = new Parameter(paramName, p.getValue());
+                }
+            }
+        }
+        return uwsParam;
+    }
+
+
+    // For sorting Protocols
+
     private static final List<String> PROTOCOL_PREF = Arrays.asList(
         VOS.PROTOCOL_HTTPS_GET,
         VOS.PROTOCOL_HTTP_GET,

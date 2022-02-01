@@ -76,6 +76,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
@@ -108,8 +109,8 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
     private static Logger log = Logger.getLogger(SyncPullFromVOSpacePackageTest.class);
 
     static {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vos.server.transfers", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server.transfers", Level.INFO);
     }
 
     public SyncPullFromVOSpacePackageTest() {
@@ -139,13 +140,27 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
 
             // Add package view for tar file
             View packageView = new View(new URI(Standards.PKG_10.toString()));
-            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
+            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_FORMAT), "application/x-tar"));
             transfer.setView(packageView);
 
             TransferResult result = doPkgTransfer(transfer);
 
             // Job phase should be PENDING.
             assertEquals("Job phase should be PENDING", ExecutionPhase.PENDING, result.job.getExecutionPhase());
+
+            // responseFormat should be added as a job parameter
+            List<Parameter> pList = result.job.getParameterList();
+            Assert.assertFalse("job parameter list empty", pList.isEmpty());
+            boolean found = false;
+            for (Parameter p: pList) {
+                log.debug("parameter: " + p.getName() + ": " + p.getValue());
+                if (p.getName().equals("responseFormat")) {
+                    found = true;
+                    break;
+                }
+            }
+            Assert.assertTrue("responseFormat parameter not found", found == true);
+
 
             // Check the protocol objects to make sure endpoints are added
             List<Protocol> protocolList = result.transfer.getProtocols();
@@ -185,7 +200,7 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
 
             // Add package view for tar file
             View packageView = new View(new URI(Standards.PKG_10.toString()));
-            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_ACCEPT), "tar"));
+            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_FORMAT), "application/x-tar"));
             transfer.setView(packageView);
 
             TransferResult result = doPkgTransfer(transfer);
@@ -236,6 +251,8 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
 
         JobReader jobReader = new JobReader();
         Job job = jobReader.read(new StringReader(jobResponse.getText()));
+
+        log.debug("job parameters: " + job.getParameterList());
 
         return new TransferResult(augmented, job, jobPath);
     }

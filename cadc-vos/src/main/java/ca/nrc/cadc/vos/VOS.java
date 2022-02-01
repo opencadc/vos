@@ -269,8 +269,6 @@ public class VOS
     // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
     public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
 
-    // property to designate an accept header value
-    public static final String PROPERTY_URI_ACCEPT = "ivo://ivoa.net/vospace/core#accept";
 
     /*
      * CADC Node Properties
