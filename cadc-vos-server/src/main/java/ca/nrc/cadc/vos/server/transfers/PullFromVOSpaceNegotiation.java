@@ -137,10 +137,10 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
                 // (in this case /vault/pkg/<jobid>
                 updateTransferJob(null, null, ExecutionPhase.PENDING);
 
-                // Add responseFormat parameter to the job, using the parameter
+                // Add RESPONSEFORMAT parameter to the job, using the parameter
                 // type from the view
                 Parameter p = TransferUtil.viewParam2JobParam(VOS.PROPERTY_URI_FORMAT,
-                    "responseFormat", transfer);
+                    "RESPONSEFORMAT", transfer);
 
                 if (p != null) {
                     // View parameter with uri=VOS.PROPERTY_URI_FORMAT found
@@ -166,11 +166,6 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
 
             PathResolver resolver = new PathResolver(nodePersistence);
 
-            // In future: change this to check all targets provided in the transfer
-            // Check at line 163 ensures this part of the code will only be arrived at
-            // if one target is given. Supporting multiple targets for anything other
-            // than zip|tar packages is considered outside scope
-            // of CADC-10509 - supporting package delivery.
             // careful to capture a link to data node so we can get the right filename in the transfer
             Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
             Node actualNode = apparentNode;

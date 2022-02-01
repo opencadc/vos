@@ -148,18 +148,18 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
             // Job phase should be PENDING.
             assertEquals("Job phase should be PENDING", ExecutionPhase.PENDING, result.job.getExecutionPhase());
 
-            // responseFormat should be added as a job parameter
+            // RESPONSEFORMAT should be added as a job parameter
             List<Parameter> pList = result.job.getParameterList();
             Assert.assertFalse("job parameter list empty", pList.isEmpty());
             boolean found = false;
             for (Parameter p: pList) {
                 log.debug("parameter: " + p.getName() + ": " + p.getValue());
-                if (p.getName().equals("responseFormat")) {
+                if (p.getName().equals("RESPONSEFORMAT")) {
                     found = true;
                     break;
                 }
             }
-            Assert.assertTrue("responseFormat parameter not found", found == true);
+            Assert.assertTrue("RESPONSEFORMAT parameter not found", found == true);
 
 
             // Check the protocol objects to make sure endpoints are added

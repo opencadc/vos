@@ -255,8 +255,6 @@ public class TransferUtil
 
         List<Protocol> protocolList = transfer.getProtocols();
         List<Protocol> augmentedList = new ArrayList<>();
-        // Sort the protocols
-        Collections.sort(protocolList, new ProtocolComparator());
 
         if (!protocolList.isEmpty()) {
 
@@ -300,6 +298,9 @@ public class TransferUtil
                 }
             }
 
+
+        // Sort the protocols
+        Collections.sort(augmentedList, new ProtocolComparator());
         // return the list even if it is empty
         return augmentedList;
     }
