@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2011.                            (c) 2011.
+ *  (c) 2021.                            (c) 2021.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos.server.transfers;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
@@ -83,12 +84,15 @@ import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
 
 /**
@@ -98,11 +102,26 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
     private static final Logger log = Logger.getLogger(PullFromVOSpaceNegotiation.class);
 
     private VOSpaceAuthorizer authorizer;
+    private boolean isPackageViewTransfer = false;
 
     public PullFromVOSpaceNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
         this.authorizer = new VOSpaceAuthorizer(true);
         authorizer.setNodePersistence(nodePersistence);
+    }
+
+    @Override
+    public void validateView() throws IllegalArgumentException,
+            TransferException, Exception {
+        // There is no representation for the package view in View.properties,
+        // so this function needs to do some extra work for this instance.
+        // For all other View values, the standard validation is performed.
+
+        if (TransferUtil.isPackageTransfer(transfer)) {
+            isPackageViewTransfer = true;
+        } else {
+            super.validateView();
+        }
     }
 
     @Override
@@ -112,9 +131,34 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
         IOException, TransientException, URISyntaxException {
         boolean updated = false;
         try {
+
+            if (isPackageViewTransfer) {
+                // Set job back to PENDING so next service in the chain can pick it up
+                // (in this case /vault/pkg/<jobid>
+                updateTransferJob(null, null, ExecutionPhase.PENDING);
+
+                // Add RESPONSEFORMAT parameter to the job, using the parameter
+                // type from the view
+                Parameter p = TransferUtil.viewParam2JobParam(VOS.PROPERTY_URI_FORMAT,
+                    "RESPONSEFORMAT", transfer);
+
+                if (p != null) {
+                    // View parameter with uri=VOS.PROPERTY_URI_FORMAT found
+                    List<Parameter> params = new ArrayList<>();
+                    params.add(p);
+
+                    // need job id here, and uws parameter made from transfer view paramter
+                    jobUpdater.addParameters(job.getID(), params);
+                }
+
+                // Set this value so in the finally clause updateTransferJob() is not
+                // run again.
+                updated = true;
+                return;
+            }
+
             // Even though Transfer.java supports multiple targets, this type
-            // of transfer does not yet. When view=zip | tar is implemented,
-            // this is likely to change.
+            // of transfer does not yet.
             // This call confirms a single target exists or throws TransferException.
             TransferUtil.confirmSingleTarget(transfer);
 
@@ -122,7 +166,6 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
 
             PathResolver resolver = new PathResolver(nodePersistence);
 
-            // TODO: change this to check all targets provided in the transfer
             // careful to capture a link to data node so we can get the right filename in the transfer
             Node apparentNode = resolver.resolveWithReadPermissionCheck(target, authorizer, false);
             Node actualNode = apparentNode;

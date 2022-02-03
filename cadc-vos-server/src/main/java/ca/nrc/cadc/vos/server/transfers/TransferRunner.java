@@ -68,6 +68,7 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
@@ -387,9 +388,10 @@ public class TransferRunner implements JobRunner {
             // standard redirect
             StringBuilder sb = new StringBuilder();
             sb.append("/").append(job.getID()).append("/results/transferDetails");
+
             try {
                 AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
-                URL serviceURL = regClient.getServiceURL(serviceURI, Standards.VOSPACE_TRANSFERS_20, authMethod);
+                URL serviceURL = regClient.getServiceURL(serviceURI,  Standards.VOSPACE_TRANSFERS_20, authMethod);
                 URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);

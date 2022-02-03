@@ -649,7 +649,6 @@ public class VOSpaceClient
             {
                 log.debug("POST: transfer jobURL: " + redirectURL);
 
-
                 // follow the redirect to run the job
                 log.debug("GET - opening connection: " + redirectURL.toString());
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -669,10 +668,7 @@ public class VOSpaceClient
                 log.debug("GET - done: " + redirectURL);
                 log.debug("negotiated transfer: " + trans);
 
-                //URL jobURL = extractJobURL(vospaceURL.toString(), redirectURL);
-                // temporary hack:
-                URL jobURL = new URL(redirectURL.toString().substring(0, redirectURL.toString().length() - "/results/transferDetails".length()));
-
+                URL jobURL = extractJobURL(redirectURL);
                 log.debug("extracted job url: " + jobURL);
                 return new ClientTransfer(jobURL, trans, schemaValidation);
             }
@@ -704,6 +700,27 @@ public class VOSpaceClient
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Extract parts of the redirectURL that are needed.
+     * @param redirectURL
+     * @return
+     * @throws MalformedURLException
+     */
+    private URL extractJobURL(URL redirectURL) throws MalformedURLException {
+        URL returnURL = null;
+
+        if (redirectURL.toString().contains("transferDetails")) {
+            // standard redirectURL in this case needs the last 2 elements removed
+            // This had 'temporary hack' comment on it when it was around line 672,
+            // where this function is called from
+            returnURL = new URL(redirectURL.toString().substring(0, redirectURL.toString().length() - "/results/transferDetails".length()));
+        } else {
+            returnURL = redirectURL;
+        }
+
+        return returnURL;
     }
 
     private class NodeOutputStream implements OutputStreamWrapper
