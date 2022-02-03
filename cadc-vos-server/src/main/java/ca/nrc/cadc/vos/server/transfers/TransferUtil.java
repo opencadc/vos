@@ -239,7 +239,7 @@ public class TransferUtil
     }
 
     /**
-     * Generate a Protocol list with endpoints set to /vault/pkg/<jobid>. One entry for every protocol in
+     * Generate a Protocol list with endpoints set to /vault/pkg/jobid. One entry for every protocol in
      * the transfer provided. Use the jobID from the job provided.
      * @param transfer
      * @param job
