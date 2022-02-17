@@ -260,7 +260,7 @@ public class TransferUtil
 
             StringBuilder sb = new StringBuilder();
             String jobID = job.getID();
-            sb.append("/").append(jobID);
+            sb.append("/").append(jobID).append("/run");
 
             RegistryClient regClient = new RegistryClient();
             LocalServiceURI localServiceURI = new LocalServiceURI();

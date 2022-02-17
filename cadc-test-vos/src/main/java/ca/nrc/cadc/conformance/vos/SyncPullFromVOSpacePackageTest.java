@@ -117,8 +117,19 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
         super(Standards.VOSPACE_SYNC_21, Standards.VOSPACE_NODES_20);
     }
 
+
     @Test
     public void testPullFromVOSpaceTarPackage() {
+        doTest("application/x-tar");
+    }
+
+
+    @Test
+    public void testPullFromVOSpaceZipPackage() {
+        doTest("application/zip");
+    }
+
+    private void doTest(String mimeType) {
         try {
             log.debug("testPullFromVOSpaceTarPackage");
 
@@ -140,7 +151,7 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
 
             // Add package view for tar file
             View packageView = new View(new URI(Standards.PKG_10.toString()));
-            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_FORMAT), "application/x-tar"));
+            packageView.getParameters().add(new View.Parameter(new URI(VOS.PROPERTY_URI_FORMAT), mimeType));
             transfer.setView(packageView);
 
             TransferResult result = doPkgTransfer(transfer);
@@ -155,6 +166,7 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
             for (Parameter p: pList) {
                 log.debug("parameter: " + p.getName() + ": " + p.getValue());
                 if (p.getName().equals("RESPONSEFORMAT")) {
+                    Assert.assertTrue(p.getValue().equals(mimeType));
                     found = true;
                     break;
                 }
@@ -178,6 +190,7 @@ public class SyncPullFromVOSpacePackageTest extends VOSTransferTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
 
 
     @Test
