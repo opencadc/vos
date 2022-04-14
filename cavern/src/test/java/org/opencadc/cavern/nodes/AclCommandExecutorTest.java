@@ -68,6 +68,7 @@
 package org.opencadc.cavern.nodes;
 
 
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -113,6 +114,31 @@ public class AclCommandExecutorTest {
     }
     
     public AclCommandExecutorTest() { 
+    }
+
+    private boolean isMacOS() {
+        boolean isMacOS = false;
+
+        String[] cmd = new String[] {
+            "uname", "-s"
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() == 0) {
+            if ("Darwin".equals(grabber.getOutput())) {
+               isMacOS = true; 
+            }
+        }
+        
+        return isMacOS;
+    }
+    
+    private void handleException(Exception ex) throws Exception {
+       if (isMacOS()) {
+          log.warn(ex.getMessage());
+       } else {
+           throw ex;
+       }
     }
     
     @Test
@@ -160,7 +186,13 @@ public class AclCommandExecutorTest {
             acl.clearACL();
             rwActual = acl.getReadWriteACL(false);
             Assert.assertNull("clear read-write", rwActual);
-            
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -203,7 +235,13 @@ public class AclCommandExecutorTest {
             acl.clearACL();
             actual = acl.getReadOnlyACL(false);
             Assert.assertNull("clear read-write", actual);
-            
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);

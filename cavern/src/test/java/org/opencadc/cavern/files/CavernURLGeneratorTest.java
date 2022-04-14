@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
@@ -189,6 +190,31 @@ public class CavernURLGeneratorTest
         pubFile.delete();
         privFile.delete();
     }
+
+    private boolean isMacOS() {
+        boolean isMacOS = false;
+
+        String[] cmd = new String[] {
+            "uname", "-s"
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() == 0) {
+            if ("Darwin".equals(grabber.getOutput())) {
+               isMacOS = true; 
+            }
+        }
+        
+        return isMacOS;
+    }
+    
+    private void handleException(Exception ex) throws Exception {
+       if (isMacOS()) {
+          log.warn(ex.getMessage());
+       } else {
+           throw ex;
+       }
+    }
     
     @Test
     public void testNegotiateMount() {
@@ -219,7 +245,13 @@ public class CavernURLGeneratorTest
             Assert.assertNotNull(mnt);
             Assert.assertEquals("mount protocol", VOS.PROTOCOL_SSHFS, mnt.getUri());
             Assert.assertNotNull("mount endpoint", mnt.getEndpoint());
-            
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -254,7 +286,13 @@ public class CavernURLGeneratorTest
             String meta = parts[3];
             VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
             Assert.assertEquals(nodeURI, retURI);
-
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -291,7 +329,13 @@ public class CavernURLGeneratorTest
             } catch (IllegalArgumentException e) {
                 Assert.assertTrue(e.getMessage().contains("Wrong direction"));
             }
-
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -328,7 +372,13 @@ public class CavernURLGeneratorTest
             } catch (AccessControlException e) {
                 // expected
             }
-
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -370,7 +420,13 @@ public class CavernURLGeneratorTest
             } catch (AccessControlException e) {
                 // expected
             }
-
+        } catch (UnsupportedOperationException uoex) {
+            try {
+                handleException(uoex);
+            } catch (Exception unexpected) {
+                log.error("unexpected exception", unexpected);
+                Assert.fail("unexpected exception: " + unexpected);
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
