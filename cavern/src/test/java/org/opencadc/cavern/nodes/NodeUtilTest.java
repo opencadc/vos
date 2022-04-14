@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -89,6 +88,7 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -138,31 +138,6 @@ public class NodeUtilTest {
         return actual;
     }
 
-    private boolean isMacOS() {
-        boolean isMacOS = false;
-
-        String[] cmd = new String[] {
-            "uname", "-s"
-        };
-        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
-        grabber.captureOutput(cmd);
-        if (grabber.getExitValue() == 0) {
-            if ("Darwin".equals(grabber.getOutput())) {
-               isMacOS = true; 
-            }
-        }
-        
-        return isMacOS;
-    }
-    
-    private void handleException(Exception ex) throws Exception {
-       if (isMacOS()) {
-          log.warn(ex.getMessage());
-       } else {
-           throw ex;
-       }
-    }
-    
     //@Test
     public void testGetRoot() {
         try {
@@ -192,8 +167,10 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
-    public void testCreateDir() throws Exception {
+    public void testCreateDir() {
         try {
             // top-level test dir
             String name = "testCreateDir-" + UUID.randomUUID().toString();
@@ -232,19 +209,14 @@ public class NodeUtilTest {
             
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreateFile() {
         try {
@@ -294,19 +266,14 @@ public class NodeUtilTest {
 
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
     
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testSetProperties() {
         try {
@@ -378,13 +345,6 @@ public class NodeUtilTest {
 
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -415,13 +375,6 @@ public class NodeUtilTest {
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
             Assert.fail("expected RuntimeException: got " + tdir);
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (RuntimeException expected) {
             log.info("caught expected exception: " + expected);
         } catch (Exception unexpected) {
@@ -462,6 +415,8 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreateLink() {
         try {
@@ -513,19 +468,14 @@ public class NodeUtilTest {
 
             NodeUtil.delete(root, testDir);
             Assert.assertFalse("deleted", Files.exists(file));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreatePath() {
 
@@ -573,19 +523,14 @@ public class NodeUtilTest {
 
             //NodeUtil.delete(root, testURI);
             //Assert.assertFalse("deleted", Files.exists(dir));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testList() {
 
@@ -660,19 +605,14 @@ public class NodeUtilTest {
 
             //NodeUtil.delete(root, testURI);
             //Assert.assertFalse("deleted", Files.exists(dir));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testMove() {
         try {
@@ -741,19 +681,15 @@ public class NodeUtilTest {
             Assert.assertTrue(moved instanceof DataNode);
             Assert.assertEquals(uri, moved.getUri());
             Assert.assertNotNull("lastModified", moved.getPropertyValue(VOS.PROPERTY_URI_DATE));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
+
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyFile() {
         try {
@@ -807,19 +743,15 @@ public class NodeUtilTest {
             Assert.assertTrue(orig instanceof DataNode);
             Assert.assertEquals(tn.getUri(), orig.getUri());
             Assert.assertNotNull("lastModified", orig.getPropertyValue(VOS.PROPERTY_URI_DATE));
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
+
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyDirectory() {
         try {
@@ -904,19 +836,15 @@ public class NodeUtilTest {
                 Assert.assertEquals(c, copy.getUri());
                 Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_DATE));
             }
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
+
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyDirectoryWithLinks() {
         try {
@@ -1016,13 +944,7 @@ public class NodeUtilTest {
                 Assert.assertEquals(c, copy.getUri());
                 Assert.assertNotNull("lastModified", copy.getPropertyValue(VOS.PROPERTY_URI_DATE));
             }
-        } catch (UnsupportedOperationException uoex) {
-            try {
-                handleException(uoex);
-            } catch (Exception unexpected) {
-                log.error("unexpected exception", unexpected);
-                Assert.fail("unexpected exception: " + unexpected);
-            }
+
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
