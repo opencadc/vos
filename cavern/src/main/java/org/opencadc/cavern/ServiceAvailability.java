@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2019.                            (c) 2019.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,18 +70,20 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vosi.AvailabilityPlugin;
-import ca.nrc.cadc.vosi.AvailabilityStatus;
+import ca.nrc.cadc.vosi.Availability;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
 import java.io.File;
 import java.net.URI;
+import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
@@ -119,16 +121,16 @@ public class ServiceAvailability implements AvailabilityPlugin {
     }
 
     @Override
-    public AvailabilityStatus getStatus() {
+    public Availability getStatus() {
         boolean isGood = true;
         String note = "service is accepting requests";
         try {
             String state = getState();
             if (VOSpaceAuthorizer.OFFLINE.equals(state)) {
-                return new AvailabilityStatus(false, null, null, null, VOSpaceAuthorizer.OFFLINE_MSG);
+                return new Availability(false, VOSpaceAuthorizer.OFFLINE_MSG);
             }
             if (VOSpaceAuthorizer.READ_ONLY.equals(state)) {
-                return new AvailabilityStatus(false, null, null, null, VOSpaceAuthorizer.READ_ONLY_MSG);
+                return new Availability(false, VOSpaceAuthorizer.READ_ONLY_MSG);
             }
 
             // File system probe
@@ -143,13 +145,13 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
             VOSURI baseURI = new LocalServiceURI().getVOSBase();
             if (baseURI == null) {
-                return new AvailabilityStatus(false, null, null, null, "Missing resourceID in VOSpaceWS.properties");
+                return new Availability(false, "Missing resourceID in VOSpaceWS.properties");
             }
             
             FileSystemProbe fsp = new FileSystemProbe(root, baseURI.toString(), owner, linkTargetOwner, null);
             Boolean success = fsp.call();
             if (success == null || !success) {
-                return new AvailabilityStatus(false, null, null, null, "File system probe failed");
+                return new Availability(false, "File system probe failed");
             }
 
             // ReadWrite: proceed with live checks
@@ -158,16 +160,28 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
             // check other services we depend on
             RegistryClient reg = new RegistryClient();
-            String url;
+            URL url;
             CheckResource checkResource;
+            
+            LocalAuthority localAuthority = new LocalAuthority();
 
-            url = reg.getServiceURL(URI.create(CRED_AVAIL), Standards.VOSI_AVAILABILITY, AuthMethod.ANON).toExternalForm();
+            URI credURI = localAuthority.getServiceURI(Standards.CRED_PROXY_10.toString());
+            url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
             checkResource = new CheckWebService(url);
             checkResource.check();
 
-            url = reg.getServiceURL(URI.create(AC_AVAIL), Standards.VOSI_AVAILABILITY, AuthMethod.ANON).toExternalForm();
+            URI usersURI = localAuthority.getServiceURI(Standards.UMS_USERS_01.toString());
+            url = reg.getServiceURL(usersURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
             checkResource = new CheckWebService(url);
             checkResource.check();
+            
+            URI groupsURI = localAuthority.getServiceURI(Standards.GMS_SEARCH_01.toString());
+            if (!groupsURI.equals(usersURI)) {
+                url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                checkResource = new CheckWebService(url);
+                checkResource.check();
+            }
+            
         } catch (CheckException ce) {
             // tests determined that the resource is not working
             isGood = false;
@@ -179,7 +193,7 @@ public class ServiceAvailability implements AvailabilityPlugin {
             note = "test failed, reason: " + t;
         }
 
-        return new AvailabilityStatus(isGood, null, null, null, note);
+        return new Availability(isGood, note);
     }
 
     @Override

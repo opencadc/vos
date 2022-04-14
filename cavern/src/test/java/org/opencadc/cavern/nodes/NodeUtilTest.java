@@ -109,7 +109,7 @@ public class NodeUtilTest {
     static final String OWNER = System.getProperty("user.name");
     static final String GROUP = System.getProperty("user.name");
     
-    static String baseURI;
+    static String baseURI = "vos://cadc.nrc.ca~cavern";
 
     static {
         try {
@@ -120,12 +120,6 @@ public class NodeUtilTest {
         } catch (IOException ex) {
             throw new RuntimeException("TEST SETUP: failed to create test dir: " + ROOT, ex);
         }
-        
-        baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
-        if (baseURI == null) {
-            throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
-        }
-            
     }
 
     public NodeUtilTest() {
