@@ -71,7 +71,6 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.opencadc.cavern.pkg.CavernPackageRunner;
 import ca.nrc.cadc.uws.server.SyncJobExecutor;
 
@@ -95,7 +94,6 @@ public class PackageJobManager extends JobManager {
         JobUpdater ju = (JobUpdater) jp;
         super.setJobPersistence(jp);
 
-//        JobExecutor jobExec = new ThreadPoolExecutor(jp, CavernPackageRunner.class, 1);
         JobExecutor je = new SyncJobExecutor(ju, CavernPackageRunner.class);
         super.setJobExecutor(je);
 

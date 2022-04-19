@@ -67,7 +67,6 @@ dependencies {
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
     compile 'org.opencadc:cadc-pkg-server:[1.1.2,)'
 
-
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
     runtime 'org.opencadc:cadc-access-control:[1.1.23,)'
     runtime 'org.opencadc:cadc-access-control-identity:[1.1.0,)'

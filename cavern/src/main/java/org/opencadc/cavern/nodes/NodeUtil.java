@@ -530,7 +530,7 @@ public abstract class NodeUtil {
         }
     }
 
-    public static Node pathToNode(Path root, Path p, VOSURI rootURI)
+    static Node pathToNode(Path root, Path p, VOSURI rootURI)
             throws IOException, NoSuchFileException {
         boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
         return pathToNode(root, p, rootURI, getAttrs);
@@ -834,18 +834,5 @@ public abstract class NodeUtil {
         }
 
         return Paths.get(rootStr);
-    }
-
-    public static VOSURI getRootURI(VOSURI targetVOSURI) {
-        VOSURI parent = targetVOSURI.getParentURI();
-        VOSURI rootURI = targetVOSURI;
-        while (parent != null) {
-            if (parent.isRoot()) {
-                rootURI = parent;
-            }
-            parent = parent.getParentURI();
-        }
-
-        return rootURI;
     }
 }
