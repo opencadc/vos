@@ -69,17 +69,10 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.client.ClientTransfer;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
-import java.util.List;
 import org.apache.log4j.Logger;
 
 /**
@@ -90,21 +83,7 @@ import org.apache.log4j.Logger;
 public class AbstractClientTransferTest {
     private static final Logger log = Logger.getLogger(AbstractClientTransferTest.class);
 
-
     public AbstractClientTransferTest() { }
-
-    protected static class GetAction implements PrivilegedExceptionAction<Node> {
-        VOSpaceClient vos;
-        String path;
-        GetAction(VOSpaceClient vos, String path) {
-            this.vos = vos;
-            this.path = path;
-        }
-        @Override
-        public Node run() throws Exception {
-            return vos.getNode(path);
-        }
-    }
 
     protected static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
         VOSpaceClient vos;
@@ -117,51 +96,6 @@ public class AbstractClientTransferTest {
         @Override
         public ClientTransfer run() throws Exception {
             return vos.createTransfer(trans);
-        }
-
-    }
-
-    protected static class DeleteAction implements PrivilegedExceptionAction<Object> {
-        VOSpaceClient vos;
-        String path;
-
-        DeleteAction(VOSpaceClient vos, String path) {
-            this.vos = vos;
-            this.path = path;
-        }
-        @Override
-        public Object run() throws Exception {
-            vos.deleteNode(path);
-            return null;
-        }
-
-    }
-
-    protected Protocol findProto(Protocol p, List<Protocol> plist) {
-        for (Protocol pp : plist) {
-            if (pp.equals(p))
-                return pp;
-        }
-        return null;
-    }
-
-    protected StringWriter getTransferXML(Transfer transfer) throws IOException {
-        // Get the transfer XML.
-        TransferWriter writer = new TransferWriter();
-        StringWriter sw = new StringWriter();
-        writer.write(transfer, sw);
-        return sw;
-    }
-
-    protected class TransferResult {
-        public Transfer transfer;
-        public Job job;
-        public String location;
-
-        TransferResult(Transfer transfer, Job job, String location) {
-            this.location = location;
-            this.transfer = transfer;
-            this.job = job;
         }
     }
 }
