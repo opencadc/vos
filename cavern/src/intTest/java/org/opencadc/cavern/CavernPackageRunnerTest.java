@@ -147,15 +147,10 @@ public class CavernPackageRunnerTest extends AbstractClientTransferTest {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", CavernPackageRunnerTest.class);
         s = SSLUtil.createSubject(SSL_CERT);
 
-        String uriProp = CavernPackageRunnerTest.class.getName() + ".baseURI";
-        String uri = System.getProperty(uriProp);
-        log.debug(uriProp + " = " + uri);
-        if ( StringUtil.hasText(uri) ) {
-            nodeURI = new VOSURI(new URI(uri));
-            log.info("Transfer node base URI: " + nodeURI);
-        } else {
-            throw new IllegalStateException("expected system property " + uriProp + " = <base vos URI>, found: " + uri);
-        }
+        String uri ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospace-package-tests";
+        log.debug("test dir base: " + uri);
+        nodeURI = new VOSURI(new URI(uri));
+        log.debug("Transfer node base URI: " + nodeURI);
 
         vos = new VOSpaceClient(nodeURI.getServiceURI());
     }
