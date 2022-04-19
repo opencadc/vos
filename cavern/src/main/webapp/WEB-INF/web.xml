@@ -302,6 +302,36 @@
     <url-pattern>/auth/xfer/*</url-pattern>
   </servlet-mapping>
 
+  <!--  PackageServlet and pkg endpoint -->
+  <servlet>
+    <servlet-name>PackageServlet</servlet-name>
+    <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
+    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+    <init-param>
+      <param-name>get</param-name>
+      <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
+    </init-param>
+    <init-param>
+      <param-name>post</param-name>
+      <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
+    </init-param>
+    <init-param>
+      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+      <param-value>org.opencadc.cavern.PackageJobManager</param-value>
+    </init-param>
+    <load-on-startup>2</load-on-startup>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>PackageServlet</servlet-name>
+    <url-pattern>/pkg/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>PackageServlet</servlet-name>
+    <url-pattern>/auth/pkg/*</url-pattern>
+  </servlet-mapping>
+
+
   <!-- Availability servlet endpoint -->
   <servlet-mapping>
     <servlet-name>AvailabilityServlet</servlet-name>

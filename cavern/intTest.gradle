@@ -8,6 +8,7 @@ sourceSets {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
+            srcDir file('src/intTest/java')
         }
         resources.srcDir file('src/intTest/resources')
         resources.srcDirs += new File(System.getenv('A') + '/test-certificates/')

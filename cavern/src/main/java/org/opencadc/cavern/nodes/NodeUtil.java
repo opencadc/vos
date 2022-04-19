@@ -72,6 +72,7 @@ import org.opencadc.gms.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
@@ -92,6 +93,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.AclEntry;
 import java.nio.file.attribute.AclEntry.Builder;
@@ -528,7 +530,7 @@ public abstract class NodeUtil {
         }
     }
 
-    static Node pathToNode(Path root, Path p, VOSURI rootURI)
+    public static Node pathToNode(Path root, Path p, VOSURI rootURI)
             throws IOException, NoSuchFileException {
         boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
         return pathToNode(root, p, rootURI, getAttrs);
@@ -821,5 +823,29 @@ public abstract class NodeUtil {
             UserPrincipal user) throws IOException {
         // TODO: this assumes default group name == owner name and should be fixed
         return users.lookupPrincipalByGroupName(user.getName());
+    }
+
+    public static Path getRootPath() {
+        PropertiesReader pr = new PropertiesReader("Cavern.properties");
+        String rootStr = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        log.debug("VOS_FILESYSTEM_ROOT: " + rootStr);
+        if (rootStr == null) {
+            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
+        }
+
+        return Paths.get(rootStr);
+    }
+
+    public static VOSURI getRootURI(VOSURI targetVOSURI) {
+        VOSURI parent = targetVOSURI.getParentURI();
+        VOSURI rootURI = targetVOSURI;
+        while (parent != null) {
+            if (parent.isRoot()) {
+                rootURI = parent;
+            }
+            parent = parent.getParentURI();
+        }
+
+        return rootURI;
     }
 }

@@ -69,6 +69,20 @@
     </interface>
   </capability>
 
+  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/Pkg-1.0">
+    <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="full">https://replace.me.com/cavern/pkg</accessURL>
+      <securityMethod/>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
+    </interface>
+    <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="full">https://replace.me.com/cavern/auth/pkg</accessURL>
+      <securityMethod standardID="ivo://ivoa.net/sso#BasicAA"/>
+    </interface>
+  </capability>
+
   <!--  not supported in cavern
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops">
     <interface xsi:type="vs:ParamHTTP" role="std">
