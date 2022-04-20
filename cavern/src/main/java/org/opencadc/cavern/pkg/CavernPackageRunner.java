@@ -77,6 +77,7 @@ import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.EnumSet;
+import org.opencadc.cavern.FileSystemNodePersistence;
 import org.opencadc.pkg.server.PackageItem;
 import org.opencadc.pkg.server.PackageRunner;
 
@@ -136,7 +137,8 @@ public class CavernPackageRunner extends PackageRunner {
     public Iterator<PackageItem> getItems() throws IOException {
         log.debug("getItems started");
         List<PackageItem> packageItems = new ArrayList<>();
-        Path rootPath = NodeUtil.getRootPath();
+        FileSystemNodePersistence nodePersistence = new FileSystemNodePersistence();
+        Path rootPath = nodePersistence.getRoot();
         log.debug("root path:" + rootPath.toString());
 
         // packageTransfer is populated in initPackage
@@ -211,23 +213,22 @@ public class CavernPackageRunner extends PackageRunner {
             URL fileURL = new URL("file://" + targetPath.toString());
             log.debug("file uri: " + fileURL.toString());
 
-            Path relativePath;
             int parentPathLength = packageParentPath.getNameCount();
             log.debug("parent path length: " + parentPathLength);
 
             int targetPathLength = targetPath.getNameCount();
             log.debug("targetPath part count: " + targetPathLength);
-            relativePath = targetPath.subpath(parentPathLength, targetPathLength);
 
+            Path relativePath;
+            relativePath = targetPath.subpath(parentPathLength, targetPathLength);
             String relativePathStr = "/" + relativePath.toString();
             log.debug("relativePath: " + relativePathStr);
 
-            log.debug("adding to PackageItem list");
-
             PackageItem pi = new PackageItem(fileURL, relativePathStr);
+            log.debug("adding to PackageItem list");
             piList.add(pi);
         }  catch (MalformedURLException mue) {
-            log.info("Malformed URL: " + targetPath.toString() + " - skipping...");
+            log.info("malformed URL: " + targetPath.toString() + " - skipping...");
         }
     }
 
@@ -256,8 +257,9 @@ public class CavernPackageRunner extends PackageRunner {
         public FileVisitResult visitFile(Path t, BasicFileAttributes bfa)
             throws IOException {
             log.debug("ManifestVisitor: visiting file: " + t);
+            log.debug("ManifestVisitor: file attributes: " + bfa);
 
-            // Add the foot to the name of the file being visited
+            // Add the root to the name of the file being visited
             Path file = root.relativize(t);
             log.debug("ManifestVisitor: adding file to manifest list: " + file);
             manifestList.add(file);
@@ -267,12 +269,16 @@ public class CavernPackageRunner extends PackageRunner {
         @Override
         public FileVisitResult visitFileFailed(Path t, IOException ioe)
             throws IOException {
+            log.info("ManifestVisitor: visitFileFailed: " + t);
+            log.info("ManifestVisitor: visitFileFailed IOException: " + ioe);
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult postVisitDirectory(Path t, IOException ioe)
             throws IOException {
+            log.debug("ManifestVisitor: postVisitDirectory: " + t);
+            log.debug("ManifestVisitor: postVisitDirectory IOException: " + ioe);
             return FileVisitResult.CONTINUE;
         }
 

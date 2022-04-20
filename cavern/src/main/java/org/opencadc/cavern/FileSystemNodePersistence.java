@@ -107,6 +107,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public static final String CONFIG_FILE = "Cavern.properties";
     
     private PosixIdentityManager identityManager;
+
     private Path root;
 
     public FileSystemNodePersistence() {
@@ -366,5 +367,9 @@ public class FileSystemNodePersistence implements NodePersistence {
         {
             throw new RuntimeException("Nodes have different authorities.");
         }
+    }
+
+    public Path getRoot() {
+        return root;
     }
 }

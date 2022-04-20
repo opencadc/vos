@@ -66,66 +66,10 @@
     </init-param>
   </servlet>
 
-  <!-- async transfer servlet with http basic auth, restlet requires a 2nd deployment-->
-  <servlet>
-    <servlet-name>AuthTransferServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-    <init-param>
-        <param-name>get</param-name>
-        <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>post</param-name>
-        <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>delete</param-name>
-        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-        <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
-    </init-param>
-  </servlet>
-
 
   <!-- sync transfer servlet-->
   <servlet>
     <servlet-name>SyncTransferServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-    <init-param>
-        <param-name>get</param-name>
-        <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>post</param-name>
-        <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>delete</param-name>
-        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.web.SyncPostAction.execOnPOST</param-name>
-        <param-value>true</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-        <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
-    </init-param>
-  </servlet>
-  
-  <!--  auth sync transfer servlet -->
-  <servlet>
-    <servlet-name>AuthSyncTransferServlet</servlet-name>
     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
         <param-name>get</param-name>
@@ -165,19 +109,7 @@
 
     <load-on-startup>4</load-on-startup>
   </servlet>
-  <!-- VOSpace NodesServlet with http basic auth, restlet requires a 2nd deployment-->
-  <servlet>
-    <servlet-name>AuthNodesServlet</servlet-name>
-    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
 
-    <init-param>
-      <param-name>org.restlet.application</param-name>
-      <param-value>ca.nrc.cadc.vos.server.web.restlet.NodesApplication</param-value>
-    </init-param>
-
-    <load-on-startup>4</load-on-startup>
-  </servlet>
-  
     <!-- internal servlet to assist async transfer servlet -->
   <servlet>
     <servlet-name>TransferDetailsServlet</servlet-name>
@@ -263,10 +195,6 @@
     <servlet-name>NodesServlet</servlet-name>
     <url-pattern>/nodes/*</url-pattern>
   </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>AuthNodesServlet</servlet-name>
-    <url-pattern>/auth/nodes/*</url-pattern>
-  </servlet-mapping>
   
   <servlet-mapping>
     <servlet-name>ViewsServlet</servlet-name>
@@ -277,19 +205,11 @@
     <servlet-name>FilesServlet</servlet-name>
     <url-pattern>/files/*</url-pattern>
   </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>FilesServlet</servlet-name>
-    <url-pattern>/auth/files/*</url-pattern>
-  </servlet-mapping>
   
   <!-- Transfer servlet endpoints -->
   <servlet-mapping>
     <servlet-name>TransferServlet</servlet-name>
     <url-pattern>/transfers/*</url-pattern>
-  </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>AuthTransferServlet</servlet-name>
-    <url-pattern>/auth/transfers/*</url-pattern>
   </servlet-mapping>
   
     <!-- Client transfer servlet endpoints -->
@@ -297,15 +217,10 @@
     <servlet-name>TransferDetailsServlet</servlet-name>
     <url-pattern>/xfer/*</url-pattern>
   </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>TransferDetailsServlet</servlet-name>
-    <url-pattern>/auth/xfer/*</url-pattern>
-  </servlet-mapping>
 
   <!--  PackageServlet and pkg endpoint -->
   <servlet>
     <servlet-name>PackageServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
       <param-name>get</param-name>
@@ -326,20 +241,12 @@
     <servlet-name>PackageServlet</servlet-name>
     <url-pattern>/pkg/*</url-pattern>
   </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>PackageServlet</servlet-name>
-    <url-pattern>/auth/pkg/*</url-pattern>
-  </servlet-mapping>
 
 
   <!-- Availability servlet endpoint -->
   <servlet-mapping>
     <servlet-name>AvailabilityServlet</servlet-name>
     <url-pattern>/availability</url-pattern>
-  </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>AvailabilityServlet</servlet-name>
-    <url-pattern>/auth/availability</url-pattern>
   </servlet-mapping>
 
   <!-- Capability servlet endpoint -->
@@ -357,10 +264,6 @@
   <servlet-mapping>
     <servlet-name>SyncTransferServlet</servlet-name>
     <url-pattern>/synctrans/*</url-pattern>
-  </servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>AuthSyncTransferServlet</servlet-name>
-    <url-pattern>/auth/synctrans/*</url-pattern>
   </servlet-mapping>
 
   <welcome-file-list>

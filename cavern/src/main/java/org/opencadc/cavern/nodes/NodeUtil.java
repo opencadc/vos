@@ -825,14 +825,4 @@ public abstract class NodeUtil {
         return users.lookupPrincipalByGroupName(user.getName());
     }
 
-    public static Path getRootPath() {
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        String rootStr = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
-        log.debug("VOS_FILESYSTEM_ROOT: " + rootStr);
-        if (rootStr == null) {
-            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
-        }
-
-        return Paths.get(rootStr);
-    }
 }
