@@ -228,7 +228,7 @@ public class CavernPackageRunner extends PackageRunner {
             log.debug("adding to PackageItem list");
             piList.add(pi);
         }  catch (MalformedURLException mue) {
-            log.info("malformed URL: " + targetPath.toString() + " - skipping...");
+            log.error("malformed URL: " + targetPath.toString() + " - skipping...");
         }
     }
 
@@ -269,8 +269,10 @@ public class CavernPackageRunner extends PackageRunner {
         @Override
         public FileVisitResult visitFileFailed(Path t, IOException ioe)
             throws IOException {
-            log.info("ManifestVisitor: visitFileFailed: " + t);
-            log.info("ManifestVisitor: visitFileFailed IOException: " + ioe);
+            log.debug("ManifestVisitor: visitFileFailed: " + t);
+            if (ioe != null) {
+                log.error("ManifestVisitor: visitFileFailed IOException: " + ioe);
+            }
             return FileVisitResult.CONTINUE;
         }
 
@@ -278,7 +280,9 @@ public class CavernPackageRunner extends PackageRunner {
         public FileVisitResult postVisitDirectory(Path t, IOException ioe)
             throws IOException {
             log.debug("ManifestVisitor: postVisitDirectory: " + t);
-            log.debug("ManifestVisitor: postVisitDirectory IOException: " + ioe);
+            if (ioe != null) {
+                log.error("ManifestVisitor: postVisitDirectory IOException: " + ioe);
+            }
             return FileVisitResult.CONTINUE;
         }
 
