@@ -106,10 +106,10 @@ public class GroupPermissionsTest {
     private static GroupURI testGroup;
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
     }
 
     public GroupPermissionsTest() {
