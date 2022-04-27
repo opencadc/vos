@@ -221,9 +221,7 @@ public class MountedContainerTest {
         StringBuilder mnt = new StringBuilder();
         mnt.append(ss[1]).append(":").append(ss[3]);
         String port = ss[2];
-        String[] cmd = new String[] {
-            "/bin/bash", wrapper, "-o", "password_stdin", "-o", "allow_other,defer_permissions", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
-        };
+        String[] cmd = getMountCommand(wrapper, port, mnt, testDir);
         StringBuilder sb = new StringBuilder();
         for (String s : cmd) {
             sb.append(s).append(" ");
@@ -394,6 +392,22 @@ public class MountedContainerTest {
             System.clearProperty(NodeUtil.class.getName() + ".disable-get-attrs");
         }
         
+    }
+    
+    private String[] getMountCommand(String wrapper, String port, StringBuilder mnt, Path testDir) {
+        // default to Linux
+        String[] cmd = new String[] {
+            "/bin/bash", wrapper, "-o", "password_stdin", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
+        };
+
+        if (isMac()) {
+            // running on a MacOS
+            cmd = new String[] {
+                "/bin/bash", wrapper, "-o", "password_stdin", "-o", "allow_other,defer_permissions", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
+            };
+        }
+            
+        return cmd;
     }
     
     private String[] getUnmountCommand(Path testDir) {
