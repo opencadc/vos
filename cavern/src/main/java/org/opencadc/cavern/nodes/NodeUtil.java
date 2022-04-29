@@ -70,6 +70,7 @@ package org.opencadc.cavern.nodes;
 import java.net.URISyntaxException;
 import org.opencadc.gms.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -81,6 +82,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
@@ -141,7 +143,8 @@ public abstract class NodeUtil {
                         VOS.PROPERTY_URI_GROUPREAD,
                         VOS.PROPERTY_URI_GROUPWRITE,
                         VOS.PROPERTY_URI_ISLOCKED,
-                        VOS.PROPERTY_URI_ISPUBLIC
+                        VOS.PROPERTY_URI_ISPUBLIC,
+                        VOS.PROPERTY_URI_QUOTA
                     }
             )
     );
@@ -609,6 +612,9 @@ public abstract class NodeUtil {
             }
         }
 
+        NodeProperty quotaProp = new NodeProperty(VOS.PROPERTY_URI_QUOTA, getQuota(root));
+        ret.getProperties().add(quotaProp);
+
         NodeProperty publicProp = new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(false));
         ret.getProperties().add(publicProp);
         for (PosixFilePermission pfp : attrs.permissions()) {
@@ -619,6 +625,37 @@ public abstract class NodeUtil {
         return ret;
     }
 
+    private static String getQuota(Path root) throws IOException {
+        String[] cmd = new String[] {
+            "getfattr", "-n", "ceph.quota.max_bytes", root.toFile().getAbsolutePath()
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() == 0) {
+            String output = grabber.getOutput();
+            int idx = output.indexOf("=");
+            if (idx >= 0) {
+                // quota is defined
+                return output.substring(idx); 
+            } else {
+                idx = output.indexOf(":");
+                if (idx >= 0) {
+                    // quota is not defined
+                    return "\"" + output.substring(idx) + "\"";
+                } else {
+                    // unexpected output
+                    return "Unexpected: " + output;
+                }
+            }
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String s : cmd) {
+                sb.append(s).append(" ");
+            }
+            throw new IOException("FAIL: " + sb + "\n" + grabber.getErrorOutput());
+        }
+    }
+    
     public static void delete(Path root, VOSURI uri) throws IOException {
         Path np = nodeToPath(root, uri);
         log.debug("[create] path: " + uri + " -> " + np);
@@ -821,5 +858,4 @@ public abstract class NodeUtil {
         // TODO: this assumes default group name == owner name and should be fixed
         return users.lookupPrincipalByGroupName(user.getName());
     }
-
 }
