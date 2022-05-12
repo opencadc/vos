@@ -72,8 +72,6 @@ import org.opencadc.gms.GroupURI;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
-import ca.nrc.cadc.util.MultiValuedProperties;
-import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
@@ -130,9 +128,6 @@ public abstract class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
     
-    private static final String CONFIG_FILE = "Cavern.properties";
-    private static final String QUOTA_ATTRIBUTE_KEY = "QUOTA_ATTRIBUTE";
-
     // set of node properties that are stored in some special way 
     // and *not* as extended attributes
     private static Set<String> FILESYSTEM_PROPS = new HashSet<>(
@@ -591,15 +586,10 @@ public abstract class NodeUtil {
                     + "user defined file attributes.");
             }
             
-            String quotaPropertyName = getQuotaAttributeName();
             for (String propName : udv.list()) {
                 String propValue = getAttribute(udv, propName);
                 if (propValue != null) {
-                    if (propName.equals(quotaPropertyName)) {
-                        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, propValue));
-                    } else {
-                        ret.getProperties().add(new NodeProperty(propName, propValue));
-                    }
+                    ret.getProperties().add(new NodeProperty(propName, propValue));
                 }
             }
             LocalAuthority loc = new LocalAuthority();
@@ -631,20 +621,6 @@ public abstract class NodeUtil {
         return ret;
     }
 
-    private static String getQuotaAttributeName() {
-        PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
-        MultiValuedProperties mvp = pr.getAllProperties();
-        if (mvp == null) {
-            throw new RuntimeException("Cannot load config file: " + CONFIG_FILE);
-        }
-        String name = mvp.getFirstPropertyValue(QUOTA_ATTRIBUTE_KEY);
-        if (name == null) {
-            throw new RuntimeException("Cannot find value for " + QUOTA_ATTRIBUTE_KEY + " in " + CONFIG_FILE);
-        }
-        
-        return name;
-    }
-    
     public static void delete(Path root, VOSURI uri) throws IOException {
         Path np = nodeToPath(root, uri);
         log.debug("[create] path: " + uri + " -> " + np);
