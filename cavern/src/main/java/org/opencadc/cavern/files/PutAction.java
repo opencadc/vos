@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
@@ -190,6 +191,15 @@ public class PutAction extends FileAction {
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
+        } catch (IOException e) {
+            // TODO: Replace the quota limit below with the number of bytes 
+            //       remaining in the quota when we can determine it.
+            Path rootPath = Paths.get(getRoot());
+            Node node = NodeUtil.get(rootPath, nodeURI);
+            long limit = Long.parseLong(node.getPropertyValue(VOS.PROPERTY_URI_QUOTA));
+            if (e.getMessage().contains("quota exceeded")) {
+                throw new ByteLimitExceededException(e.getMessage(), limit);
+            }
         } finally {
             log.debug("put: done " + nodeURI.getURI().toASCIIString());
         }
