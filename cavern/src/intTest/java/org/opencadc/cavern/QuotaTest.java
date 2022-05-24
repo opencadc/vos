@@ -86,7 +86,9 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.auth.SSLUtil;
@@ -112,10 +114,37 @@ public class QuotaTest
 {
     private static Logger log = Logger.getLogger(QuotaTest.class);
 
+    private static final String NODE_NAME = "quotaTestFile.txt";
+    private static final String TARGET_CONTAINER = "vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/quotaTest";
+    private static final String  TARGET = TARGET_CONTAINER + "/" + NODE_NAME;
+    private static Subject sub;
+    private static VOSpaceClient vosClient;
+
     static {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+    }
+
+    @BeforeClass
+    public static void staticInit() throws Exception
+    {
+        File ssl_cert = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", QuotaTest.class);
+        sub = SSLUtil.createSubject(ssl_cert);
+        VOSURI targetContainerURI = new VOSURI(new URI(TARGET_CONTAINER));
+        vosClient = new VOSpaceClient(targetContainerURI.getServiceURI());
+    }
+
+    @AfterClass
+    public static void staticShutdown() throws Exception
+    {
+        // remove test file
+        Subject.doAs(sub, new PrivilegedExceptionAction<Object>() {
+            public Object run() throws Exception {
+                VOSURI vosURI = new VOSURI(new URI(TARGET));
+                vosClient.deleteNode(vosURI.getURI().getPath());
+                return null;
+            }});
     }
 
     @Test
@@ -134,21 +163,12 @@ public class QuotaTest
     {
         try
         {
-            File ssl_cert = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", QuotaTest.class);
-
-            String nodeName = "quotaTestFile.txt";
-            String targetContainerURIString = "vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/quotaTest";
-            log.debug("target container URI = " + targetContainerURIString);
-            VOSURI targetContainerURI = new VOSURI(new URI(targetContainerURIString));
-            
             try {
-                Subject sub = SSLUtil.createSubject(ssl_cert);
                 List<Protocol> protocols = new ArrayList<Protocol>();
                 Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
                 basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
                 protocols.add(basicTLS);
-                VOSpaceClient vosClient = new VOSpaceClient(targetContainerURI.getServiceURI());
-                DataNode targetNode = new DataNode(new VOSURI(new URI(targetContainerURI + "/" + nodeName)));
+                DataNode targetNode = new DataNode(new VOSURI(new URI(TARGET)));
                 log.debug("uploading: " + targetNode.getUri().getURI().toASCIIString());
                 Transfer transfer = new Transfer(targetNode.getUri().getURI(), Direction.pushToVoSpace);
                 transfer.getProtocols().addAll(protocols);
@@ -177,7 +197,7 @@ public class QuotaTest
                 Throwable ex = paex.getCause();
                 if (expectException && (ex != null) && (ex instanceof IOException)) {
                     String msg = ex.getCause().getMessage();
-                    if (msg.contains("quota exceeded")) {
+                    if (msg.contains("quota")) {
                         // expected, success
                     } else {
                         throw paex;

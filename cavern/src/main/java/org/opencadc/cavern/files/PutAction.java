@@ -190,35 +190,37 @@ public class PutAction extends FileAction {
             log.debug(e);
             syncOutput.setCode(403);
         } catch (IOException e) {
-            if (e.getMessage().contains("quota exceeded")) {
-                // TODO: Replace the quota limit below with the number of bytes 
-                //       remaining in the quota when we can determine it.
-                // get quota limit from a parent container
+            if (e.getMessage().contains("quota")) {
                 Path rootPath = Paths.get(getRoot());
                 restoreOwnNGroup(rootPath, node);
                 Node curNode = node.getParent();
                 String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
                 while (limitValue == null) {
                     curNode = curNode.getParent();
-                    try {
-                        limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
-                    } catch (NullPointerException ex) {
+                    if (curNode == null) {
                         // quota limit not defined in a parent container, exit while loop
                         break;
+                    } else {
+                        limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
                     }
                 }
 
+                // TODO: Replace the quota limit below with the number of bytes 
+                //       remaining in the quota when we can determine it. This 
+                //       means the above code to obtain the limitValue will need
+                //       to be changed.
+                // get quota limit from a parent container
                 // -1 to indicate quota limit not defined
                 long limit = -1;
-                String msg = e.getMessage();
                 if (limitValue == null) {
                     // VOS.PROPERTY_URI_QUOTA attribute is not set on the node
-                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
+                    String msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
+                    log.warn(msg);
                 } else {
                     limit = Long.parseLong(limitValue);
                 }
 
-                throw new ByteLimitExceededException(msg, limit);
+                throw new ByteLimitExceededException(e.getMessage(), limit);
             } else {
                 // unexpected IOException
                 throw e;
