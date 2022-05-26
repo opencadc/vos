@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
@@ -127,12 +128,13 @@ public class PutAction extends FileAction {
     @Override
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
+        Node node = null;
 
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
 
             Path rootPath = Paths.get(getRoot());
-            Node node = NodeUtil.get(rootPath, nodeURI);
+            node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
                 // When the /files endpoint supports the putting of data
                 // before the node is created this will have to change.
@@ -183,15 +185,56 @@ public class PutAction extends FileAction {
 
             // doing this last because it requires chown which is most likely to fail during experimentation
             log.debug("restore owner & group");
-            UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-            GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
-            NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
-            
+            restoreOwnNGroup(rootPath, node);
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
+        } catch (IOException e) {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("quota")) {
+                Path rootPath = Paths.get(getRoot());
+                restoreOwnNGroup(rootPath, node);
+                Node curNode = node.getParent();
+                String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                while (limitValue == null) {
+                    curNode = curNode.getParent();
+                    if (curNode == null) {
+                        // quota limit not defined in a parent container, exit while loop
+                        break;
+                    } else {
+                        limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                    }
+                }
+
+                // TODO: Replace the quota limit below with the number of bytes 
+                //       remaining in the quota when we can determine it. This 
+                //       means the above code to obtain the limitValue will need
+                //       to be changed.
+                // get quota limit from a parent container
+                // -1 to indicate quota limit not defined
+                long limit = -1;
+                if (limitValue == null) {
+                    // VOS.PROPERTY_URI_QUOTA attribute is not set on the node
+                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
+                    log.warn(msg);
+                } else {
+                    limit = Long.parseLong(limitValue);
+                }
+
+                throw new ByteLimitExceededException(e.getMessage(), limit);
+            } else {
+                // unexpected IOException
+                throw e;
+            }
         } finally {
             log.debug("put: done " + nodeURI.getURI().toASCIIString());
         }
+    }
+    
+    private void restoreOwnNGroup(Path rootPath, Node node) throws IOException {
+        UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
+        GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
+        Path target = NodeUtil.nodeToPath(rootPath, node);
+        NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
     }
 }

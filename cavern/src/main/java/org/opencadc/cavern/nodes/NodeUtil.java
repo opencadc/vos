@@ -127,7 +127,7 @@ import org.apache.log4j.Logger;
 public abstract class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
-
+    
     // set of node properties that are stored in some special way 
     // and *not* as extended attributes
     private static Set<String> FILESYSTEM_PROPS = new HashSet<>(
@@ -141,7 +141,8 @@ public abstract class NodeUtil {
                         VOS.PROPERTY_URI_GROUPREAD,
                         VOS.PROPERTY_URI_GROUPWRITE,
                         VOS.PROPERTY_URI_ISLOCKED,
-                        VOS.PROPERTY_URI_ISPUBLIC
+                        VOS.PROPERTY_URI_ISPUBLIC,
+                        VOS.PROPERTY_URI_QUOTA
                     }
             )
     );
@@ -584,6 +585,7 @@ public abstract class NodeUtil {
                 throw new UnsupportedOperationException("file system does not support "
                     + "user defined file attributes.");
             }
+            
             for (String propName : udv.list()) {
                 String propValue = getAttribute(udv, propName);
                 if (propValue != null) {
@@ -821,5 +823,4 @@ public abstract class NodeUtil {
         // TODO: this assumes default group name == owner name and should be fixed
         return users.lookupPrincipalByGroupName(user.getName());
     }
-
 }
