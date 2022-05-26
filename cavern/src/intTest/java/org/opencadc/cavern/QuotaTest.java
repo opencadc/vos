@@ -197,7 +197,7 @@ public class QuotaTest
                 Throwable ex = paex.getCause();
                 if (expectException && (ex != null) && (ex instanceof IOException)) {
                     String msg = ex.getCause().getMessage();
-                    if (msg.contains("quota")) {
+                    if (msg != null && msg.toLowerCase().contains("quota")) {
                         // expected, success
                     } else {
                         throw paex;

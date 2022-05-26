@@ -190,7 +190,8 @@ public class PutAction extends FileAction {
             log.debug(e);
             syncOutput.setCode(403);
         } catch (IOException e) {
-            if (e.getMessage().contains("quota")) {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("quota")) {
                 Path rootPath = Paths.get(getRoot());
                 restoreOwnNGroup(rootPath, node);
                 Node curNode = node.getParent();
@@ -214,7 +215,7 @@ public class PutAction extends FileAction {
                 long limit = -1;
                 if (limitValue == null) {
                     // VOS.PROPERTY_URI_QUOTA attribute is not set on the node
-                    String msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
+                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
                     log.warn(msg);
                 } else {
                     limit = Long.parseLong(limitValue);
