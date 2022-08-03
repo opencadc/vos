@@ -249,15 +249,24 @@ public class CavernURLGeneratorTest
             String suri = p.getEndpoint();
             log.debug("Transfer URI: " + suri);
             Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
+            VOSURI transferURI = new VOSURI(new URI(suri));
             Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
             String path = transferURI.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
-            String sig = parts[4];
-            String meta = parts[3];
-            VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
+//            String sig = parts[4];
+//            String meta = parts[3];
+            String token = parts[3];
+
+            int firstSlashIndex = path.indexOf("/");
+            String pathStr = path.substring(firstSlashIndex + 1);
+            log.debug("path: " + pathStr);
+            String targetURIStr = baseURI.toString() + "/" + pathStr;
+            log.debug("target URI for validating token: " + targetURIStr);
+            VOSURI targetURI = new VOSURI(new URI(targetURIStr));
+
+            VOSURI retURI = urlGen.getNodeURI(token, targetURI, Direction.pullFromVoSpace);
             Assert.assertEquals(nodeURI, retURI);
 
         } catch (Exception unexpected) {
@@ -266,38 +275,160 @@ public class CavernURLGeneratorTest
         }
     }
 
-    // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
-    @Test
-    public void testWrongDirection() {
-        try {
+//    // TODO: acl specific codes will be moved to a library, enable the test after
+//    @Ignore
+//    @Test
+//    public void testWrongDirection() {
+//        try {
+//
+//            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
+//            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
+//            List<Protocol> protos = new ArrayList<>();
+//            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+//            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+//            trans.getProtocols().addAll(protos);
+//            View view = null;
+//            Job job = null;
+//            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+//            Protocol p = result.get(0);
+//            Assert.assertNotNull(p);
+//            String suri = p.getEndpoint();
+//            log.debug("Transfer URI: " + suri);
+//            Assert.assertNotNull(suri);
+//            URI transferURI = new URI(suri);
+//
+//            String path = transferURI.getPath();
+//            String[] parts = path.split("/");
+//            String sig = parts[4];
+//            String meta = parts[3];
+//            try {
+//                urlGen.getNodeURI(meta, sig, Direction.pushToVoSpace);
+//                Assert.fail();
+//            } catch (IllegalArgumentException e) {
+//                Assert.assertTrue(e.getMessage().contains("Wrong direction"));
+//            }
+//
+//        } catch (Exception unexpected) {
+//            log.error("unexpected exception", unexpected);
+//            Assert.fail("unexpected exception: " + unexpected);
+//        }
+//    }
 
-            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
-            List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            trans.getProtocols().addAll(protos);
-            View view = null;
-            Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
-            Protocol p = result.get(0);
-            Assert.assertNotNull(p);
-            String suri = p.getEndpoint();
-            log.debug("Transfer URI: " + suri);
-            Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
-            
-            String path = transferURI.getPath();
-            String[] parts = path.split("/");
-            String sig = parts[4];
-            String meta = parts[3];
-            try {
-                urlGen.getNodeURI(meta, sig, Direction.pushToVoSpace);
-                Assert.fail();
-            } catch (IllegalArgumentException e) {
-                Assert.assertTrue(e.getMessage().contains("Wrong direction"));
-            }
+//    // TODO: acl specific codes will be moved to a library, enable the test after
+//    @Ignore
+//    @Test
+//    public void testInvalidSignature() {
+//        try {
+//            // Have to generate a token with a fouled signature?
+//            // Is this even necessary considering Token Tool is being used, and those tests should be there?
+//
+//            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
+//            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
+//            List<Protocol> protos = new ArrayList<>();
+//            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+//            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+//            trans.getProtocols().addAll(protos);
+//            View view = null;
+//            Job job = null;
+//            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+//            Protocol p = result.get(0);
+//            Assert.assertNotNull(p);
+//            String suri = p.getEndpoint();
+//            log.debug("Transfer URI: " + suri);
+//            Assert.assertNotNull(suri);
+//            URI transferURI = new URI(suri);
+//
+//            String path = transferURI.getPath();
+//            String[] parts = path.split("/");
+//            //String sig = parts[4];
+//            String meta = parts[3];
+//            try {
+//                urlGen.getNodeURI(meta, "12345", Direction.pushToVoSpace);
+//                Assert.fail();
+//            } catch (AccessControlException e) {
+//                // expected
+//            }
+//
+//        } catch (Exception unexpected) {
+//            log.error("unexpected exception", unexpected);
+//            Assert.fail("unexpected exception: " + unexpected);
+//        }
+//    }
+
+//    // TODO: acl specific codes will be moved to a library, enable the test after
+//    @Ignore
+//    @Test
+//    public void testMetaTampered() {
+//        // TODO: test stil relevant?
+//        try {
+//
+//            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
+//            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
+//            List<Protocol> protos = new ArrayList<>();
+//            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+//            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+//            trans.getProtocols().addAll(protos);
+//            View view = null;
+//            Job job = null;
+//            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+//            Protocol p = result.get(0);
+//            Assert.assertNotNull(p);
+//            String suri = p.getEndpoint();
+//            log.debug("Transfer URI: " + suri);
+//            Assert.assertNotNull(suri);
+//            URI transferURI = new URI(suri);
+//
+//            Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
+//
+//            String path = transferURI.getPath();
+//            log.debug("Path: " + path);
+//            // Have to generate a token with different meta and pass it in, using token Tool?
+////            String[] parts = path.split("/");
+////            URI targetURI = urlGen.getURIFromPath(path);
+//////            String sig = parts[4];
+////            //String meta = parts[3];
+////            String token = parts[3];
+////            VOSURI altURI = new VOSURI(baseURI + "/" + TEST_DIR + "/fakeFile");
+//////            String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
+////            try {
+//////                VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
+////                VOSURI retURI = urlGen.getNodeURI(token, targetURI, Direction.pullFromVoSpace);
+////                Assert.fail();
+////            } catch (AccessControlException e) {
+////                // expected
+////            }
+//
+//        } catch (Exception unexpected) {
+//            log.error("unexpected exception", unexpected);
+//            Assert.fail("unexpected exception: " + unexpected);
+//        }
+//    }
+
+//    @Test
+//    public void testBase64URI() {
+//        // not relelvant as base64URLDecode not in CavernURLGenerator anymore
+//        String[] testStrings = {
+//            "abcde",
+//            "ab//de",
+//            "ab/de",
+//            "ab++///+de"
+//        };
+//        for (String s : testStrings) {
+//            log.debug("testing: " + s);
+//            Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
+//        }
+//    }
+
+
+    @Test
+    public void testGetURLFromPathWithToken() {
+        try {
+            String path = "token/path/to/file";
+            String expectedPath = "vos://example.org~vospace/path/to/file";
+            VOSURI expectedURI = new VOSURI(new URI(expectedPath));
+
+            VOSURI generatedURI = CavernURLGenerator.getURIFromPath(path);
+            Assert.assertEquals("expected and generated URI don't match: ", expectedURI, generatedURI);
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -305,102 +436,6 @@ public class CavernURLGeneratorTest
         }
     }
 
-    // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
-    @Test
-    public void testInvalidSignature() {
-        try {
-
-            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
-            List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            trans.getProtocols().addAll(protos);
-            View view = null;
-            Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
-            Protocol p = result.get(0);
-            Assert.assertNotNull(p);
-            String suri = p.getEndpoint();
-            log.debug("Transfer URI: " + suri);
-            Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
-            
-            String path = transferURI.getPath();
-            String[] parts = path.split("/");
-            //String sig = parts[4];
-            String meta = parts[3];
-            try {
-                urlGen.getNodeURI(meta, "12345", Direction.pushToVoSpace);
-                Assert.fail();
-            } catch (AccessControlException e) {
-                // expected
-            }
-
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
-    @Test
-    public void testMetaTampered() {
-        try {
-
-            TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
-            List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            trans.getProtocols().addAll(protos);
-            View view = null;
-            Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
-            Protocol p = result.get(0);
-            Assert.assertNotNull(p);
-            String suri = p.getEndpoint();
-            log.debug("Transfer URI: " + suri);
-            Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
-            
-            Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
-
-            String path = transferURI.getPath();
-            log.debug("Path: " + path);
-            String[] parts = path.split("/");
-            String sig = parts[4];
-            //String meta = parts[3];
-            VOSURI altURI = new VOSURI(baseURI + "/" + TEST_DIR + "/fakeFile");
-            String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
-            try {
-                VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
-                Assert.fail();
-            } catch (AccessControlException e) {
-                // expected
-            }
-
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testBase64URI() {
-        String[] testStrings = {
-            "abcde",
-            "ab//de",
-            "ab/de",
-            "ab++///+de"
-        };
-        for (String s : testStrings) {
-            log.debug("testing: " + s);
-            Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
-        }
-    }
 
     class TestTransferGenerator extends CavernURLGenerator {
 

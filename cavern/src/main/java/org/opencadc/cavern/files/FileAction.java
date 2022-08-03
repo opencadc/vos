@@ -73,7 +73,10 @@ import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.VOSURI;
 
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.GroupPrincipal;
@@ -113,7 +116,7 @@ public abstract class FileAction extends RestAction {
         return null;
     }
 
-    protected VOSURI getNodeURI() throws AccessControlException, IOException {
+    protected VOSURI getNodeURI() throws AccessControlException, IOException, URISyntaxException {
         initTarget();
         return nodeURI;
     }
@@ -132,20 +135,40 @@ public abstract class FileAction extends RestAction {
 
     protected abstract Direction getDirection();
 
-    private void initTarget() throws AccessControlException, IOException {
+    private void initTarget() throws AccessControlException, IOException, URISyntaxException {
         if (nodeURI == null) {
             String path = syncInput.getPath();
+
+//            LocalServiceURI localServiceURI = new LocalServiceURI();
+//            VOSURI baseURI = localServiceURI.getVOSBase();
+//            log.debug("baseURI for target node: " + baseURI.toString());
+
             String[] parts = path.split("/");
-            if (parts.length < 3) {
+            if (parts.length < 2) {
                 throw new IllegalArgumentException("Invalid request");
             }
-            String meta = parts[0];
-            String sig = parts[1];
-            log.debug("meta: " + meta);
-            log.debug("sig: " + sig);
+//            String meta = parts[0];
+//            String sig = parts[1];
+//            log.debug("meta: " + meta);
+//            log.debug("sig: " + sig);
+            String token = parts[0];
+            log.debug("token: " + token);
+
+//            int firstSlashIndex = path.indexOf("/");
+//            String pathStr = path.substring(firstSlashIndex + 1);
+//            log.debug("path: " + pathStr);
+//            String targetURIStr = baseURI.toString() + "/" + pathStr;
+//            log.debug("target URI for validating token: " + targetURIStr);
+//            // TODO: could be that having an error trap here is better than just
+//            // throwing it in the signature
+//            URI targetURI = new URI(targetURIStr);
+
             CavernURLGenerator urlGen = new CavernURLGenerator();
+            VOSURI targetVOSURI = urlGen.getURIFromPath(path);
             Direction direction = this.getDirection();
-            nodeURI = urlGen.getNodeURI(meta, sig, direction);
+
+//            nodeURI = urlGen.getNodeURI(meta, sig, direction);
+            nodeURI = urlGen.getNodeURI(token, targetVOSURI, direction);
             log.debug("Init node uri: " + nodeURI);
         }
     }

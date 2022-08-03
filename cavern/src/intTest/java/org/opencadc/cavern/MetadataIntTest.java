@@ -110,8 +110,11 @@ public class MetadataIntTest {
     private static VOSURI linksBaseURI;
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
     }
 
     public MetadataIntTest() {
