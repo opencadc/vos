@@ -203,8 +203,9 @@
 
   <servlet-mapping>
     <servlet-name>FilesServlet</servlet-name>
-    <url-pattern>/files/*</url-pattern>
+    <url-pattern>/preauth/*</url-pattern>
   </servlet-mapping>
+
   
   <!-- Transfer servlet endpoints -->
   <servlet-mapping>

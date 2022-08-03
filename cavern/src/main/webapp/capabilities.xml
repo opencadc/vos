@@ -41,7 +41,7 @@
   
   <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
     <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/files</accessURL>
+      <accessURL use="base">https://replace.com/cavern/preauth</accessURL>
       <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
@@ -93,7 +93,7 @@
   
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/archive#file-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/files</accessURL>
+      <accessURL use="full">https://replace.com/cavern/preauth</accessURL>
       <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
