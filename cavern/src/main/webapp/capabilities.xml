@@ -90,6 +90,17 @@
     </interface>
   </capability>
    -->
+
+  <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
+    <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="base">https://replace.com/cavern/files</accessURL>
+      <securityMethod/>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
+    </interface>
+
+  </capability>
   
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/archive#file-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">

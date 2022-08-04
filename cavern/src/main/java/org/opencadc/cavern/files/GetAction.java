@@ -121,7 +121,9 @@ public class GetAction extends FileAction {
                 return;
             }
             
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer) 
+            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
+            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
+            // authentication will probably need the authorizer...
             NodePersistence nodePersistence = new FileSystemNodePersistence();
             PathResolver pathResolver = new PathResolver(nodePersistence, true);
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
