@@ -122,15 +122,15 @@
   </servlet>
 
   <servlet>
-    <servlet-name>AuthFilesServlet</servlet-name>
+    <servlet-name>PreauthFileServlet</servlet-name>
     <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
     <init-param>
       <param-name>get</param-name>
-      <param-value>org.opencadc.cavern.files.GetAction</param-value>
+      <param-value>org.opencadc.cavern.files.PreauthGetAction</param-value>
     </init-param>
     <init-param>
       <param-name>put</param-name>
-      <param-value>org.opencadc.cavern.files.PutAction</param-value>
+      <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
     </init-param>
     <init-param>
       <param-name>isPreAuthRequest</param-name>
@@ -155,15 +155,11 @@
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
         <init-param>
             <param-name>get</param-name>
-            <param-value>org.opencadc.cavern.files.GetAction</param-value>
+            <param-value>org.opencadc.cavern.files.FileGetAction</param-value>
         </init-param>
         <init-param>
             <param-name>put</param-name>
-            <param-value>org.opencadc.cavern.files.PutAction</param-value>
-        </init-param>
-        <init-param>
-          <param-name>isPreAuthRequest</param-name>
-          <param-value>false</param-value>
+            <param-value>org.opencadc.cavern.files.FilePutAction</param-value>
         </init-param>
         <!--
         <init-param>
@@ -235,7 +231,7 @@
   </servlet-mapping>
 
   <servlet-mapping>
-    <servlet-name>AuthFilesServlet</servlet-name>
+    <servlet-name>PreauthFileServlet</servlet-name>
     <url-pattern>/preauth/*</url-pattern>
   </servlet-mapping>
 

@@ -124,10 +124,10 @@ public class CavernURLGenerator implements TransferGenerator {
     private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
 
-    public static final String KEY_SIGNATURE = "sig";
-    public static final String KEY_META = "meta";
-    private static final String KEY_META_NODE = "node";
-    private static final String KEY_META_DIRECTION = "dir";
+//    public static final String KEY_SIGNATURE = "sig";
+//    public static final String KEY_META = "meta";
+//    private static final String KEY_META_NODE = "node";
+//    private static final String KEY_META_DIRECTION = "dir";
     
     private static final String PUB_KEY_FILENAME = "CavernPub.key";
     private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
@@ -151,6 +151,16 @@ public class CavernURLGenerator implements TransferGenerator {
         this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
     }
 
+    public Node resolveReadPermissionCheck(VOSURI target) throws NodeNotFoundException, LinkingException {
+
+        PathResolver ps = new PathResolver(nodes, true);
+        // TODO: this will work for a get, but what about a put?
+        Node checkedNode = ps.resolveWithReadPermissionCheck(target, null, true);
+        log.debug("checked node: " + checkedNode);
+        return checkedNode;
+
+    }
+
     @Override
     public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view,
             Job job, List<Parameter> additionalParams)
@@ -167,8 +177,9 @@ public class CavernURLGenerator implements TransferGenerator {
             // so that the node instead of the URI is passed in so this step
             // can be avoided.
             FileSystem fs = FileSystems.getDefault();
-            PathResolver ps = new PathResolver(nodes, true);
-            Node node = ps.resolveWithReadPermissionCheck(target, null, true);
+            Node node = resolveReadPermissionCheck(target);
+//            PathResolver ps = new PathResolver(nodes, true);
+//            Node node = ps.resolveWithReadPermissionCheck(target, null, true);
 
             List<Protocol> ret = new ArrayList<>();
             List<URI> uris;
@@ -307,7 +318,7 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    public VOSURI getNodeURI(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
+    public VOSURI getPreauthNodeURI(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
 
         // TODO: behaviour will vary if token passed in or not
         log.debug("url encoded token: " + token);
@@ -357,6 +368,31 @@ public class CavernURLGenerator implements TransferGenerator {
 
         throw new IllegalArgumentException("Missing node URI");
     }
+
+    public VOSURI getNodeURI(VOSURI targetVOSURI, Direction direction) throws AccessControlException,
+        NodeNotFoundException, LinkingException {
+
+        Node node = null;
+        if (Direction.pushToVoSpace.equals(direction)) {
+            throw new UnsupportedOperationException("pushToVoSpace not supported yet for /cavern/files.");
+        } else if (Direction.pullFromVoSpace.equals(direction)) {
+            // TODO: Q: does this cover a PUT scenario or not?
+            node = resolveReadPermissionCheck(targetVOSURI);
+        }
+
+        URI nodeURI = node.getUri().getURI();
+
+        log.debug("nodeURI: " + nodeURI.toString());
+
+        if (nodeURI != null) {
+            VOSURI vosURI = new VOSURI(nodeURI);
+            log.debug("vosURI generated from node URI: " + vosURI);
+            return vosURI;
+        }
+
+        throw new IllegalArgumentException("Missing node URI");
+    }
+
 
     List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
         // find all the base endpoints

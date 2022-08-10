@@ -97,7 +97,7 @@ import org.opencadc.cavern.nodes.NodeUtil;
  *
  * @author majorb
  */
-public class PutAction extends FileAction {
+public abstract class PutAction extends FileAction {
     private static final Logger log = Logger.getLogger(PutAction.class);
 
     private static final String INPUT_STREAM = "in";

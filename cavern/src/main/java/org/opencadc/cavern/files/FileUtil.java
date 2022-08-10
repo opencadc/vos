@@ -67,85 +67,65 @@
 
 package org.opencadc.cavern.files;
 
-
+import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.rest.RestAction;
+import ca.nrc.cadc.util.PropertiesReader;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.PathResolver;
-
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
+import org.opencadc.cavern.PosixIdentityManager;
 
 /**
  *
  */
-public abstract class GetAction extends FileAction {
-    private static final Logger log = Logger.getLogger(GetActionBase.class);
+public class FileUtil {
+    private static final Logger log = Logger.getLogger(FileUtil.class);
 
-    public GetActionBase() {
-        super();
+    public FileUtil() {
     }
 
-    @Override
-    public Direction getDirection() {
-        return Direction.pullFromVoSpace;
-    }
+    public static VOSURI initPreauthTarget(String path, Direction direction) throws AccessControlException, IOException, URISyntaxException {
+        //        if (nodeURI == null) {
+        //            String path = syncInput.getPath();
 
-    @Override
-    public void doAction() throws Exception {
-        try {
-            VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                // not found
-                syncOutput.setCode(404);
-                return;
-            }
-            if (!Files.isReadable(source)) {
-                // permission denied
-                syncOutput.setCode(403);
-                return;
-            }
-
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
-            // authentication will probably need the authorizer...
-            NodePersistence nodePersistence = new FileSystemNodePersistence();
-            PathResolver pathResolver = new PathResolver(nodePersistence, true);
-            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
-            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
-            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
-            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", contentEncoding);
-            syncOutput.setHeader("Content-Length", contentLength);
-            syncOutput.setHeader("Content-MD5", contentMD5);
-
-            OutputStream out = syncOutput.getOutputStream();
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+        // Long marker as cavern debug is rather verbose
+        log.debug("--------------------------------------------------------------------------------");
+        if (!StringUtil.hasLength(path)) {
+            throw new IllegalArgumentException("Invalid preauthorized request");
         }
+
+        CavernURLGenerator urlGen = new CavernURLGenerator();
+        VOSURI targetVOSURI = urlGen.getURIFromPath(path);
+
+        String[] parts = path.split("/");
+        log.debug(" number of parts in path: " + parts.length);
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("Invalid preauthorized request");
+        }
+
+        String token = parts[0];
+        log.debug("token: " + token);
+
+        // preauth token is validated in this step. Exceptions are thrown
+        // if it's not valid
+        VOSURI nodeURI = urlGen.getPreauthNodeURI(token, targetVOSURI, direction);
+        log.debug("preauthorized node uri: " + nodeURI);
+
+        return nodeURI;
+    }
+
+    public static VOSURI initTarget(String path) throws AccessControlException, IOException, URISyntaxException {
+        // TODO: What needs to go in here for auth check? Is READ check enough?
+        // ie: PathResolver.resolveWithReadCheck??
+
+        // remove this when new getNodeURI function proven to work
+        throw new UnsupportedOperationException("non-preauth access to cavern files not supported yet.");
     }
 }

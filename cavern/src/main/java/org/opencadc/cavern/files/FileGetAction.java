@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,85 +67,26 @@
 
 package org.opencadc.cavern.files;
 
-
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.PathResolver;
-
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
  *
  */
-public abstract class GetAction extends FileAction {
-    private static final Logger log = Logger.getLogger(GetActionBase.class);
+public class FileGetAction extends GetAction {
+    private static final Logger log = Logger.getLogger(FileGetAction.class);
 
-    public GetActionBase() {
+    public FileGetAction() {
         super();
     }
 
     @Override
-    public Direction getDirection() {
-        return Direction.pullFromVoSpace;
+    protected void initTarget() throws AccessControlException, IOException, URISyntaxException {
+        String path = syncInput.getPath();
+        // TODO: what would need to go in here?
+        nodeURI = FileUtil.initTarget(path);
     }
 
-    @Override
-    public void doAction() throws Exception {
-        try {
-            VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                // not found
-                syncOutput.setCode(404);
-                return;
-            }
-            if (!Files.isReadable(source)) {
-                // permission denied
-                syncOutput.setCode(403);
-                return;
-            }
-
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
-            // authentication will probably need the authorizer...
-            NodePersistence nodePersistence = new FileSystemNodePersistence();
-            PathResolver pathResolver = new PathResolver(nodePersistence, true);
-            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
-            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
-            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
-            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", contentEncoding);
-            syncOutput.setHeader("Content-Length", contentLength);
-            syncOutput.setHeader("Content-MD5", contentMD5);
-
-            OutputStream out = syncOutput.getOutputStream();
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
-        }
-    }
 }
