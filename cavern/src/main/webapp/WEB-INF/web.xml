@@ -132,17 +132,6 @@
       <param-name>put</param-name>
       <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
     </init-param>
-    <!--
-    <init-param>
-        <param-name>post</param-name>
-        <param-value>org.opencadc.cavern.files.PostAction</param-value>
-    </init-param>
-
-    <init-param>
-        <param-name>delete</param-name>
-        <param-value>org.opencadc.cavern.files.DeleteAction</param-value>
-    </init-param>
-    -->
     <load-on-startup>2</load-on-startup>
   </servlet>
   
@@ -151,27 +140,12 @@
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
         <init-param>
             <param-name>get</param-name>
-            <param-value>org.opencadc.cavern.files.GetAction</param-value>
+            <param-value>org.opencadc.cavern.files.FilesGetAction</param-value>
         </init-param>
         <init-param>
             <param-name>put</param-name>
-            <param-value>org.opencadc.cavern.files.PutAction</param-value>
+            <param-value>org.opencadc.cavern.files.FilesPutAction</param-value>
         </init-param>
-        <init-param>
-          <param-name>isPreAuthRequest</param-name>
-          <param-value>false</param-value>
-        </init-param>
-        <!--
-        <init-param>
-            <param-name>post</param-name>
-            <param-value>org.opencadc.cavern.files.PostAction</param-value>
-        </init-param>
-
-        <init-param>
-            <param-name>delete</param-name>
-            <param-value>org.opencadc.cavern.files.DeleteAction</param-value>
-        </init-param>
-        -->
         <load-on-startup>2</load-on-startup>
     </servlet>
 
