@@ -94,13 +94,13 @@ import org.opencadc.cavern.PosixIdentityManager;
 public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
-    private static final String PREAUTH_INIT_PARAM = "isPreAuthRequest";
+    protected static final String PREAUTH_INIT_PARAM = "isPreAuthRequest";
 
     private String root;
     private UserPrincipalLookupService upLookupSvc;
     private PosixIdentityManager identityManager;
 
-    private VOSURI nodeURI;
+    protected VOSURI nodeURI;
 
     protected FileAction() {
         PropertiesReader pr = new PropertiesReader("Cavern.properties");
@@ -138,44 +138,46 @@ public abstract class FileAction extends RestAction {
 
     protected abstract Direction getDirection();
 
-    private void initTarget() throws AccessControlException, IOException, URISyntaxException {
-        if (nodeURI == null) {
-            String path = syncInput.getPath();
+//    private void initTarget() throws AccessControlException, IOException, URISyntaxException {
+//        if (nodeURI == null) {
+//            String path = syncInput.getPath();
+//
+//            // Long marker as cavern debug is rather verbose
+//            log.debug("--------------------------------------------------------------------------------");
+//
+//            // init param set in web.xml
+//            // TODO: have something that responds if it is null??
+//            String isPreAuth = initParams.get(PREAUTH_INIT_PARAM);
+//            log.debug("isPreAuth value: " + isPreAuth);
+//
+//            if (isPreAuth.toLowerCase().equals("true")) {
+//                if (!StringUtil.hasLength(path)) {
+//                    throw new IllegalArgumentException("Invalid preauthorized request");
+//                }
+//                String[] parts = path.split("/");
+//                log.debug(" number of parts in path: " + parts.length);
+//                if (parts.length < 2) {
+//                    throw new IllegalArgumentException("Invalid preauthorized request");
+//                }
+//
+//                String token = parts[0];
+//                log.debug("token: " + token);
+//
+//                CavernURLGenerator urlGen = new CavernURLGenerator();
+//                VOSURI targetVOSURI = urlGen.getURIFromPath(path);
+//                Direction direction = this.getDirection();
+//
+//                // preauth token is validated in this step. Exceptions are thrown
+//                // if it's not valid
+//                nodeURI = urlGen.getNodeURI(token, targetVOSURI, direction);
+//                log.debug("Init node uri: " + nodeURI);
+//            } else {
+//                // TODO: this will be where a potentially different funciton from getNodeURI
+//                // will be called, including setting up an authorizer.
+//                throw new UnsupportedOperationException("non-preauth access to cavern files not supported yet.");
+//            }
+//        }
 
-            // Long marker as cavern debug is rather verbose
-            log.debug("--------------------------------------------------------------------------------");
+    protected abstract void initTarget() throws AccessControlException, IOException, URISyntaxException;
 
-            // init param set in web.xml
-            // TODO: have something that responds if it is null??
-            String isPreAuth = initParams.get(PREAUTH_INIT_PARAM);
-            log.debug("isPreAuth value: " + isPreAuth);
-
-            if (isPreAuth.toLowerCase().equals("true")) {
-                if (!StringUtil.hasLength(path)) {
-                    throw new IllegalArgumentException("Invalid preauthorized request");
-                }
-                String[] parts = path.split("/");
-                log.debug(" number of parts in path: " + parts.length);
-                if (parts.length < 2) {
-                    throw new IllegalArgumentException("Invalid preauthorized request");
-                }
-
-                String token = parts[0];
-                log.debug("token: " + token);
-
-                CavernURLGenerator urlGen = new CavernURLGenerator();
-                VOSURI targetVOSURI = urlGen.getURIFromPath(path);
-                Direction direction = this.getDirection();
-
-                // preauth token is validated in this step. Exceptions are thrown
-                // if it's not valid
-                nodeURI = urlGen.getNodeURI(token, targetVOSURI, direction);
-                log.debug("Init node uri: " + nodeURI);
-            } else {
-                // TODO: this will be where a potentially different funciton from getNodeURI
-                // will be called, including setting up an authorizer.
-                throw new UnsupportedOperationException("non-preauth access to cavern files not supported yet.");
-            }
-        }
-    }
 }

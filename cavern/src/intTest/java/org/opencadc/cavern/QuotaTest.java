@@ -124,6 +124,7 @@ public class QuotaTest
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.permissions", Level.DEBUG);
     }
 
     @BeforeClass

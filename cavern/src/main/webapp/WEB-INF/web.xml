@@ -126,15 +126,11 @@
     <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
     <init-param>
       <param-name>get</param-name>
-      <param-value>org.opencadc.cavern.files.GetAction</param-value>
+      <param-value>org.opencadc.cavern.files.PreauthGetAction</param-value>
     </init-param>
     <init-param>
       <param-name>put</param-name>
-      <param-value>org.opencadc.cavern.files.PutAction</param-value>
-    </init-param>
-    <init-param>
-      <param-name>isPreAuthRequest</param-name>
-      <param-value>true</param-value>
+      <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
     </init-param>
     <!--
     <init-param>

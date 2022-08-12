@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.files;
 
-
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOS;
@@ -88,11 +87,8 @@ import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
-/**
- *
- * @author majorb
- */
-public class GetAction extends FileAction {
+
+public abstract class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
     public GetAction() {
@@ -149,4 +145,5 @@ public class GetAction extends FileAction {
             syncOutput.setCode(403);
         }
     }
+
 }

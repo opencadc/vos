@@ -71,6 +71,7 @@ import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
@@ -79,6 +80,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -97,7 +99,7 @@ import org.opencadc.cavern.nodes.NodeUtil;
  *
  * @author majorb
  */
-public class PutAction extends FileAction {
+public abstract class PutAction extends FileAction {
     private static final Logger log = Logger.getLogger(PutAction.class);
 
     private static final String INPUT_STREAM = "in";
@@ -237,4 +239,5 @@ public class PutAction extends FileAction {
         Path target = NodeUtil.nodeToPath(rootPath, node);
         NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
     }
+
 }

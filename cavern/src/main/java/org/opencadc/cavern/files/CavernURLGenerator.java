@@ -258,6 +258,7 @@ public class CavernURLGenerator implements TransferGenerator {
             StringBuilder path = new StringBuilder();
             path.append("/");
             path.append(encodedToken);
+//            path.append(token);
             path.append("/");
 
             if (Direction.pushToVoSpace.equals(dir)) {
@@ -315,7 +316,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
         String decodedTokenbytes = new String(Base64.decode(token));
         log.debug("url decoded token: " + decodedTokenbytes);
-
+//        log.debug("not decoding token as it wasn't encoded.)");
         URI targetURI = targetVOSURI.getURI();
         URI nodeURI = null;
         if (token != null) {
@@ -335,6 +336,8 @@ public class CavernURLGenerator implements TransferGenerator {
             // This will throw an AccessControlException if something is wrong with the
             // grantClass or targetURI. Can return null if user isn't in the meta key=value set
             String tokenUser = tk.validateToken(decodedTokenbytes, targetURI, grantClass);
+//            log.debug("using token only, not b64 encoded token...");
+//            String tokenUser = tk.validateToken(token, targetURI, grantClass);
 
             if (tokenUser == null) {
                 throw new AccessControlException("invalid token");
