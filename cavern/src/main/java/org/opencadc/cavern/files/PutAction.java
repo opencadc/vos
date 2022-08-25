@@ -236,13 +236,8 @@ public class PutAction extends FileAction {
         log.debug("clean up on put failure " + target);
         Files.delete(target);
         // restore empty DataNode: remove props that are no longer applicable
-        Iterator<NodeProperty> i = node.getProperties().iterator();
-        while (i.hasNext()) {
-            NodeProperty np = i.next();
-            if (VOS.PROPERTY_URI_CONTENTMD5.equals(np.getPropertyURI())) {
-                i.remove();
-            }
-        }
+        NodeProperty npToBeRemoved = node.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+        node.getProperties().remove(npToBeRemoved);
         NodeUtil.create(rootPath, node);
         return;
     }
