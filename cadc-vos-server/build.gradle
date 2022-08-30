@@ -15,7 +15,11 @@ repositories {
 
 apply from: '../opencadc.gradle'
 
-sourceCompatibility = 11.0
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
 
 group = 'org.opencadc'
 
