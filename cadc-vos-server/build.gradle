@@ -15,7 +15,7 @@ repositories {
 
 apply from: '../opencadc.gradle'
 
-sourceCompatibility = 11.0
+sourceCompatibility = 1.8
 
 group = 'org.opencadc'
 
