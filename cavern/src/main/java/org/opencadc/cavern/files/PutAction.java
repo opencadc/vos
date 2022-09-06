@@ -129,11 +129,15 @@ public class PutAction extends FileAction {
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
         Node node = null;
+        Path target = null;
+        Path rootPath = null;
+        boolean putStarted = false;
+        boolean successful = false;
 
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
 
-            Path rootPath = Paths.get(getRoot());
+            rootPath = Paths.get(getRoot());
             node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
                 // When the /files endpoint supports the putting of data
@@ -149,12 +153,13 @@ public class PutAction extends FileAction {
                 syncOutput.setCode(400);
             }
 
-            Path target = NodeUtil.nodeToPath(rootPath, node);
+            target = NodeUtil.nodeToPath(rootPath, node);
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
             MessageDigest md = MessageDigest.getInstance("MD5");
             DigestInputStream vis = new DigestInputStream(in, md);
             log.debug("copy: start " + target);
+            putStarted = true;
             Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("copy: done " + target);
 
@@ -165,16 +170,7 @@ public class PutAction extends FileAction {
             if (expectedMD5 != null && !expectedMD5.equals(propValue)) {
                 // upload failed: do not keep corrupt data
                 log.debug("upload corrupt: " + expectedMD5 + " != " + propValue);
-                Files.delete(target);
-                // restore empty DataNode: remove props that are no longer applicable
-                Iterator<NodeProperty> i = node.getProperties().iterator();
-                while (i.hasNext()) {
-                    NodeProperty np = i.next();
-                    if (VOS.PROPERTY_URI_CONTENTMD5.equals(np.getPropertyURI())) {
-                        i.remove();
-                    }
-                }
-                NodeUtil.create(rootPath, node);
+                cleanUpOnFailure(target, node, rootPath);
                 return;
             }
             
@@ -186,13 +182,14 @@ public class PutAction extends FileAction {
             // doing this last because it requires chown which is most likely to fail during experimentation
             log.debug("restore owner & group");
             restoreOwnNGroup(rootPath, node);
+            successful = true;
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             syncOutput.setCode(403);
         } catch (IOException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("quota")) {
-                Path rootPath = Paths.get(getRoot());
+                rootPath = Paths.get(getRoot());
                 restoreOwnNGroup(rootPath, node);
                 Node curNode = node.getParent();
                 String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
@@ -227,8 +224,22 @@ public class PutAction extends FileAction {
                 throw e;
             }
         } finally {
-            log.debug("put: done " + nodeURI.getURI().toASCIIString());
+            if (successful) {
+                log.debug("put: done " + nodeURI.getURI().toASCIIString());
+            } else if (putStarted) {
+                cleanUpOnFailure(target, node, rootPath);
+            }
         }
+    }
+    
+    private void cleanUpOnFailure(Path target, Node node, Path rootPath) throws IOException {
+        log.debug("clean up on put failure " + target);
+        Files.delete(target);
+        // restore empty DataNode: remove props that are no longer applicable
+        NodeProperty npToBeRemoved = node.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+        node.getProperties().remove(npToBeRemoved);
+        NodeUtil.create(rootPath, node);
+        return;
     }
     
     private void restoreOwnNGroup(Path rootPath, Node node) throws IOException {
