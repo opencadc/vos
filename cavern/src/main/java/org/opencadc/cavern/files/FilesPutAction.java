@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,6 +67,9 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
@@ -82,14 +85,18 @@ public class FilesPutAction extends PutAction {
         super();
     }
 
-    // doAction() is in the parent abstract PutAction class
+    // doAction() and getDirection() are in the parent abstract PutAction class
 
     @Override
-    protected void initTarget() throws AccessControlException, IOException, URISyntaxException {
+    protected void initTarget() throws AccessControlException, IOException, URISyntaxException,
+        NodeNotFoundException, LinkingException {
         if (nodeURI == null) {
             log.debug("FilesPutAction.initTarget() ******************* ");
             String path = syncInput.getPath();
-            nodeURI = FileActionUtil.initFilesTarget(path, initParams, this.getDirection());
+            FileActionMgr fam = new FileActionMgr();
+            fam.initTools();
+            nodeURI = fam.getVOSURIForPath(path);
+            Node node = fam.resolveWithWritePermission(nodeURI, initParams, getDirection());
         }
     }
 }

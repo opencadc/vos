@@ -369,6 +369,7 @@ public class CavernURLGenerator implements TransferGenerator {
         try {
             RegistryClient rc = new RegistryClient();
             Capabilities caps = rc.getCapabilities(serviceURI);
+            // TODO: test if this needs to be something else?
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
             for (Interface ifc : interfaces) {

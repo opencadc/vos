@@ -72,12 +72,18 @@ import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
 
 import ca.nrc.cadc.vos.server.LocalServiceURI;
+import ca.nrc.cadc.vos.server.PathResolver;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.GroupPrincipal;
@@ -85,6 +91,7 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.FileSystemNodePersistence;
 import org.opencadc.cavern.PosixIdentityManager;
 
 /**
@@ -94,11 +101,10 @@ import org.opencadc.cavern.PosixIdentityManager;
 public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
-    protected static final String PREAUTH_INIT_PARAM = "isPreAuthRequest";
-
     private String root;
     private UserPrincipalLookupService upLookupSvc;
     private PosixIdentityManager identityManager;
+
 
     protected VOSURI nodeURI;
 
@@ -119,7 +125,8 @@ public abstract class FileAction extends RestAction {
         return null;
     }
 
-    protected VOSURI getNodeURI() throws AccessControlException, IOException, URISyntaxException {
+    protected VOSURI getNodeURI() throws AccessControlException, IOException,
+        URISyntaxException, NodeNotFoundException, LinkingException {
         initTarget();
         return nodeURI;
     }
@@ -138,46 +145,6 @@ public abstract class FileAction extends RestAction {
 
     protected abstract Direction getDirection();
 
-//    private void initTarget() throws AccessControlException, IOException, URISyntaxException {
-//        if (nodeURI == null) {
-//            String path = syncInput.getPath();
-//
-//            // Long marker as cavern debug is rather verbose
-//            log.debug("--------------------------------------------------------------------------------");
-//
-//            // init param set in web.xml
-//            // TODO: have something that responds if it is null??
-//            String isPreAuth = initParams.get(PREAUTH_INIT_PARAM);
-//            log.debug("isPreAuth value: " + isPreAuth);
-//
-//            if (isPreAuth.toLowerCase().equals("true")) {
-//                if (!StringUtil.hasLength(path)) {
-//                    throw new IllegalArgumentException("Invalid preauthorized request");
-//                }
-//                String[] parts = path.split("/");
-//                log.debug(" number of parts in path: " + parts.length);
-//                if (parts.length < 2) {
-//                    throw new IllegalArgumentException("Invalid preauthorized request");
-//                }
-//
-//                String token = parts[0];
-//                log.debug("token: " + token);
-//
-//                CavernURLGenerator urlGen = new CavernURLGenerator();
-//                VOSURI targetVOSURI = urlGen.getURIFromPath(path);
-//                Direction direction = this.getDirection();
-//
-//                // preauth token is validated in this step. Exceptions are thrown
-//                // if it's not valid
-//                nodeURI = urlGen.getNodeURI(token, targetVOSURI, direction);
-//                log.debug("Init node uri: " + nodeURI);
-//            } else {
-//                // TODO: this will be where a potentially different funciton from getNodeURI
-//                // will be called, including setting up an authorizer.
-//                throw new UnsupportedOperationException("non-preauth access to cavern files not supported yet.");
-//            }
-//        }
-
-    protected abstract void initTarget() throws AccessControlException, IOException, URISyntaxException;
+    protected abstract void initTarget() throws AccessControlException, IOException, URISyntaxException, NodeNotFoundException, LinkingException;
 
 }
