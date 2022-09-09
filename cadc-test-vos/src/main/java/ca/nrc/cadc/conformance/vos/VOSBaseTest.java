@@ -605,7 +605,7 @@ public abstract class VOSBaseTest
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponseWebResponse delete(URI standard, Node node)
+    protected WebResponse delete(URI standard, Node node)
         throws IOException, SAXException
     {
         String resourceUrl;
