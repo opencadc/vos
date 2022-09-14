@@ -92,22 +92,18 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.VOSURI;
 
-public class FilesIntTest {
+public class FilesGetTest {
 
-    protected static Logger log = Logger.getLogger(FilesIntTest.class);
+    protected static Logger log = Logger.getLogger(FilesGetTest.class);
 
     protected static Subject cadcauthSubject;
     protected static String baseURI;
     protected static String getFolderURI;
-    protected static String putFolderURI;
     
-    public FilesIntTest() {}
+    public FilesGetTest() {}
     
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.cavern.files", Level.DEBUG);
     }
@@ -119,21 +115,19 @@ public class FilesIntTest {
 
         baseURI ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";
         getFolderURI = baseURI + "getTest";
-        putFolderURI = baseURI + "putTest";
         log.debug("------------ TEST SETUP ------------");
-        log.debug("get and put test folders: " + getFolderURI + ", " + putFolderURI);
+        log.debug("get test folder: " + getFolderURI );
         log.debug("test dir base URI: " + baseURI);
     }
 
-
     @Test
-    public void testGetPublicFile() throws Throwable {
+    public void testGetPublicFile() {
         try {
-            // Q: is there an arc vospace-int-test folder already set up? for whih account?
             final String uri = getFolderURI + "/bowline.jpg";
             File f = getFile(new VOSURI(uri));
             log.debug("filename found: " + f.getName());
             Assert.assertEquals("filename incorrect", f.getName(), "bowline.jpg" );
+            cleanup(f);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
             Assert.fail("Unexcepted exception: " + t.getMessage());
@@ -141,12 +135,13 @@ public class FilesIntTest {
     }
     
     @Test
-    public void testGetPublicFileThroughLink() throws Throwable {
+    public void testGetPublicFileThroughLink() {
         try {
             String uri = getFolderURI + "/ChilkootPass_GoldenStairs2.jpg";
             File f = getFile(new VOSURI(uri));
             log.debug("filename found: " + f.getName());
             Assert.assertEquals("filename incorrect", f.getName(), "ChilkootPass_GoldenStairs2.jpg" );
+            cleanup(f);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
             Assert.fail("Unexcepted exception: " + t.getMessage());
@@ -154,7 +149,7 @@ public class FilesIntTest {
     }
     
     @Test
-    public void testGetContainerNode() throws Throwable {
+    public void testGetContainerNode() {
         try {
             try {
                 getFile(new VOSURI(baseURI));
@@ -170,7 +165,7 @@ public class FilesIntTest {
     }
     
     @Test
-    public void testGetProprietaryFile() throws Throwable {
+    public void testGetProprietaryFile() {
         try {
             final String uri = getFolderURI + "/All-Falcon-Chicks-2016.jpg";
             final VOSURI vosURI = new VOSURI(uri);
@@ -201,11 +196,13 @@ public class FilesIntTest {
     }
     
     public File getFile(VOSURI uri) throws Throwable {
-        RegistryClient regClient = new RegistryClient();
+
         AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
         if (authMethod == null) {
             authMethod = AuthMethod.ANON;
         }
+
+        RegistryClient regClient = new RegistryClient();
         URL baseURL = regClient.getServiceURL(uri.getServiceURI(), Standards.VOSPACE_FILES_20, authMethod);
         log.debug("baseURL for getFile: " + baseURL.toExternalForm());
         URL url = new URL(baseURL.toString() + uri.getPath());
@@ -216,13 +213,12 @@ public class FilesIntTest {
         HttpDownload download = new HttpDownload(url, tmp);
 
         download.setFollowRedirects(false);
-        download.setOverwrite(true); // file exists from create above
+        download.setOverwrite(true); // file potentially exists from previous test runs
         download.run();
+
         if (download.getThrowable() != null) {
             throw download.getThrowable();
         }
-
-        Assert.assertNull("throwable", download.getThrowable());
         Assert.assertEquals(200, download.getResponseCode());
         File ret = download.getFile();
         Assert.assertTrue("file exists", ret.exists());
@@ -230,6 +226,12 @@ public class FilesIntTest {
 
         return ret;
 
+    }
+
+    private void cleanup(File f) {
+        if (f.exists()) {
+            f.delete();
+        }
     }
 
 }

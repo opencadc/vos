@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -95,6 +95,7 @@ import org.opencadc.cavern.nodes.NodeUtil;
 /**
  *
  * @author majorb
+ * @author jeevesh
  */
 public abstract class PutAction extends FileAction {
     private static final Logger log = Logger.getLogger(PutAction.class);
@@ -139,9 +140,7 @@ public abstract class PutAction extends FileAction {
             rootPath = Paths.get(getRoot());
             node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
-                // When the /files endpoint supports the putting of data
-                // before the node is created this will have to change.
-                // For now, return NotFound.
+                // Node needs to be created ahead of time for PUT
                 syncOutput.setCode(404);
                 return;
             }

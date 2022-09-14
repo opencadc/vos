@@ -67,29 +67,14 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.PathResolver;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.security.AccessControlException;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
  *
- * @author
+ * @author jeevesh
  */
 public class PreauthGetAction extends GetAction {
     private static final Logger log = Logger.getLogger(PreauthGetAction.class);

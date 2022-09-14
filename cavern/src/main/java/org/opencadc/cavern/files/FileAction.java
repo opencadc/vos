@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,40 +70,32 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.PropertiesReader;
-import ca.nrc.cadc.util.StringUtil;
+
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.VOSURI;
 
-import ca.nrc.cadc.vos.server.LocalServiceURI;
-import ca.nrc.cadc.vos.server.PathResolver;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.cavern.PosixIdentityManager;
 
 /**
  *
  * @author majorb
+ * @author jeevesh
  */
 public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     private String root;
     private UserPrincipalLookupService upLookupSvc;
-    private PosixIdentityManager identityManager;
 
 
     protected VOSURI nodeURI;
@@ -117,8 +109,11 @@ public abstract class FileAction extends RestAction {
 
         Path rootPath = Paths.get(getRoot());
         this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
-        this.identityManager = new PosixIdentityManager(upLookupSvc);
     }
+
+    protected abstract Direction getDirection();
+
+    protected abstract void initTarget() throws AccessControlException, IOException, URISyntaxException, NodeNotFoundException, LinkingException, NodeNotSupportedException;
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {
@@ -126,7 +121,7 @@ public abstract class FileAction extends RestAction {
     }
 
     protected VOSURI getNodeURI() throws AccessControlException, IOException,
-        URISyntaxException, NodeNotFoundException, LinkingException {
+        URISyntaxException, NodeNotFoundException, LinkingException, NodeNotSupportedException {
         initTarget();
         return nodeURI;
     }
@@ -138,13 +133,4 @@ public abstract class FileAction extends RestAction {
     protected UserPrincipalLookupService getUpLookupSvc() {
         return upLookupSvc;
     }
-
-    protected PosixIdentityManager getIdentityManager() {
-        return identityManager;
-    }
-
-    protected abstract Direction getDirection();
-
-    protected abstract void initTarget() throws AccessControlException, IOException, URISyntaxException, NodeNotFoundException, LinkingException;
-
 }

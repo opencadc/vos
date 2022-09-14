@@ -69,10 +69,14 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
@@ -85,22 +89,23 @@ import org.opencadc.cavern.FileSystemNodePersistence;
 
 
 /**
- *
+ * @author jeevesh
  */
 public class FileActionMgr {
     private final Logger log = Logger.getLogger(FileActionMgr.class);
 
     private VOSpaceAuthorizer authorizer;
     private PathResolver pathResolver;
+    private FileSystemNodePersistence fsPersistence;
 
     public FileActionMgr() {}
 
     public void initTools() {
         // Set up authorizer and path resolver
-        FileSystemNodePersistence nodes = new FileSystemNodePersistence();
-        this.pathResolver = new PathResolver(nodes, true);
+        this.fsPersistence = new FileSystemNodePersistence();
+        this.pathResolver = new PathResolver(fsPersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
-        this.authorizer.setNodePersistence(nodes);
+        this.authorizer.setNodePersistence(fsPersistence);
     }
 
     public VOSURI initPreauthTarget(String path, Map<String, String> initParams, Direction direction)
@@ -108,7 +113,7 @@ public class FileActionMgr {
         VOSURI nodeURI = null;
 
         // Long marker as cavern debug is rather verbose
-        log.debug("----------------initPreauthTarget debug log----------------------------------------------------------------");
+        log.debug("---------------- initPreauthTarget debug log ----------------------");
         log.debug("path passed in: " + path);
 
         if (!StringUtil.hasLength(path)) {
@@ -141,8 +146,7 @@ public class FileActionMgr {
 
         // Authorization is done in this step
         Node node = pathResolver.resolveWithReadPermissionCheck(targetVOSURI, authorizer, true);
-
-        // TODO: consider putting error checking try-catch here? 9/9/22
+        log.debug("node resolved with read permission: " + targetVOSURI.toString());
 
         return node;
     }
@@ -150,13 +154,54 @@ public class FileActionMgr {
     public Node resolveWithWritePermission(VOSURI targetVOSURI, Map<String, String> initParams, Direction direction)
         throws AccessControlException, NodeNotFoundException, LinkingException, URISyntaxException {
 
-        log.debug("[resolveWithWritePermission]: checking read permission for targetVOSURI: " + targetVOSURI.toString());
-        Node node = resolveWithReadPermission(targetVOSURI, initParams, direction);
+        Node resolvedNode = null;
 
-        log.debug("[resolveWithWritePermission]: checking write permission for targetVOSURI: " + targetVOSURI.toString());
-        this.authorizer.getWritePermission(node);
+        try {
+            // Test to see if the node exists already or not
+            log.debug("[resolveWithWritePermission]: checking read permission for targetVOSURI: " + targetVOSURI.toString());
+            resolvedNode = resolveWithReadPermission(targetVOSURI, initParams, direction);
 
-        return node;
+            try {
+                // Node exists, check write permissions & whether parent is locked
+                resolvedNode = (Node) authorizer.getWritePermission(resolvedNode);
+
+                // check to ensure the parent node isn't locked
+                if (resolvedNode.getParent() != null && resolvedNode.getParent().isLocked()) {
+                    throw new NodeLockedException(resolvedNode.getParent().getUri().toString());
+                }
+
+                return resolvedNode;
+
+            } catch (NodeLockedException e) {
+                throw e;
+            }
+
+        } catch (NodeNotFoundException ex) {
+            // this could be a new file. Check parent exists and is writable
+            Node pn = resolveWithReadPermission(targetVOSURI.getParentURI(), initParams, direction);
+
+            // parent node exists
+            if (!(pn instanceof ContainerNode))
+            {
+                throw new IllegalArgumentException(
+                    "parent is not a ContainerNode: " + pn.getUri().getURI().toASCIIString());
+            }
+            authorizer.getWritePermission(pn);
+
+            // everything checks out so far, create the new DataNode
+            try {
+                Node newNode =  new DataNode(new VOSURI(pn.getUri()
+                        + "/" + targetVOSURI.getName()));
+
+                newNode.setParent((ContainerNode) pn);
+                fsPersistence.put(newNode);
+                return newNode;
+            } catch (NodeNotSupportedException e2) {
+                throw new IllegalArgumentException(
+                    "node type not supported.", e2);
+            }
+
+        }
     }
 
 
@@ -176,5 +221,10 @@ public class FileActionMgr {
 
         return targetVOSURI;
 
+    }
+
+    public Node putNode(DataNode node) throws NodeNotSupportedException {
+        log.debug("attempting to put node: " + node.toString());
+        return fsPersistence.put(node);
     }
 }

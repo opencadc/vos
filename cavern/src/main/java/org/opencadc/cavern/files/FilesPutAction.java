@@ -70,13 +70,14 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 
 /**
- *
+ * @author jeevesh
  */
 public class FilesPutAction extends PutAction {
     private static final Logger log = Logger.getLogger(FilesPutAction.class);
@@ -89,13 +90,21 @@ public class FilesPutAction extends PutAction {
 
     @Override
     protected void initTarget() throws AccessControlException, IOException, URISyntaxException,
-        NodeNotFoundException, LinkingException {
+        NodeNotFoundException, LinkingException, NodeNotSupportedException {
+
         if (nodeURI == null) {
+
             log.debug("FilesPutAction.initTarget() ******************* ");
             String path = syncInput.getPath();
+            log.debug("syncinput; " + syncInput.getRequestURI());
+            log.debug("path passed in :" + path);
             FileActionMgr fam = new FileActionMgr();
             fam.initTools();
+
+            // Node to be written
             nodeURI = fam.getVOSURIForPath(path);
+            log.debug("nodeURI for PUT request: " + nodeURI.toString());
+
             Node node = fam.resolveWithWritePermission(nodeURI, initParams, getDirection());
         }
     }

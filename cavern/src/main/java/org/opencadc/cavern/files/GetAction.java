@@ -87,6 +87,11 @@ import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
+/**
+ *
+ * @author majorb
+ * @author jeevesh
+ */
 
 public abstract class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
