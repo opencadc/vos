@@ -70,6 +70,9 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.HttpDelete;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
@@ -83,6 +86,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -92,8 +96,8 @@ import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -107,14 +111,16 @@ public class FilesPutTest {
     protected static Logger log = Logger.getLogger(FilesPutTest.class);
 
     protected static Subject cadcauthSubject;
-    protected static String baseURI;
+    protected static String baseURIStr;
+    protected static VOSURI baseURI;
     protected static String putTestURIStr;
     private static URL nodesURL;
     private static VOSURI putTestFolderURI;
+    private static VOSpaceClient vos;
 
     // Set this to 'false' if the test folder needs to be retained
     // during manual or dev testing for debugging
-    private static boolean cleanupAfterTest = true;
+    private static boolean cleanupAfterTest = false;
 
     public FilesPutTest() {}
     
@@ -126,15 +132,19 @@ public class FilesPutTest {
 
     @BeforeClass
     public static void staticInit() throws Exception {
+
         log.debug("------------ TEST SETUP ------------");
         File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", CavernPackageRunnerTest.class);
         cadcauthSubject = SSLUtil.createSubject(SSL_CERT);
 
-        baseURI ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/putTest";
-        putTestURIStr = baseURI + "/filesPutTest-" + System.currentTimeMillis();
+        baseURIStr ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/putTest";
+        putTestURIStr = baseURIStr + "/filesPutTest-" + System.currentTimeMillis();
 
-        log.debug("test dir base URI: " + baseURI);
+        log.debug("test dir base URI: " + baseURIStr);
         log.debug("put test folder: " +  putTestFolderURI);
+
+        baseURI = new VOSURI(new URI(baseURIStr));
+        vos = new VOSpaceClient(baseURI.getServiceURI());
 
         putTestFolderURI = new VOSURI(new URI(putTestURIStr));
         final URI serviceURI = putTestFolderURI.getServiceURI();
@@ -145,27 +155,35 @@ public class FilesPutTest {
         nodesURL = rc.getServiceURL(serviceURI, Standards.VOSPACE_NODES_20, AuthMethod.CERT);
 
         // Set up the put test container folder
-        Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
-            @Override
-            public Object run() throws Exception {
-                ContainerNode cn = new ContainerNode(putTestFolderURI);
-                putNode(new URL(nodesURL.toExternalForm() + cn.getUri().getPath()), cn);
-                return null;
-            }
-        });
+        try {
+            Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
+                @Override
+                public Object run() throws Exception {
+                    ContainerNode cn = new ContainerNode(putTestFolderURI);
+                    vos.createNode(cn);
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException ioe) {
+            log.error("unable to set up test container " + putTestFolderURI.toString());
+        }
     }
 
     @Test
     public void testPutFileOK() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile.rtf";
+        final String sourceFilename = "src/test/resources/smallTextFile.rtf";
+        final String expectedMD5 = "e99fb782d60d295a3aa287cc999349d2";
         final VOSURI nodeURI = new VOSURI(uri);
+        final File f = new File(sourceFilename);
+        log.debug("source file for test: " + sourceFilename);
 
         try {
             Subject.doAs(cadcauthSubject, new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
-                        String filename = "src/test/resources/smallTextFile.rtf";
-                        putFile(nodeURI, filename);
+                        putFile(nodeURI, f);
+                        verifyPut(nodeURI, expectedMD5);
                         return null;
                     } catch (Throwable t) {
                         throw new RuntimeException(t);
@@ -183,27 +201,35 @@ public class FilesPutTest {
     @Test
     public void testPutOverwriteFileOK() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile2.rtf";
+        final String sourceFilename = "src/test/resources/smallTextFile2.rtf";
+        final String expectedMD5 = "351314eb3b99502adb0fc7d7dd33f7b8";
         final VOSURI nodeURI = new VOSURI(uri);
+        final File f = new File(sourceFilename);
+        log.debug("source file for test: " + sourceFilename);
 
         // Make a DataNode of the same name as the test file,
         // PUT that node using /cavern/nodes service
-        Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
-            @Override
-            public Object run() throws Exception {
-                DataNode dn = new DataNode(nodeURI);
-                dn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
-                putNode(new URL(nodesURL.toExternalForm() + dn.getUri().getPath()), dn);
-                return null;
-            }
-        });
+        try {
+            Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
+                @Override
+                public Object run() throws Exception {
+                    DataNode dn = new DataNode(nodeURI);
+                    dn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
+                    vos.createNode(dn);
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException ioe) {
+            Assert.fail("unable to set up test node");
+        }
 
         // Now attempt to PUT the file using /cavern/files - should still work
         try {
             Subject.doAs(cadcauthSubject, new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
-                        String filename = "src/test/resources/smallTextFile2.rtf";
-                        putFile(nodeURI, filename);
+                        putFile(nodeURI, f);
+                        verifyPut(nodeURI, expectedMD5);
                         return null;
                     } catch (Throwable t) {
                         throw new RuntimeException(t);
@@ -221,11 +247,14 @@ public class FilesPutTest {
     @Test
     public void testPutFileNotAuth() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile.rtf";
+        final String sourceFilename = "src/test/resources/smallTextFile.rtf";
         final VOSURI nodeURI = new VOSURI(uri);
+        final File f = new File(sourceFilename);
+        log.debug("source file for test: " + sourceFilename);
 
         try {
             String filename = "src/test/resources/smallTextFile.rtf";
-            putFile(nodeURI, filename);
+            putFile(nodeURI, f);
             Assert.fail("should have had an access error.");
 
         } catch (AccessControlException t) {
@@ -238,7 +267,13 @@ public class FilesPutTest {
     }
 
 
-    private void putFile(VOSURI uri, String fileName) throws Throwable {
+    /**
+     * Use Standards.VOSPACE_FILES_20 service (/files) to PUT the given file
+     * @param uri
+     * @param fileToPut
+     * @throws Throwable
+     */
+    private void putFile(VOSURI uri, File fileToPut) throws Throwable {
 
         RegistryClient regClient = new RegistryClient();
         AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
@@ -250,13 +285,8 @@ public class FilesPutTest {
         URL url = new URL(filePutURL.toString() + uri.getPath());
         log.debug("requested url for putFile: " + url.toExternalForm());
 
-        File fileToUpload = new File(fileName);
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        File tmp = new File(System.getProperty("java.io.tmpdir"));
-        HttpUpload put = new HttpUpload(fileToUpload, url);
+        HttpUpload put = new HttpUpload(fileToPut, url);
         put.setRequestProperty("Content-Type", "text/xml");
-
         put.run();
 
         if (put.getThrowable() != null) {
@@ -267,52 +297,68 @@ public class FilesPutTest {
     }
 
 
-
+    /**
+     * Use to create node prior to push with /files endpoint
+     * @param url
+     * @param node
+     * @throws Exception
+     */
     private static void putNode(URL url, final Node node) throws Exception {
 
-        OutputStreamWrapper wrapper = new OutputStreamWrapper() {
-            @Override
-            public void write(OutputStream out) throws IOException {
-                OutputStreamWriter writer = new OutputStreamWriter(out);
-                NodeWriter nodeWriter = new NodeWriter();
-                nodeWriter.write(node, writer);
-                out.close();
-            }
-        };
-        HttpUpload upload = new HttpUpload(wrapper, url);
-        upload.run();
-
-        int code = upload.getResponseCode();
-        log.debug("Put node response code: " + code);
-
-        if (node instanceof ContainerNode && code == 409) {
-            // conflict = exists
-            return; // ok
-        }
-        if (code >= 400) {
-            throw new RuntimeException("put node failed: " + code, upload.getThrowable());
+        try {
+            Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
+                @Override
+                public Object run() throws Exception {
+                    Node n = vos.createNode(node);
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException ioe) {
+            Assert.fail("unable to set up test node");
         }
     }
 
+
+    private static void verifyPut(VOSURI fileURI, String md5Sum) throws Throwable {
+        try {
+            Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
+                @Override
+                public Object run() throws Exception {
+                    Node n = vos.getNode(fileURI.getPath());
+                    log.debug("MD5: " + n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5) + " (expecting " + md5Sum + ")");
+                    Assert.assertEquals(md5Sum, n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException ioe) {
+            Assert.fail("unable to set up test node");
+        }
+    }
+
+
     /**
-     * Delete the test putFile directory
+     * Delete the test directory (filesPutTest-{system time millis})>
      */
     @AfterClass
     public static void cleanupTestDir() {
         if (cleanupAfterTest == true) {
             try {
-                URL nodeResourceURL = new URL(nodesURL.toExternalForm() + putTestFolderURI.getPath());
+                Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
+                    @Override
+                    public Object run() throws Exception {
+                        log.debug("attempting to remove put test folder: " + putTestFolderURI.getPath());
+                        URL nodeResourceURL = new URL(nodesURL.toExternalForm() + putTestFolderURI.getPath());
+                        HttpDelete cleanup = new HttpDelete(nodeResourceURL, false);
+                        cleanup.run();
+                        int code = cleanup.getResponseCode();
+                        log.debug("DELETE node response code: " + code);
+                        return null;
+                    }
+                });
 
-                // try to delete the node
-                HttpsURLConnection connection = (HttpsURLConnection) nodeResourceURL.openConnection();
-                connection.setSSLSocketFactory(SSLUtil.getSocketFactory(cadcauthSubject));
-                connection.setRequestMethod("DELETE");
-                log.debug("Delete node response code: " + connection.getResponseCode());
-
-            } catch (IOException ioe) {
+            } catch (PrivilegedActionException ioe) {
                 log.error("unable to clean up file: " + putTestFolderURI.toString());
             }
         }
     }
-
 }

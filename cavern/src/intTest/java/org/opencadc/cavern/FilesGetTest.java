@@ -110,7 +110,8 @@ public class FilesGetTest {
 
     @BeforeClass
     public static void staticInit() throws Exception {
-        File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", CavernPackageRunnerTest.class);
+        File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem",
+                            FilesGetTest.class);
         cadcauthSubject = SSLUtil.createSubject(SSL_CERT);
 
         baseURI ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";
