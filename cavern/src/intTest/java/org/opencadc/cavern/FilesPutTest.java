@@ -71,10 +71,7 @@ import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDelete;
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
@@ -83,15 +80,10 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlException;
@@ -197,7 +189,6 @@ public class FilesPutTest {
         }
     }
 
-
     @Test
     public void testPutOverwriteFileOK() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile2.rtf";
@@ -243,7 +234,6 @@ public class FilesPutTest {
         }
     }
 
-
     @Test
     public void testPutFileNotAuth() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile.rtf";
@@ -265,7 +255,6 @@ public class FilesPutTest {
             Assert.fail("Unexcepted exception: " + t.getMessage());
         }
     }
-
 
     /**
      * Use Standards.VOSPACE_FILES_20 service (/files) to PUT the given file
@@ -296,29 +285,6 @@ public class FilesPutTest {
         Assert.assertEquals(200, put.getResponseCode());
     }
 
-
-    /**
-     * Use to create node prior to push with /files endpoint
-     * @param url
-     * @param node
-     * @throws Exception
-     */
-    private static void putNode(URL url, final Node node) throws Exception {
-
-        try {
-            Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
-                @Override
-                public Object run() throws Exception {
-                    Node n = vos.createNode(node);
-                    return null;
-                }
-            });
-        } catch (PrivilegedActionException ioe) {
-            Assert.fail("unable to set up test node");
-        }
-    }
-
-
     private static void verifyPut(VOSURI fileURI, String md5Sum) throws Throwable {
         try {
             Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
@@ -334,7 +300,6 @@ public class FilesPutTest {
             Assert.fail("unable to set up test node");
         }
     }
-
 
     /**
      * Delete the test directory (filesPutTest-{system time millis})>
