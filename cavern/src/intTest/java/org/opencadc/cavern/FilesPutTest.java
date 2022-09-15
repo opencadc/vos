@@ -86,6 +86,9 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
@@ -112,7 +115,7 @@ public class FilesPutTest {
 
     // Set this to 'false' if the test folder needs to be retained
     // during manual or dev testing for debugging
-    private static boolean cleanupAfterTest = false;
+    private static boolean cleanupAfterTest = true;
 
     public FilesPutTest() {}
     
@@ -175,7 +178,7 @@ public class FilesPutTest {
                 public Object run() {
                     try {
                         putFile(nodeURI, f);
-                        verifyPut(nodeURI, expectedMD5);
+                        verifyPut(nodeURI, sourceFilename, expectedMD5);
                         return null;
                     } catch (Throwable t) {
                         throw new RuntimeException(t);
@@ -196,6 +199,7 @@ public class FilesPutTest {
         final String expectedMD5 = "351314eb3b99502adb0fc7d7dd33f7b8";
         final VOSURI nodeURI = new VOSURI(uri);
         final File f = new File(sourceFilename);
+
         log.debug("source file for test: " + sourceFilename);
 
         // Make a DataNode of the same name as the test file,
@@ -220,7 +224,7 @@ public class FilesPutTest {
                 public Object run() {
                     try {
                         putFile(nodeURI, f);
-                        verifyPut(nodeURI, expectedMD5);
+                        verifyPut(nodeURI, sourceFilename, expectedMD5);
                         return null;
                     } catch (Throwable t) {
                         throw new RuntimeException(t);
@@ -285,13 +289,17 @@ public class FilesPutTest {
         Assert.assertEquals(200, put.getResponseCode());
     }
 
-    private static void verifyPut(VOSURI fileURI, String md5Sum) throws Throwable {
+    private static void verifyPut(VOSURI fileURI, String sourceFilename, String md5Sum) throws Throwable {
+        final Path filePath = Paths.get(sourceFilename);
         try {
             Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
                 @Override
                 public Object run() throws Exception {
                     Node n = vos.getNode(fileURI.getPath());
                     log.debug("MD5: " + n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5) + " (expecting " + md5Sum + ")");
+                    Assert.assertEquals(("filename not as expected: "), filePath.getFileName().toString(), n.getName());
+                    long contentLength = Long.parseLong(n.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+                    Assert.assertEquals(Files.size(filePath), contentLength);
                     Assert.assertEquals(md5Sum, n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
                     return null;
                 }
