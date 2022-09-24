@@ -102,13 +102,14 @@ public abstract class PutAction extends FileAction {
 
     private static final String INPUT_STREAM = "in";
 
-    public PutAction() {
-        super();
+    public PutAction(Direction pushToVoSpace, boolean isPreauth) {
+        super(pushToVoSpace, isPreauth);
     }
 
     @Override
-    public Direction getDirection() {
-        return Direction.pushToVoSpace;
+    public void initAction() throws Exception {
+        // Authorization is checked here
+        initNodeURI(syncInput.getPath());
     }
 
     @Override

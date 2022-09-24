@@ -71,8 +71,6 @@ import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.PathResolver;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -85,7 +83,6 @@ import java.nio.file.Path;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
  *
@@ -96,18 +93,22 @@ import org.opencadc.cavern.FileSystemNodePersistence;
 public abstract class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
-    public GetAction() {
-        super();
+    public GetAction(Direction pullFromVoSpace, boolean isPreauth) {
+        super(pullFromVoSpace, isPreauth);
     }
 
     @Override
-    public Direction getDirection() {
-        return Direction.pullFromVoSpace;
+    public void initAction() throws Exception {
+        // Authorization is checked here
+        initNodeURI(syncInput.getPath());
     }
 
     @Override
     public void doAction() throws Exception {
+
         try {
+
+
             VOSURI nodeURI = getNodeURI();
             FileSystem fs = FileSystems.getDefault();
             Path source = fs.getPath(getRoot(), nodeURI.getPath());
@@ -125,8 +126,8 @@ public abstract class GetAction extends FileAction {
             // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
             // This is appropriate for preauth endpoint, but the /cavern/files files requiring
             // authentication will probably need the authorizer...
-            NodePersistence nodePersistence = new FileSystemNodePersistence();
-            PathResolver pathResolver = new PathResolver(nodePersistence, true);
+//            NodePersistence nodePersistence = new FileSystemNodePersistence();
+//            PathResolver pathResolver = new PathResolver(nodePersistence, true);
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);

@@ -420,21 +420,21 @@ public class CavernURLGeneratorTest
 //    }
 
 
-    @Test
-    public void testGetURLFromPathWithToken() {
-        try {
-            String path = "token/path/to/file";
-            String expectedPath = "vos://example.org~vospace/path/to/file";
-            VOSURI expectedURI = new VOSURI(new URI(expectedPath));
-
-            VOSURI generatedURI = CavernURLGenerator.getURIFromPath(path);
-            Assert.assertEquals("expected and generated URI don't match: ", expectedURI, generatedURI);
-
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
+//    @Test
+//    public void testGetURLFromPathWithToken() {
+//        try {
+//            String path = "token/path/to/file";
+//            String expectedPath = "vos://example.org~vospace/path/to/file";
+//            VOSURI expectedURI = new VOSURI(new URI(expectedPath));
+//
+//            VOSURI generatedURI = CavernURLGenerator.getURIFromPath(path);
+//            Assert.assertEquals("expected and generated URI don't match: ", expectedURI, generatedURI);
+//
+//        } catch (Exception unexpected) {
+//            log.error("unexpected exception", unexpected);
+//            Assert.fail("unexpected exception: " + unexpected);
+//        }
+//    }
 
 
     class TestTransferGenerator extends CavernURLGenerator {

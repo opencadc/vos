@@ -92,15 +92,15 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.VOSURI;
 
-public class FilesGetTest {
+public class AuthGetActionTest {
 
-    protected static Logger log = Logger.getLogger(FilesGetTest.class);
+    protected static Logger log = Logger.getLogger(AuthGetActionTest.class);
 
     protected static Subject cadcauthSubject;
     protected static String baseURI;
     protected static String getFolderURI;
     
-    public FilesGetTest() {}
+    public AuthGetActionTest() {}
     
     static
     {
@@ -111,7 +111,7 @@ public class FilesGetTest {
     @BeforeClass
     public static void staticInit() throws Exception {
         File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem",
-                            FilesGetTest.class);
+                            AuthGetActionTest.class);
         cadcauthSubject = SSLUtil.createSubject(SSL_CERT);
 
         baseURI ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";

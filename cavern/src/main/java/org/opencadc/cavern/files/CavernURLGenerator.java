@@ -69,6 +69,7 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
@@ -105,11 +106,16 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
+import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.MissingResourceException;
+import java.util.Set;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
+import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;
@@ -174,11 +180,12 @@ public class CavernURLGenerator implements TransferGenerator {
             List<URI> uris;
             for (Protocol protocol : transfer.getProtocols()) {
                 log.debug("addressing protocol: " + protocol);
+                Subject currentSubject = AuthenticationUtil.getCurrentSubject();
                 if (node instanceof ContainerNode) {
-                    UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
+                    UserPrincipal caller = nodes.getPosixUser(currentSubject);
                     uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
                 } else if (node instanceof DataNode) {
-                    uris = handleDataNode(target, (DataNode) node, protocol);
+                    uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
                 } else {
                     throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
                         + node.getUri());
@@ -201,7 +208,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
 
 
-    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol) {
+    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol, Subject s) {
         String scheme = null;
         Direction dir = null;
 
@@ -251,14 +258,16 @@ public class CavernURLGenerator implements TransferGenerator {
             TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
 
             // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
-            String token = gen.generateToken(target.getURI(), grantClass, CAVERN_INTERNAL_USER);
+            PosixIdentityManager im = new PosixIdentityManager(FileSystems.getDefault().getUserPrincipalLookupService());
+            String callingUser = (String)im.toOwner(s);
+            String token = gen.generateToken(target.getURI(), grantClass, callingUser);
             String encodedToken = new String(Base64.encode(token.getBytes()));
+
 
             // build the request path
             StringBuilder path = new StringBuilder();
             path.append("/");
             path.append(encodedToken);
-//            path.append(token);
             path.append("/");
 
             if (Direction.pushToVoSpace.equals(dir)) {
@@ -310,13 +319,12 @@ public class CavernURLGenerator implements TransferGenerator {
 
     public VOSURI getNodeURI(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
 
-        // TODO: behaviour will vary if token passed in or not
         log.debug("url encoded token: " + token);
         log.debug("direction: " + direction.toString());
 
         String decodedTokenbytes = new String(Base64.decode(token));
         log.debug("url decoded token: " + decodedTokenbytes);
-//        log.debug("not decoding token as it wasn't encoded.)");
+
         URI targetURI = targetVOSURI.getURI();
         URI nodeURI = null;
         if (token != null) {
@@ -336,18 +344,12 @@ public class CavernURLGenerator implements TransferGenerator {
             // This will throw an AccessControlException if something is wrong with the
             // grantClass or targetURI. Can return null if user isn't in the meta key=value set
             String tokenUser = tk.validateToken(decodedTokenbytes, targetURI, grantClass);
-//            log.debug("using token only, not b64 encoded token...");
-//            String tokenUser = tk.validateToken(token, targetURI, grantClass);
 
             if (tokenUser == null) {
                 throw new AccessControlException("invalid token");
             }
 
-            if (CAVERN_INTERNAL_USER.equals(tokenUser)) {
-                nodeURI = targetURI;
-            } else {
-                throw new AccessControlException("Invalid user in token: " + tokenUser);
-            }
+            nodeURI = targetURI;
         }
 
         log.debug("nodeURI: " + nodeURI.toString());
@@ -369,7 +371,6 @@ public class CavernURLGenerator implements TransferGenerator {
         try {
             RegistryClient rc = new RegistryClient();
             Capabilities caps = rc.getCapabilities(serviceURI);
-            // TODO: test if this needs to be something else?
             Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
             for (Interface ifc : interfaces) {
@@ -401,27 +402,33 @@ public class CavernURLGenerator implements TransferGenerator {
     }
 
 
-    public static VOSURI getURIFromPath(String path) throws URISyntaxException {
-
-        log.debug("getURIFromPath for " + path);
-        LocalServiceURI localServiceURI = new LocalServiceURI();
-        VOSURI baseURI = localServiceURI.getVOSBase();
-        log.debug("baseURI for cavern deployment: " + baseURI.toString());
-
-        int firstSlashIndex = path.indexOf("/");
-        String pathStr = path.substring(firstSlashIndex + 1);
-        log.debug("path: " + pathStr);
-        String targetURIStr = baseURI.toString() + "/" + pathStr;
-        log.debug("target URI for validating token: " + targetURIStr);
-
-        URI targetURI = new URI(targetURIStr);
-        log.debug("targetURI for system: " + targetURI.toString());
-        VOSURI targetVOSURI = new VOSURI(targetURI);
-        log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
-
-        return targetVOSURI;
-
-    }
+//    public static VOSURI getURIFromPath(String path, boolean hasToken) throws URISyntaxException {
+//
+//        log.debug("getURIFromPath for " + path);
+//        LocalServiceURI localServiceURI = new LocalServiceURI();
+//        VOSURI baseURI = localServiceURI.getVOSBase();
+//        log.debug("baseURI for cavern deployment: " + baseURI.toString());
+//
+//        String pathStr = null;
+//        if (hasToken == true) {
+//            int firstSlashIndex = path.indexOf("/");
+//            pathStr = path.substring(firstSlashIndex + 1);
+//        } else {
+//
+//        }
+//
+//        log.debug("path: " + pathStr);
+//        String targetURIStr = baseURI.toString() + "/" + pathStr;
+//        log.debug("target URI for validating token: " + targetURIStr);
+//
+//        URI targetURI = new URI(targetURIStr);
+//        log.debug("targetURI for system: " + targetURI.toString());
+//        VOSURI targetVOSURI = new VOSURI(targetURI);
+//        log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
+//
+//        return targetVOSURI;
+//
+//    }
 
 }
 

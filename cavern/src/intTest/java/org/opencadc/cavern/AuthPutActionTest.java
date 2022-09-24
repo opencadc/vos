@@ -101,9 +101,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class FilesPutTest {
+public class AuthPutActionTest {
 
-    protected static Logger log = Logger.getLogger(FilesPutTest.class);
+    protected static Logger log = Logger.getLogger(AuthPutActionTest.class);
 
     protected static Subject cadcauthSubject;
     protected static String baseURIStr;
@@ -117,7 +117,7 @@ public class FilesPutTest {
     // during manual or dev testing for debugging
     private static boolean cleanupAfterTest = true;
 
-    public FilesPutTest() {}
+    public AuthPutActionTest() {}
     
     static
     {
