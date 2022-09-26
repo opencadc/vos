@@ -116,7 +116,6 @@ public abstract class FileAction extends RestAction {
     protected PathResolver pathResolver;
     private FileSystemNodePersistence fsPersistence;
 
-
     protected FileAction(Direction direction, boolean isPreauth) {
 
         // Validate direction is supported
@@ -147,11 +146,30 @@ public abstract class FileAction extends RestAction {
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(fsPersistence);
 
-        // syncInput isn't available
-//        String path = syncInput.getPath();
-//        initFileAction(path, isPreauth);
     }
 
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return null;
+    }
+
+    protected VOSURI getNodeURI() {
+        return nodeURI;
+    }
+
+    protected String getRoot() {
+        return root;
+    }
+
+    protected UserPrincipalLookupService getUpLookupSvc() {
+        return upLookupSvc;
+    }
+
+    /**
+     * Initialize the nodeURI value. Check authorization, either token validation or
+     * user authentication against node attributes.
+     * @param path - path to node URI will be made for
+     */
     protected void initNodeURI(String path) {
         if (isPreauth == true) {
             initPreauthTarget(path);
@@ -196,17 +214,6 @@ public abstract class FileAction extends RestAction {
         }
     }
 
-//    private void validateAuthorization(VOSURI nodeToVaidateURI) throws LinkingException, NodeNotFoundException, URISyntaxException {
-//        // Check read permission on node
-//        if (Direction.pullFromVoSpace == direction) {
-//            resolveWithReadPermission(nodeURI);
-//        } else if (Direction.pushToVoSpace == direction) {
-//            resolveWithWritePermission(nodeURI);
-//        } else {
-//            throw new IllegalArgumentException("direction not supported: " + direction.toString());
-//        }
-//    }
-
     private void initAuthTarget(String path) throws IllegalArgumentException {
         try {
             // false indicates there's no token
@@ -233,8 +240,7 @@ public abstract class FileAction extends RestAction {
         throws AccessControlException, NodeNotFoundException, LinkingException, URISyntaxException {
 
         log.debug("[resolveWithReadPermission]: checking read permission for targetVOSURI: " + targetVOSURI.toString());
-
-        // Authorization is done in this step
+        // Authorization is done in this step.
         Node node = pathResolver.resolveWithReadPermissionCheck(targetVOSURI, authorizer, true);
         log.debug("node resolved with read permission: " + targetVOSURI.toString());
 
@@ -245,7 +251,6 @@ public abstract class FileAction extends RestAction {
         throws AccessControlException, NodeNotFoundException, LinkingException, URISyntaxException {
 
         Node resolvedNode = null;
-
         try {
             // Test to see if the node exists already or not
             log.debug("[resolveWithWritePermission]: checking read permission for targetVOSURI: " + targetVOSURI.toString());
@@ -319,25 +324,5 @@ public abstract class FileAction extends RestAction {
         log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
 
         return targetVOSURI;
-
     }
-
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return null;
-    }
-
-    protected VOSURI getNodeURI() {
-        return nodeURI;
-    }
-
-    protected String getRoot() {
-        return root;
-    }
-
-    protected UserPrincipalLookupService getUpLookupSvc() {
-        return upLookupSvc;
-    }
-
-
 }

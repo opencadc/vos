@@ -68,9 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.vos.Direction;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 
 /**
@@ -80,24 +77,7 @@ import org.apache.log4j.Logger;
 public class PreauthGetAction extends GetAction {
     private static final Logger log = Logger.getLogger(PreauthGetAction.class);
 
-    public PreauthGetAction() throws IOException, URISyntaxException {
+    public PreauthGetAction() {
         super(Direction.pullFromVoSpace, true);
-
-//        // path can't be fed
-//        log.debug("PreauthGetAction ctor ******************* ");
-//        String path = syncInput.getPath();
-//        nodeURI = initPreauthTarget(path);
     }
-
-    // doAction() is in the parent abstract GetAction class
-
-//    @Override
-//    protected void initTarget() throws AccessControlException, IOException, URISyntaxException {
-//        if (nodeURI == null) {
-//            log.debug("PreauthGetAction.initTarget() ******************* ");
-//            String path = syncInput.getPath();
-////            FileActionMgr fam = new FileActionMgr();
-//            nodeURI = initPreauthTarget(path, initParams, getDirection());
-//        }
-//    }
 }

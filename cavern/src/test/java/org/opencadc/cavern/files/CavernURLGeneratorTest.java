@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -255,8 +255,6 @@ public class CavernURLGeneratorTest
             String path = transferURI.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
-//            String sig = parts[4];
-//            String meta = parts[3];
             String token = parts[3];
 
             int firstSlashIndex = path.indexOf("/");
@@ -416,23 +414,6 @@ public class CavernURLGeneratorTest
 //        for (String s : testStrings) {
 //            log.debug("testing: " + s);
 //            Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
-//        }
-//    }
-
-
-//    @Test
-//    public void testGetURLFromPathWithToken() {
-//        try {
-//            String path = "token/path/to/file";
-//            String expectedPath = "vos://example.org~vospace/path/to/file";
-//            VOSURI expectedURI = new VOSURI(new URI(expectedPath));
-//
-//            VOSURI generatedURI = CavernURLGenerator.getURIFromPath(path);
-//            Assert.assertEquals("expected and generated URI don't match: ", expectedURI, generatedURI);
-//
-//        } catch (Exception unexpected) {
-//            log.error("unexpected exception", unexpected);
-//            Assert.fail("unexpected exception: " + unexpected);
 //        }
 //    }
 

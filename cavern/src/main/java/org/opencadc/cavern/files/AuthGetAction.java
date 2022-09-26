@@ -68,9 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
 
 /**
@@ -80,29 +77,7 @@ import org.apache.log4j.Logger;
 public class AuthGetAction extends GetAction {
     private static final Logger log = Logger.getLogger(AuthGetAction.class);
 
-    public AuthGetAction() throws LinkingException, NodeNotFoundException, URISyntaxException {
+    public AuthGetAction() {
         super(Direction.pullFromVoSpace, false);
-
-//        log.debug("FilesGetAction.initTarget() ******************* ");
-//        String path = syncInput.getPath();
-//        initAuthTarget(path);
     }
-
-    // doAction() and getDirection() are in the parent abstract GetAction class
-
-//    @Override
-//    protected void initTarget() throws AccessControlException, IOException, URISyntaxException,
-//        NodeNotFoundException, LinkingException {
-//        if (nodeURI == null) {
-//            log.debug("FilesGetAction.initTarget() ******************* ");
-//            String path = syncInput.getPath();
-//            FileActionMgr fam = new FileActionMgr();
-//            fam.initTools();
-//            nodeURI = fam.getVOSURIForPath(path);
-//
-//            // Check read permission on node
-//            Node node = fam.resolveWithReadPermission(nodeURI, initParams, getDirection());
-//
-//        }
-//    }
 }

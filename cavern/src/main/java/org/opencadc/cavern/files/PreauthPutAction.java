@@ -68,8 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.vos.Direction;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
 
 /**
@@ -81,17 +79,4 @@ public class PreauthPutAction extends PutAction {
     public PreauthPutAction() {
         super(Direction.pushToVoSpace, true);
     }
-
-    // doAction() is in the parent abstract PutAction class.  Behaviour for
-    // preauth and caller authentication (non preauth) is the same.
-
-//    @Override
-//    protected void initTarget() throws AccessControlException, IOException, URISyntaxException {
-//        if (nodeURI == null) {
-//            log.debug("PreauthPutAction.initTarget() ******************* ");
-//            String path = syncInput.getPath();
-//            FileActionMgr fam = new FileActionMgr();
-//            nodeURI = fam.initPreauthTarget(path, initParams, this.getDirection());
-//        }
-//    }
 }

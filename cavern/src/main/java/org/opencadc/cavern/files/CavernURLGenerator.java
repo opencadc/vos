@@ -401,35 +401,6 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-
-//    public static VOSURI getURIFromPath(String path, boolean hasToken) throws URISyntaxException {
-//
-//        log.debug("getURIFromPath for " + path);
-//        LocalServiceURI localServiceURI = new LocalServiceURI();
-//        VOSURI baseURI = localServiceURI.getVOSBase();
-//        log.debug("baseURI for cavern deployment: " + baseURI.toString());
-//
-//        String pathStr = null;
-//        if (hasToken == true) {
-//            int firstSlashIndex = path.indexOf("/");
-//            pathStr = path.substring(firstSlashIndex + 1);
-//        } else {
-//
-//        }
-//
-//        log.debug("path: " + pathStr);
-//        String targetURIStr = baseURI.toString() + "/" + pathStr;
-//        log.debug("target URI for validating token: " + targetURIStr);
-//
-//        URI targetURI = new URI(targetURIStr);
-//        log.debug("targetURI for system: " + targetURI.toString());
-//        VOSURI targetVOSURI = new VOSURI(targetURI);
-//        log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
-//
-//        return targetVOSURI;
-//
-//    }
-
 }
 
 

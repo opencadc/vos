@@ -107,8 +107,6 @@ public abstract class GetAction extends FileAction {
     public void doAction() throws Exception {
 
         try {
-
-
             VOSURI nodeURI = getNodeURI();
             FileSystem fs = FileSystems.getDefault();
             Path source = fs.getPath(getRoot(), nodeURI.getPath());
