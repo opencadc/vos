@@ -94,8 +94,12 @@ public abstract class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
     public GetAction(boolean isPreauth) {
-        super(Direction.pullFromVoSpace, isPreauth);
+        super(isPreauth);
     }
+
+    protected Direction getDirection() {
+        return Direction.pullFromVoSpace;
+    };
 
     @Override
     public void doAction() throws Exception {

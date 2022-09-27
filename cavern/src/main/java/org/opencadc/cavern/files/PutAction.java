@@ -103,8 +103,12 @@ public abstract class PutAction extends FileAction {
     private static final String INPUT_STREAM = "in";
 
     public PutAction(boolean isPreauth) {
-        super(Direction.pushToVoSpace, isPreauth);
+        super(isPreauth);
     }
+
+    protected Direction getDirection() {
+        return Direction.pushToVoSpace;
+    };
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {

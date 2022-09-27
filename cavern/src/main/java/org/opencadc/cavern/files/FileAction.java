@@ -105,7 +105,6 @@ public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     // Key values needed for FileAction
-    private Direction direction;
     private VOSURI nodeURI;
     private boolean isPreauth;
 
@@ -116,18 +115,7 @@ public abstract class FileAction extends RestAction {
     protected PathResolver pathResolver;
     private FileSystemNodePersistence fsPersistence;
 
-    protected FileAction(Direction direction, boolean isPreauth) {
-
-        // Validate direction is supported
-        if (direction == null) {
-            throw new IllegalArgumentException("direction can not be null");
-        }
-        if ((Direction.pullFromVoSpace != direction)
-            && (Direction.pushToVoSpace != direction)) {
-            throw new IllegalArgumentException("direction not supported: " + direction.toString());
-        }
-        this.direction = direction;
-
+    protected FileAction(boolean isPreauth) {
         this.isPreauth = isPreauth;
 
         // Set up tools needed for generating nodeURI and
@@ -147,6 +135,8 @@ public abstract class FileAction extends RestAction {
         this.authorizer.setNodePersistence(fsPersistence);
 
     }
+
+    protected abstract Direction getDirection();
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {
@@ -209,7 +199,7 @@ public abstract class FileAction extends RestAction {
             // preauth token is validated in this step.
             // Exceptions are thrown if it's not valid
             CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.validateToken(token, nodeURI, direction);
+            urlGen.validateToken(token, nodeURI, getDirection());
 
             log.debug("preauth token good node uri: " + nodeURI);
 
@@ -225,6 +215,7 @@ public abstract class FileAction extends RestAction {
             nodeURI = getURIFromPath(path, false);
             log.debug("nodeURI from path: " + nodeURI);
 
+            Direction direction = getDirection();
             // Check read permission on node
             if (Direction.pullFromVoSpace == direction) {
                 resolveWithReadPermission(nodeURI);

@@ -107,6 +107,7 @@ import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingResourceException;
+import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
@@ -132,6 +133,7 @@ public class CavernURLGenerator implements TransferGenerator {
     
     private static final String PUB_KEY_FILENAME = "CavernPub.key";
     private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
+    private static final String ANON_USER = "anon";
 
 
     public CavernURLGenerator() {
@@ -253,11 +255,16 @@ public class CavernURLGenerator implements TransferGenerator {
             TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
 
             // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
-            PosixIdentityManager im = new PosixIdentityManager(FileSystems.getDefault().getUserPrincipalLookupService());
-            String callingUser = (String)im.toOwner(s);
+            Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
+            String callingUser = "";
+            if (authUsers.size() > 0) {
+                callingUser = authUsers.iterator().next();
+            } else {
+                callingUser = ANON_USER;
+            }
+
             String token = gen.generateToken(target.getURI(), grantClass, callingUser);
             String encodedToken = new String(Base64.encode(token.getBytes()));
-
 
             // build the request path
             StringBuilder path = new StringBuilder();

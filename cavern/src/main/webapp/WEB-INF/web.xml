@@ -122,7 +122,7 @@
   </servlet>
 
   <servlet>
-    <servlet-name>AuthFilesServlet</servlet-name>
+    <servlet-name>PreauthFileActionServlet</servlet-name>
     <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
     <init-param>
       <param-name>get</param-name>
@@ -136,7 +136,7 @@
   </servlet>
   
   <servlet>
-    <servlet-name>FilesServlet</servlet-name>
+    <servlet-name>AuthFileActionServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
         <init-param>
             <param-name>get</param-name>
@@ -205,12 +205,12 @@
   </servlet-mapping>
 
   <servlet-mapping>
-    <servlet-name>AuthFilesServlet</servlet-name>
+    <servlet-name>PreauthFileActionServlet</servlet-name>
     <url-pattern>/preauth/*</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
-    <servlet-name>FilesServlet</servlet-name>
+    <servlet-name>AuthFileActionServlet</servlet-name>
     <url-pattern>/files/*</url-pattern>
   </servlet-mapping>
 
