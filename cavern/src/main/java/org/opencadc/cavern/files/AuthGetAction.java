@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.vos.Direction;
 import org.apache.log4j.Logger;
 
 /**
@@ -78,6 +77,6 @@ public class AuthGetAction extends GetAction {
     private static final Logger log = Logger.getLogger(AuthGetAction.class);
 
     public AuthGetAction() {
-        super(Direction.pullFromVoSpace, false);
+        super(false);
     }
 }

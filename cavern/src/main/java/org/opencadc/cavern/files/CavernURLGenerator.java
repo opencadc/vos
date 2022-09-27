@@ -69,7 +69,6 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
@@ -93,7 +92,6 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
 import java.io.File;
@@ -106,12 +104,9 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
-import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.MissingResourceException;
-import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
@@ -137,7 +132,7 @@ public class CavernURLGenerator implements TransferGenerator {
     
     private static final String PUB_KEY_FILENAME = "CavernPub.key";
     private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
-    private static final String CAVERN_INTERNAL_USER = "cavernInternalUser";
+
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
@@ -317,7 +312,7 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    public VOSURI getNodeURI(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
+    public void validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
 
         log.debug("url encoded token: " + token);
         log.debug("direction: " + direction.toString());
@@ -326,7 +321,6 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("url decoded token: " + decodedTokenbytes);
 
         URI targetURI = targetVOSURI.getURI();
-        URI nodeURI = null;
         if (token != null) {
 
             File publicKeyFile = findFile(PUB_KEY_FILENAME);
@@ -349,15 +343,6 @@ public class CavernURLGenerator implements TransferGenerator {
                 throw new AccessControlException("invalid token");
             }
 
-            nodeURI = targetURI;
-        }
-
-        log.debug("nodeURI: " + nodeURI.toString());
-
-        if (nodeURI != null) {
-            VOSURI vosURI = new VOSURI(nodeURI);
-            log.debug("vosURI generated from node URI: " + vosURI);
-            return vosURI;
         }
 
         throw new IllegalArgumentException("Missing node URI");

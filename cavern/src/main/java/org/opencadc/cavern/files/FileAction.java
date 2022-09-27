@@ -165,6 +165,12 @@ public abstract class FileAction extends RestAction {
         return upLookupSvc;
     }
 
+    @Override
+    public void initAction() throws Exception {
+        initNodeURI(syncInput.getPath());
+        log.debug("sync input available: ");
+    }
+
     /**
      * Initialize the nodeURI value. Check authorization, either token validation or
      * user authentication against node attributes.
@@ -178,8 +184,7 @@ public abstract class FileAction extends RestAction {
         }
     }
 
-    private void initPreauthTarget(String path)
-        throws IllegalArgumentException {
+    private void initPreauthTarget(String path) throws IllegalArgumentException {
 
         // Long debug marker as cavern debug is rather verbose
         log.debug("---------------- initPreauthTarget debug log ----------------------");
@@ -198,15 +203,15 @@ public abstract class FileAction extends RestAction {
         log.debug("token: " + token);
 
         try {
-            VOSURI targetVOSURI = getURIFromPath(path, true);
+            nodeURI = getURIFromPath(path, true);
+            log.debug("checking preauth token for node uri: " + nodeURI);
 
             // preauth token is validated in this step.
             // Exceptions are thrown if it's not valid
             CavernURLGenerator urlGen = new CavernURLGenerator();
-            nodeURI = urlGen.getNodeURI(token, targetVOSURI, direction);
-            log.debug("checking preauth node uri: " + nodeURI);
+            urlGen.validateToken(token, nodeURI, direction);
 
-            log.debug("resolved & authorized node uri: " + nodeURI);
+            log.debug("preauth token good node uri: " + nodeURI);
 
         } catch ( URISyntaxException | IOException e ) {
             log.debug("unable to init preauth target: " + nodeURI + ": " + e);

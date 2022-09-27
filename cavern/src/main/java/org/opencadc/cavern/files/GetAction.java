@@ -93,14 +93,8 @@ import org.apache.log4j.Logger;
 public abstract class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
-    public GetAction(Direction pullFromVoSpace, boolean isPreauth) {
-        super(pullFromVoSpace, isPreauth);
-    }
-
-    @Override
-    public void initAction() throws Exception {
-        // Authorization is checked here
-        initNodeURI(syncInput.getPath());
+    public GetAction(boolean isPreauth) {
+        super(Direction.pullFromVoSpace, isPreauth);
     }
 
     @Override
@@ -124,8 +118,6 @@ public abstract class GetAction extends FileAction {
             // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
             // This is appropriate for preauth endpoint, but the /cavern/files files requiring
             // authentication will probably need the authorizer...
-//            NodePersistence nodePersistence = new FileSystemNodePersistence();
-//            PathResolver pathResolver = new PathResolver(nodePersistence, true);
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
