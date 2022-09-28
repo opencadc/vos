@@ -122,17 +122,17 @@ public abstract class FileAction extends RestAction {
         // validating permissions
         PropertiesReader pr = new PropertiesReader("Cavern.properties");
         this.root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
-        if (root == null) {
+        if (this.root == null) {
             throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
         }
 
-        Path rootPath = Paths.get(root);
+        Path rootPath = Paths.get(this.root);
         this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
 
         this.fsPersistence = new FileSystemNodePersistence();
-        this.pathResolver = new PathResolver(fsPersistence, true);
+        this.pathResolver = new PathResolver(this.fsPersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
-        this.authorizer.setNodePersistence(fsPersistence);
+        this.authorizer.setNodePersistence(this.fsPersistence);
 
     }
 
@@ -157,21 +157,19 @@ public abstract class FileAction extends RestAction {
 
     @Override
     public void initAction() throws Exception {
-        initNodeURI(syncInput.getPath());
-        log.debug("sync input available: ");
-    }
+        // Abstract for this function is in RestAction.
+        // Code is executed before doAction()
 
-    /**
-     * Initialize the nodeURI value. Check authorization, either token validation or
-     * user authentication against node attributes.
-     * @param path - path to node URI will be made for
-     */
-    protected void initNodeURI(String path) {
+        // Initialize the nodeURI value. Check authorization, either token validation or
+        // user authentication against node attributes.
+        String path = syncInput.getPath();
         if (isPreauth == true) {
             initPreauthTarget(path);
         } else {
             initAuthTarget(path);
         }
+
+        log.debug("sync input available: ");
     }
 
     private void initPreauthTarget(String path) throws IllegalArgumentException {
