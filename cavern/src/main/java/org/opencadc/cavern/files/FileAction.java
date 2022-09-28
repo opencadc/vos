@@ -193,18 +193,18 @@ public abstract class FileAction extends RestAction {
         log.debug("token: " + token);
 
         try {
-            nodeURI = getURIFromPath(path, true);
-            log.debug("checking preauth token for node uri: " + nodeURI);
+            VOSURI tmpURI = getURIFromPath(path, true);
+            log.debug("checking preauth token for node uri: " + tmpURI);
 
             // preauth token is validated in this step.
             // Exceptions are thrown if it's not valid
             CavernURLGenerator urlGen = new CavernURLGenerator();
-            urlGen.validateToken(token, nodeURI, getDirection());
+            nodeURI = urlGen.validateToken(token, tmpURI, getDirection());
 
             log.debug("preauth token good node uri: " + nodeURI);
 
         } catch ( URISyntaxException | IOException e ) {
-            log.debug("unable to init preauth target: " + nodeURI + ": " + e);
+            log.debug("unable to init preauth target: " + path + ": " + e);
             throw new IllegalArgumentException(e.getCause());
         }
     }

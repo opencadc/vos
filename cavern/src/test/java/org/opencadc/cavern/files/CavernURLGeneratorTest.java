@@ -68,7 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
@@ -89,7 +88,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.AccessControlException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -275,7 +273,8 @@ public class CavernURLGeneratorTest
             VOSURI targetURI = getTargetVOSURI(path);
 
             // Will throw exception if is invalid
-            urlGen.validateToken(token, targetURI, Direction.pullFromVoSpace);
+            VOSURI returnURI = urlGen.validateToken(token, targetURI, Direction.pullFromVoSpace);
+            Assert.assertEquals("URI was altered? ", returnURI, targetURI);
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);

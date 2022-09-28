@@ -319,7 +319,7 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    public void validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
+    public VOSURI validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
 
         log.debug("url encoded token: " + token);
         log.debug("direction: " + direction.toString());
@@ -328,6 +328,7 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("url decoded token: " + decodedTokenbytes);
 
         URI targetURI = targetVOSURI.getURI();
+        log.debug("targetURI for validation: " + targetURI);
         if (token != null) {
 
             File publicKeyFile = findFile(PUB_KEY_FILENAME);
@@ -349,6 +350,8 @@ public class CavernURLGenerator implements TransferGenerator {
             if (tokenUser == null) {
                 throw new AccessControlException("invalid token");
             }
+
+            return new VOSURI(targetURI);
 
         }
 
