@@ -67,83 +67,16 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
 
 /**
  *
- * @author majorb
  * @author jeevesh
  */
+public class AuthGetAction extends GetAction {
+    private static final Logger log = Logger.getLogger(AuthGetAction.class);
 
-public abstract class GetAction extends FileAction {
-    private static final Logger log = Logger.getLogger(GetAction.class);
-
-    public GetAction(boolean isPreauth) {
-        super(isPreauth);
+    public AuthGetAction() {
+        super(false);
     }
-
-    protected Direction getDirection() {
-        return Direction.pullFromVoSpace;
-    };
-
-    @Override
-    public void doAction() throws Exception {
-
-        try {
-            VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                // not found
-                syncOutput.setCode(404);
-                return;
-            }
-            if (!Files.isReadable(source)) {
-                // permission denied
-                syncOutput.setCode(403);
-                return;
-            }
-            
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
-            // authentication will probably need the authorizer...
-            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
-            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
-            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
-            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", contentEncoding);
-            syncOutput.setHeader("Content-Length", contentLength);
-            syncOutput.setHeader("Content-MD5", contentMD5);
-            
-            OutputStream out = syncOutput.getOutputStream();
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
-        }
-    }
-
 }

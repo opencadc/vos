@@ -224,19 +224,23 @@ public class MountedContainerTest {
         String[] cmd = getMountCommand(wrapper, port, mnt, testDir);
         StringBuilder sb = new StringBuilder();
         for (String s : cmd) {
+            log.info("command: " + s);
             sb.append(s).append(" ");
         }
         log.info("mount command: " + sb.toString());
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
+        log.info("exit code from grabber for cmd: " + grabber.getExitValue());
         if (grabber.getExitValue() != 0) {
             throw new IOException("FAIL: " + sb + "\n" + grabber.getErrorOutput());
-        } 
+        }
+
     }
     
     private void doUnmount(Path testDir) throws Exception {
         String[] cmd = getUnmountCommand(testDir);
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+
         grabber.captureOutput(cmd);
         if (grabber.getExitValue() != 0) {
             StringBuilder sb = new StringBuilder();
