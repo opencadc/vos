@@ -67,14 +67,10 @@
 
 package org.opencadc.cavern.files;
 
-import org.apache.log4j.Logger;
-
 /**
  * @author jeevesh
  */
 public class AuthPutAction extends PutAction {
-    private static final Logger log = Logger.getLogger(AuthPutAction.class);
-
     public AuthPutAction() {
         super(false);
     }

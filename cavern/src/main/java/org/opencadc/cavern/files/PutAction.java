@@ -140,12 +140,14 @@ public abstract class PutAction extends FileAction {
             node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
                 // Node needs to be created ahead of time for PUT
-                syncOutput.setCode(404);
+                sendError(404, "node must be created before PUT");
                 return;
             }
 
             // only support data nodes for now
             if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
+                log.debug("400 error with PUT: not a writable node");
+                // not using sendError here because of .getBytes()
                 syncOutput.getOutputStream().write("Not a writable node".getBytes());
                 syncOutput.setCode(400);
             }
@@ -181,8 +183,9 @@ public abstract class PutAction extends FileAction {
             restoreOwnNGroup(rootPath, node);
             successful = true;
         } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+            log.debug("403 error with PUT: ",  e);
+            sendError(403, e.getLocalizedMessage());
+
         } catch (IOException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("quota")) {

@@ -67,7 +67,7 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.net.RemoteServiceException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.util.FileUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -97,6 +97,7 @@ public class AuthGetActionTest {
     protected static Logger log = Logger.getLogger(AuthGetActionTest.class);
 
     protected static Subject cadcauthSubject;
+    protected static Subject cadcregSubject;
     protected static String baseURI;
     protected static String getFolderURI;
     
@@ -104,25 +105,30 @@ public class AuthGetActionTest {
     
     static
     {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.cavern.files", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern.files", Level.INFO);
     }
 
     @BeforeClass
     public static void staticInit() throws Exception {
+        log.debug("------------ TEST SETUP ------------");
         File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem",
                             AuthGetActionTest.class);
         cadcauthSubject = SSLUtil.createSubject(SSL_CERT);
 
-        baseURI ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";
+        File SSL_CERT_2 = FileUtil.getFileFromResource("x509_CADCRegtest1.pem",
+            AuthGetActionTest.class);
+        cadcregSubject = SSLUtil.createSubject(SSL_CERT_2);
+
+        baseURI = "vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";
         getFolderURI = baseURI + "getTest";
-        log.debug("------------ TEST SETUP ------------");
+
         log.debug("get test folder: " + getFolderURI );
         log.debug("test dir base URI: " + baseURI);
     }
 
     @Test
-    public void testGetPublicFile() {
+    public void testGetPublicFileOK() {
         try {
             final String uri = getFolderURI + "/bowline.jpg";
             File f = getFile(new VOSURI(uri));
@@ -131,12 +137,12 @@ public class AuthGetActionTest {
             cleanup(f);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
-    
+
     @Test
-    public void testGetPublicFileThroughLink() {
+    public void testGetPublicFileThroughLinkOK() {
         try {
             String uri = getFolderURI + "/ChilkootPass_GoldenStairs2.jpg";
             File f = getFile(new VOSURI(uri));
@@ -145,37 +151,15 @@ public class AuthGetActionTest {
             cleanup(f);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
-    
+
     @Test
-    public void testGetContainerNode() {
-        try {
-            try {
-                getFile(new VOSURI(baseURI));
-                Assert.fail("should have received illegal argument exception.");
-            } catch (RemoteServiceException e) {
-                log.info("caught expected: " + e);
-            }
-        } catch (Throwable t) {
-            log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception (" + t.getClass().getSimpleName() +
-                    "): " + t.getMessage());
-        }
-    }
-    
-    @Test
-    public void testGetProprietaryFile() {
+    public void testGetProprietaryFileOK() {
         try {
             final String uri = getFolderURI + "/All-Falcon-Chicks-2016.jpg";
             final VOSURI vosURI = new VOSURI(uri);
-            try {
-                getFile(vosURI);
-                Assert.fail("should have received access control exception.");
-            } catch (AccessControlException e) {
-                // expected
-            }
 
             Subject.doAs(cadcauthSubject, new PrivilegedAction<Object>() {
                 public Object run() {
@@ -189,13 +173,120 @@ public class AuthGetActionTest {
                     }
                 }
             });
-            
+
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
-    
+
+    @Test
+    public void testGetPublicFileNotFound() {
+        try {
+            String uri = baseURI + "/doesNotExist.txt";
+            HttpDownload d = getFileNOK(new VOSURI(uri), 404);
+            Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  ResourceNotFoundException.class);
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception (" + t.getClass().getSimpleName() +
+                "): " + t.getMessage());
+        }
+    }
+
+    @Test
+    public void testGetPublicParentFolderNotFound() {
+        try {
+            // spelled wrong on purpose
+            String uri = baseURI + "getTet" + "/bowline.jpg";
+            HttpDownload d = getFileNOK(new VOSURI(uri), 404);
+            Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  ResourceNotFoundException.class);
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception (" + t.getClass().getSimpleName() +
+                "): " + t.getMessage());
+        }
+    }
+
+    @Test
+    public void testGetContainerNodeNOK() {
+        try {
+            HttpDownload d = getFileNOK(new VOSURI(baseURI), 400);
+            Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  IllegalArgumentException.class);
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception (" + t.getClass().getSimpleName() +
+                "): " + t.getMessage());
+        }
+    }
+
+    @Test
+    public void testGetProprietaryFileNOK() {
+        try {
+            final String uri = getFolderURI + "/All-Falcon-Chicks-2016.jpg";
+            final VOSURI vosURI = new VOSURI(uri);
+
+            // File is owned by cadcauthSubject
+            Subject.doAs(cadcregSubject, new PrivilegedAction<Object>() {
+                public Object run() {
+                    try {
+                        HttpDownload d = getFileNOK(vosURI, 403);
+                        Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  AccessControlException.class);
+                    } catch (Throwable t) {
+                        log.error(t.getMessage(), t);
+                        Assert.fail("Unexpected exception: " + t.getMessage());
+                    }
+                    return null;
+                }
+            });
+
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception: " + t.getMessage());
+        }
+    }
+
+
+    @Test
+    public void testGetProprietaryAnonFileNotAuth() {
+        try {
+            final String uri = getFolderURI + "/All-Falcon-Chicks-2016.jpg";
+            final VOSURI vosURI = new VOSURI(uri);
+            try {
+                HttpDownload d = getFileNOK(vosURI, 403);
+                Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  AccessControlException.class);
+            } catch (Throwable t) {
+                log.error(t.getMessage(), t);
+                Assert.fail("Unexpected exception: " + t.getMessage());
+            }
+
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception: " + t.getMessage());
+        }
+    }
+
+    @Test
+    public void testGetFileNotExist() {
+        try {
+            final String uri = getFolderURI + "/All-Falcon-Chicks-2020.jpg";
+            final VOSURI vosURI = new VOSURI(uri);
+
+            try {
+                HttpDownload d = getFileNOK(vosURI, 404);
+                Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  ResourceNotFoundException.class);
+            } catch (Throwable t) {
+                log.error(t.getMessage(), t);
+                Assert.fail("Unexpected exception: " + t.getMessage());
+            }
+
+        } catch (Throwable t) {
+            log.error(t.getMessage(), t);
+            Assert.fail("Unexpected exception: " + t.getMessage());
+        }
+    }
+
+
+
     public File getFile(VOSURI uri) throws Throwable {
 
         AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
@@ -215,8 +306,10 @@ public class AuthGetActionTest {
 
         download.setFollowRedirects(false);
         download.setOverwrite(true); // file potentially exists from previous test runs
+        log.debug("about to run download.");
         download.run();
 
+        log.debug("download response code: " + download.getResponseCode());
         if (download.getThrowable() != null) {
             throw download.getThrowable();
         }
@@ -228,6 +321,42 @@ public class AuthGetActionTest {
         return ret;
 
     }
+
+
+    public HttpDownload getFileNOK(VOSURI uri, int expectedResponseCode) throws Throwable {
+
+        AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+        if (authMethod == null) {
+            authMethod = AuthMethod.ANON;
+        }
+
+        RegistryClient regClient = new RegistryClient();
+        URL baseURL = regClient.getServiceURL(uri.getServiceURI(), Standards.VOSPACE_FILES_20, authMethod);
+        log.debug("baseURL for getFile: " + baseURL.toExternalForm());
+        URL url = new URL(baseURL.toString() + uri.getPath());
+        log.debug("requested url for getFile: " + url.toExternalForm());
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        File tmp = new File(System.getProperty("java.io.tmpdir"));
+        HttpDownload download = new HttpDownload(url, tmp);
+
+        download.setFollowRedirects(false);
+        download.setOverwrite(true); // file potentially exists from previous test runs
+        log.debug("about to run download.");
+        download.run();
+
+        int responseCode = download.getResponseCode();
+        log.debug("GET response code: " + responseCode);
+        log.debug("GET throwable: " + download.getThrowable());
+        log.debug("GET cause: " + download.getThrowable().getCause());
+        log.debug("GET message: " + download.getThrowable().getMessage());
+
+        Assert.assertEquals("wrong expected response code: expected " + expectedResponseCode + " got " + responseCode, expectedResponseCode, responseCode);
+
+        return download;
+
+    }
+
 
     private void cleanup(File f) {
         if (f.exists()) {

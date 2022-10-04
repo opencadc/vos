@@ -67,12 +67,16 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.net.RemoteServiceException;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystem;
@@ -110,19 +114,21 @@ public abstract class GetAction extends FileAction {
             Path source = fs.getPath(getRoot(), nodeURI.getPath());
             if (!Files.exists(source)) {
                 // not found
-                syncOutput.setCode(404);
+                log.debug("permission denied for: " + nodeURI.toString());
+                sendError(404, "file not found");
                 return;
             }
             if (!Files.isReadable(source)) {
                 // permission denied
-                syncOutput.setCode(403);
+                log.debug("permission denied for: " + nodeURI.toString());
+                sendError(403, "permission denied");
                 return;
             }
             
             // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
-            // authentication will probably need the authorizer...
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+            log.debug("node path resolved: " + node.getName());
+            log.debug("node type: " + node.getClass().getCanonicalName());
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
@@ -137,13 +143,14 @@ public abstract class GetAction extends FileAction {
             Files.copy(source, out);
             log.debug("Completed copy of file " + source);
             out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+        }
+        catch (NodeNotFoundException e) {
+            log.debug("404 error with GET: ",  e);
+            sendError(404, e.getLocalizedMessage());
+        }
+        catch (LinkingException | IOException e) {
+            log.debug("400 error with GET: ",  e);
+            sendError(400, e.getLocalizedMessage());
         }
     }
-
 }
