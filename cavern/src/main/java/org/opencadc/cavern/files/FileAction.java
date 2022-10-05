@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.PropertiesReader;
@@ -93,6 +94,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
+import jdk.internal.loader.Resource;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
@@ -156,7 +158,7 @@ public abstract class FileAction extends RestAction {
     }
 
     @Override
-    public void initAction() throws Exception {
+    public void initAction() throws ResourceNotFoundException, IllegalArgumentException {
         // Abstract for this function is in RestAction.
         // Code is executed before doAction()
 
@@ -173,14 +175,13 @@ public abstract class FileAction extends RestAction {
             }
         } catch (NodeNotFoundException e) {
             log.debug("node not found: " + e.getMessage());
-            sendError(404, e.getMessage());
-        } catch (LinkingException e) {
-            log.debug("linking exception: " + e.getMessage());
-            sendError(400, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.debug("illegal argument exception: " + e.getMessage());
-            sendError(400, e.getMessage());
+            throw new ResourceNotFoundException(e.getMessage());
         }
+        catch (LinkingException e) {
+            log.debug("linking exception: " + e.getMessage());
+            throw new IllegalArgumentException(e.getMessage());
+        }
+
     }
 
     private void initPreauthTarget(String path) throws IllegalArgumentException {
@@ -328,16 +329,5 @@ public abstract class FileAction extends RestAction {
         log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
 
         return targetVOSURI;
-    }
-
-    protected void sendError(int code, String msg) throws RuntimeException {
-        try {
-            syncOutput.setCode(code);
-            syncOutput.setHeader("Content-Type", "text/plain");
-            syncOutput.getOutputStream().write(msg.getBytes());
-        } catch (IOException ioe) {
-            log.debug("syncOutput output stream not available." + ioe.getMessage());
-            throw new RuntimeException("output stream not available.");
-        }
     }
 }

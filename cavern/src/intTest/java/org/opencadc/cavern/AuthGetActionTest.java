@@ -105,8 +105,8 @@ public class AuthGetActionTest {
     
     static
     {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern.files", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern.files", Level.DEBUG);
     }
 
     @BeforeClass
