@@ -32,6 +32,11 @@ war {
         into 'WEB-INF/classes/'
         include 'RsaSignaturePub.key'
     }
+
+    // Include the swagger-ui so that /vospace provides the VOSpace API documentation
+    from(System.getenv('RPS') + '/resources/') {
+        include 'swagger-ui/'
+    }
 }
 
 sourceSets {
