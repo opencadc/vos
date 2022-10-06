@@ -67,8 +67,12 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 
@@ -102,27 +106,34 @@ public abstract class GetAction extends FileAction {
     };
 
     @Override
-    public void doAction() throws Exception {
+    public void doAction()  throws Exception {
 
         try {
             VOSURI nodeURI = getNodeURI();
             FileSystem fs = FileSystems.getDefault();
             Path source = fs.getPath(getRoot(), nodeURI.getPath());
             if (!Files.exists(source)) {
-                // not found
-                syncOutput.setCode(404);
-                return;
+                log.debug("not found: " + nodeURI.toString());
+                throw new ResourceNotFoundException("not found: " + nodeURI.toString());
             }
             if (!Files.isReadable(source)) {
-                // permission denied
-                syncOutput.setCode(403);
-                return;
+                log.debug("permission denied for: " + nodeURI.toString());
+                throw new AccessControlException("permission denied for " + nodeURI.toString());
             }
             
             // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // This is appropriate for preauth endpoint, but the /cavern/files files requiring
-            // authentication will probably need the authorizer...
+            // Authorization checks should have been done in initAction already.
             Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+
+            // GetAction code is common for both /files and /preauth endpoints. Neither will support
+            // GET for container nodes
+            if (node instanceof ContainerNode) {
+                log.debug("container nodes not supported for GET");
+                throw new IllegalArgumentException("GET for directories not supported");
+            }
+
+            log.debug("node path resolved: " + node.getName());
+            log.debug("node type: " + node.getClass().getCanonicalName());
             String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
             String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
@@ -131,19 +142,24 @@ public abstract class GetAction extends FileAction {
             syncOutput.setHeader("Content-Encoding", contentEncoding);
             syncOutput.setHeader("Content-Length", contentLength);
             syncOutput.setHeader("Content-MD5", contentMD5);
-            
+
+            // IOExceptions thrown from getOutputStream, Files.copy and out.flush
+            // will be handled by RestServlet
             OutputStream out = syncOutput.getOutputStream();
             log.debug("Starting copy of file " + source);
             Files.copy(source, out);
             log.debug("Completed copy of file " + source);
             out.flush();
-        } catch (FileNotFoundException | NoSuchFileException e) {
-            log.debug(e);
-            syncOutput.setCode(404);
+
+        } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {
+            log.debug("404 error with GET: ",  e);
+            throw new ResourceNotFoundException(e.getMessage());
+        } catch (LinkingException e) {
+            log.debug("400 error with GET: ",  e);
+            throw new IllegalArgumentException(e.getMessage());
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
-            syncOutput.setCode(403);
+            throw new AccessControlException(e.getMessage());
         }
     }
-
 }

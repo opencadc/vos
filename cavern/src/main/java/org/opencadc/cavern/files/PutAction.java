@@ -68,6 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
@@ -140,14 +141,13 @@ public abstract class PutAction extends FileAction {
             node = NodeUtil.get(rootPath, nodeURI);
             if (node == null) {
                 // Node needs to be created ahead of time for PUT
-                syncOutput.setCode(404);
-                return;
+                throw new ResourceNotFoundException("node must be created before PUT");
             }
 
             // only support data nodes for now
             if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
-                syncOutput.getOutputStream().write("Not a writable node".getBytes());
-                syncOutput.setCode(400);
+                log.debug("400 error with PUT: not a writable node");
+                throw new IllegalArgumentException("not a writable node");
             }
 
             target = NodeUtil.nodeToPath(rootPath, node);
@@ -180,9 +180,10 @@ public abstract class PutAction extends FileAction {
             log.debug("restore owner & group");
             restoreOwnNGroup(rootPath, node);
             successful = true;
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            syncOutput.setCode(403);
+        } catch (AccessDeniedException e) {
+            log.debug("403 error with PUT: ",  e);
+            throw new AccessControlException(e.getLocalizedMessage());
+
         } catch (IOException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("quota")) {

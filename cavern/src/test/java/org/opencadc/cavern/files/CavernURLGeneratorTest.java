@@ -105,7 +105,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.opencadc.permissions.TokenTool;
 
 public class CavernURLGeneratorTest
 {
@@ -120,8 +119,6 @@ public class CavernURLGeneratorTest
     static final String OWNER = System.getProperty("user.name");
     static String TEST_DIR = "dir-" + UUID.randomUUID().toString();
     static String TEST_FILE = "file-" + UUID.randomUUID().toString();
-
-    static TokenTool tokenGenerator;
     
     static String baseURI;
 
@@ -368,8 +365,6 @@ public class CavernURLGeneratorTest
             VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             String badToken = "something clearly not base 64";
 
-            VOSURI altURI = new VOSURI(baseURI + "/" + TEST_DIR + "/fakeFile");
-
             try {
                 urlGen.validateToken(badToken, nodeURI, Direction.pushToVoSpace);
                 Assert.fail();
@@ -382,7 +377,6 @@ public class CavernURLGeneratorTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
 
     class TestTransferGenerator extends CavernURLGenerator {
 
@@ -401,5 +395,4 @@ public class CavernURLGeneratorTest
             return list;
         }
     }
-
 }

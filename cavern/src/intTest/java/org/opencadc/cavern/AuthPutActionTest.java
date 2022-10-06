@@ -72,6 +72,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
@@ -106,6 +107,7 @@ public class AuthPutActionTest {
     protected static Logger log = Logger.getLogger(AuthPutActionTest.class);
 
     protected static Subject cadcauthSubject;
+    protected static Subject cadcregSubject;
     protected static String baseURIStr;
     protected static VOSURI baseURI;
     protected static String putTestURIStr;
@@ -121,16 +123,19 @@ public class AuthPutActionTest {
     
     static
     {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.cavern.files", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern.files", Level.INFO);
     }
 
     @BeforeClass
     public static void staticInit() throws Exception {
-
         log.debug("------------ TEST SETUP ------------");
         File SSL_CERT = FileUtil.getFileFromResource("x509_CADCAuthtest1.pem", CavernPackageRunnerTest.class);
         cadcauthSubject = SSLUtil.createSubject(SSL_CERT);
+
+        File SSL_CERT_2 = FileUtil.getFileFromResource("x509_CADCRegtest1.pem",
+            AuthGetActionTest.class);
+        cadcregSubject = SSLUtil.createSubject(SSL_CERT_2);
 
         baseURIStr ="vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/putTest";
         putTestURIStr = baseURIStr + "/filesPutTest-" + System.currentTimeMillis();
@@ -165,7 +170,7 @@ public class AuthPutActionTest {
     }
 
     @Test
-    public void testPutFileOK() throws Throwable {
+    public void testPutFileAuthOK() throws Throwable {
         final String uri = putTestURIStr + "/smallTextFile.rtf";
         final String sourceFilename = "src/test/resources/smallTextFile.rtf";
         final String expectedMD5 = "e99fb782d60d295a3aa287cc999349d2";
@@ -188,7 +193,7 @@ public class AuthPutActionTest {
             
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
 
@@ -234,7 +239,7 @@ public class AuthPutActionTest {
 
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
 
@@ -246,19 +251,62 @@ public class AuthPutActionTest {
         final File f = new File(sourceFilename);
         log.debug("source file for test: " + sourceFilename);
 
+        // Now attempt to PUT the file using /cavern/files - should still work
+
+        Subject.doAs(cadcregSubject, new PrivilegedAction<Object>() {
+            public Object run() {
+                try {
+                    HttpUpload p = putFileNOK(nodeURI, f, 403);
+                    Assert.assertEquals("wrong exception type: " + p.getThrowable(), p.getThrowable().getClass(),  AccessControlException.class);
+                } catch (Throwable t) {
+                    log.error(t.getMessage(), t);
+                    Assert.fail("Unexpected exception: " + t.getMessage());
+                }
+                return null;
+            }
+        });
+
+    }
+
+    @Test
+    public void testPutParentFolderNotFound() throws Throwable {
+        final String uri = putTestURIStr + "/newFolder/smallTextFile.rtf";
+        final String sourceFilename = "src/test/resources/smallTextFile.rtf";
+        final VOSURI nodeURI = new VOSURI(uri);
+        final File f = new File(sourceFilename);
+        log.debug("source file for test: " + sourceFilename);
+        Subject.doAs(cadcregSubject, new PrivilegedAction<Object>() {
+            public Object run() {
+                try {
+                    HttpUpload p = putFileNOK(nodeURI, f, 404);
+                    Assert.assertEquals("wrong exception type: " + p.getThrowable(), p.getThrowable().getClass(), ResourceNotFoundException.class);
+                } catch (Throwable t) {
+                    log.error(t.getMessage(), t);
+                    Assert.fail("Unexpected exception: " + t.getMessage());
+                }
+                return null;
+            }
+        });
+    }
+
+    @Test
+    public void testPutFileAnonNOK() throws Throwable {
+        final String uri = baseURIStr + "/public-do-not-delete/smallTextFile.rtf";
+        final String sourceFilename = "src/test/resources/smallTextFile.rtf";
+        final VOSURI nodeURI = new VOSURI(uri);
+        final File f = new File(sourceFilename);
+        log.debug("source file for test: " + sourceFilename);
+
         try {
-            String filename = "src/test/resources/smallTextFile.rtf";
-            putFile(nodeURI, f);
-            Assert.fail("should have had an access error.");
-
-        } catch (AccessControlException t) {
-            log.debug("expected & got AccessControlException");
-
+            HttpUpload p = putFileNOK(nodeURI, f, 403);
+            Assert.assertEquals("wrong exception type: " + p.getThrowable(), p.getThrowable().getClass(),  AccessControlException.class);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
-            Assert.fail("Unexcepted exception: " + t.getMessage());
+            Assert.fail("Unexpected exception: " + t.getMessage());
         }
     }
+
+
 
     /**
      * Use Standards.VOSPACE_FILES_20 service (/files) to PUT the given file
@@ -282,12 +330,39 @@ public class AuthPutActionTest {
         put.setRequestProperty("Content-Type", "text/xml");
         put.run();
 
+        log.debug("PUT response code: " + put.getResponseCode());
         if (put.getThrowable() != null) {
             throw put.getThrowable();
         }
 
         Assert.assertEquals(200, put.getResponseCode());
     }
+
+
+    private HttpUpload putFileNOK(VOSURI uri, File fileToPut, int expectedResponseCode) throws Throwable {
+
+        RegistryClient regClient = new RegistryClient();
+        AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+        if (authMethod == null) {
+            authMethod = AuthMethod.ANON;
+        }
+        URL filePutURL = regClient.getServiceURL(uri.getServiceURI(), Standards.VOSPACE_FILES_20, authMethod);
+        log.debug("baseURL for getFile: " + filePutURL.toExternalForm());
+        URL url = new URL(filePutURL.toString() + uri.getPath());
+        log.debug("requested url for putFile: " + url.toExternalForm());
+
+        HttpUpload put = new HttpUpload(fileToPut, url);
+        put.setRequestProperty("Content-Type", "text/xml");
+        put.run();
+        int responseCode = put.getResponseCode();
+        log.debug("PUT response code: " + responseCode);
+        log.debug("PUT throwable: " + put.getThrowable());
+
+        Assert.assertEquals("wrong expected response code: expected " + expectedResponseCode + " got " + responseCode, expectedResponseCode, responseCode);
+        return put;
+    }
+
+
 
     private static void verifyPut(VOSURI fileURI, String sourceFilename, String md5Sum) throws Throwable {
         final Path filePath = Paths.get(sourceFilename);

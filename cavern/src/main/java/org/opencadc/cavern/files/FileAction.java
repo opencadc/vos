@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.PropertiesReader;
@@ -93,6 +94,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
+import jdk.internal.loader.Resource;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
@@ -156,20 +158,30 @@ public abstract class FileAction extends RestAction {
     }
 
     @Override
-    public void initAction() throws Exception {
+    public void initAction() throws ResourceNotFoundException, IllegalArgumentException {
         // Abstract for this function is in RestAction.
         // Code is executed before doAction()
 
         // Initialize the nodeURI value. Check authorization, either token validation or
         // user authentication against node attributes.
-        String path = syncInput.getPath();
-        if (isPreauth == true) {
-            initPreauthTarget(path);
-        } else {
-            initAuthTarget(path);
+        // Exceptions from init functions are put to syncOutput so they can
+        // be reported to the caller.
+        try {
+            String path = syncInput.getPath();
+            if (isPreauth == true) {
+                initPreauthTarget(path);
+            } else {
+                initAuthTarget(path);
+            }
+        } catch (NodeNotFoundException e) {
+            log.debug("node not found: " + e.getMessage());
+            throw new ResourceNotFoundException(e.getMessage());
+        }
+        catch (LinkingException e) {
+            log.debug("linking exception: " + e.getMessage());
+            throw new IllegalArgumentException(e.getMessage());
         }
 
-        log.debug("sync input available: ");
     }
 
     private void initPreauthTarget(String path) throws IllegalArgumentException {
@@ -201,13 +213,14 @@ public abstract class FileAction extends RestAction {
 
             log.debug("preauth token good node uri: " + nodeURI);
 
-        } catch ( URISyntaxException | IOException e ) {
+        } catch (URISyntaxException | IOException e ) {
             log.debug("unable to init preauth target: " + path + ": " + e);
             throw new IllegalArgumentException(e.getCause());
         }
     }
 
-    private void initAuthTarget(String path) throws IllegalArgumentException {
+    private void initAuthTarget(String path)
+        throws IllegalArgumentException, NodeNotFoundException, LinkingException {
         try {
             // false indicates there's no token
             nodeURI = getURIFromPath(path, false);
@@ -220,20 +233,20 @@ public abstract class FileAction extends RestAction {
             } else if (Direction.pushToVoSpace == direction) {
                 resolveWithWritePermission(nodeURI);
             } else {
+                log.debug("[initAuthTarget]: direction not supported: " + direction.getValue());
                 throw new IllegalArgumentException("direction not supported: " + direction.toString());
             }
 
-        } catch (URISyntaxException | NodeNotFoundException | LinkingException e) {
-            log.debug("initAuthTarget:uri syntax exception " + nodeURI + ": " + e.getMessage());
-            throw new IllegalArgumentException(e.getCause());
-
+        } catch (URISyntaxException e) {
+            log.debug("[initAuthTarget]: exception for " + nodeURI + ": " + e);
+            throw new IllegalArgumentException(e.getMessage());
         }
     }
 
     private Node resolveWithReadPermission(VOSURI targetVOSURI)
-        throws AccessControlException, NodeNotFoundException, LinkingException, URISyntaxException {
+        throws AccessControlException, NodeNotFoundException, LinkingException {
 
-        log.debug("[resolveWithReadPermission]: checking read permission for targetVOSURI: " + targetVOSURI.toString());
+        log.debug("checking read permission for targetVOSURI: " + targetVOSURI.toString());
         // Authorization is done in this step.
         Node node = pathResolver.resolveWithReadPermissionCheck(targetVOSURI, authorizer, true);
         log.debug("node resolved with read permission: " + targetVOSURI.toString());
@@ -270,8 +283,7 @@ public abstract class FileAction extends RestAction {
             Node pn = resolveWithReadPermission(targetVOSURI.getParentURI());
 
             // parent node exists
-            if (!(pn instanceof ContainerNode))
-            {
+            if (!(pn instanceof ContainerNode)) {
                 throw new IllegalArgumentException(
                     "parent is not a ContainerNode: " + pn.getUri().getURI().toASCIIString());
             }
@@ -286,8 +298,7 @@ public abstract class FileAction extends RestAction {
                 fsPersistence.put(newNode);
                 return newNode;
             } catch (NodeNotSupportedException e2) {
-                throw new IllegalArgumentException(
-                    "node type not supported.", e2);
+                throw new IllegalArgumentException("node type not supported.", e2);
             }
 
         }
