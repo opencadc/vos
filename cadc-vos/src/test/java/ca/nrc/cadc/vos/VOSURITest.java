@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2009.                            (c) 2009.
+ *  (c) 2022.                            (c) 2022.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -431,4 +431,38 @@ public class VOSURITest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    @Test
+    public void testCommonForm()
+    {
+        try
+        {
+            VOSURI expectedURI = new VOSURI(new URI("vos://cadc.nrc.ca~vospace/test/file.txt"));
+            String fileURI = "vos://cadc.nrc.ca!vospace/test/file.txt";
+            VOSURI vos = new VOSURI(new URI(fileURI));
+            log.debug("input URI: " + vos.toString());
+            VOSURI commonFormURI = vos.getCommonFormURI();
+            log.debug("common form URI: " + commonFormURI.toString());
+            Assert.assertEquals(expectedURI, commonFormURI);
+            Assert.assertTrue("common form authority doesn't have ~: "
+                + commonFormURI, commonFormURI.getAuthority().contains("~"));
+
+            // This one should stay the same
+            fileURI = "vos://cadc.nrc.ca~vospace/test/file.txt";
+            vos = new VOSURI(new URI(fileURI));
+            log.debug("input URI: " + vos.toString());
+            commonFormURI = vos.getCommonFormURI();
+            log.debug("common form URI: " + commonFormURI.toString());
+            Assert.assertEquals(expectedURI, commonFormURI);
+            Assert.assertTrue("common form authority doesn't have ~: "
+                + commonFormURI, commonFormURI.getAuthority().contains("~"));
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
 }

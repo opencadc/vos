@@ -263,7 +263,13 @@ public class CavernURLGenerator implements TransferGenerator {
                 callingUser = ANON_USER;
             }
 
-            String token = gen.generateToken(target.getURI(), grantClass, callingUser);
+            // Use this function in case the incoming URI uses '!' instead of '~'
+            // in the authority.
+            // This will translate the URI to use '~' in it's authority.
+            log.debug("URI passed in :" + target.getURI());
+            VOSURI commonFormURI = target.getCommonFormURI();
+            log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
+            String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
             String encodedToken = new String(Base64.encode(token.getBytes()));
 
             // build the request path
@@ -327,8 +333,12 @@ public class CavernURLGenerator implements TransferGenerator {
         String decodedTokenbytes = new String(Base64.decode(token));
         log.debug("url decoded token: " + decodedTokenbytes);
 
-        URI targetURI = targetVOSURI.getURI();
-        log.debug("targetURI for validation: " + targetURI);
+        // Use this function in case the incoming URI uses '!' instead of '~'
+        // in the authority.
+        // This will translate the URI to use '~' in it's authority.
+        VOSURI commonFormURI = targetVOSURI.getCommonFormURI();
+        log.debug("targetURI passed in: " + targetVOSURI.toString());
+        log.debug("targetURI for validation: " + commonFormURI.toString());
         if (token != null) {
 
             File publicKeyFile = findFile(PUB_KEY_FILENAME);
@@ -345,13 +355,13 @@ public class CavernURLGenerator implements TransferGenerator {
 
             // This will throw an AccessControlException if something is wrong with the
             // grantClass or targetURI. Can return null if user isn't in the meta key=value set
-            String tokenUser = tk.validateToken(decodedTokenbytes, targetURI, grantClass);
+            String tokenUser = tk.validateToken(decodedTokenbytes, commonFormURI.getURI(), grantClass);
 
             if (tokenUser == null) {
                 throw new AccessControlException("invalid token");
             }
 
-            return new VOSURI(targetURI);
+            return commonFormURI;
 
         }
 
