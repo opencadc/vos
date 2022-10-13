@@ -320,6 +320,60 @@ public class TransferRunnerTest {
         }
     }
 
+
+    @Test
+    public void testPullFromVOSpaceNotCommonFormURI() {
+        try {
+            Subject s = SSLUtil.createSubject(SSL_CERT);
+
+            // Using '!' shouldn't stop the transfer from working
+            String notCommonFormURI = "vos://cadc.nrc.ca!arc/home/cadcregtest1/vospace-static-test/transfer";
+
+            VOSURI testURI = new VOSURI(new URI(notCommonFormURI));
+            VOSpaceClient vos = new VOSpaceClient(testURI.getServiceURI());
+            DataNode data = new DataNode(new VOSURI(new URI(testURI + "/testFile.txt")));
+            log.debug("testPullFromVOSpace: " + data.getUri().getURI().toASCIIString());
+
+            List<Protocol> proto = new ArrayList<Protocol>();
+            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(proto);
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
+            List<Protocol> plist = trans.getTransfer().getProtocols();
+            Assert.assertNotNull(plist);
+            log.debug("found: " + plist.size() + " protocols");
+
+            for (Protocol reqP : proto) {
+                int num = 0;
+                for (Protocol p : plist) {
+                    log.debug(p + " : " + data.getUri() + " -> " + p.getEndpoint());
+                    Assert.assertNotNull(p.getEndpoint());
+                    if (reqP.getUri().equals(p.getUri())) {
+                        num++;
+                    }
+                }
+                Assert.assertTrue("one or more endpoints for " + reqP.getUri(), (num > 0));
+            }
+
+            // check the file content
+            final byte[] buf = new byte[100];
+            TestWrapper tw = new TestWrapper(buf);
+            trans.setInputStreamWrapper(tw);
+            trans.runTransfer();
+            Assert.assertTrue(trans.getThrowable() == null);
+            int bytesRead = tw.size;
+            Assert.assertEquals(FILE_DATA.length(), bytesRead);
+            String result = new String(Arrays.copyOfRange(buf, 0, bytesRead));
+            Assert.assertEquals(FILE_DATA, result);
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
     @Test
     public void testNegotiateMount() {
         Protocol sp = new Protocol(VOS.PROTOCOL_SSHFS);
