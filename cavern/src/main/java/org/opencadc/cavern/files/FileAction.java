@@ -94,7 +94,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
-import jdk.internal.loader.Resource;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 

@@ -190,6 +190,10 @@
         <param-name>input</param-name>
         <param-value>/capabilities.xml</param-value>
     </init-param>
+    <init-param>
+      <param-name>head</param-name>
+      <param-value>ca.nrc.cadc.vosi.CapHeadAction</param-value>
+    </init-param>
     <load-on-startup>3</load-on-startup>
   </servlet>
 
