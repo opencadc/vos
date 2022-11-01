@@ -19,6 +19,9 @@ jobs:
     - name: build and test cadc-vos
       run: cd cadc-vos && ../gradlew --info clean build javadoc install
       
+    - name: build and test cadc-vos-server-db
+      run: cd cadc-vos-server-db && ../gradlew --info clean build javadoc install
+
     - name: build and test cadc-vos-server
       run: cd cadc-vos-server && ../gradlew --info clean build javadoc install
       
