@@ -46,7 +46,6 @@ dependencies {
     testCompile 'junit:junit:4.13'
     testCompile 'org.easymock:easymock:3.6'
     testCompile 'org.skyscreamer:jsonassert:[1.0,)'
-    testCompile 'org.opencadc:cadc-vos-server-db:[0.1,)'
 
     // JDBC drivers
     intTestRuntime 'org.postgresql:postgresql:[42.2.8,)'

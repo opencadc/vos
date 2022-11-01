@@ -23,15 +23,9 @@ def git_url = 'https://github.com/opencadc/vos'
 
 dependencies {
     compile 'org.opencadc:cadc-util:[1.6,2.0)'
-    compile 'org.opencadc:cadc-gms:[1.0.0,)'
     compile 'org.opencadc:cadc-vos:[1.2.1,)'
-    compile 'org.opencadc:cadc-access-control:[1.1.1,2.0)'
-    compile 'org.opencadc:cadc-cdp:[1.2.3,)'
-    compile 'org.opencadc:cadc-registry:[1.5.15,)'
 
     testCompile 'junit:junit:4.13'
-    testCompile 'org.easymock:easymock:3.6'
-    testCompile 'org.skyscreamer:jsonassert:[1.0,)'
 
     // JDBC drivers
     intTestRuntime 'org.postgresql:postgresql:[42.2.8,)'
