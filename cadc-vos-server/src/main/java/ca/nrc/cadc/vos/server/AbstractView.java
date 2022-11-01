@@ -94,6 +94,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 
 /**
  * This abstract class defines the required behaviour of server side implementations

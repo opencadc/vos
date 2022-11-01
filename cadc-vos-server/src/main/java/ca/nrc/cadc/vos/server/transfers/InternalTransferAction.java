@@ -93,7 +93,7 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 

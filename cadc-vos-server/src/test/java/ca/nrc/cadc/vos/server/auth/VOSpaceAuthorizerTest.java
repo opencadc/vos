@@ -101,9 +101,8 @@ import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodeID;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import ca.nrc.cadc.vos.server.db.NodeID;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 
 /**
  * Test class for the VOSpaceAuthorizer.

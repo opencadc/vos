@@ -94,7 +94,7 @@ import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 

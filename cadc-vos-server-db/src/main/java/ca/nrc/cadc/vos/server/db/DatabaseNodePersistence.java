@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.vos.server.db;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;

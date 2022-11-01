@@ -105,7 +105,7 @@ import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 import ca.nrc.cadc.vos.server.Views;
 
 /**

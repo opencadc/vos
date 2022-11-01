@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*                                       Node
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -67,57 +67,37 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.vos.server.db;
 
-import javax.security.auth.Subject;
+import java.net.URI;
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
- * Class used to hold server-side implementation objects.
+ * Interface to label support for additional persistence options.
+ * 
+ * This includes alternate sort columns and sort order.
  * 
  * @author majorb
  *
  */
-public class NodeID
-{
-    Long id;
-    Subject owner;
-    Object ownerObject;
-    String storageID;
-
-    public NodeID() { }
-
-    /**
-     * NodeID constructor.
-     *
-     * @param id
-     * @param owner
-     * @param ownerObject
-     */
-    public NodeID(Long id, Subject owner, Object ownerObject) {
-        this.id = id;
-        this.owner = owner;
-        this.ownerObject = ownerObject;
-    }
+public interface PersistenceOptions {
     
     /**
-     * @return The node ID.
+     * Load some of the children of a container. Child parameters include VOSURI start, limit,
+     * resolveMetadata, sort column name
+     * 
+     * @param parent
+     * @param start
+     * @param limit
+     * @param sortProperty
+     * @param sortAsc
+     * @param resolveMetadata
+     * @throws TransientException
      */
-    public Long getID()
-    {
-        return id;
-    }
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit, URI sortProperty, Boolean sortAsc, boolean resolveMetadata)
+       throws TransientException;
 
-    public Subject getOwner()
-    {
-        return owner;
-    }
-
-    public String getStorageID() {
-        return storageID;
-    }
-
-    public String toString()
-    {
-        return "NodeID[" + id + "]";
-    }
 }

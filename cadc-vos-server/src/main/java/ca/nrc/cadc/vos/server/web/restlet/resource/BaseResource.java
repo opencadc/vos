@@ -74,7 +74,7 @@ import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.restlet.RestletPrincipalExtractor;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 import java.security.Principal;
 import java.util.Iterator;

@@ -79,7 +79,7 @@ import org.restlet.routing.Router;
 import org.restlet.routing.TemplateRoute;
 import org.restlet.routing.Variable;
 
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;

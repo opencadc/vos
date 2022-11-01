@@ -82,7 +82,7 @@ import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.db.NodePersistence;
 
 /**
  *

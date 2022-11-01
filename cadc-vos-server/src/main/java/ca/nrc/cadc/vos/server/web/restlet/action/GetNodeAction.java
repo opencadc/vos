@@ -91,7 +91,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.PathResolver;
-import ca.nrc.cadc.vos.server.PersistenceOptions;
+import ca.nrc.cadc.vos.server.db.PersistenceOptions;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 
