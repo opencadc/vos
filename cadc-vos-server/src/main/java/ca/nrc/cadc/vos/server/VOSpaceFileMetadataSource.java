@@ -85,7 +85,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.db.NodePersistence;
+import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
  * Class to get and set the meta data of vospace data nodes.  This class

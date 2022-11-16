@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       Node
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -67,37 +67,57 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.db;
+package ca.nrc.cadc.vos.server;
 
-import java.net.URI;
-
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.VOSURI;
+import javax.security.auth.Subject;
 
 /**
- * Interface to label support for additional persistence options.
- * 
- * This includes alternate sort columns and sort order.
+ * Class used to hold server-side implementation objects.
  * 
  * @author majorb
  *
  */
-public interface PersistenceOptions {
+public class NodeID
+{
+    public Long id;
+    public Subject owner;
+    public Object ownerObject;
+    public String storageID;
+
+    public NodeID() { }
+
+    /**
+     * NodeID constructor.
+     *
+     * @param id
+     * @param owner
+     * @param ownerObject
+     */
+    public NodeID(Long id, Subject owner, Object ownerObject) {
+        this.id = id;
+        this.owner = owner;
+        this.ownerObject = ownerObject;
+    }
     
     /**
-     * Load some of the children of a container. Child parameters include VOSURI start, limit,
-     * resolveMetadata, sort column name
-     * 
-     * @param parent
-     * @param start
-     * @param limit
-     * @param sortProperty
-     * @param sortAsc
-     * @param resolveMetadata
-     * @throws TransientException
+     * @return The node ID.
      */
-    void getChildren(ContainerNode parent, VOSURI start, Integer limit, URI sortProperty, Boolean sortAsc, boolean resolveMetadata)
-       throws TransientException;
+    public Long getID()
+    {
+        return id;
+    }
 
+    public Subject getOwner()
+    {
+        return owner;
+    }
+
+    public String getStorageID() {
+        return storageID;
+    }
+
+    public String toString()
+    {
+        return "NodeID[" + id + "]";
+    }
 }

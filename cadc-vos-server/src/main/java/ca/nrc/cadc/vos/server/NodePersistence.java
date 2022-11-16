@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.db;
+package ca.nrc.cadc.vos.server;
 
 import java.net.URI;
 import java.util.List;

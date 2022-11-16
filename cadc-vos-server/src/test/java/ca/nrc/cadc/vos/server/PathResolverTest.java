@@ -84,7 +84,7 @@ import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.db.NodePersistence;
+import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
  * Unit tests for PathResolver.

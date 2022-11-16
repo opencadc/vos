@@ -85,7 +85,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import ca.nrc.cadc.vos.server.db.NodePersistence;
+import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
  * Utility class to follow and resolve the target of link nodes in a local vospace.

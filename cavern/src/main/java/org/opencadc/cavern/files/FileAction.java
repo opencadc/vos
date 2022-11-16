@@ -83,9 +83,6 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.VOSURI;
 
-import ca.nrc.cadc.vos.server.LocalServiceURI;
-import ca.nrc.cadc.vos.server.PathResolver;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;

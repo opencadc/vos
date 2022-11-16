@@ -123,6 +123,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -733,7 +734,7 @@ public class NodeDAO
             return;
 
         NodeID nid = (NodeID) node.appData;
-        if (nid.owner != null)
+        if (nid.getOwner() != null)
             return; // already loaded (parent loop below)
 
         String ownerPropertyString = null;
@@ -2738,7 +2739,7 @@ public class NodeDAO
             sb.append(pval);
             sb.append(",");
 
-            String storageID = nodeID.storageID;
+            String storageID = nodeID.getStorageID();
             if (storageID != null) {
                 ps.setString(col, storageID);
                 sb.append(storageID);

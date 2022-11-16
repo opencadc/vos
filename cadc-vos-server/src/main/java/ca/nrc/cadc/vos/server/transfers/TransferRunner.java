@@ -70,7 +70,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
-import ca.nrc.cadc.vos.server.db.NodePersistence;
+import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;

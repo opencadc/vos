@@ -90,6 +90,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 
 /**
  * Class to map a result set into a Node object.
@@ -182,7 +183,7 @@ public class NodeMapper implements RowMapper
                     + type);
         }
 
-        NodeID nid = new NodeID();
+        NodeID nid = new NodeID(nodeID, null, ownerObject);
         nid.id = nodeID;
         nid.ownerObject = ownerObject;
         nid.storageID = storageID;
