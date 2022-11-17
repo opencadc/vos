@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,45 +67,105 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.vos.server.db;
 
-/**
- * Class used to hold information required to apply a node size
- * propagation update.
- * 
- */
-public class NodeSizePropagation
-{
-	
-	private Long parentID;
-	private long childID;
-	private String childType;
-	
-	public NodeSizePropagation(final long childID, final String childType, final Long parentID)
-	{
-	    this.parentID = parentID;
-	    this.childID = childID;
-	    this.childType = childType;
-	}
+import java.net.URI;
 
-    public Long getParentID()
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOSURI;
+
+public class NodeMapperTest {
+    
+    private static Logger log = Logger.getLogger(NodeMapperTest.class);
+    static
     {
-        return parentID;
-    }
-
-    public long getChildID()
-    {
-        return childID;
-    }
-
-    public String getChildType()
-    {
-        return childType;
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server.db", Level.INFO);
     }
     
-    public String toString()
-    {
-        return childID + " -> " + parentID;
+    @Test
+    public void testAbsoluteLinkURI() {
+        
+        try {
+            
+            String authority = null;
+            URI inURI = null;
+            String dbLink = null;
+            
+            authority = "cadc.nrc.ca~vospace";
+            inURI = new VOSURI("vos://" + authority + "/path/to/file").getURI();
+            dbLink = NodeMapper.createDBLinkString(inURI, authority);
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(dbLink, authority));
+            
+            authority = "cadc.nrc.ca!vospace";
+            inURI = new VOSURI("vos://" + authority + "/path/to/file").getURI();
+            dbLink = NodeMapper.createDBLinkString(inURI, authority);
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(dbLink, authority));
+            
+            authority = "cadc.nrc.ca~vospace";
+            inURI = new VOSURI("vos://" + authority + "/path/to/file").getURI();
+            dbLink = NodeMapper.createDBLinkString(inURI, authority);
+            authority = "canfar.net~vault";
+            inURI = new VOSURI("vos://" + authority + "/path/to/file").getURI();
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(dbLink, authority));
+            
+        } catch (Throwable t) {
+         
+            log.error("Unexpected error", t);
+            Assert.fail("unexpected: " + t.getMessage());
+        }
     }
-	
+    
+    @Test
+    public void testExternalLinkURI() {
+        
+        try {
+            
+            String authority = null;
+            URI inURI = null;
+            String dbLink = null;
+            
+            authority = "cadc.nrc.ca~vospace";
+            inURI = new VOSURI("vos://different.authority~vospace/path/to/file").getURI();
+            dbLink = NodeMapper.createDBLinkString(inURI, authority);
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(dbLink, authority));
+            
+            authority = "cadc.nrc.ca!vospace";
+            inURI = new URI("https://externalurl:8080/path/to/file?query=param#frag");
+            dbLink = NodeMapper.createDBLinkString(inURI, authority);
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(dbLink, authority));
+            
+        } catch (Throwable t) {
+         
+            log.error("Unexpected error", t);
+            Assert.fail("unexpected: " + t.getMessage());
+        }
+    }
+    
+    @Test
+    public void testBackwardsCompat() {
+        
+        try {
+            
+            String authority = null;
+            URI inURI = null;
+            
+            authority = "cadc.nrc.ca~vospace";
+            inURI = new VOSURI("vos://different.authority~vospace/path/to/file").getURI();
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(inURI.toString(), authority));
+            
+            inURI = new URI("http://mysite.com?query=string#fragment");
+            Assert.assertEquals(inURI, NodeMapper.extractLinkURI(inURI.toString(), authority));
+            
+        } catch (Throwable t) {
+         
+            log.error("Unexpected error", t);
+            Assert.fail("unexpected: " + t.getMessage());
+        }
+    }
+
 }
