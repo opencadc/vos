@@ -734,7 +734,7 @@ public class NodeDAO
             return;
 
         NodeID nid = (NodeID) node.appData;
-        if (nid.getOwner() != null)
+        if (nid.owner != null)
             return; // already loaded (parent loop below)
 
         String ownerPropertyString = null;
@@ -2739,7 +2739,7 @@ public class NodeDAO
             sb.append(pval);
             sb.append(",");
 
-            String storageID = nodeID.getStorageID();
+            String storageID = nodeID.storageID;
             if (storageID != null) {
                 ps.setString(col, storageID);
                 sb.append(storageID);
