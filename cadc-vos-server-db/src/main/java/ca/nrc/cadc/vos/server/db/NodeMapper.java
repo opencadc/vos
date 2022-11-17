@@ -183,7 +183,7 @@ public class NodeMapper implements RowMapper
                     + type);
         }
 
-        NodeID nid = new NodeID(nodeID, null, ownerObject);
+        NodeID nid = new NodeID();
         nid.id = nodeID;
         nid.ownerObject = ownerObject;
         nid.storageID = storageID;

@@ -2852,7 +2852,7 @@ public class NodeDAO
                     if (c > 0)
                         sb.append(",");
                     sb.append(acur);
-                    sb.append("");
+                    sb.append(".");
                     sb.append(NODE_COLUMNS[c]);
                 }
                 sb.append(",");

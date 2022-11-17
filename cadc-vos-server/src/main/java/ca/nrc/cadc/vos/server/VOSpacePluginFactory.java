@@ -6,7 +6,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.MultiValuedProperties;
-import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
 
 public class VOSpacePluginFactory
