@@ -103,7 +103,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
  * Test class for the VOSpaceAuthorizer.

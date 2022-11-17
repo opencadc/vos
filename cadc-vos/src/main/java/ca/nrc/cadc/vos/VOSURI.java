@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -308,5 +308,31 @@ public class VOSURI
         {
             throw new RuntimeException("BUG: failed to create service URI from VOSURI: " + vosURI);
         }
+    }
+
+    /**
+     * Return the service uri in the form common to CADC code.
+     * e.g.
+     * for VOSURI("vos://cadc.nrc.ca!vospace/temp/tempFile.txt"),
+     * it returns:
+     * VOSURI("vos://cadc.nrc.ca~vospace/temp/tempFile.txt")
+     *
+     * @author Helena Jeeves, Oct 12/2022
+     */
+    public VOSURI getCommonFormURI()
+    {
+        String authority = getAuthority();
+        authority = authority.replace('!', '~');
+
+        try
+        {
+            // Only the authority string should be changing.
+            return new VOSURI(new URI(getScheme(), authority, getPath(), getQuery(), getFragment()));
+        }
+        catch (URISyntaxException e)
+        {
+            throw new IllegalArgumentException("URI malformed: " + vosURI.toString());
+        }
+
     }
 }
