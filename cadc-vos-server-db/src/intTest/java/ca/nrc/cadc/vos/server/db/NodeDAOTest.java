@@ -112,7 +112,8 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
+import ca.nrc.cadc.vos.server.NodeID;
+import ca.nrc.cadc.vos.server.db.NodeDAO.NodeSchema;
 
 
 /**
