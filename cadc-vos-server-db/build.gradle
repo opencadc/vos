@@ -19,7 +19,7 @@ sourceCompatibility = 1.8
 
 group = 'org.opencadc'
 
-version = '1.3.4'
+version = '1.3.5'
 
 description = 'OpenCADC VOSpace server library DB'
 def git_url = 'https://github.com/opencadc/vos'
