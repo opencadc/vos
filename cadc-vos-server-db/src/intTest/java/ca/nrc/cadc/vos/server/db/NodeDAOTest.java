@@ -180,7 +180,7 @@ public class NodeDAOTest
             }
             this.dataSource = DBUtil.getDataSource(connConfig);
 
-            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeSchema = new NodeSchema("vospace.Node", "vospace.NodeProperty", false); // LIMIT
 
             // cleanup from old runs
             //JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -970,7 +970,7 @@ public class NodeDAOTest
             meta.setContentLength(new Long(2048L));
             meta.setContentEncoding("gzip");
             meta.setContentType("text/plain");
-            meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+            meta.setMd5Sum("tbd");
 
             log.debug("** update without setting busy state **");
             try
@@ -1899,8 +1899,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -1922,7 +1921,7 @@ public class NodeDAOTest
 
             // manually set the content length & nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set contentLength=4, busyState='W' where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set contentLength=4, busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             FileMetadata meta = new FileMetadata();
@@ -1931,7 +1930,7 @@ public class NodeDAOTest
             // perform the metadata update
             nodeDAO.updateNodeMetadata(dataNode, meta, true);
 
-            int delta = jdbc.queryForObject("select delta from Node where name='" + dataNode.getName() + "'", new IntRowMapper());
+            int delta = jdbc.queryForObject("select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 6, delta);
         }
         catch(Exception unexpected)
@@ -1955,8 +1954,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -1978,16 +1976,16 @@ public class NodeDAOTest
 
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set contentLength=2 where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set contentLength=2 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // manually set the delta
-            sql = "update Node set delta=7 where name='" + containerNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set delta=7 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
 
             nodeDAO.delete(dataNode);
 
-            int delta = jdbc.queryForObject("select delta from Node where name='" + containerNode.getName() + "'", new IntRowMapper());
+            int delta = jdbc.queryForObject("select delta from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'", new IntRowMapper());
             // delta should now be 7-2
             Assert.assertEquals("Wrong delta", 5, delta);
         }
@@ -2012,8 +2010,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2041,21 +2038,21 @@ public class NodeDAOTest
 
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set contentLength=9 where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set contentLength=9 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // manually set the deltas
-            sql = "update Node set delta=11 where name='" + containerNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set delta=11 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
-            sql = "update Node set delta=13 where name='" + containerNode2.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set delta=13 where name='" + containerNode2.getName() + "'";
             jdbc.update(sql);
 
             nodeDAO.move(dataNode, containerNode2);
 
-            int delta = jdbc.queryForObject("select delta from Node where name='" + containerNode.getName() + "'", new IntRowMapper());
+            int delta = jdbc.queryForObject("select delta from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 2, delta);
 
-            delta = jdbc.queryForObject("select delta from Node where name='" + containerNode2.getName() + "'", new IntRowMapper());
+            delta = jdbc.queryForObject("select delta from " + nodeSchema.nodeTable + " where name='" + containerNode2.getName() + "'", new IntRowMapper());
             Assert.assertEquals("Wrong delta", 22, delta);
         }
         catch(Exception unexpected)
@@ -2078,8 +2075,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2101,17 +2097,17 @@ public class NodeDAOTest
 
             // manually set the deltas
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set delta=11 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set delta=3 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
 
             // grab the nodeIDs for assertion
-            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             Long dataNodeID = jdbc.queryForObject(sql, new LongRowMapper());
-            sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'";
             Long containerNodeID = jdbc.queryForObject(sql, new LongRowMapper());
-            sql = "select nodeID from Node where name='" + rootContainer.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + rootContainer.getName() + "'";
             Long rootNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, false);
@@ -2152,8 +2148,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2175,9 +2170,9 @@ public class NodeDAOTest
 
             // manually set the deltas
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set delta=11 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
-            sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set delta=3 where name='" + containerNode.getName() + "'";
             jdbc.update(sql);
 
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100, true);
@@ -2237,8 +2232,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2262,17 +2256,17 @@ public class NodeDAOTest
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
             // ensure the contentLength is zero to start
-            String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            String sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNull("null content length", contentLength);
 
             // ensure the data node delta is zero to start
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             Long delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNull("null delta", delta);
 
             // manually set the busy state
-            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // update the metadata, using the strict option
@@ -2282,28 +2276,28 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, true);
 
             // ensure the state is back to normal
-            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            sql = "select busyState from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             String curState = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong busy state", "N", curState);
 
             // ensure the contentLength is correct
-            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
 
             // ensure the data node delta is correct
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull("delta", delta);
             Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // ensure the md5sum is correct
-            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentMD5 from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             String md5sum = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong md5 sum", "a94fc20c049422af7c591e2984f1f82d".toUpperCase(), md5sum.toUpperCase());
 
             // get the nodeID
-            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             long nodeID = jdbc.queryForObject(sql, new LongRowMapper());
             log.debug("nodeID is " + nodeID);
 
@@ -2322,12 +2316,12 @@ public class NodeDAOTest
             nodeDAO.applyPropagation(propagation);
 
             // ensure the data node content length is correct
-            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(10L), contentLength);
 
             // ensure the data node delta is correct
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             // null or 0
             if (delta != null) {
@@ -2335,7 +2329,7 @@ public class NodeDAOTest
             }
 
             // ensure the container node content length is correct
-            sql = "select contentLength from Node where name='" + containerName + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + containerName + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             // null or 0
             if (contentLength != null) {
@@ -2343,7 +2337,7 @@ public class NodeDAOTest
             }
 
             // ensure the container node delta is correct
-            sql = "select delta from Node where name='" + containerName + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + containerName + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull("delta", delta);
             Assert.assertEquals("Wrong container delta", 10L, delta.longValue());
@@ -2370,8 +2364,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2395,17 +2388,17 @@ public class NodeDAOTest
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
             // ensure the contentLength is zero to start
-            String sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            String sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             Long contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNull("Wrong content length", contentLength);
 
             // ensure the data node delta is zero to start
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             Long delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNull("null delta", delta);
 
             // manually set the busy state
-            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // update the metadata, using the strict option
@@ -2415,29 +2408,29 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, true);
 
             // ensure the state is back to normal
-            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            sql = "select busyState from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             String curState = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong busy state", "N", curState);
 
             // ensure the contentLength is correct
-            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull(contentLength);
             Assert.assertEquals("Wrong content length", 10L, contentLength.longValue());
 
             // ensure the md5sum is correct
-            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentMD5 from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             String md5sum = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong md5 sum", "a94fc20c049422af7c591e2984f1f82d".toUpperCase(), md5sum.toUpperCase());
 
             // ensure the data node delta is correct
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull(delta);
             Assert.assertEquals("Wrong delta", 10L, delta.longValue());
 
             // start the replace--manually set the busy state
-            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // update the metadata, using the strict option
@@ -2447,28 +2440,28 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, true);
 
             // ensure the state is back to normal
-            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            sql = "select busyState from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             curState = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong busy state", "N", curState);
 
             // ensure the contentLength is correct
-            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
 
             // ensure the md5sum is correct
-            sql = "select contentMD5 from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentMD5 from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             md5sum = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong md5 sum", "c2831384aae9c2e175c255797c2cfca5".toUpperCase(), md5sum.toUpperCase());
 
             // ensure the data node delta is correct
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull(delta);
             Assert.assertEquals("Wrong delta", 15L, delta.longValue());
 
             // get the nodeID
-            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             long nodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             // get the propagation
@@ -2485,12 +2478,12 @@ public class NodeDAOTest
             nodeDAO.applyPropagation(propagation);
 
             // ensure the data node content length is correct
-            sql = "select contentLength from Node where name='" + dataNode.getName() + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong content length", Long.valueOf(15L), contentLength);
 
             // ensure the data node delta is correct
-            sql = "select delta from Node where name='" + dataNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             // null or 0
             if (delta != null) {
@@ -2498,7 +2491,7 @@ public class NodeDAOTest
             }
 
             // ensure the container node content length is correct
-            sql = "select contentLength from Node where name='" + containerName + "'";
+            sql = "select contentLength from " + nodeSchema.nodeTable + " where name='" + containerName + "'";
             contentLength = jdbc.queryForObject(sql, new LongRowMapper());
             // null or 0
             if (contentLength != null) {
@@ -2506,7 +2499,7 @@ public class NodeDAOTest
             }
 
             // ensure the container node delta is correct
-            sql = "select delta from Node where name='" + containerName + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + containerName + "'";
             delta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertNotNull(delta);
             Assert.assertEquals("Wrong container delta", 15L, delta.longValue());
@@ -2533,8 +2526,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2566,16 +2558,16 @@ public class NodeDAOTest
             nodeDAO.updateNodeMetadata(dataNode, metadata, false);
 
             // propagate data node
-            String sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
+            String sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'";
             long parentNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
-            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            sql = "select nodeID from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             long dataNodeID = jdbc.queryForObject(sql, new LongRowMapper());
 
             NodeSizePropagation np = new NodeSizePropagation(dataNodeID, NodeDAO.NODE_TYPE_DATA, parentNodeID);
             nodeDAO.applyPropagation(np);
 
-            sql = "select delta from Node where name='" + containerNode.getName() + "'";
+            sql = "select delta from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'";
             long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
             Assert.assertEquals("Wrong container delta", 5L, actualDelta);
 
@@ -2608,8 +2600,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2639,7 +2630,7 @@ public class NodeDAOTest
             metadata.setMd5Sum("a94fc20c049422af7c591e2984f1f82d");
             nodeDAO.updateNodeMetadata(dataNode, metadata, false);
 
-            String sql = "select delta from Node where name='" + containerNode.getName() + "'";
+            String sql = "select delta from " + nodeSchema.nodeTable + " where name='" + containerNode.getName() + "'";
             Long actualDelta = jdbc.queryForObject(sql, new LongRowMapper());
             
             Assert.assertNull("null container delta", actualDelta);
@@ -2676,8 +2667,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
@@ -2699,19 +2689,19 @@ public class NodeDAOTest
 
             // manually set the busy state
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            String sql = "update " + nodeSchema.nodeTable + " set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // update the metadata, using the strict option
             nodeDAO.updateNodeMetadata(dataNode, new FileMetadata(), true);
 
             // ensure the state is back to normal
-            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            sql = "select busyState from " + nodeSchema.nodeTable + " where name='" + dataNode.getName() + "'";
             String curState = (String) jdbc.queryForObject(sql, String.class);
             Assert.assertEquals("Wrong busy state", "N", curState);
 
             // manually reset the busy state
-            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            sql = "update " + nodeSchema.nodeTable + " set busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
 
             // modify some metadata (this will tweak the date)

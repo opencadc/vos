@@ -822,7 +822,11 @@ public class NodeDAO
             npsc.setValues(node, null);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
-            nodeID.id = new Long(keyHolder.getKey().longValue());
+            if (keyHolder.getKeys().size() > 1) {
+                nodeID.id = (Long)keyHolder.getKeys().get("nodeID");
+            } else {
+                nodeID.id = keyHolder.getKey().longValue();
+            }
             prof.checkpoint("NodePutStatementCreator");
 
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
@@ -2428,9 +2432,9 @@ public class NodeDAO
             sb.append(len);
             sb.append(",");
             if (md5 == null)
-                prep.setNull(col++, Types.VARBINARY);
+                prep.setNull(col++, Types.VARCHAR);
             else
-                prep.setBytes(col++, HexUtil.toBytes(md5));
+                prep.setString(col++, md5);
             sb.append(md5);
             sb.append(",");
 
@@ -3011,7 +3015,7 @@ public class NodeDAO
             }
             log.debug("readNode: contentLength = " + contentLength);
 
-            Object contentMD5 = rs.getObject(col++);
+            String contentMD5 = rs.getString(col++);
 
             Long nodeID = null;
             o = rs.getObject(col++);
@@ -3077,18 +3081,9 @@ public class NodeDAO
                 else
                     node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
 
-	            if (contentMD5 != null && contentMD5 instanceof byte[])
+	            if (contentMD5 != null)
 	            {
-	                byte[] md5 = (byte[]) contentMD5;
-	                if (md5.length < 16)
-	                {
-	                    byte[] tmp = md5;
-	                    md5 = new byte[16];
-	                    System.arraycopy(tmp, 0, md5, 0, tmp.length);
-	                    // extra space is init with 0
-	                }
-	                String contentMD5String = HexUtil.toHex(md5);
-	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
 	            }
 	            if (lastModified != null)
 	            {
