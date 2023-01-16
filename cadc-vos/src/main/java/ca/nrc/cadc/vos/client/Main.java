@@ -1,71 +1,69 @@
 /*
-************************************************************************
-*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
-**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
-*
-*  (c) 2009.                            (c) 2009.
-*  Government of Canada                 Gouvernement du Canada
-*  National Research Council            Conseil national de recherches
-*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
-*  All rights reserved                  Tous droits réservés
-*
-*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
-*  expressed, implied, or               énoncée, implicite ou légale,
-*  statutory, of any kind with          de quelque nature que ce
-*  respect to the software,             soit, concernant le logiciel,
-*  including without limitation         y compris sans restriction
-*  any warranty of merchantability      toute garantie de valeur
-*  or fitness for a particular          marchande ou de pertinence
-*  purpose. NRC shall not be            pour un usage particulier.
-*  liable in any event for any          Le CNRC ne pourra en aucun cas
-*  damages, whether direct or           être tenu responsable de tout
-*  indirect, special or general,        dommage, direct ou indirect,
-*  consequential or incidental,         particulier ou général,
-*  arising from the use of the          accessoire ou fortuit, résultant
-*  software.  Neither the name          de l'utilisation du logiciel. Ni
-*  of the National Research             le nom du Conseil National de
-*  Council of Canada nor the            Recherches du Canada ni les noms
-*  names of its contributors may        de ses  participants ne peuvent
-*  be used to endorse or promote        être utilisés pour approuver ou
-*  products derived from this           promouvoir les produits dérivés
-*  software without specific prior      de ce logiciel sans autorisation
-*  written permission.                  préalable et particulière
-*                                       par écrit.
-*
-*  This file is part of the             Ce fichier fait partie du projet
-*  OpenCADC project.                    OpenCADC.
-*
-*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
-*  you can redistribute it and/or       vous pouvez le redistribuer ou le
-*  modify it under the terms of         modifier suivant les termes de
-*  the GNU Affero General Public        la “GNU Affero General Public
-*  License as published by the          License” telle que publiée
-*  Free Software Foundation,            par la Free Software Foundation
-*  either version 3 of the              : soit la version 3 de cette
-*  License, or (at your option)         licence, soit (à votre gré)
-*  any later version.                   toute version ultérieure.
-*
-*  OpenCADC is distributed in the       OpenCADC est distribué
-*  hope that it will be useful,         dans l’espoir qu’il vous
-*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
-*  without even the implied             GARANTIE : sans même la garantie
-*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
-*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
-*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
-*  General Public License for           Générale Publique GNU Affero
-*  more details.                        pour plus de détails.
-*
-*  You should have received             Vous devriez avoir reçu une
-*  a copy of the GNU Affero             copie de la Licence Générale
-*  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
-*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
-*                                       <http://www.gnu.org/licenses/>.
-*
-*  $Revision: 4 $
-*
-************************************************************************
-*/
+ ************************************************************************
+ *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+ **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+ *
+ *  (c) 2023.                            (c) 2023.
+ *  Government of Canada                 Gouvernement du Canada
+ *  National Research Council            Conseil national de recherches
+ *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+ *  All rights reserved                  Tous droits réservés
+ *
+ *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+ *  expressed, implied, or               énoncée, implicite ou légale,
+ *  statutory, of any kind with          de quelque nature que ce
+ *  respect to the software,             soit, concernant le logiciel,
+ *  including without limitation         y compris sans restriction
+ *  any warranty of merchantability      toute garantie de valeur
+ *  or fitness for a particular          marchande ou de pertinence
+ *  purpose. NRC shall not be            pour un usage particulier.
+ *  liable in any event for any          Le CNRC ne pourra en aucun cas
+ *  damages, whether direct or           être tenu responsable de tout
+ *  indirect, special or general,        dommage, direct ou indirect,
+ *  consequential or incidental,         particulier ou général,
+ *  arising from the use of the          accessoire ou fortuit, résultant
+ *  software.  Neither the name          de l'utilisation du logiciel. Ni
+ *  of the National Research             le nom du Conseil National de
+ *  Council of Canada nor the            Recherches du Canada ni les noms
+ *  names of its contributors may        de ses  participants ne peuvent
+ *  be used to endorse or promote        être utilisés pour approuver ou
+ *  products derived from this           promouvoir les produits dérivés
+ *  software without specific prior      de ce logiciel sans autorisation
+ *  written permission.                  préalable et particulière
+ *                                       par écrit.
+ *
+ *  This file is part of the             Ce fichier fait partie du projet
+ *  OpenCADC project.                    OpenCADC.
+ *
+ *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+ *  you can redistribute it and/or       vous pouvez le redistribuer ou le
+ *  modify it under the terms of         modifier suivant les termes de
+ *  the GNU Affero General Public        la “GNU Affero General Public
+ *  License as published by the          License” telle que publiée
+ *  Free Software Foundation,            par la Free Software Foundation
+ *  either version 3 of the              : soit la version 3 de cette
+ *  License, or (at your option)         licence, soit (à votre gré)
+ *  any later version.                   toute version ultérieure.
+ *
+ *  OpenCADC is distributed in the       OpenCADC est distribué
+ *  hope that it will be useful,         dans l’espoir qu’il vous
+ *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+ *  without even the implied             GARANTIE : sans même la garantie
+ *  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+ *  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+ *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+ *  General Public License for           Générale Publique GNU Affero
+ *  more details.                        pour plus de détails.
+ *
+ *  You should have received             Vous devriez avoir reçu une
+ *  a copy of the GNU Affero             copie de la Licence Générale
+ *  General Public License along         Publique GNU Affero avec
+ *  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+ *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+ *                                       <http://www.gnu.org/licenses/>.
+ *
+ ************************************************************************
+ */
 
 package ca.nrc.cadc.vos.client;
 
@@ -99,6 +97,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.View.Parameter;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -115,6 +114,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -123,8 +123,7 @@ import org.apache.log4j.Logger;
  *
  * @author pdowler, zhangsa
  */
-public class Main implements Runnable
-{
+public class Main implements Runnable {
     public static final String ARG_HELP = "help";
     public static final String ARG_VERBOSE = "verbose";
     public static final String ARG_DEBUG = "debug";
@@ -165,15 +164,14 @@ public class Main implements Runnable
     /**
      * Supported node type
      */
-    public enum NodeType
-    {
-    	CONTAINER_NODE, LINK_NODE, STRUCTURED_DATA_NODE, UNSTRUCTURED_DATA_NODE
+    public enum NodeType {
+        CONTAINER_NODE, LINK_NODE, STRUCTURED_DATA_NODE, UNSTRUCTURED_DATA_NODE
     }
+
     /**
      * Operations of VoSpace Client.
      */
-    public enum Operation
-    {
+    public enum Operation {
         VIEW, CREATE, DELETE, SET, COPY, MOVE
     }
 
@@ -200,58 +198,45 @@ public class Main implements Runnable
     /**
      * @param args  The arguments passed into this command.
      */
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         ArgumentMap argMap = new ArgumentMap(args);
         Main command = new Main();
 
-        if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H))
-        {
+        if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H)) {
             usage();
             System.exit(0);
         }
 
         // Set debug mode
-        if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
-        {
+        if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D)) {
             Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.reg", Level.DEBUG);
-        }
-        else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
-        {
+        } else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V)) {
             Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
             Log4jInit.setLevel("ca.nrc.cadc.reg", Level.INFO);
-        }
-        else
+        } else {
             Log4jInit.setLevel("ca", Level.WARN);
+        }
 
-        try
-        {
+        try {
             command.validateCommand(argMap);
             command.validateCommandArguments(argMap);
-        }
-        catch (IllegalArgumentException ex)
-        {
+        } catch (IllegalArgumentException ex) {
             msg("illegal argument(s): " + ex.getMessage());
             msg("");
             usage();
             System.exit(INIT_STATUS);
         }
 
-        try
-        {
+        try {
             command.init(argMap);
             Subject.doAs(command.subject, new RunnableAction(command));
-        }
-        catch (IllegalArgumentException ex)
-        {
+        } catch (IllegalArgumentException ex) {
             msg("illegal arguments(s): " + ex.getMessage());
             msg("");
             System.exit(INIT_STATUS);
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             log.error("unexpected failure", t);
             System.exit(NET_STATUS);
         }
@@ -259,188 +244,143 @@ public class Main implements Runnable
     }
 
     // encapsulate all messages to console here
-    private static void msg(String s)
-    {
+    private static void msg(String s) {
         System.out.println(s);
     }
 
-    public void run()
-    {
+    public void run() {
         log.debug("run - START");
-        if (this.operation.equals(Operation.CREATE))
-        {
+        if (this.operation.equals(Operation.CREATE)) {
             doCreate();
-        }
-        else if (this.operation.equals(Operation.DELETE))
-        {
+        } else if (this.operation.equals(Operation.DELETE)) {
             doDelete();
-        }
-        else if (this.operation.equals(Operation.VIEW))
-        {
+        } else if (this.operation.equals(Operation.VIEW)) {
             doView();
-        }
-        else if (this.operation.equals(Operation.COPY))
-        {
+        } else if (this.operation.equals(Operation.COPY)) {
             doCopy();
-        }
-        else if (this.operation.equals(Operation.MOVE))
-        {
+        } else if (this.operation.equals(Operation.MOVE)) {
             doMove();
-        }
-        else if (this.operation.equals(Operation.SET))
-        {
-            if (recursiveMode)
+        } else if (this.operation.equals(Operation.SET)) {
+            if (recursiveMode) {
                 doRecursiveSet();
-            else
+            } else {
                 doSet();
+            }
         }
         log.debug("run - DONE");
     }
 
-    private void doSet()
-    {
+    private void doSet() {
         log.debug("doSet");
-        try
-        {
+        try {
             log.debug("target.getPath()" + this.target.getPath());
             // TODO: here we get the node in order to figure out the type, but
             // maybe we could just POST a vanilla Node object?
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
-            if (n instanceof ContainerNode)
+            if (n instanceof ContainerNode) {
                 up = new ContainerNode(target, properties);
-            else if (n instanceof DataNode)
+            } else if (n instanceof DataNode) {
                 up = new DataNode(target, properties);
-            else if (n instanceof LinkNode)
-            {
+            } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
                 up = new LinkNode(target, properties, link);
-            }
-            else
+            } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
+            }
 
             this.client.setNode(up);
             log.info("updated properties: " + this.target);
-        }
-        catch(NodeNotFoundException ex)
-        {
+        } catch (NodeNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             msg("failed to set properties on node: " + target);
-            if (t.getMessage() != null)
+            if (t.getMessage() != null) {
                 msg("          reason: " + t.getMessage());
-            else
+            } else {
                 msg("          reason: " + t);
-            if (t.getCause() != null)
+            }
+            if (t.getCause() != null) {
                 msg("          reason: " + t.getCause());
+            }
             System.exit(NET_STATUS);
         }
     }
 
-    private void doDelete()
-    {
+    private void doDelete() {
         log.debug("doDelete");
-        try
-        {
+        try {
             log.debug("target.getPath()" + this.target.getPath());
             this.client.deleteNode(this.target.getPath());
             log.info("deleted: " + this.target);
-        }
-        catch(NodeLockedException nlex)
-        {
+        } catch (NodeLockedException nlex) {
             msg("node locked: " + target);
             System.exit(NET_STATUS);
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             msg("failed to delete: " + target);
-            if (t.getMessage() != null)
+            if (t.getMessage() != null) {
                 msg("          reason: " + t.getMessage());
-            else
+            } else {
                 msg("          reason: " + t);
-            if (t.getCause() != null)
+            }
+            if (t.getCause() != null) {
                 msg("          reason: " + t.getCause());
+            }
             System.exit(NET_STATUS);
         }
     }
 
-    private void doCopy()
-    {
+    private void doCopy() {
         log.debug("doCopy");
-        try
-        {
-            if (this.transferDirection.equals(Direction.pushToVoSpace))
-            {
+        try {
+            if (this.transferDirection.equals(Direction.pushToVoSpace)) {
                 copyToVOSpace();
-            }
-            else if (this.transferDirection.equals(Direction.pullFromVoSpace))
-            {
+            } else if (this.transferDirection.equals(Direction.pullFromVoSpace)) {
                 copyFromVOSpace();
             }
-        }
-        catch(NullPointerException ex)
-        {
+        } catch (NullPointerException ex) {
             log.error("BUG", ex);
             System.exit(NET_STATUS);
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             log.debug(t);
-            if (t instanceof IllegalArgumentException)
-            {
+            if (t instanceof IllegalArgumentException) {
                 throw (IllegalArgumentException) t;
-            }
-            else
-            {
+            } else {
                 msg("failed to copy: " + source + " -> " + destination);
-                if (t.getCause() != null)
-                {
-                    if (t.getCause().getMessage() != null)
+                if (t.getCause() != null) {
+                    if (t.getCause().getMessage() != null) {
                         msg("          reason: " + t.getCause().getMessage());
-                    else
+                    } else {
                         msg("          reason: " + t.getCause());
-                }
-                else
-                {
-                    if (t.getMessage() != null)
+                    }
+                } else {
+                    if (t.getMessage() != null) {
                         msg("          reason: " + t.getMessage());
-                    else
+                    } else {
                         msg("          reason: " + t);
+                    }
                 }
             }
-
             System.exit(NET_STATUS);
         }
     }
 
-    private void doMove()
-    {
+    private void doMove() {
         log.debug("doMove");
-        try
-        {
-            if (Direction.pushToVoSpace.equals(transferDirection))
-            {
+        try {
+            if (Direction.pushToVoSpace.equals(transferDirection)) {
                 moveToVOSpace();
-            }
-            else if (Direction.pullFromVoSpace.equals(transferDirection))
-            {
+            } else if (Direction.pullFromVoSpace.equals(transferDirection)) {
                 moveFromVOSpace();
                 // TODO: cofirm copy worked by checking MD5, length
                 // TODO: delete src file from VOSpace, see TODO below
-            }
-            else //if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
-            {
+            } else { //if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
                 moveWithinVOSpace();
             }
-        }
-        catch(NullPointerException ex)
-        {
+        } catch (NullPointerException ex) {
             log.error("BUG", ex);
             System.exit(NET_STATUS);
-        }
         /* TODO: Add this catch when we add delete src file from VOSpace for
          *       Direction.pullFromVOSpace (see TODO above)
         catch(NodeLockedException nlex)
@@ -453,46 +393,38 @@ public class Main implements Runnable
             System.exit(NET_STATUS);
         }
         */
-        catch(Throwable t)
-        {
-            if (t instanceof IllegalArgumentException)
-            {
+        } catch (Throwable t) {
+            if (t instanceof IllegalArgumentException) {
                 throw (IllegalArgumentException) t;
-            }
-            else
-            {
-                if (destination == null)
+            } else {
+                if (destination == null) {
                     msg("failed to move: " + source + " -> " + transferDirection.getValue());
-                else
+                } else {
                     msg("failed to move: " + source + " -> " + destination);
-                if (t.getCause() != null)
-                {
-                    if (t.getCause().getMessage() != null)
-                        msg("          reason: " + t.getCause().getMessage());
-                    else
-                        msg("          reason: " + t.getCause());
                 }
-                else
-                {
-                    if (t.getMessage() != null)
+                if (t.getCause() != null) {
+                    if (t.getCause().getMessage() != null) {
+                        msg("          reason: " + t.getCause().getMessage());
+                    } else {
+                        msg("          reason: " + t.getCause());
+                    }
+                } else {
+                    if (t.getMessage() != null) {
                         msg("          reason: " + t.getMessage());
-                    else
+                    } else {
                         msg("          reason: " + t);
+                    }
                 }
             }
-
             System.exit(NET_STATUS);
         }
     }
 
 
-    private void doCreate()
-    {
-        try
-        {
+    private void doCreate() {
+        try {
             Node node;
-            switch (this.nodeType)
-            {
+            switch (this.nodeType) {
                 case CONTAINER_NODE:
                     node = new ContainerNode(this.target, this.properties);
                     break;
@@ -511,42 +443,43 @@ public class Main implements Runnable
 
             Node nodeRtn = client.createNode(node);
             log.info("created: " + nodeRtn.getUri());
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             msg("failed to create: " + target);
-            if (t.getMessage() != null)
+            if (t.getMessage() != null) {
                 msg("          reason: " + t.getMessage());
-            else
+            } else {
                 msg("          reason: " + t);
-            if (t.getCause() != null)
+            }
+            if (t.getCause() != null) {
                 msg("          reason: " + t.getCause());
+            }
             System.exit(NET_STATUS);
         }
     }
 
-    private void doView()
-    {
+    private void doView() {
         // if the user isn't controlling paging, add a child
         // limit of MAX_CHILD_SIZE (1000)
         boolean explicitPaging = false;
         String queryString = target.getQuery();
-        if (StringUtil.hasText(queryString))
-        {
+        if (StringUtil.hasText(queryString)) {
             String[] queries = queryString.split("&");
-            for (String query : queries)
-                if (query.startsWith("limit=") || query.startsWith("uri="))
+            for (String query : queries) {
+                if (query.startsWith("limit=") || query.startsWith("uri=")) {
                     explicitPaging = true;
-            if (!explicitPaging)
+                    break;
+                }
+            }
+            if (!explicitPaging) {
                 queryString += "&limit=" + MAX_CHILD_SIZE;
-        }
-        else
+            }
+        } else {
             queryString = "limit=" + MAX_CHILD_SIZE;
+        }
         log.debug("explicit paging control: " + explicitPaging);
         log.debug("view query string: " + queryString);
 
-        try
-        {
+        try {
             Node n = client.getNode(target.getPath(), queryString);
 
             msg(getType(n) + ": " + n.getUri());
@@ -558,22 +491,16 @@ public class Main implements Runnable
             msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
             msg("size: " + getContentLength(n,true));
 
-            if (n instanceof ContainerNode)
-            {
-                final String quotaSize =
-                        safePropertyRef(n, VOS.PROPERTY_URI_QUOTA);
+            if (n instanceof ContainerNode) {
+                final String quotaSize = safePropertyRef(n, VOS.PROPERTY_URI_QUOTA);
 
-                if (StringUtil.hasText(quotaSize))
-                {
-                    msg("quota size: "
-                        + FileSizeType.getHumanReadableSize(
-                            Long.parseLong(quotaSize)) + " (" + quotaSize
-                        + " bytes)");
+                if (StringUtil.hasText(quotaSize)) {
+                    msg("quota size: " + FileSizeType.getHumanReadableSize(Long.parseLong(quotaSize))
+                            + " (" + quotaSize + " bytes)");
                 }
 
                 ContainerNode cn = (ContainerNode) n;
-                if (cn.getNodes().size() > 0)
-                {
+                if (cn.getNodes().size() > 0) {
                     StringBuilder sb = new StringBuilder();
                     sb.append(pad("child nodes: ", 32));
                     sb.append(pad("size",12));
@@ -587,72 +514,60 @@ public class Main implements Runnable
                 printChildList(n, cn.getNodes());
 
                 // get remaining children if the user isn't explicitly controlling paging
-                if (!explicitPaging)
-                {
+                if (!explicitPaging) {
                     VOSURI uriQueryObj = null;
                     String uriQueryParam = null;
-                    while (cn.getNodes().size() > 0)
-                    {
+                    while (cn.getNodes().size() > 0) {
                         log.debug("Getting next set of children.");
                         uriQueryObj = cn.getNodes().get(cn.getNodes().size() - 1).getUri();
                         uriQueryParam = "uri=" + NetUtil.encode(uriQueryObj.toString());
                         cn = null;
 
-                        if (StringUtil.hasText(queryString))
+                        if (StringUtil.hasText(queryString)) {
                             n = client.getNode(target.getPath(), queryString + "&" + uriQueryParam);
-                        else
+                        } else {
                             n = client.getNode(target.getPath(), uriQueryParam);
-                        if (!(n instanceof ContainerNode))
+                        }
+                        if (!(n instanceof ContainerNode)) {
                             throw new IllegalStateException("inconsistent node state.");
+                        }
                         cn = (ContainerNode) n;
 
                         log.debug("next set has : " + cn.getNodes().size() + " children.");
 
                         // remove the first child if it is the one matching the uri parameter
-                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getUri().equals(uriQueryObj))
-                        {
+                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getUri().equals(uriQueryObj)) {
                             cn.getNodes().remove(0);
                         }
                         printChildList(n, cn.getNodes());
                     }
                 }
-            }
-            else if (n instanceof DataNode)
-            {
+            } else if (n instanceof DataNode) {
                 msg("type: " + safePropertyRef(n, VOS.PROPERTY_URI_TYPE));
                 msg("encoding: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTENCODING));
                 msg("md5sum: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTMD5));
-            }
-            else if (n instanceof LinkNode)
-            {
+            } else if (n instanceof LinkNode) {
                 msg("link uri: " + ((LinkNode) n).getTarget());
-            }
-            else
-            {
+            } else {
                 log.debug("class of returned node: " + n.getClass().getName());
             }
-        }
-        catch(AccessControlException ex)
-        {
+        } catch (AccessControlException ex) {
             msg("permission denied: " + target);
             System.exit(NET_STATUS);
-        }
-        catch(NodeNotFoundException ex)
-        {
+        } catch (NodeNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
         }
     }
 
-    private void printChildList(Node n, List<Node> children)
-    {
+    private void printChildList(Node n, List<Node> children) {
         StringBuilder sb = null;
-        for (Node child : children)
-        {
+        for (Node child : children) {
             sb = new StringBuilder();
             String name = child.getName();
-            if (child instanceof ContainerNode)
+            if (child instanceof ContainerNode) {
                 name += "/";
+            }
             sb.append(pad(name,32));
             sb.append(pad(getContentLength(child,true),12));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
@@ -662,57 +577,51 @@ public class Main implements Runnable
         }
     }
 
-    private String pad(String s, int len)
-    {
-        if (s.length() >= len)
+    private String pad(String s, int len) {
+        if (s.length() >= len) {
             len = s.length() + 1;
+        }
         StringBuilder sb = new StringBuilder();
         sb.append(s);
-        for (int i=s.length(); i<len; i++)
+        for (int i = s.length(); i < len; i++) {
             sb.append(" ");
+        }
         return sb.toString();
     }
 
-    private String getContentLength(Node n, boolean simple)
-    {
+    private String getContentLength(Node n, boolean simple) {
         String contentLength = safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
-        if (!StringUtil.hasText(contentLength) )
+        if (!StringUtil.hasText(contentLength)) {
             return "0";
-        if (simple)
+        }
+        if (simple) {
             return contentLength;
+        }
         return FileSizeType.getHumanReadableSize(Long.parseLong(contentLength))
                 + " (" + contentLength + " bytes)";
     }
 
     private void copyToVOSpace()
-        throws Throwable
-    {
+        throws Throwable {
         URI originalDestination = null;
-        if (StringUtil.hasText(destination.getQuery()))
-        {
+        if (StringUtil.hasText(destination.getQuery())) {
             originalDestination = new URI(destination.toString());
             destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         }
 
         View view = null;
-        if (originalDestination != null)
-        {
+        if (originalDestination != null) {
             view = createAcceptsView(new VOSURI(originalDestination), null);
         }
-        if (view == null)
-        {
+        if (view == null) {
             view = new View(new URI(VOS.VIEW_DEFAULT));
         }
 
-
         Protocol proto = null;
-        if (subject != null)
-        {
+        if (subject != null) {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-        }
-        else
-        {
+        } else {
             proto = new Protocol(VOS.PROTOCOL_HTTP_PUT);
         }
         log.debug("copyToVOSpace: " + proto);
@@ -723,51 +632,48 @@ public class Main implements Runnable
         File fileToUpload = new File(source);
 
         Transfer transfer = new Transfer(destination, Direction.pushToVoSpace);
+        transfer.setContentLength(fileToUpload.length());
         transfer.getProtocols().addAll(protocols);
         transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
-        transfer.setContentLength(fileToUpload.length());
+
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         // set http headers for put
-        if (contentType != null)
-        {
+        if (contentType != null) {
             log.debug("copyToVOSpaceFast: setting content-type = " + contentType);
             clientTransfer.setRequestProperty("Content-Type", contentType);
         }
-        if (contentEncoding != null)
-        {
+        if (contentEncoding != null) {
             log.debug("copyToVOSpaceFast: setting content-encoding = " + contentEncoding);
             clientTransfer.setRequestProperty("Content-Encoding", contentEncoding);
         }
 
-        if (retryEnabled)
+        if (retryEnabled) {
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        }
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
         clientTransfer.setFile(fileToUpload);
 
         clientTransfer.runTransfer();
-        if (!quickTransfer)
-        {
-        	checkPhase(clientTransfer);
+        if (!quickTransfer) {
+            checkPhase(clientTransfer);
         }
         Node node = client.getNode(destination.getPath());
 
         boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
-        if (checkProps || log.isDebugEnabled())
-        {
+        if (checkProps || log.isDebugEnabled()) {
             log.debug("clientTransfer getTarget: " + node);
             Node cur = this.client.getNode(node.getUri().getPath());
             log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(cur));
-            if (checkProps)
-            {
+            if (checkProps) {
                 log.debug("checking properties after put: " + cur.getUri());
                 boolean updateProps = false;
-                for (NodeProperty np : properties)
+                for (NodeProperty np : properties) {
                     updateProps = updateProps || updateProperty(cur, np.getPropertyURI(), np.getPropertyValue());
-                if (updateProps)
-                {
+                }
+                if (updateProps) {
                     log.debug("updating properties after put: " + cur.getUri());
                     client.setNode(cur);
                 }
@@ -775,22 +681,18 @@ public class Main implements Runnable
         }
     }
 
-    private boolean updateProperty(Node n, String propURI, String propValue)
-    {
+    private boolean updateProperty(Node n, String propURI, String propValue) {
         log.debug("checking property: " + propURI + " vs " + propValue);
         boolean ret = false;
-        if (propValue != null)
-        {
+        if (propValue != null) {
             NodeProperty cur = n.findProperty(propURI);
-            if ( cur == null)
-            {
+            if (cur == null) {
                 log.debug("adding property: " + propURI + " = " + propValue);
                 n.getProperties().add(new NodeProperty(propURI, propValue));
                 ret = true;
-            }
-            else if ( !propValue.equals(cur.getPropertyValue()) )
-            {
-                log.debug("setting property: " + propURI + " = '" + propValue + "', was '" + cur.getPropertyValue() + "'");
+            } else if (!propValue.equals(cur.getPropertyValue())) {
+                log.debug("setting property: " + propURI + " = '" + propValue
+                              + "', was '" + cur.getPropertyValue() + "'");
                 cur.setValue(propValue);
                 ret = true;
             }
@@ -799,27 +701,21 @@ public class Main implements Runnable
     }
 
     private void copyFromVOSpace()
-        throws Throwable
-    {
+        throws Throwable {
         View view = null;
-        if (StringUtil.hasText(source.getQuery()))
-        {
+        if (StringUtil.hasText(source.getQuery())) {
             view = createProvidesView(new VOSURI(source), null);
             source = new URI(source.toString().replace("?" + source.getQuery(), ""));
         }
-        if (view == null)
-        {
+        if (view == null) {
             view = new View(new URI(VOS.VIEW_DEFAULT));
         }
 
         Protocol proto = null;
-        if (subject != null)
-        {
+        if (subject != null) {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_GET);
             proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-        }
-        else
-        {
+        } else {
             proto = new Protocol(VOS.PROTOCOL_HTTP_GET);
         }
         log.debug("copyFromVOSpace: " + proto);
@@ -835,35 +731,33 @@ public class Main implements Runnable
 
         log.debug("this.source: " + source);
         File fileToSave = new File(destination);
-        if (fileToSave.exists())
+        if (fileToSave.exists()) {
             log.info("overwriting existing file: " + destination);
+        }
 
-        if (retryEnabled)
+        if (retryEnabled) {
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        }
         clientTransfer.setTransferListener(new VOSpaceTransferListener(true));
         clientTransfer.setFile(fileToSave);
 
         clientTransfer.runTransfer();
-        if (!quickTransfer)
-        {
-        	checkPhase(clientTransfer);
+        if (!quickTransfer) {
+            checkPhase(clientTransfer);
         }
     }
 
     private void moveToVOSpace()
-        throws Throwable
-    {
+        throws Throwable {
         File sourceFile = new File(source);
-        if (!sourceFile.isFile())
-        {
+        if (!sourceFile.isFile()) {
             msg("Cannot move local directories to VOSpace.");
             System.exit(-1);
         }
         copyToVOSpace();
         log.debug("copied local file " + source + " to " + this.destination.getPath());
         Node uploadedNode = this.client.getNode(this.destination.getPath(), "limit=0");
-        if (uploadedNode == null)
-        {
+        if (uploadedNode == null) {
             msg("Failed to upload, keeping local file.");
             System.exit(-1);
         }
@@ -871,8 +765,7 @@ public class Main implements Runnable
         long uploadedSize = Long.parseLong(uploadedSizeProp.getPropertyValue());
         log.debug("uploaded size: " + uploadedSize);
         log.debug("original size: " + sourceFile.length());
-        if (uploadedSize != sourceFile.length())
-        {
+        if (uploadedSize != sourceFile.length()) {
             msg("Uploaded file size does not match that of local file, keeping local file.");
             System.exit(-1);
         }
@@ -881,11 +774,9 @@ public class Main implements Runnable
     }
 
     private void moveFromVOSpace()
-        throws Throwable
-    {
+        throws Throwable {
         Node sourceNode = this.client.getNode(this.source.getPath(), "limit=0");
-        if (sourceNode instanceof ContainerNode)
-        {
+        if (sourceNode instanceof ContainerNode) {
             msg("Cannot move containers from VOSpace to local file system.");
             System.exit(-1);
         }
@@ -897,8 +788,7 @@ public class Main implements Runnable
         long downloadedSize = Long.parseLong(downloadedSizeProp.getPropertyValue());
         log.debug("downloaded size: " + downloadedSize);
         log.debug("original size: " + destFile.length());
-        if (downloadedSize != destFile.length())
-        {
+        if (downloadedSize != destFile.length()) {
             msg("Downloaded file size does not match that of local file, keeping remote file.");
             System.exit(-1);
         }
@@ -906,26 +796,23 @@ public class Main implements Runnable
         log.debug("deleted vos file: " + this.source);
     }
 
-    private void doRecursiveSet()
-    {
-        try
-        {
+    private void doRecursiveSet() {
+        try {
             log.debug("target.getPath()" + this.target.getPath());
             // TODO: here we get the node in order to figure out the type, but
             // maybe we could just POST a vanilla Node object?
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
-            if (n instanceof ContainerNode)
+            if (n instanceof ContainerNode) {
                 up = new ContainerNode(target, properties);
-            else if (n instanceof DataNode)
+            } else if (n instanceof DataNode) {
                 up = new DataNode(target, properties);
-            else if (n instanceof LinkNode)
-            {
+            } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
                 up = new LinkNode(target, properties, link);
-            }
-            else
+            } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
+            }
 
             ClientRecursiveSetNode recSetNode = client.setNodeRecursive(up);
 
@@ -937,29 +824,25 @@ public class Main implements Runnable
             checkPhase(recSetNode);
 
             log.info("updated properties recursively: " + this.target);
-        }
-        catch(NodeNotFoundException ex)
-        {
+        } catch (NodeNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
-        }
-        catch(Throwable t)
-        {
+        } catch (Throwable t) {
             msg("failed to set properties recursively on node: " + target);
-            if (t.getMessage() != null)
+            if (t.getMessage() != null) {
                 msg("          reason: " + t.getMessage());
-            else
+            } else {
                 msg("          reason: " + t);
-            if (t.getCause() != null)
+            }
+            if (t.getCause() != null) {
                 msg("          reason: " + t.getCause());
+            }
             System.exit(NET_STATUS);
         }
-
     }
 
     private void moveWithinVOSpace()
-        throws Throwable
-    {
+        throws Throwable {
         VOSURI dest = new VOSURI(destination);
         Transfer transfer = new Transfer(source, dest.getURI(), false);
         ClientTransfer trans = client.createTransfer(transfer);
@@ -973,33 +856,29 @@ public class Main implements Runnable
     }
 
     private void checkPhase(ClientTransfer trans)
-            throws IOException, RuntimeException
-    {
+            throws IOException, RuntimeException {
         ExecutionPhase ep = trans.getPhase();
-        if ( ExecutionPhase.ERROR.equals(ep) )
-        {
+        if (ExecutionPhase.ERROR.equals(ep)) {
             ErrorSummary es = trans.getServerError();
             throw new RuntimeException(es.getSummaryMessage());
-        }
-        else if ( ExecutionPhase.ABORTED.equals(ep) )
+        } else if (ExecutionPhase.ABORTED.equals(ep)) {
             throw new RuntimeException("transfer aborted by service");
-        else if ( !ExecutionPhase.COMPLETED.equals(ep) )
+        } else if (!ExecutionPhase.COMPLETED.equals(ep)) {
             log.warn("unexpected job state: " + ep.name());
+        }
     }
 
     private void checkPhase(ClientRecursiveSetNode recSetNode)
-        throws IOException, RuntimeException
-    {
+        throws IOException, RuntimeException {
         ExecutionPhase ep = recSetNode.getPhase();
-        if ( ExecutionPhase.ERROR.equals(ep) )
-        {
+        if (ExecutionPhase.ERROR.equals(ep)) {
             ErrorSummary es = recSetNode.getServerError();
             throw new RuntimeException(es.getSummaryMessage());
-        }
-        else if ( ExecutionPhase.ABORTED.equals(ep) )
+        } else if (ExecutionPhase.ABORTED.equals(ep)) {
             throw new RuntimeException("recursive set node aborted by service");
-        else if ( !ExecutionPhase.COMPLETED.equals(ep) )
+        } else if (!ExecutionPhase.COMPLETED.equals(ep)) {
             log.warn("unexpected job state: " + ep.name());
+        }
     }
 
     /**
@@ -1007,15 +886,15 @@ public class Main implements Runnable
      *
      * @param vosuri
      * @param node The node object if available.
-     * @return
-     * @throws NodeNotFoundException
-     * @throws URISyntaxException
+     * @return  accepts view
+     * @throws URISyntaxException invalid vosuri
      */
-    private View createAcceptsView(VOSURI vosuri, Node node) throws URISyntaxException
-    {
-        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction()
-        {
-            public List<URI> getViews(Node node) { return node.accepts(); }
+    private View createAcceptsView(VOSURI vosuri, Node node) 
+        throws URISyntaxException {
+        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
+            public List<URI> getViews(Node node) { 
+                return node.accepts(); 
+            }
         };
         return createView(vosuri, nodeViewWrapper, node);
     }
@@ -1025,101 +904,81 @@ public class Main implements Runnable
      *
      * @param vosuri
      * @param node The node object if available.
-     * @return
-     * @throws NodeNotFoundException
-     * @throws URISyntaxException
+     * @return provides view
+     * @throws URISyntaxException for invalid vosuri.
      */
-    private View createProvidesView(VOSURI vosuri, Node node) throws URISyntaxException
-    {
-        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction()
-        {
-            public List<URI> getViews(Node node) { return node.provides(); }
+    private View createProvidesView(VOSURI vosuri, Node node) 
+        throws URISyntaxException {
+        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
+            public List<URI> getViews(Node node) { 
+                return node.provides(); 
+            }
         };
         return createView(vosuri, nodeViewWrapper, node);
     }
 
     /**
-     * Createa a view based on the query string in the vosuri.
+     * Create a view based on the query string in the vosuri.
      *
      * @param vosuri
      * @param acceptsOrProvides
      * @param node The node object if available.
-     * @return
-     * @throws NodeNotFoundException
-     * @throws URISyntaxException
+     * @return view
+     * @throws URISyntaxException for invalid vosuri.
      */
     private View createView(VOSURI vosuri, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
-            throws URISyntaxException
-    {
+            throws URISyntaxException {
         // parse the query string
         String queryString = vosuri.getQuery();
         final String viewKey = "view=";
         String[] queries = queryString.split("&");
         String viewRef = null;
         List<String> params = new ArrayList<String>();
-        for (String query : queries)
-        {
-            if (query.startsWith(viewKey))
-            {
-                if (viewRef != null)
-                {
+        for (String query : queries) {
+            if (query.startsWith(viewKey)) {
+                if (viewRef != null) {
                     throw new IllegalArgumentException("Too many view references.");
                 }
                 viewRef = query.substring(viewKey.length());
-            }
-            else
-            {
+            } else {
                 params.add(query);
             }
         }
-        if (viewRef == null)
-        {
+        if (viewRef == null) {
             log.debug("View not found in query string, using default view");
             return null;
         }
 
         // get the node object if necessary
-        if (node == null)
-        {
-            try
-            {
+        if (node == null) {
+            try {
                 node = client.getNode(vosuri.getPath(), "limit=0");
-            }
-            catch (NodeNotFoundException e)
-            {
-                throw new IllegalArgumentException(
-                        "Node " + vosuri.getPath() + " not found.");
+            } catch (NodeNotFoundException e) {
+                throw new IllegalArgumentException("Node " + vosuri.getPath() + " not found.");
             }
         }
 
         // determine if the view is supported
         URI viewURI = null;
-        for (URI uri : acceptsOrProvides.getViews(node))
-        {
-            if (viewRef.equals(uri.getFragment()))
-            {
+        for (URI uri : acceptsOrProvides.getViews(node)) {
+            if (viewRef.equals(uri.getFragment())) {
                 viewURI = uri;
             }
         }
 
-        if (viewURI == null)
-        {
-            throw new IllegalArgumentException(
-                    "View '" + viewRef + "' not supported by node " +
-                    node.getUri().toString());
+        if (viewURI == null) {
+            throw new IllegalArgumentException("View '" + viewRef + "' not supported by node " 
+            + node.getUri().toString());
         }
 
         // add the view parameters
         View view = new View(viewURI);
-        if (params.size() > 0)
-        {
+        if (params.size() > 0) {
             String viewURIFragment = viewURI.getFragment();
             String paramURIBase = viewURI.toString().replace("#" + viewURIFragment, "");
-            for (String param : params)
-            {
+            for (String param : params) {
                 int eqIndex = param.indexOf('=');
-                if (eqIndex > 0)
-                {
+                if (eqIndex > 0) {
                     String key = param.substring(0, eqIndex);
                     URI paramURI = new URI(paramURIBase + "#" + key);
                     Parameter viewParam = new Parameter(paramURI, param.substring(eqIndex + 1));
@@ -1131,26 +990,32 @@ public class Main implements Runnable
     }
 
     private static String ZERO_LENGTH = "";
-    private String safePropertyRef(Node n, String key)
-    {
-        if (n == null || key == null)
+
+    private String safePropertyRef(Node n, String key) {
+        if (n == null || key == null) {
             return ZERO_LENGTH;
+        }
         NodeProperty p = n.findProperty(key);
-        if (p == null)
+        if (p == null) {
             return ZERO_LENGTH;
+        }
         String ret = p.getPropertyValue();
-        if (ret == null)
+        if (ret == null) {
             return ZERO_LENGTH;
+        }
         return ret;
     }
-    private String getType(Node n)
-    {
-        if (n instanceof ContainerNode)
+
+    private String getType(Node n) {
+        if (n instanceof ContainerNode) {
             return "container";
-        if (n instanceof DataNode)
+        }
+        if (n instanceof DataNode) {
             return "data";
-        if (n instanceof LinkNode)
+        }
+        if (n instanceof LinkNode) {
             return "link";
+        }
         return ZERO_LENGTH;
     }
 
@@ -1159,11 +1024,9 @@ public class Main implements Runnable
      *
      * @param argMap    The parsed arguments to this command.
      */
-    private void init(ArgumentMap argMap)
-    {
+    private void init(ArgumentMap argMap) {
         URI serverUri = null;
-        try
-        {
+        try {
             // setup optional authentication for harvesting from a web service
             this.subject = AuthenticationUtil.getAnonSubject();
             if (argMap.isSet("netrc")) {
@@ -1177,71 +1040,58 @@ public class Main implements Runnable
             
             // check that loaded certficate chain is valid right now
             // TODO: should this be moved into CertCmdArgUtil?
-            if (subject != null)
-            {
+            if (subject != null) {
                 Set<X509CertificateChain> certs = subject.getPublicCredentials(X509CertificateChain.class);
-                if (!certs.isEmpty())
-                {
+                if (!certs.isEmpty()) {
                     DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
                     X509CertificateChain chain = certs.iterator().next(); // the first one
                     Date start = null;
                     Date end = null;
-                    for (X509Certificate c : chain.getChain())
-                    {
-                        try
-                        {
+                    for (X509Certificate c : chain.getChain()) {
+                        try {
                             start = c.getNotBefore();
                             end = c.getNotAfter();
                             c.checkValidity();
-                        }
-                        catch(CertificateNotYetValidException exp)
-                        {
-                            log.error("certificate is not valid yet (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                        } catch (CertificateNotYetValidException exp) {
+                            log.error("certificate is not valid yet (valid from " + df.format(start)
+                                          + " to " + df.format(end) + ")");
                             System.exit(INIT_STATUS);
-                        }
-                        catch (CertificateExpiredException exp)
-                        {
-                            log.error("certificate has expired (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                        } catch (CertificateExpiredException exp) {
+                            log.error("certificate has expired (valid from " + df.format(start)
+                                          + " to " + df.format(end) + ")");
                             System.exit(INIT_STATUS);
                         }
                     }
                 }
-            }
-            else
+            } else {
                 this.subject = AuthenticationUtil.getAnonSubject();
-        }
-        catch(Exception ex)
-        {
+            }
+        } catch (Exception ex) {
             log.error("failed to load certificates: " + ex.getMessage());
             System.exit(INIT_STATUS);
         }
 
 
-        try
-        {
-            if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE))
-            {
-            	if (this.operation.equals(Operation.COPY) && argMap.isSet(ARG_QUICK))
-            	{
-            		this.quickTransfer = true;
-            	}
+        try {
+            if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
+                if (this.operation.equals(Operation.COPY) && argMap.isSet(ARG_QUICK)) {
+                    this.quickTransfer = true;
+                }
                 String strSrc = argMap.getValue(ARG_SRC);
                 String strDest = argMap.getValue(ARG_DEST);
-                if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
-                {
+                if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX)) {
                     this.transferDirection = Direction.pushToVoSpace;
-                    try
-                    {
+                    try {
                         this.destination = new URI(strDest);
                         serverUri = new VOSURI(strDest).getServiceURI();
-                    }
-                    catch (URISyntaxException e)
-                    {
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
                     }
                     File f = new File(strSrc);
-                    if (!f.exists() || !f.canRead())
-                        throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
+                    if (!f.exists() || !f.canRead()) {
+                        throw new IllegalArgumentException("Source file " + strSrc
+                                                               + " does not exist or cannot be read.");
+                    }
 
                     // Predetermine delete permission on file -- fail on attempt for now
                     // if (this.operation.equals(Operation.MOVE))
@@ -1253,115 +1103,86 @@ public class Main implements Runnable
                     //     }
                     //     catch (SecurityException secEx)
                     //     {
-                    //         throw new IllegalArgumentException("Permission to remove source file " + strSrc + " denied.");
+                    //         throw new IllegalArgumentException("Permission to remove source file "
+                    //                                              + strSrc + " denied.");
                     //     }
                     // }
 
-                    try
-                    {
+                    try {
                         this.source = new URI("file", f.getAbsolutePath(), null);
-                    }
-                    catch (URISyntaxException e)
-                    {
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid file path: " + strSrc);
                     }
-                }
-                else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
-                {
+                } else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX)) {
                     this.transferDirection = Direction.pullFromVoSpace;
-                    try
-                    {
+                    try {
                         serverUri = new VOSURI(strSrc).getServiceURI();
                         this.source = new URI(strSrc);
-                    }
-                    catch (URISyntaxException e)
-                    {
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
                     }
                     File f = new File(strDest);
-                    if (f.exists())
-                    {
-                        if (!f.canWrite()) throw new IllegalArgumentException("Destination file " + strDest + " is not writable.");
-                    }
-                    else
-                    {
+                    if (f.exists()) {
+                        if (!f.canWrite()) {
+                            throw new IllegalArgumentException("Destination file " + strDest + " is not writable.");
+                        }
+                    } else {
                         File parent = f.getParentFile();
-                        if (parent == null)
-                        {
+                        if (parent == null) {
                             String cwd = System.getProperty("user.dir");
                             parent = new File(cwd);
                         }
-                        if (parent.isDirectory())
-                        {
-                            if (!parent.canWrite())
-                                throw new IllegalArgumentException("The parent directory of destination file " + strDest
-                                        + " is not writable.");
+                        if (parent.isDirectory()) {
+                            if (!parent.canWrite()) {
+                                throw new IllegalArgumentException("The parent directory of destination file "
+                                                                       + strDest + " is not writable.");
+                            }
+                        } else {
+                            throw new IllegalArgumentException("Destination file "
+                                                                   + strDest + " is not within a directory.");
                         }
-                        else
-                            throw new IllegalArgumentException("Destination file " + strDest + " is not within a directory.");
                     }
                     this.destination = f.toURI();
-                }
-                else if (!strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
-                {
+                } else if (!strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX)) {
                     // local copy/move
                     throw new IllegalArgumentException("Local copy and move operations not yet supported.");
-                }
-                else
-                {
+                } else {
                     // server to server copy/move
-                    if (this.operation.equals(Operation.COPY))
-                    {
+                    if (this.operation.equals(Operation.COPY)) {
                         throw new IllegalArgumentException("Copy within vospace is not yet supported.");
                     }
 
                     URI destServerUri = null;
-                    try
-                    {
+                    try {
                         this.source = new URI(strSrc);
                         serverUri = new VOSURI(source).getServiceURI();
-                    }
-                    catch (URISyntaxException e)
-                    {
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
                     }
-                    try
-                    {
+                    try {
                         this.destination = new URI(strDest);
                         destServerUri = new VOSURI(destination).getServiceURI();
-                    }
-                    catch (URISyntaxException e)
-                    {
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
                     }
 
-                    if (!serverUri.equals(destServerUri))
-                    {
+                    if (!serverUri.equals(destServerUri)) {
                         throw new IllegalArgumentException("Move between two vospace services is not yet supported.");
                     }
                 }
-            }
-            else
-            {
+            } else {
                 String strTarget = argMap.getValue(ARG_TARGET);
-                try
-                {
+                try {
                     this.target = new VOSURI(strTarget);
                     serverUri = this.target.getServiceURI();
-                }
-                catch (URISyntaxException e)
-                {
+                } catch (URISyntaxException e) {
                     throw new IllegalArgumentException("Invalid VOS URI: " + strTarget);
                 }
             }
-        }
-        catch(NullPointerException nex)
-        {
+        } catch (NullPointerException nex) {
             log.error("BUG", nex);
             System.exit(-1);
-        }
-        catch(Exception ex)
-        {
+        } catch (Exception ex) {
             log.error(ex.toString());
             System.exit(INIT_STATUS);
         }
@@ -1369,8 +1190,7 @@ public class Main implements Runnable
         // check if schema validation should be disabled
         boolean doVal = true;
         String schemaVal = argMap.getValue(ARG_XSV);
-        if (schemaVal != null && "off".equals(schemaVal))
-        {
+        if (schemaVal != null && "off".equals(schemaVal)) {
             doVal = false;
             log.info("XML schema validation: disabled");
         }
@@ -1388,46 +1208,36 @@ public class Main implements Runnable
      *                  If more or less than one operation was requested.
      */
     private void validateCommand(ArgumentMap argMap)
-            throws IllegalArgumentException
-    {
+            throws IllegalArgumentException {
         int numOp = 0;
-        if (argMap.isSet(ARG_VIEW))
-        {
+        if (argMap.isSet(ARG_VIEW)) {
             numOp++;
             this.operation = Operation.VIEW;
         }
-        if (argMap.isSet(ARG_CREATE))
-        {
+        if (argMap.isSet(ARG_CREATE)) {
             numOp++;
             this.operation = Operation.CREATE;
         }
-        if (argMap.isSet(ARG_DELETE))
-        {
+        if (argMap.isSet(ARG_DELETE)) {
             numOp++;
             this.operation = Operation.DELETE;
         }
-        if (argMap.isSet(ARG_SET))
-        {
+        if (argMap.isSet(ARG_SET)) {
             numOp++;
             this.operation = Operation.SET;
         }
-        if (argMap.isSet(ARG_COPY))
-        {
+        if (argMap.isSet(ARG_COPY)) {
             numOp++;
             this.operation = Operation.COPY;
         }
-        if (argMap.isSet(ARG_MOVE))
-        {
+        if (argMap.isSet(ARG_MOVE)) {
             numOp++;
             this.operation = Operation.MOVE;
         }
 
-        if (numOp == 0)
-        {
+        if (numOp == 0) {
             throw new IllegalArgumentException("At least one operation must be defined.");
-        }
-        else if (numOp > 1)
-        {
+        } else if (numOp > 1) {
             throw new IllegalArgumentException("Only one operation may be defined.");
         }
     }
@@ -1437,48 +1247,47 @@ public class Main implements Runnable
      * @throws IllegalArgumentException  For any required missing arguments.
      */
     private void validateCommandArguments(ArgumentMap argMap)
-        throws IllegalArgumentException
-    {
-        if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE))
-        {
+        throws IllegalArgumentException {
+        if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
             String strSrc = argMap.getValue(ARG_SRC);
-            if (strSrc == null) throw new IllegalArgumentException("Argument src is required for " + this.operation);
+            if (strSrc == null) {
+                throw new IllegalArgumentException("Argument src is required for " + this.operation);
+            }
 
             String strDest = argMap.getValue(ARG_DEST);
-            if (strDest == null) throw new IllegalArgumentException("Argument dest is required for " + this.operation);
-        }
-        else
-        {
+            if (strDest == null) {
+                throw new IllegalArgumentException("Argument dest is required for " + this.operation);
+            }
+        } else {
             String strTarget = argMap.getValue(ARG_TARGET);
-            if (strTarget == null) throw new IllegalArgumentException("Argument target is required for " + this.operation);
+            if (strTarget == null) {
+                throw new IllegalArgumentException("Argument target is required for " + this.operation);
+            }
 
-            if (this.operation.equals(Operation.CREATE))
-            {
+            if (this.operation.equals(Operation.CREATE)) {
                 String strNodeType = argMap.getValue(ARG_CREATE);
-                if (("true".equalsIgnoreCase(strNodeType)) || ("ContainerNode".equalsIgnoreCase(strNodeType)))
+                if (("true".equalsIgnoreCase(strNodeType)) || ("ContainerNode".equalsIgnoreCase(strNodeType))) {
                     this.nodeType = NodeType.CONTAINER_NODE;
-                else if (("DataNode".equalsIgnoreCase(strNodeType)) || ("UnstructuredDataNode".equalsIgnoreCase(strNodeType)))
+                } else if (("DataNode".equalsIgnoreCase(strNodeType))
+                    || ("UnstructuredDataNode".equalsIgnoreCase(strNodeType))) {
                     this.nodeType = NodeType.UNSTRUCTURED_DATA_NODE;
-                else if ("LinkNode".equalsIgnoreCase(strNodeType))
-                {
+                } else if ("LinkNode".equalsIgnoreCase(strNodeType)) {
                     String strLink = argMap.getValue(ARG_LINK);
-                    if (strLink == null) throw new IllegalArgumentException("Argument link is required for node type " + strNodeType);
-
-                    try
-                    {
-                        this.link = new URI(strLink);
+                    if (strLink == null) {
+                        throw new IllegalArgumentException("Argument link is required for node type " + strNodeType);
                     }
-                    catch (URISyntaxException e)
-                    {
+                    try {
+                        this.link = new URI(strLink);
+                    } catch (URISyntaxException e) {
                         throw new IllegalArgumentException("Invalid URI: " + strLink);
                     }
 
                     this.nodeType = NodeType.LINK_NODE;
-                }
-                else if ("StructuredDataNode".equalsIgnoreCase(strNodeType))
+                } else if ("StructuredDataNode".equalsIgnoreCase(strNodeType)) {
                     this.nodeType = NodeType.STRUCTURED_DATA_NODE;
-                else
+                } else {
                     throw new IllegalArgumentException("Unsupported node type: " + strNodeType);
+                }
             }
         }
 
@@ -1486,59 +1295,44 @@ public class Main implements Runnable
         this.properties = new ArrayList<NodeProperty>();
 
         String propFile = argMap.getValue(ARG_PROP);
-        if (propFile != null)
-        {
+        if (propFile != null) {
             File f = new File(propFile);
-            if (f.exists())
-            {
-                if (f.canRead())
-                {
-                    try
-                    {
+            if (f.exists()) {
+                if (f.canRead()) {
+                    try {
                         Properties p = new Properties();
                         p.load(new FileReader(f));
-                        for ( String key : p.stringPropertyNames())
-                        {
+                        for (String key : p.stringPropertyNames()) {
                             String val = p.getProperty(key);
                             properties.add(new NodeProperty(key, val));
                         }
+                    } catch (IOException ex) {
+                        log.info("failed to read properties file: " + f.getAbsolutePath()
+                                     + "(" + ex.getMessage() + ", skipping)");
                     }
-                    catch(IOException ex)
-                    {
-                        log.info("failed to read properties file: "
-                                + f.getAbsolutePath()
-                                + "(" + ex.getMessage() + ", skipping)");
-                    }
+                } else {
+                    log.info("cannot read properties file: " + f.getAbsolutePath()
+                                 + " (permission denied, skipping)");
                 }
-                else
-                    log.info("cannot read properties file: "
-                            + f.getAbsolutePath() + " (permission denied, skipping)");
+            } else {
+                log.info("cannot read properties file: " + f.getAbsolutePath()
+                             + " (does not exist, skipping)");
             }
-            else
-                log.info("cannot read properties file: "
-                        + f.getAbsolutePath() + " (does not exist, skipping)");
         }
 
         this.contentType = argMap.getValue(ARG_CONTENT_TYPE);
         this.contentEncoding = argMap.getValue(ARG_CONTENT_ENCODING);
-        String contentMD5 = argMap.getValue(ARG_CONTENT_MD5);
-        String groupRead = argMap.getValue(ARG_GROUP_READ);
-        String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
 
         // support --public and --public=true; everything else sets it to false
         boolean isPublicSet = argMap.isSet(ARG_PUBLIC);
         boolean isPublicValue = true;
-        if (isPublicSet)
-        {
+        if (isPublicSet) {
             String s = argMap.getValue(ARG_PUBLIC);
-            if (s != null  && s.trim().length() > 0 && !s.trim().equalsIgnoreCase("true"))
-            {
-                if (s.equalsIgnoreCase("false"))
-                {
+            if (s != null  && s.trim().length() > 0
+                && !s.trim().equalsIgnoreCase("true")) {
+                if (s.equalsIgnoreCase("false")) {
                     isPublicValue = false;
-                }
-                else
-                {
+                } else {
                     isPublicSet = false;
                     log.info("--public value not recognized: " + s.trim() + ".  Ignoring.");
                 }
@@ -1548,17 +1342,12 @@ public class Main implements Runnable
         // support --lock and --lock=true; everything else sets it to false
         boolean isLockSet = argMap.isSet(ARG_LOCK);
         boolean isLockValue = true;
-        if (isLockSet)
-        {
+        if (isLockSet) {
             String s = argMap.getValue(ARG_LOCK);
-            if (s != null  && s.trim().length() > 0 && !s.trim().equalsIgnoreCase("true"))
-            {
-                if (s.equalsIgnoreCase("false"))
-                {
+            if (s != null  && s.trim().length() > 0 && !s.trim().equalsIgnoreCase("true")) {
+                if (s.equalsIgnoreCase("false")) {
                     isLockValue = false;
-                }
-                else
-                {
+                } else {
                     isLockSet = false;
                     log.info("--lock value not recognized: " + s.trim() + ".  Ignoring.");
                 }
@@ -1567,30 +1356,41 @@ public class Main implements Runnable
 
         this.recursiveMode = argMap.isSet(ARG_RECURSIVE);
 
-        if (contentType != null)
+        if (contentType != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
-        if (contentEncoding != null)
+        }
+        if (contentEncoding != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+        }
 
-        if (contentMD5 != null)
+        String contentMD5 = argMap.getValue(ARG_CONTENT_MD5);
+        if (contentMD5 != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
+        }
 
-        if (groupRead != null)
+        String groupRead = argMap.getValue(ARG_GROUP_READ);
+        if (groupRead != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
-        if (groupWrite != null)
+        }
+
+        String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
+        if (groupWrite != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-        if (isLockSet)
+        }
+
+        if (isLockSet) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(isLockValue)));
-        if (isPublicSet)
+        }
+
+        if (isPublicSet) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublicValue)));
+        }
     }
 
     /**
      * Print the usage report for this command.
      */
-    public static void usage()
-    {
-        String[] um = {
+    public static void usage() {
         /*
          * Note: When using "Format" in Eclipse, shorter lines in this string array are squeezed into one line.
          * This makes it hard to read or edit.
@@ -1601,6 +1401,7 @@ public class Main implements Runnable
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
          *
          */
+        String[] um = {
             "",
             "Usage: java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
             CertCmdArgUtil.getCertArgUsage(),
@@ -1681,15 +1482,16 @@ public class Main implements Runnable
             "  specified in destination URI.                                                                   "
 
         };
-        for (String line : um)
+        for (String line : um) {
             msg(line);
+        }
     }
 
     /**
      * Interface to allow abstraction between accepts and provides views.
      */
-    private interface AcceptsProvidesAbstraction
-    {
+    private interface AcceptsProvidesAbstraction {
         List<URI> getViews(Node node);
     }
+    
 }
