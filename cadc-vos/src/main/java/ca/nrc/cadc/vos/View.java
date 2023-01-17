@@ -119,8 +119,7 @@ public class View {
      * View URI setter.
      */
     
-    protected void setURI(URI uri)
-    {
+    protected void setURI(URI uri) {
         this.uri = uri;
     }
 
@@ -143,8 +142,7 @@ public class View {
      * 
      * @param params
      */
-    public void setParameters(List<Parameter> params)
-    {
+    public void setParameters(List<Parameter> params) {
         this.params = params;
     }
 

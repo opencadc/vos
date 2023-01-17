@@ -71,7 +71,9 @@ public class VOSException extends Exception {
 
     /**
      * Constructs a new runtime exception with the specified detail message and
-     * cause.  <p>Note that the detail message associated with
+     * cause.
+     *
+     * <p>Note that the detail message associated with
      * <code>cause</code> is <i>not</i> automatically incorporated in
      * this runtime exception's detail message.
      *
