@@ -83,7 +83,7 @@ import org.apache.log4j.Logger;
  * @author majorb
  *
  */
-public abstract class Node extends Entity implements Comparable<Object> {
+public abstract class Node implements Comparable<Object> {
     private static Logger log = Logger.getLogger(Node.class);
 
     /**
