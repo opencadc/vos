@@ -68,8 +68,9 @@
 package ca.nrc.cadc.vos;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -82,86 +83,42 @@ import org.apache.log4j.Logger;
  */
 public class ContainerNode extends Node {
     private static Logger log = Logger.getLogger(ContainerNode.class);
-    
-    // The list of contained nodes.
-    protected List<Node> nodes;
+
+    // Do child nodes inherit permissions from the parent node.
+    private final boolean inheritPermissions;
+
+    // The list of child nodes.
+    public final transient List<Node> nodes = new ArrayList<>();
 
     /**
-     * @param uri 
-     */
-    public ContainerNode(VOSURI uri) {
-        super(uri);
-        this.nodes = new ArrayList<Node>();
-    }
-
-    /**
-     * @param uri
-     * @param properties
-     */
-    public ContainerNode(VOSURI uri, List<NodeProperty> properties) {
-        super(uri, properties);
-        this.nodes = new ArrayList<Node>();
-    }
-
-    /**
-     * A container node is structured if all its nodes within are structured.
-     * A container node is unstructured if it is empty.
-     * 
-     * @return True if the node is considered structured.
-     */
-    public boolean isStructured() {
-        Iterator<Node> i = nodes.iterator();
-        boolean structured = i.hasNext();
-        while (i.hasNext() && structured) {
-            if (!i.next().isStructured()) {
-                structured = false;
-            }
-        }
-        return structured;
-    }
-
-    /**
+     * ContainerNode constructor.
      *
-     * @param containerNode
-     * @return true if given container heirarchy matches.
-     * @deprecated
+     * @param name The name of the node.
+     * @param inheritPermissions do child nodes inherit permissions from parent
      */
-    public boolean heirarchyEqualsX(ContainerNode containerNode) {
-        if (containerNode == null) {
-            return false;
-        }
-        if (this.name.equals(containerNode.getName())) {
-            if (this.parent == null) {
-                if (containerNode.parent == null) {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                if (containerNode.parent == null) {
-                    return false;
-                } else {
-                    return this.parent.heirarchyEqualsX(containerNode.parent);
-                }
-            }
-        }
-        return false;
+    public ContainerNode(String name, boolean inheritPermissions) {
+        this(name, inheritPermissions, new TreeSet<>());
     }
 
     /**
-     * @return A list of nodes contained by this node.
+     * ContainerNode constructor.
+     *
+     * @param name The name of the node.
+     * @param properties The node's properties.
      */
-    public List<Node> getNodes() {
-        return nodes;
+    public ContainerNode(String name, boolean inheritPermissions, Set<NodeProperty> properties) {
+        super(name, properties);
+        this.inheritPermissions = inheritPermissions;
     }
 
     /**
-     * Sets the list of contained nodes.
-     * 
-     * @param nodes The nodes to contain.
+     * Do the child node's inherit the parent nodes permissions.
+     *
+     * @return true if the child nodes inherit permissions from the parent,
+     *              false otherwise.
      */
-    public void setNodes(List<Node> nodes) {
-        this.nodes = nodes;
+    public boolean isInheritPermissions() {
+        return this.inheritPermissions;
     }
 
 }
