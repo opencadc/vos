@@ -69,28 +69,24 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-
 /**
- *
  * @author yeunga
  */
-public class LinkNodeTest 
-{
+public class LinkNodeTest {
     private static Logger log = Logger.getLogger(LinkNodeTest.class);
     private static String ROOT_NODE;
-    private static String VOS_URI =  "vos://cadc.nrc.ca!vospace";
+    private static String VOS_URI = "vos://cadc.nrc.ca!vospace";
 
     String endpoint;
     VOSpaceClient client;
@@ -99,68 +95,56 @@ public class LinkNodeTest
      * @throws java.lang.Exception
      */
     @BeforeClass
-    public static void setUpBeforeClass() throws Exception
-    {
+    public static void setUpBeforeClass() throws Exception {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
         ROOT_NODE = System.getProperty("user.name") + "/";
     }
 
     @Test
-    public void testInstantiationsWithoutProperties() throws Exception
-    {
-        final String slashPath1 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
-        final String slashPath2 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
+    public void testInstantiationsWithoutProperties() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         VOSURI uri = new VOSURI(VOS_URI + slashPath1);
         URI target = new URI(VOS_URI + slashPath2);
         LinkNode node = new LinkNode(uri, target);
         Assert.assertEquals(uri, node.getUri());
         Assert.assertEquals(target, node.getTarget());
     }
-    
+
     @Test
-    public void testInstantiationsWithProperties() throws Exception
-    {
-        final String slashPath1 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
-        final String slashPath2 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
+    public void testInstantiationsWithProperties() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         VOSURI uri = new VOSURI(VOS_URI + slashPath1);
         URI target = new URI(VOS_URI + slashPath2);
 
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title"));
         properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
-        
+
         LinkNode node = new LinkNode(uri, properties, target);
         Assert.assertEquals(uri, node.getUri());
         Assert.assertEquals(target, node.getTarget());
         List<NodeProperty> actualProperties = node.getProperties();
         Assert.assertEquals(properties.size(), actualProperties.size());
-        for (NodeProperty property : properties)
-        {
-        	Assert.assertTrue(actualProperties.contains(property));
+        for (NodeProperty property : properties) {
+            Assert.assertTrue(actualProperties.contains(property));
         }
     }
-    
+
     @Test
-    public void testSetTarget() throws Exception
-    {
-        final String slashPath1 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
-        final String slashPath2 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
-        final String slashPath3 = "/" + ROOT_NODE
-                + TestUtil.uniqueStringOnTime();
+    public void testSetTarget() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath3 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         VOSURI uri = new VOSURI(VOS_URI + slashPath1);
         URI target = new URI(VOS_URI + slashPath2);
         URI newTarget = new URI(VOS_URI + slashPath3);
         LinkNode node = new LinkNode(uri, target);
         Assert.assertEquals(target, node.getTarget());
-        
+
         node.setTarget(newTarget);
         Assert.assertEquals(newTarget, node.getTarget());
     }
-        	
+
 }
