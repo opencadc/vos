@@ -67,6 +67,8 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URI;
+
 /**
  * Holder of commonly used constants.
  *
@@ -144,129 +146,129 @@ public class VOS {
      */
 
     // Denotes a name given to the resource
-    public static final String PROPERTY_URI_TITLE = "ivo://ivoa.net/vospace/core#title";
+    public static final URI PROPERTY_URI_TITLE = URI.create("ivo://ivoa.net/vospace/core#title");
 
     // Denotes an entity primarily responsible for making the resource
-    public static final String PROPERTY_URI_CREATOR = "ivo://ivoa.net/vospace/core#creator";
+    public static final URI PROPERTY_URI_CREATOR = URI.create("ivo://ivoa.net/vospace/core#creator");
 
     // Denotes the topic of the resource
-    public static final String PROPERTY_URI_SUBJECT = "ivo://ivoa.net/vospace/core#subject";
+    public static final URI PROPERTY_URI_SUBJECT = URI.create("ivo://ivoa.net/vospace/core#subject");
 
     // Denotes an account of the resource
-    public static final String PROPERTY_URI_DESCRIPTION = "ivo://ivoa.net/vospace/core#description";
+    public static final URI PROPERTY_URI_DESCRIPTION = URI.create("ivo://ivoa.net/vospace/core#description");
 
     // Denotes an entity responsible for making the resource available
-    public static final String PROPERTY_URI_PUBLISHER = "ivo://ivoa.net/vospace/core#publisher";
+    public static final URI PROPERTY_URI_PUBLISHER = URI.create("ivo://ivoa.net/vospace/core#publisher");
 
     // Denotes an entity responsible for making contributions to this resource
-    public static final String PROPERTY_URI_CONTRIBUTOR = "ivo://ivoa.net/vospace/core#contributor";
+    public static final URI PROPERTY_URI_CONTRIBUTOR = URI.create("ivo://ivoa.net/vospace/core#contributor");
 
     // timestamp of the last modification to the node metadata or stored bytes
-    public static final String PROPERTY_URI_DATE = "ivo://ivoa.net/vospace/core#date";
+    public static final URI PROPERTY_URI_DATE = URI.create("ivo://ivoa.net/vospace/core#date");
 
     // Denotes the nature or genre of the resource
-    public static final String PROPERTY_URI_TYPE = "ivo://ivoa.net/vospace/core#type";
+    public static final URI PROPERTY_URI_TYPE = URI.create("ivo://ivoa.net/vospace/core#type");
 
     // Denotes the file format, physical medium, or dimensions of the resource
-    public static final String PROPERTY_URI_FORMAT = "ivo://ivoa.net/vospace/core#format";
+    public static final URI PROPERTY_URI_FORMAT = URI.create("ivo://ivoa.net/vospace/core#format");
 
     // Denotes an unambiguous reference to the resource within a given context
-    public static final String PROPERTY_URI_IDENTIFIER = "ivo://ivoa.net/vospace/core#identifier";
+    public static final URI PROPERTY_URI_IDENTIFIER = URI.create("ivo://ivoa.net/vospace/core#identifier");
 
     // Denotes a related resource from which the described resource is derived
-    public static final String PROPERTY_URI_SOURCE = "ivo://ivoa.net/vospace/core#source";
+    public static final URI PROPERTY_URI_SOURCE = URI.create("ivo://ivoa.net/vospace/core#source");
 
     // Denotes a language of the resource
-    public static final String PROPERTY_URI_LANGUAGE = "ivo://ivoa.net/vospace/core#language";
+    public static final URI PROPERTY_URI_LANGUAGE = URI.create("ivo://ivoa.net/vospace/core#language");
 
     // Denotes a related resource
-    public static final String PROPERTY_URI_RELATION = "ivo://ivoa.net/vospace/core#relation";
+    public static final URI PROPERTY_URI_RELATION = URI.create("ivo://ivoa.net/vospace/core#relation");
 
     // Denotes the spatial or temporal topic of the resource,
     // the spatial applicability of the resource,
     // or the jurisdiction under which the resource is relevant
-    public static final String PROPERTY_URI_COVERAGE = "ivo://ivoa.net/vospace/core#coverage";
+    public static final URI PROPERTY_URI_COVERAGE = URI.create("ivo://ivoa.net/vospace/core#coverage");
 
     // Denotes information about rights held in and over the resource
-    public static final String PROPERTY_URI_RIGHTS = "ivo://ivoa.net/vospace/core#rights";
+    public static final URI PROPERTY_URI_RIGHTS = URI.create("ivo://ivoa.net/vospace/core#rights");
 
     // Denotes the amount of space available within a container
-    public static final String PROPERTY_URI_AVAILABLESPACE = "ivo://ivoa.net/vospace/core#availableSpace";
+    public static final URI PROPERTY_URI_AVAILABLESPACE = URI.create("ivo://ivoa.net/vospace/core#availableSpace");
 
     // SHALL be used as the protocol URI for a HTTP GET transfer
-    public static final String PROTOCOL_HTTP_GET = "ivo://ivoa.net/vospace/core#httpget";
+    public static final URI PROTOCOL_HTTP_GET = URI.create("ivo://ivoa.net/vospace/core#httpget");
 
     // SHALL be used as the protocol URI for a HTTP PUT transfer
-    public static final String PROTOCOL_HTTP_PUT = "ivo://ivoa.net/vospace/core#httpput";
+    public static final URI PROTOCOL_HTTP_PUT = URI.create("ivo://ivoa.net/vospace/core#httpput");
 
     // SHALL be used as the protocol URI for a HTTPS GET transfer
-    public static final String PROTOCOL_HTTPS_GET = "ivo://ivoa.net/vospace/core#httpsget";
+    public static final URI PROTOCOL_HTTPS_GET = URI.create("ivo://ivoa.net/vospace/core#httpsget");
 
     // SHALL be used as the protocol URI for a HTTPS PUT transfer
-    public static final String PROTOCOL_HTTPS_PUT = "ivo://ivoa.net/vospace/core#httpsput";
+    public static final URI PROTOCOL_HTTPS_PUT = URI.create("ivo://ivoa.net/vospace/core#httpsput");
     
     // prototype mount protocol
-    public static final String PROTOCOL_SSHFS = "ivo://cadc.nrc.ca/vospace#SSHFS";
+    public static final URI PROTOCOL_SSHFS = URI.create("ivo://cadc.nrc.ca/vospace#SSHFS");
 
     // SHALL be used as the view URI to indicate that a service will accept any view for an import operation
-    public static final String VIEW_ANY = "ivo://ivoa.net/vospace/core#anyview";
+    public static final URI VIEW_ANY = URI.create("ivo://ivoa.net/vospace/core#anyview");
 
     // SHALL be used as the view URI to import or export data as a binary file
-    public static final String VIEW_BINARY = "ivo://ivoa.net/vospace/core#binaryview";
+    public static final URI VIEW_BINARY = URI.create("ivo://ivoa.net/vospace/core#binaryview");
 
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
-    public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
+    public static final URI VIEW_DEFAULT = URI.create("ivo://ivoa.net/vospace/core#defaultview");
 
 
     /*
      * Standard Node Properties defined by the CADC
      */
 
-    // Property used for identifying a transaction"
-    public static final String PROPERTY_URI_RUNID = "ivo://ivoa.net/vospace/core#runid";
+    // Property used for identifying a transaction
+    public static final URI PROPERTY_URI_RUNID = URI.create("ivo://ivoa.net/vospace/core#runid");
 
     // The size of the resource
-    public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
+    public static final URI PROPERTY_URI_CONTENTLENGTH = URI.create("ivo://ivoa.net/vospace/core#length");
 
     // The quota of a Container Node.
-    public static final String PROPERTY_URI_QUOTA = "ivo://ivoa.net/vospace/core#quota";
+    public static final URI PROPERTY_URI_QUOTA = URI.create("ivo://ivoa.net/vospace/core#quota");
 
     // The content encoding of the resource
-    public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
+    public static final URI PROPERTY_URI_CONTENTENCODING = URI.create("ivo://ivoa.net/vospace/core#encoding");
 
     // The MD5 Checksum of the resource
-    public static final String PROPERTY_URI_CONTENTMD5 = "ivo://ivoa.net/vospace/core#MD5";
+    public static final URI PROPERTY_URI_CONTENTMD5 = URI.create("ivo://ivoa.net/vospace/core#MD5");
 
     // The groups who can read the resource
-    public static final String PROPERTY_URI_GROUPREAD = "ivo://ivoa.net/vospace/core#groupread";
+    public static final URI PROPERTY_URI_GROUPREAD = URI.create("ivo://ivoa.net/vospace/core#groupread");
     public static final String PROPERTY_DELIM_GROUPREAD = " ";
 
     // The groups who can write to the resource
-    public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
+    public static final URI PROPERTY_URI_GROUPWRITE = URI.create("ivo://ivoa.net/vospace/core#groupwrite");
     public static final String PROPERTY_DELIM_GROUPWRITE = " ";
     
     // If not null, the mask that must be applied to the values of groupread and groupwrite to
     // determine the effective permissions
-    public static final String PROPERTY_URI_GROUPMASK = "ivo://ivoa.net/vospace/core#groupmask";
+    public static final URI PROPERTY_URI_GROUPMASK = URI.create("ivo://ivoa.net/vospace/core#groupmask");
 
     // Flag indicating if the Node is public (true/false)
-    public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
+    public static final URI PROPERTY_URI_ISPUBLIC = URI.create("ivo://ivoa.net/vospace/core#ispublic");
 
     // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
-    public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
+    public static final URI PROPERTY_URI_CREATION_DATE = URI.create("ivo://ivoa.net/vospace/core#creationDate");
 
 
     /*
      * CADC Node Properties
      */
     // Flag indicating if the Node locked (true/false)
-    public static final String PROPERTY_URI_ISLOCKED = "ivo://cadc.nrc.ca/vospace/core#islocked";
+    public static final URI PROPERTY_URI_ISLOCKED = URI.create("ivo://cadc.nrc.ca/vospace/core#islocked");
 
     // Flag indicating that the Node passed a read-permission check
-    public static final String PROPERTY_URI_READABLE = "ivo://cadc.nrc.ca/vospace/core#readable";
+    public static final URI PROPERTY_URI_READABLE = URI.create("ivo://cadc.nrc.ca/vospace/core#readable");
 
     // Flag indicating that the Node passed a write-permission check
-    public static final String PROPERTY_URI_WRITABLE = "ivo://cadc.nrc.ca/vospace/core#writable";
+    public static final URI PROPERTY_URI_WRITABLE = URI.create("ivo://cadc.nrc.ca/vospace/core#writable");
 
 
 
@@ -274,7 +276,7 @@ public class VOS {
     /*
      * List of properties that are read-only by the user
      */
-    public static final String[] READ_ONLY_PROPERTIES = new String[] {
+    public static final URI[] READ_ONLY_PROPERTIES = new URI[] {
         PROPERTY_URI_DATE,
         PROPERTY_URI_CREATOR,
         PROPERTY_URI_QUOTA,

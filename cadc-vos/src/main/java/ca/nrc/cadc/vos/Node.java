@@ -69,8 +69,9 @@ package ca.nrc.cadc.vos;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -83,229 +84,131 @@ import org.apache.log4j.Logger;
  * @author majorb
  *
  */
-public abstract class Node implements Comparable<Object> {
-    private static Logger log = Logger.getLogger(Node.class);
+public abstract class Node extends Entity implements Comparable<Node> {
+    private static final Logger log = Logger.getLogger(Node.class);
 
     /**
-     * Keep track of the vospace version since some things differ. This field
+     * Keep track of the VOSpace version since some things differ. This field
      * is here to facilitate reading and writing the same version of documents
      * on the server side in order to maintain support for older clients.
      */
     public int version = VOS.VOSPACE_20;
-    
-    // The node uri
-    protected VOSURI uri;
 
     // The name of the node
-    protected String name;
+    private String name;
 
-    // The parent of the node
-    protected ContainerNode parent;
-
-    // The list of node properties
-    protected List<NodeProperty> properties;
+    // The ID of the creator
+    public String creatorID;
 
     // Flag indicating if the node is public
-    protected boolean isPublic;
-    
-    // Flag indicating if the node is locked
-    protected boolean isLocked;
+    public Boolean isPublic;
 
-    // True if marked for deletion
-    //protected boolean markedForDeletion;
+    // Flag indicating if the node is locked
+    public Boolean isLocked;
+
+    // Set of groups with read access to the Node
+    public final Set<URI> readOnlyGroup = new TreeSet<>();
+
+    // Set of groups with read/write access to the Node
+    public final Set<URI> readWriteGroup = new TreeSet<>();
+
+    // Set of node properties
+    public final Set<NodeProperty> properties = new TreeSet<>();
 
     // To be used by controlling applications as they wish
     public transient Object appData;
-    
+
     // List of views which this node accepts
-    protected List<URI> accepts;
-    
+    public final transient List<URI> accepts = new ArrayList<>();
+
     // List of views which this node provides
-    protected List<URI> provides;
-    
+    public final transient List<URI> provides = new ArrayList<>();
 
-    private Node() {
-
+    /**
+     * Node constructor.
+     *
+     * @param name The name of the node.
+     */
+    protected Node(String name) {
+        this(name, new TreeSet<>());
     }
 
     /**
-     * @param uri
+     * Node constructor.
+     *
+     * @param name The name of the node.
+     * @param properties The node's properties.
      */
-    public Node(VOSURI uri) {
-        this(uri, new ArrayList<NodeProperty>());
-    }
-
-    /**
-     * @param uri The uri of the node
-     * @param properties The node's properties
-     */
-    public Node(VOSURI uri, List<NodeProperty> properties) {
-        this.uri = uri;
-        this.properties = properties;
-
-        this.name = uri.getName();
-        log.debug("uri: " + uri + " -> name: " + name);
-        accepts = new ArrayList<URI>();
-        provides = new ArrayList<URI>();
+    protected Node(String name, Set<NodeProperty> properties) {
+        super();
+        NodeUtil.assertNotNull(Node.class, "name", "name");
+        this.name = name;
+        this.properties.addAll(properties);
     }
 
     @Override
     public String toString() {
-        String parentStr = null;
-        if (parent != null) {
-            parentStr = parent.uri.toString() + " " + parent.appData;
-        }
-
-        return this.getClass().getSimpleName() 
-                + " [appData=" + appData
-                //+ ", markedForDeletion=" + markedForDeletion
-                + ", uri=" + uri.toString()
-                + ", parent=" + parentStr
-                + ", properties=" + properties + "]";
+        return this.getClass().getSimpleName()
+            + ", [name=" + name
+            + ", appData=" + appData
+            + ", properties=" + properties + "]";
     }
 
     /**
-     * Return an integer denoting the display order for two nodes.
-     */
-    public int compareTo(Object o1) {
-        if (o1 == null) {
-            return -1;
-        }
-        if (! (o1 instanceof Node)) {
-            throw new ClassCastException("compareTo requires a Node, got: " + o1.getClass().getName());
-        }
-        Node rhs = (Node) o1;
-        String s1 = this.getUri().getURI().toASCIIString();
-        String s2 = rhs.getUri().getURI().toASCIIString();
-
-        return s1.compareTo(s2);
-    }
-
-    /**
-     * Nodes are considered equal if their URIs are equal.
+     * Nodes are considered equal if the names are equal.
      */
     @Override
     public boolean equals(Object o) {
-        return this.compareTo(o) == 0;
+        if (o == null) {
+            return false;
+        }
+        Node node = (Node) o;
+        return this.name.equals(node.getName());
     }
 
     /**
-     * @return true if the VOSpace understands the format of the data.
+     * @param node the node for comparison.
+     * @return an integer denoting the display order for two nodes.
      */
-    public abstract boolean isStructured();
+    @Override
+    public int compareTo(Node node) {
+        return this.name.compareTo(node.getName());
+    }
 
     /**
-     * @return A list of view uris which the node can use for importing.
+     * @return the hashcode of toString().
      */
-    public List<URI> accepts() {
-        return accepts;
+    @Override
+    public int hashCode() {
+        return this.name.hashCode();
     }
 
     /**
-     * @return A list of view uris which the node can use for exporting.
-     */
-    public List<URI> provides() {
-        return provides;
-    }
-
-    /**
-     * Set the accepts list.
-     * @param accepts
-     */
-    public void setAccepts(List<URI> accepts) {
-        this.accepts = accepts;
-    }
-
-    /**
-     * Set the provides list.
-     * @param provides
-     */
-    public void setProvides(List<URI> provides) {
-        this.provides = provides;
-    }
-
-    public VOSURI getUri() {
-        return uri;
-    }
-    
-    /**
-     * Convenience method to get the relative name of this node.
-     * @return
+     * Get the name of the node.
+     *
+     * @return node name.
      */
     public String getName() {
-        return name;
+        return this.name;
     }
-    
+
+    /**
+     * Set the name of the node.
+     */
     public void setName(String name) {
         this.name = name;
     }
 
-    public ContainerNode getParent() {
-        return parent;
-    }
-
-    public void setParent(ContainerNode parent) {
-        this.parent = parent;
-        // TODO: should verify that this.uri is a single path component
-        // extension of parent.uri
-    }
-
-    public List<NodeProperty> getProperties() {
-        return properties;
-    }
-    
-    public void setProperties(List<NodeProperty> properties) {
-        this.properties = properties;
-    }
-
-    /*
-    public boolean isMarkedForDeletion()
-    {
-        return markedForDeletion;
-    }
-
-    public void setMarkedForDeletion(boolean markedForDeletion)
-    {
-        this.markedForDeletion = markedForDeletion;
-    }
-    */
-    
     /**
-     * Convenience method. This just calls
-     * <pre>
-     * Node.getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC)
-     * </pre>
-     *
-     * @return true if the property is set to true, otherwise false
-     */
-    public boolean isPublic() {
-        String val = getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC);
-        return "true".equals(val);
-    }
-    
-    /**
-     * Convenience method. This just calls
-     * <pre>
-     * Node.getPropertyValue(VOS.PROPERTY_URI_ISLOCKED)
-     * </pre>
-     *
-     * @return true if the property is set to true, otherwise false
-     */
-    public boolean isLocked() {
-        String val = getPropertyValue(VOS.PROPERTY_URI_ISLOCKED);
-        return "true".equals(val);
-    }
-
-    /**
-     * Find a property by its key (propertyUri).
+     * Get a node property by its key.
      * 
-     * @param propertyURI
-     * @return the node property object or null if not found
+     * @param uri the node property identifier.
+     * @return the node property object or null if not found.
      */
-    public NodeProperty findProperty(String propertyURI) {
-        for (NodeProperty prop : this.properties) {
-            if (prop.getPropertyURI().equalsIgnoreCase(propertyURI)) {
-                return prop;
+    public NodeProperty getProperty(URI uri) {
+        for (NodeProperty nodeProperty : this.properties) {
+            if (nodeProperty.getKey() == uri) {
+                return nodeProperty;
             }
         }
         return null;
@@ -314,29 +217,15 @@ public abstract class Node implements Comparable<Object> {
     /**
      * Return the value of the specified property.
      *
-     * @param propertyURI property key.
+     * @param uri the node property identifier.
      * @return the value or null if not found.
      */
-    public String getPropertyValue(String propertyURI) {
-        NodeProperty prop = findProperty(propertyURI);
-        if (prop != null) {
-            return prop.getPropertyValue();
+    public String getPropertyValue(URI uri) {
+        NodeProperty nodeProperty = getProperty(uri);
+        if (nodeProperty != null) {
+            return nodeProperty.getValue();
         }
         return null;
     }
 
-    /**
-     * Get a linked list of nodes from leaf to root.
-     *
-     * @return list of nodes, with leaf first and root last
-     */
-    public static LinkedList<Node> getNodeList(Node leaf) {
-        LinkedList<Node> nodes = new LinkedList<Node>();
-        Node cur = leaf;
-        while (cur != null) {
-            nodes.add(cur);
-            cur = cur.getParent();
-        }
-        return nodes;
-    }
 }

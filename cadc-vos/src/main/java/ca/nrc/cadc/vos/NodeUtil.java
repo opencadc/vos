@@ -67,116 +67,21 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URI;
-
-/**
- * A VOSpace property representing metadata for a node.
- * 
- * @author majorb
- *
- */
-public class NodeProperty implements Comparable<Object> {
-    
-    // Maximum number of groups allowed
-    static final int MAX_GROUPS = 4;
-
-    // true if the property cannot be modified.
-    public Boolean readOnly;
-    
-    // The property identifier
-    private final URI key;
-    
-    // The value of the property
-    private String value;
-    
-    // true if this property is marked for deletion
-    //private boolean markedForDeletion;
+public class NodeUtil {
 
     /**
-     * Property constructor.
-     * 
-     * @param key The property identifier.
-     * @param value The property value.
-     */
-    public NodeProperty(URI key, String value) {
-        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
-        NodeUtil.assertNotNull(NodeProperty.class, "value", "value");
-        this.key = key;
-        this.value = value;
-        //this.markedForDeletion = false;
-    }
-
-    /**
-     * Order by the URI key.
+     * Utility method so constructors can validate arguments.
      *
-     * @param o the object to be compared.
-     * @return an integer denoting the display order for two NodeProperty objects.
+     * @param caller class doing test
+     * @param name field name being checked
+     * @param test object to test
+     * @throws IllegalArgumentException if the value is invalid
      */
-    @Override
-    public int compareTo(Object o) {
-        if (o == null) {
-            return -1;
+    public static void assertNotNull(Class caller, String name, Object test)
+        throws IllegalArgumentException {
+        if (test == null) {
+            throw new IllegalArgumentException("invalid " + caller.getSimpleName() + "." + name + ": null");
         }
-        if (!(o instanceof NodeProperty)) {
-            throw new ClassCastException("compareTo requires a NodeProperty, got: " + o.getClass().getName());
-        }
-        NodeProperty rhs = (NodeProperty) o;
-        return this.key.compareTo(rhs.key);
     }
-    
-    /**
-     * @return true iff the property URI are equal.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        }
-        if (!(o instanceof NodeProperty)) {
-
-        }
-        final NodeProperty np = (NodeProperty) o;
-        return this.key == np.key;
-    }
-
-    @Override
-    public String toString() {
-        return this.key + ": " + this.value;
-    }
-
-    /**
-     * Get the property identifier.
-     *
-     * @return The property identifier.
-     */
-    public URI getKey() {
-        return this.key;
-    }
-
-    /**
-     * Get the property value.
-     *
-     * @return The property value.
-     */
-    public String getValue() {
-        return this.value;
-    }
-
-    /**
-     * Set the property value.
-     *
-     * @param value new property value.
-     */
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    //public boolean isMarkedForDeletion() {
-    //    return markedForDeletion;
-    //}
-
-    //public void setMarkedForDeletion(boolean markedForDeletion) {
-    //    this.markedForDeletion = markedForDeletion;
-    //}
 
 }
