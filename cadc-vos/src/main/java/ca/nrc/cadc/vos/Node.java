@@ -172,6 +172,9 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     @Override
     public int compareTo(Node node) {
+        if (node == null) {
+            return -1;
+        }
         return this.name.compareTo(node.getName());
     }
 

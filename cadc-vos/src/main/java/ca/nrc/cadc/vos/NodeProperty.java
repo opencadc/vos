@@ -75,7 +75,7 @@ import java.net.URI;
  * @author majorb
  *
  */
-public class NodeProperty implements Comparable<Object> {
+public class NodeProperty implements Comparable<NodeProperty> {
     
     // Maximum number of groups allowed
     static final int MAX_GROUPS = 4;
@@ -90,7 +90,7 @@ public class NodeProperty implements Comparable<Object> {
     private String value;
     
     // true if this property is marked for deletion
-    //private boolean markedForDeletion;
+    private transient boolean markedForDeletion;
 
     /**
      * Property constructor.
@@ -103,27 +103,14 @@ public class NodeProperty implements Comparable<Object> {
         NodeUtil.assertNotNull(NodeProperty.class, "value", "value");
         this.key = key;
         this.value = value;
-        //this.markedForDeletion = false;
+        this.markedForDeletion = false;
     }
 
-    /**
-     * Order by the URI key.
-     *
-     * @param o the object to be compared.
-     * @return an integer denoting the display order for two NodeProperty objects.
-     */
     @Override
-    public int compareTo(Object o) {
-        if (o == null) {
-            return -1;
-        }
-        if (!(o instanceof NodeProperty)) {
-            throw new ClassCastException("compareTo requires a NodeProperty, got: " + o.getClass().getName());
-        }
-        NodeProperty rhs = (NodeProperty) o;
-        return this.key.compareTo(rhs.key);
+    public String toString() {
+        return this.key + ": " + this.value;
     }
-    
+
     /**
      * @return true iff the property URI are equal.
      */
@@ -132,16 +119,22 @@ public class NodeProperty implements Comparable<Object> {
         if (o == null) {
             return false;
         }
-        if (!(o instanceof NodeProperty)) {
-
-        }
         final NodeProperty np = (NodeProperty) o;
         return this.key == np.key;
     }
 
+    /**
+     * Order by the URI key.
+     *
+     * @param np the NodeProperty to be compared.
+     * @return an integer denoting the display order for two NodeProperty objects.
+     */
     @Override
-    public String toString() {
-        return this.key + ": " + this.value;
+    public int compareTo(NodeProperty np) {
+        if (np == null) {
+            return -1;
+        }
+        return this.key.compareTo(np.key);
     }
 
     /**
@@ -171,12 +164,12 @@ public class NodeProperty implements Comparable<Object> {
         this.value = value;
     }
 
-    //public boolean isMarkedForDeletion() {
-    //    return markedForDeletion;
-    //}
+    public boolean isMarkedForDeletion() {
+        return markedForDeletion;
+    }
 
-    //public void setMarkedForDeletion(boolean markedForDeletion) {
-    //    this.markedForDeletion = markedForDeletion;
-    //}
+    public void setMarkedForDeletion(boolean markedForDeletion) {
+        this.markedForDeletion = markedForDeletion;
+    }
 
 }
