@@ -116,11 +116,11 @@ public class NodeProperty implements Comparable<NodeProperty> {
      */
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
+        if (o instanceof NodeProperty) {
+            NodeProperty np = (NodeProperty) o;
+            return this.key == np.key;
         }
-        final NodeProperty np = (NodeProperty) o;
-        return this.key == np.key;
+        return false;
     }
 
     /**

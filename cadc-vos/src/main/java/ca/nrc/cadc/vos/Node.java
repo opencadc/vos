@@ -159,11 +159,11 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
+        if (o instanceof Node) {
+            Node node = (Node) o;
+            return this.name.equals(node.getName());
         }
-        Node node = (Node) o;
-        return this.name.equals(node.getName());
+        return false;
     }
 
     /**
