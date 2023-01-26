@@ -76,9 +76,6 @@ import java.net.URI;
  *
  */
 public class NodeProperty implements Comparable<NodeProperty> {
-    
-    // Maximum number of groups allowed
-    static final int MAX_GROUPS = 4;
 
     // true if the property cannot be modified.
     public Boolean readOnly;
