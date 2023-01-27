@@ -67,10 +67,10 @@
 
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-
-import java.net.URISyntaxException;
-import java.util.List;
+import java.net.URI;
+import java.util.Date;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -82,54 +82,71 @@ import org.apache.log4j.Logger;
 public class DataNode extends Node {
     
     private static Logger log = Logger.getLogger(DataNode.class);
-    
-    // Indicates if the node can be accessed.
-    private NodeBusyState busy;
-    
-    // Indicates if the VOSpace understands the data format.
-    private boolean structured;
 
-    /**
-     * Data node constructor.
-     * @param uri
-     */
-    public DataNode(VOSURI uri) {
-        super(uri);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
-    }
+    // The URI to the associated artifact.
+    private final URI storageID;
+
+    // The checksum of the artifact.
+    private final URI contentChecksum;
+
+    // The last modified date of the artifact.
+    private final Date contentLastModified;
+
+    // The content length of the artifact.
+    private final long contentLength;
+
+    // The type of the artifact.
+    public String contentType;
+
+    // The encoding of the artifact.
+    public String contentEncoding;
 
     /**
      * DataNode constructor.
-     * @throws URISyntaxException 
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
+     * @param contentChecksum The artifact checksum.
+     * @param contentLastModified The artifact lastModified date.
+     * @param contentLength The artifact contentLength.
      */
-    public DataNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException {
-        super(uri, properties);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
+    public DataNode(String name, URI storageID, URI contentChecksum, Date contentLastModified, long contentLength) {
+        this(name, storageID, contentChecksum, contentLastModified, contentLength, new TreeSet<>());
     }
 
     /**
-     * @return true if the VOSpace understands the format of the data.
+     * Data node constructor.
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
+     * @param contentChecksum The artifact checksum.
+     * @param contentLastModified The artifact lastModified date.
+     * @param contentLength The artifact contentLength.
+     * @param properties The node's properties.
      */
-    public boolean isStructured() {
-        return this.structured;
+    public DataNode(String name, URI storageID, URI contentChecksum, Date contentLastModified,
+                    long contentLength, Set<NodeProperty> properties) {
+        super(name, properties);
+        this.storageID = storageID;
+        this.contentChecksum = contentChecksum;
+        this.contentLastModified = contentLastModified;
+        this.contentLength = contentLength;
     }
 
-    public void setStructured(boolean isStructured) {
-        this.structured = isStructured;
-    }
-    
-    public NodeBusyState getBusy() {
-        return this.busy;
+    public URI getStorageID() {
+        return this.storageID;
     }
 
-    public void setBusy(NodeBusyState busy) {
-        this.busy = busy;
+    public URI getContentChecksum() {
+        return this.contentChecksum;
     }
-    
-    public boolean isBusy() {
-        return !NodeBusyState.notBusy.equals(busy);
+
+    public Date getContentLastModified() {
+        return this.contentLastModified;
+    }
+
+    public long getContentLength() {
+        return this.contentLength;
     }
 
 }
