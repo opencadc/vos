@@ -68,7 +68,8 @@
 package ca.nrc.cadc.vos;
 
 import java.net.URI;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -83,40 +84,25 @@ public class LinkNode extends Node {
     
     // A URI that points to any type of resource.
     private URI target;
-    
-    // TODO: 'structured' will be moved from Node to DataNode.
-    //       Removed this attribute after Node has been updated.
-    // Indicates if the VOSpace understands the data format.
-    private boolean structured;
 
     /**
      * Link node constructor.
-     * @param uri
-     * @param target
+     * @param name The name of the node.
+     * @param target The URI to the node resource.
      */
-    public LinkNode(VOSURI uri, URI target) {
-        super(uri);
-        this.structured = false;
-        this.target = target;
+    public LinkNode(String name, URI target) {
+        this(name, target, new TreeSet<>());
     }
 
     /**
      * LinkNode constructor.
-     * @param uri
-     * @param properties
-     * @param target
+     * @param name The name of the node.
+     * @param target The URI to the node resource.
+     * @param properties The node's properties.
      */
-    public LinkNode(VOSURI uri, List<NodeProperty> properties, URI target) {
-        super(uri, properties);
-        this.structured = false;
+    public LinkNode(String name, URI target, Set<NodeProperty> properties) {
+        super(name, properties);
         this.target = target;
-    }
-
-    /**
-     * @return true if the VOSpace understands the format of the data.
-     */
-    public boolean isStructured() {
-        return structured;
     }
 
     /**
@@ -125,11 +111,11 @@ public class LinkNode extends Node {
     public URI getTarget() {
         return target;
     }
-    
+
     /**
      * Sets the target URI of this LinkNode instance.
-     * 
-     * @param target target URI.
+     *
+     * @param target The URI to the node resource.
      */
     public void setTarget(URI target) {
         this.target = target;
