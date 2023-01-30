@@ -105,6 +105,8 @@ public abstract class Node extends Entity implements Comparable<Node> {
 
     public final transient List<URI> accepts = new ArrayList<>();
     public final transient List<URI> provides = new ArrayList<>();
+
+    // To be used by controlling applications as they wish.
     public transient Object appData;
 
     /**
