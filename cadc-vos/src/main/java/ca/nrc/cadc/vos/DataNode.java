@@ -127,6 +127,10 @@ public class DataNode extends Node {
     public DataNode(String name, URI storageID, URI contentChecksum, Date contentLastModified,
                     long contentLength, Set<NodeProperty> properties) {
         super(name, properties);
+        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
+        NodeUtil.assertNotNull(DataNode.class, "contentChecksum", "contentChecksum");
+        NodeUtil.assertNotNull(DataNode.class, "contentLastModified", "contentLastModified");
+        NodeUtil.assertNotNull(DataNode.class, "contentLength", "contentLength");
         this.storageID = storageID;
         this.contentChecksum = contentChecksum;
         this.contentLastModified = contentLastModified;

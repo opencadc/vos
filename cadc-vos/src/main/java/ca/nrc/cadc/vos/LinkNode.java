@@ -102,6 +102,7 @@ public class LinkNode extends Node {
      */
     public LinkNode(String name, URI target, Set<NodeProperty> properties) {
         super(name, properties);
+        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
         this.target = target;
     }
 
