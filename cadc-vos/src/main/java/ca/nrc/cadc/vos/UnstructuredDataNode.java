@@ -67,10 +67,7 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URISyntaxException;
-import java.util.List;
-
-import org.apache.log4j.Logger;
+import java.net.URI;
 
 /**
  * A VOSpace node that describes an unstructured data item.
@@ -78,24 +75,15 @@ import org.apache.log4j.Logger;
  * @author yeunga
  */
 public class UnstructuredDataNode extends DataNode {
-    
-    private static Logger log = Logger.getLogger(UnstructuredDataNode.class);
 
     /**
      * UnstructuredDataNode constructor.
-     * @param uri
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
      */
-    public UnstructuredDataNode(VOSURI uri) {
-        super(uri);
-    }
-
-    /**
-     * UnstructuredDataNode constructor.
-     * @throws URISyntaxException 
-     */
-    public UnstructuredDataNode(VOSURI uri, List<NodeProperty> properties)
-        throws URISyntaxException {
-        super(uri, properties);
+    public UnstructuredDataNode(String name, URI storageID) {
+        super(name, storageID);
     }
 
 }

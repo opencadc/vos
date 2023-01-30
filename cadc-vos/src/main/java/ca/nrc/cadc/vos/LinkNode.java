@@ -68,8 +68,6 @@
 package ca.nrc.cadc.vos;
 
 import java.net.URI;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -86,22 +84,12 @@ public class LinkNode extends Node {
     private URI target;
 
     /**
-     * Link node constructor.
+     * LinkNode constructor.
      * @param name The name of the node.
      * @param target The URI to the node resource.
      */
     public LinkNode(String name, URI target) {
-        this(name, target, new TreeSet<>());
-    }
-
-    /**
-     * LinkNode constructor.
-     * @param name The name of the node.
-     * @param target The URI to the node resource.
-     * @param properties The node's properties.
-     */
-    public LinkNode(String name, URI target, Set<NodeProperty> properties) {
-        super(name, properties);
+        super(name);
         NodeUtil.assertNotNull(LinkNode.class, "target", "target");
         this.target = target;
     }
@@ -110,7 +98,7 @@ public class LinkNode extends Node {
      * @return Target URI of this LinkNode instance.
      */    
     public URI getTarget() {
-        return target;
+        return this.target;
     }
 
     /**
@@ -119,6 +107,7 @@ public class LinkNode extends Node {
      * @param target The URI to the node resource.
      */
     public void setTarget(URI target) {
+        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
         this.target = target;
     }
 

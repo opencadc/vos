@@ -67,10 +67,7 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URISyntaxException;
-import java.util.List;
-
-import org.apache.log4j.Logger;
+import java.net.URI;
 
 /**
  * A VOSpace node that describes a structured data item.
@@ -78,26 +75,15 @@ import org.apache.log4j.Logger;
  * @author yeunga
  */
 public class StructuredDataNode extends DataNode {
-    
-    private static Logger log = Logger.getLogger(StructuredDataNode.class);
 
     /**
      * StructuredDataNode constructor.
-     * @param uri
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
      */
-    public StructuredDataNode(VOSURI uri) {
-        super(uri);
-        this.setStructured(true);
-    }
-
-    /**
-     * StructuredDataNode constructor.
-     * @throws URISyntaxException 
-     */
-    public StructuredDataNode(VOSURI uri, List<NodeProperty> properties)
-        throws URISyntaxException {
-        super(uri, properties);
-        this.setStructured(true);
+    public StructuredDataNode(String name, URI storageID) {
+        super(name, storageID);
     }
 
 }

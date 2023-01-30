@@ -77,13 +77,8 @@ import java.net.URI;
  */
 public class NodeProperty implements Comparable<NodeProperty> {
 
-    // true if the property cannot be modified.
     public Boolean readOnly;
-    
-    // The property identifier
     private final URI key;
-    
-    // The value of the property
     private String value;
     
     // true if this property is marked for deletion
@@ -91,6 +86,7 @@ public class NodeProperty implements Comparable<NodeProperty> {
 
     /**
      * Property constructor.
+     * Sets the property key and value.
      * 
      * @param key The property identifier.
      * @param value The property value.
@@ -101,6 +97,19 @@ public class NodeProperty implements Comparable<NodeProperty> {
         this.key = key;
         this.value = value;
         this.markedForDeletion = false;
+    }
+
+    /**
+     * Property constructor.
+     * Set the property key and flag the property as markedForDeletion.
+     *
+     * @param key The property identifier.
+     */
+    public NodeProperty(URI key) {
+        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
+        this.key = key;
+        this.value = null;
+        this.markedForDeletion = true;
     }
 
     @Override
@@ -154,19 +163,20 @@ public class NodeProperty implements Comparable<NodeProperty> {
 
     /**
      * Set the property value.
+     * TODO Should setting a value toggle markedForDeletion to false?
+     * Does a property have only 2 states:
+     * - a null value with markedForDeletion == true.
+     * - a non-null value and markedForDeletion == false.
      *
      * @param value new property value.
      */
     public void setValue(String value) {
         this.value = value;
+        this.markedForDeletion = false;
     }
 
     public boolean isMarkedForDeletion() {
         return markedForDeletion;
-    }
-
-    public void setMarkedForDeletion(boolean markedForDeletion) {
-        this.markedForDeletion = markedForDeletion;
     }
 
 }

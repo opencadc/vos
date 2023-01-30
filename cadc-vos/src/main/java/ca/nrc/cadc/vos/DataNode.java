@@ -69,8 +69,6 @@ package ca.nrc.cadc.vos;
 
 import java.net.URI;
 import java.util.Date;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -83,35 +81,27 @@ public class DataNode extends Node {
     
     private static Logger log = Logger.getLogger(DataNode.class);
 
-    // The URI to the associated artifact.
     private final URI storageID;
-
-    // The checksum of the artifact.
     private final URI contentChecksum;
-
-    // The last modified date of the artifact.
     private final Date contentLastModified;
-
-    // The content length of the artifact.
-    private final long contentLength;
-
-    // The type of the artifact.
+    private final Long contentLength;
     public String contentType;
-
-    // The encoding of the artifact.
     public String contentEncoding;
+    public Boolean busy;
 
     /**
-     * DataNode constructor.
+     * Data node constructor.
      *
      * @param name The name of the node.
      * @param storageID The URI of associated artifact.
-     * @param contentChecksum The artifact checksum.
-     * @param contentLastModified The artifact lastModified date.
-     * @param contentLength The artifact contentLength.
      */
-    public DataNode(String name, URI storageID, URI contentChecksum, Date contentLastModified, long contentLength) {
-        this(name, storageID, contentChecksum, contentLastModified, contentLength, new TreeSet<>());
+    public DataNode(String name, URI storageID) {
+        super(name);
+        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
+        this.storageID = storageID;
+        this.contentChecksum = null;
+        this.contentLastModified = null;
+        this.contentLength = null;
     }
 
     /**
@@ -122,19 +112,17 @@ public class DataNode extends Node {
      * @param contentChecksum The artifact checksum.
      * @param contentLastModified The artifact lastModified date.
      * @param contentLength The artifact contentLength.
-     * @param properties The node's properties.
      */
-    public DataNode(String name, URI storageID, URI contentChecksum, Date contentLastModified,
-                    long contentLength, Set<NodeProperty> properties) {
-        super(name, properties);
-        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
+    public DataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
+        super(name);
         NodeUtil.assertNotNull(DataNode.class, "contentChecksum", "contentChecksum");
         NodeUtil.assertNotNull(DataNode.class, "contentLastModified", "contentLastModified");
         NodeUtil.assertNotNull(DataNode.class, "contentLength", "contentLength");
-        this.storageID = storageID;
+        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
         this.contentChecksum = contentChecksum;
         this.contentLastModified = contentLastModified;
         this.contentLength = contentLength;
+        this.storageID = storageID;
     }
 
     public URI getStorageID() {
@@ -149,7 +137,7 @@ public class DataNode extends Node {
         return this.contentLastModified;
     }
 
-    public long getContentLength() {
+    public Long getContentLength() {
         return this.contentLength;
     }
 

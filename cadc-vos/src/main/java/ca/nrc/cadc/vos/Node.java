@@ -95,35 +95,17 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     public int version = VOS.VOSPACE_20;
 
-    // The name of the node
     private String name;
-
-    // The ID of the creator
     public String creatorID;
-
-    // Flag indicating if the node is public
     public Boolean isPublic;
-
-    // Flag indicating if the node is locked
     public Boolean isLocked;
-
-    // Set of groups with read access to the Node
     public final Set<URI> readOnlyGroup = new TreeSet<>();
-
-    // Set of groups with read/write access to the Node
     public final Set<URI> readWriteGroup = new TreeSet<>();
-
-    // Set of node properties
     public final Set<NodeProperty> properties = new TreeSet<>();
 
-    // To be used by controlling applications as they wish
-    public transient Object appData;
-
-    // List of views which this node accepts
     public final transient List<URI> accepts = new ArrayList<>();
-
-    // List of views which this node provides
     public final transient List<URI> provides = new ArrayList<>();
+    public transient Object appData;
 
     /**
      * Node constructor.
@@ -131,20 +113,9 @@ public abstract class Node extends Entity implements Comparable<Node> {
      * @param name The name of the node.
      */
     protected Node(String name) {
-        this(name, new TreeSet<>());
-    }
-
-    /**
-     * Node constructor.
-     *
-     * @param name The name of the node.
-     * @param properties The node's properties.
-     */
-    protected Node(String name, Set<NodeProperty> properties) {
         super();
         NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
-        this.properties.addAll(properties);
     }
 
     @Override
@@ -200,6 +171,7 @@ public abstract class Node extends Entity implements Comparable<Node> {
      * Set the name of the node.
      */
     public void setName(String name) {
+        NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
     }
 

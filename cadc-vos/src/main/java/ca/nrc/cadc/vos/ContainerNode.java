@@ -69,8 +69,6 @@ package ca.nrc.cadc.vos;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 
@@ -98,17 +96,7 @@ public class ContainerNode extends Node {
      *                           false otherwise.
      */
     public ContainerNode(String name, boolean inheritPermissions) {
-        this(name, inheritPermissions, new TreeSet<>());
-    }
-
-    /**
-     * ContainerNode constructor.
-     *
-     * @param name The name of the node.
-     * @param properties The node's properties.
-     */
-    public ContainerNode(String name, boolean inheritPermissions, Set<NodeProperty> properties) {
-        super(name, properties);
+        super(name);
         this.inheritPermissions = inheritPermissions;
     }
 
