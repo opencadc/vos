@@ -65,9 +65,10 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.persist;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.vos.NodeUtil;
 
 import java.net.URI;
 import java.text.DateFormat;

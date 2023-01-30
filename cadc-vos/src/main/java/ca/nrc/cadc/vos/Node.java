@@ -74,6 +74,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
+import org.opencadc.persist.Entity;
 
 /**
  * Abstract class defining an object within VOSpace.
