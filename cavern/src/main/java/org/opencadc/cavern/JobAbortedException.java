@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -75,7 +75,7 @@ import ca.nrc.cadc.vos.VOSException;
 /**
  * Exception indicating the a job has been aborted by the client.
  * 
- * @author majorb
+ * @author yeunga
  *
  */
 public class JobAbortedException extends VOSException
