@@ -68,8 +68,9 @@
 package org.opencadc.cavern;
 
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.ac.ACIdentityManager;
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
 
@@ -77,6 +78,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.security.auth.Subject;
@@ -96,6 +98,7 @@ public class PosixIdentityManagerTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        System.setProperty(IdentityManager.class.getName(), ACIdentityManager.class.getName());
     }
 
     private UserPrincipalLookupService users = FileSystems.getDefault().getUserPrincipalLookupService();
@@ -116,13 +119,8 @@ public class PosixIdentityManagerTest {
 
             Assert.assertNull("toSubject", im.toSubject(null));
 
-            Assert.assertNull("toOwnerString", im.toOwnerString(null));
-
-            try {
-                im.getOwnerType();
-            } catch (UnsupportedOperationException expected) {
-                log.info("caught expected: " + expected);
-            }
+            Assert.assertNull("toDisplayString", im.toDisplayString(null));
+            
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -138,6 +136,12 @@ public class PosixIdentityManagerTest {
 
             Subject s = im.toSubject(orig);
             Assert.assertNotNull(s);
+            Set<HttpPrincipal> ps = s.getPrincipals(HttpPrincipal.class);
+            Assert.assertFalse(ps.isEmpty());
+            HttpPrincipal hp = ps.iterator().next();
+            log.info("toSubject: " + orig.getClass().getSimpleName() + " " + orig.getName() 
+                    + " -> " + hp.getClass().getSimpleName() + " " + hp.getName());
+            Assert.assertEquals(expected, hp);
 
             // add other principal types to subject
             String dn = "cn=" + orig.getName() + ",ou=opencadc.org,c=ca";
@@ -148,15 +152,16 @@ public class PosixIdentityManagerTest {
             // the value to "store"
             Object o = im.toOwner(s);
             Assert.assertNotNull(o);
+            log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
             String owner = (String) o;
             UserPrincipal actual = users.lookupPrincipalByName(owner);
             Assert.assertEquals(orig, actual);
             Assert.assertEquals(expected.getName(), actual.getName());
 
-            String actualDN = im.toOwnerString(s);
-            Assert.assertNotNull(actualDN);
-            X500Principal actualX500 = new X500Principal(actualDN);
-            Assert.assertEquals(0, AuthenticationUtil.compare(x500, actualX500));
+            String actualStr = im.toDisplayString(s);
+            log.info("display string: " + actualStr);
+            Assert.assertNotNull(actualStr);
+            Assert.assertEquals(orig.getName(), actualStr);
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
