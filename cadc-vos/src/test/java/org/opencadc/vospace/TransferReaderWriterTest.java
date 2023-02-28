@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2018.                            (c) 2018.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,16 +62,14 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
- *  $Revision: 4 $
- *
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.View.Parameter;
+
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
@@ -98,7 +96,7 @@ public class TransferReaderWriterTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
 
     @AfterClass
@@ -256,7 +254,7 @@ public class TransferReaderWriterTest {
     @Test
     public void testTransferWithViewAndNoParameters() {
         try {
-            View view = new View(new URI(VOS.VIEW_ANY));
+            View view = new View(VOS.VIEW_ANY);
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
             transfer.getProtocols().addAll(protocols);
             transfer.setView(view);
@@ -282,12 +280,12 @@ public class TransferReaderWriterTest {
     @Test
     public void testTransferWithViewParameters() {
         try {
-            List<Parameter> params = new ArrayList<Parameter>();
-            params.add(new Parameter(new URI(VOS.VIEW_ANY), "cutoutParameter1"));
-            params.add(new Parameter(new URI(VOS.VIEW_BINARY), "cutoutParameter2"));
+            List<View.Parameter> params = new ArrayList<View.Parameter>();
+            params.add(new View.Parameter(VOS.VIEW_ANY, "cutoutParameter1"));
+            params.add(new View.Parameter(VOS.VIEW_BINARY, "cutoutParameter2"));
             params.add(
-                new Parameter(new URI("ivo://cadc.nrc.ca/vospace/viewparam#someotherparam"), "[]{}/;,+=-'\"@#$%^"));
-            View view = new View(new URI(VOS.VIEW_ANY));
+                new View.Parameter(new URI("ivo://cadc.nrc.ca/vospace/viewparam#someotherparam"), "[]{}/;,+=-'\"@#$%^"));
+            View view = new View(new URI(VOS.VIEW_ANY.toASCIIString()));
             view.setParameters(params);
 
             Transfer transfer = new Transfer(target, Direction.pullFromVoSpace);
@@ -430,7 +428,7 @@ public class TransferReaderWriterTest {
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            Assert.assertTrue(xml.contains(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertTrue(xml.contains(VOS.PROPERTY_URI_CONTENTLENGTH.toASCIIString()));
 
             log.debug("testPushTransferContentLengthParam\n" + xml);
 
@@ -569,7 +567,7 @@ public class TransferReaderWriterTest {
             URI secondTarget = new URI(baseURI + "/mydir/myfile2");
             targetList.add(secondTarget);
 
-            View view = new View(new URI(VOS.VIEW_ANY));
+            View view = new View(new URI(VOS.VIEW_ANY.toASCIIString()));
             transfer.getTargets().addAll(targetList);
             transfer.getProtocols().addAll(protocols);
             transfer.setView(view);

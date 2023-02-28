@@ -67,16 +67,18 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import static org.junit.Assert.assertEquals;
 
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
+
+import org.opencadc.vospace.Protocol;
+import org.opencadc.vospace.Transfer;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.Direction;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;

@@ -67,7 +67,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import static org.junit.Assert.assertEquals;
 

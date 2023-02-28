@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,33 +65,43 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import org.junit.Assert;
-import org.junit.Before;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.io.File;
+import java.text.DateFormat;
+import java.util.Date;
+import org.apache.log4j.Logger;
 
-public abstract class AbstractCADCVOSTest<T> {
-    private T testSubject;
+/**
+ * @author zhangsa
+ */
+public class TestUtil {
+    private static Logger log = Logger.getLogger(TestUtil.class);
 
-    @Before
-    public void setUp() throws Exception {
-        initializeTestSubject();
+    private static final String STR_FORMAT = "MMMdd_HH.mm_";
+    private static final DateFormat dateFormat = DateUtil.getDateFormat(STR_FORMAT, DateUtil.LOCAL);
 
-        Assert.assertNotNull("Test subject should not be null.", getTestSubject());
+    public static String uniqueStringOnTime() {
+        double random = Math.random();
+        String strR = Double.toString(random);
+        int strLen = strR.length();
+        String strR2 = strR.substring(strLen - 4);
+
+        String strD = dateFormat.format(new Date());
+        return strD + strR2;
     }
 
     /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception If anything goes awry.
+     * @return
      */
-    protected abstract void initializeTestSubject() throws Exception;
-
-    public T getTestSubject() {
-        return testSubject;
+    public static File getTestFile() {
+        String strUrl = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
+        strUrl = strUrl.substring(5);
+        log.debug("test file URL: " + strUrl);
+        File testFile = new File(strUrl);
+        return testFile;
     }
 
-    public void setTestSubject(T testSubject) {
-        this.testSubject = testSubject;
-    }
 }

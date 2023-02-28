@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2009.                            (c) 2009.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,48 +62,86 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
- *  $Revision: 4 $
- *
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.xml.XmlUtil;
-import java.io.File;
-import java.text.DateFormat;
-import java.util.Date;
+import ca.nrc.cadc.util.Log4jInit;
+import java.net.URI;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
- * @author zhangsa
+ * @author yeunga
  */
-public class TestUtil {
-    private static Logger log = Logger.getLogger(TestUtil.class);
-
-    private static String STR_FORMAT = "MMMdd_HH.mm_";
-    private static DateFormat dateFormat = DateUtil.getDateFormat(STR_FORMAT, DateUtil.LOCAL);
-
-    public static String uniqueStringOnTime() {
-        double random = Math.random();
-        String strR = Double.toString(random);
-        int strLen = strR.length();
-        String strR2 = strR.substring(strLen - 4);
-
-        String strD = dateFormat.format(new Date());
-        return strD + strR2;
-    }
+public class LinkNodeTest {
+    private static Logger log = Logger.getLogger(LinkNodeTest.class);
+    private static String ROOT_NODE;
+    private static String VOS_URI = "vos://cadc.nrc.ca!vospace";
 
     /**
-     * @return
+     * @throws java.lang.Exception
      */
-    public static File getTestFile() {
-        String strUrl = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
-        strUrl = strUrl.substring(5);
-        log.debug("test file URL: " + strUrl);
-        File testFile = new File(strUrl);
-        return testFile;
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        ROOT_NODE = System.getProperty("user.name") + "/";
+    }
+
+    @Test
+    public void testInstantiationsWithoutProperties() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+        LinkNode node = new LinkNode(uri.getName(), target);
+        Assert.assertEquals(uri.getName(), node.getName());
+        Assert.assertEquals(target, node.getTarget());
+    }
+
+    @Test
+    public void testInstantiationsWithProperties() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+
+        Set<NodeProperty> properties = new TreeSet<NodeProperty>();
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
+
+        LinkNode node = new LinkNode(uri.getName(), target);
+        node.properties.addAll(properties);
+
+        Assert.assertEquals(uri.getName(), node.getName());
+        Assert.assertEquals(target, node.getTarget());
+        Set<NodeProperty> actualProperties = node.properties;
+        Assert.assertEquals(properties.size(), actualProperties.size());
+        for (NodeProperty property : properties) {
+            Assert.assertTrue(actualProperties.contains(property));
+        }
+    }
+
+    @Test
+    public void testSetTarget() throws Exception {
+        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        final String slashPath3 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+        URI newTarget = new URI(VOS_URI + slashPath3);
+        LinkNode node = new LinkNode(uri.getName(), target);
+        Assert.assertEquals(target, node.getTarget());
+
+        node.setTarget(newTarget);
+        Assert.assertEquals(newTarget, node.getTarget());
     }
 
 }

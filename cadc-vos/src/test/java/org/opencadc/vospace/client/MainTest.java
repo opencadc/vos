@@ -67,12 +67,13 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import static org.junit.Assert.fail;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+
 import java.lang.reflect.Method;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -105,37 +106,25 @@ public class MainTest {
         validateCommand.setAccessible(true);
         validateCommandArguments.setAccessible(true);
 
-        // test --create --target=vos://cadc.nrc.ca~vospace/foo/bar (default: ContainerNode)
-        String[] args1 = { "--create", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        // test --create --inheritPermissions=false --target=vos://cadc.nrc.ca~vospace/foo/bar (default: ContainerNode)
+        String[] args1 = { "--create", "--inheritPermissions=false", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap1 = new ArgumentMap(args1);
         validateCommand.invoke(command, argMap1);
         validateCommandArguments.invoke(command, argMap1);
 
-        // test --create=ContainerNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args2 = { "--create=ContainerNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        // test --create=ContainerNode --inheritPermissions=false --target=vos://cadc.nrc.ca~vospace/foo/bar
+        String[] args2 = { "--create=ContainerNode", "--inheritPermissions=false", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap2 = new ArgumentMap(args2);
         validateCommand.invoke(command, argMap2);
         validateCommandArguments.invoke(command, argMap2);
 
-        // test --create=DataNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args3 = { "--create=DataNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        // test --create=DataNode --target=vos://cadc.nrc.ca~vospace/foo/bar --storageID=cadc:TEST/file.fits
+        String[] args3 = { "--create=DataNode", "--storageID=cadc:TEST/file.fits", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap3 = new ArgumentMap(args3);
         validateCommand.invoke(command, argMap3);
         validateCommandArguments.invoke(command, argMap3);
 
-        // test --create=UnstructuredDataNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args4 = { "--create=UnstructuredDataNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
-        ArgumentMap argMap4 = new ArgumentMap(args4);
-        validateCommand.invoke(command, argMap4);
-        validateCommandArguments.invoke(command, argMap4);
-
-        // test --create=StructuredDataNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args5 = { "--create=StructuredDataNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
-        ArgumentMap argMap5 = new ArgumentMap(args5);
-        validateCommand.invoke(command, argMap5);
-        validateCommandArguments.invoke(command, argMap5);
-
-        // test --create=LinkNode --target=vos://cadc.nrc.ca~vospace/foo/bar --uri=http://www.google.com
+        // test --create=LinkNode --target=vos://cadc.nrc.ca~vospace/foo/bar --link=http://www.google.com
         String[] args6 = { "--create=LinkNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar",
             "--link=http://www.google.com" };
         ArgumentMap argMap6 = new ArgumentMap(args6);
