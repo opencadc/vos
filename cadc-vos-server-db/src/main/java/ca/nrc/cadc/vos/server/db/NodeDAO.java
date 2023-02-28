@@ -755,7 +755,7 @@ public class NodeDAO
                 log.debug("found cached subject for owner=" + nid.ownerObject);
             }
 
-            ownerPropertyString = identManager.toOwnerString(s);
+            ownerPropertyString = identManager.toDisplayString(s);
         }
         else
         {
@@ -847,7 +847,7 @@ public class NodeDAO
             commitTransaction();
             prof.checkpoint("commit.NodePutStatementCreator");
 
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toDisplayString(creator)));
             if (node instanceof ContainerNode)
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
             return node;
@@ -2649,9 +2649,6 @@ public class NodeDAO
 
             String pval;
 
-            // ownerID and creatorID data type
-            int ownerDataType = identManager.getOwnerType();
-
             Object ownerObject = null;
             NodeID nodeID = (NodeID) node.appData;
             ownerObject = nodeID.ownerObject;
@@ -2660,6 +2657,15 @@ public class NodeDAO
             if (ownerObject == null)
                 throw new IllegalStateException("cannot update a node without an owner.");
 
+            // ownerID and creatorID data type
+            //int ownerDataType = identManager.getOwnerType();
+            int ownerDataType = Types.OTHER;
+            if (ownerObject instanceof String) {
+                ownerDataType = Types.VARCHAR;
+            } else if (ownerObject instanceof Integer) {
+                ownerDataType = Types.INTEGER; 
+            }
+            
             // ownerID
             ps.setObject(col++, ownerObject, ownerDataType);
             sb.append(ownerObject);
