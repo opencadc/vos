@@ -65,25 +65,18 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import java.net.URI;
+import java.security.AccessControlException;
 
-/**
- * A VOSpace node that describes a structured data item.
- * 
- * @author yeunga
- */
-public class StructuredDataNode extends DataNode {
+public class NodeLockedException extends AccessControlException {
 
     /**
-     * StructuredDataNode constructor.
-     *
-     * @param name The name of the node.
-     * @param storageID The URI of associated artifact.
+     * Constructor with message.
+     * 
+     * @param message
      */
-    public StructuredDataNode(String name, URI storageID) {
-        super(name, storageID);
+    public NodeLockedException(String message) {
+        super(message);
     }
-
 }

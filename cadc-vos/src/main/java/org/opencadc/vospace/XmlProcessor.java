@@ -65,68 +65,22 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Logger;
+package org.opencadc.vospace;
 
 /**
- * A VOSpace node that describes a data item that contains other data
- * items.  A ContainerNode is similar to a directory.
+ * Tagging interface that holds XML related constants.
  * 
- * @author majorb
- *
+ * @author pdowler
  */
-public class ContainerNode extends Node {
-    private static Logger log = Logger.getLogger(ContainerNode.class);
-
-    // True if child nodes inherit permissions from the parent node, false otherwise.
-    private boolean inheritPermissions;
-
-    // The list of child nodes.
-    private final transient List<Node> nodes = new ArrayList<>();
-
-    /**
-     * ContainerNode constructor.
-     *
-     * @param name The name of the node.
-     * @param inheritPermissions true if child nodes inherit permissions from parent,
-     *                           false otherwise.
-     */
-    public ContainerNode(String name, boolean inheritPermissions) {
-        super(name);
-        this.inheritPermissions = inheritPermissions;
-    }
-
-    /**
-     * Do the child node's inherit the parent nodes permissions.
-     *
-     * @return true if the child nodes inherit permissions from the parent,
-     *              false otherwise.
-     */
-    public boolean isInheritPermissions() {
-        return this.inheritPermissions;
-    }
-
-    /**
-     * Set whether the child node's inherit the parent nodes permissions.
-     *
-     * @param inheritPermissions true if child nodes inherit permissions from parent,
-     *                           false otherwise.
-     */
-    public void setInheritPermissions(boolean inheritPermissions) {
-        this.inheritPermissions = inheritPermissions;
-    }
-
-    /**
-     * Get the list of all child nodes for this container node.
-     *
-     * @return list of child nodes.
-     */
-    public List<Node> getNodes() {
-        return this.nodes;
-    }
-
+public interface XmlProcessor {
+    static final String VOSPACE_NS_20 = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    static final String VOSPACE_MINOR_VERSION_21 = "2.1";
+    
+    static final String VOSPACE_SCHEMA_RESOURCE_20 = "VOSpace-2.0.xsd";
+    static final String VOSPACE_SCHEMA_RESOURCE_21 = "VOSpace-2.1.xsd";
+    
+    static final String XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+    static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
+    
+    static final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 }

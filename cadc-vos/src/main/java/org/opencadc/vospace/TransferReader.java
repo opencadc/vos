@@ -65,9 +65,8 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import ca.nrc.cadc.vos.View.Parameter;
 import ca.nrc.cadc.xml.XmlUtil;
 
 import java.io.IOException;
@@ -88,6 +87,7 @@ import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.opencadc.vospace.View.Parameter;
 
 /**
  * Constructs a Transfer from an XML source. This class is not thread safe but it is
@@ -141,8 +141,6 @@ public class TransferReader implements XmlProcessor {
     public Transfer read(Reader reader, String targetScheme)
         throws IOException, TransferParsingException {
         try {
-            // TODO: investigate creating a SAXBuilder once and re-using it
-            // as long as we can detect concurrent access (a la java collections)
             Document doc = XmlUtil.buildDocument(reader, schemaMap);
             return parseTransfer(doc, targetScheme);
         } catch (JDOMException ex) {
@@ -188,17 +186,14 @@ public class TransferReader implements XmlProcessor {
 
         View view = null;
         Parameter param = null;
-        List views = root.getChildren("view", vosNS);
-        if (views != null && views.size() > 0) {
-            Element v = (Element) views.get(0);
+        List<Element> views = root.getChildren("view", vosNS);
+        if (views.size() > 0) {
+            Element v = views.get(0);
             view = new View(new URI(v.getAttributeValue("uri")));
-            List params = v.getChildren("param", vosNS);
-            if (params != null) {
-                for (Object o : params) {
-                    Element p = (Element) o;
-                    param = new Parameter(new URI(p.getAttributeValue("uri")), p.getText());
-                    view.getParameters().add(param);
-                }
+            List<Element> params = v.getChildren("param", vosNS);
+            for (Element p : params) {
+                param = new Parameter(new URI(p.getAttributeValue("uri")), p.getText());
+                view.getParameters().add(param);
             }
         }
 
@@ -225,10 +220,10 @@ public class TransferReader implements XmlProcessor {
         if (version >= VOS.VOSPACE_21) {
             List<Element> params = root.getChildren("param", vosNS);
             for (Element pe : params) {
-                String uri = pe.getAttributeValue("uri");
+                URI uri = URI.create(pe.getAttributeValue("uri"));
                 if (VOS.PROPERTY_URI_CONTENTLENGTH.equals(uri)) {
                     try {
-                        ret.setContentLength(new Long(pe.getText()));
+                        ret.setContentLength(Long.valueOf(pe.getText()));
                     } catch (NumberFormatException ex) {
                         throw new IllegalArgumentException("invalid " + VOS.PROPERTY_URI_CONTENTLENGTH
                             + ": " + pe.getText());
@@ -268,17 +263,21 @@ public class TransferReader implements XmlProcessor {
 
     private List<Protocol> parseProtocols(Element root, Namespace vosNS, int version) {
         List<Protocol> rtn = null;
-        List prots = root.getChildren("protocol", vosNS);
+        List<Element> protocols = root.getChildren("protocol", vosNS);
 
-        if (prots != null && prots.size() > 0) {
-            rtn = new ArrayList<Protocol>(prots.size());
-            for (Object obj : prots) {
-                Element protocolElement = (Element) obj;
-
-                String uri = protocolElement.getAttributeValue("uri");
+        if (protocols.size() > 0) {
+            rtn = new ArrayList<>(protocols.size());
+            for (Element protocolElement : protocols) {
+                String uriString = protocolElement.getAttributeValue("uri");
+                URI uri;
+                try {
+                    uri = new URI(uriString);
+                } catch (URISyntaxException e) {
+                    throw new IllegalArgumentException("invalid protocol uri: " + uriString, e);
+                }
                 Protocol p = new Protocol(uri);
 
-                // optional ndpoint
+                // optional endpoint
                 String endpoint = protocolElement.getChildText("endpoint", vosNS);
                 if (endpoint != null) {
                     p.setEndpoint(endpoint);
@@ -304,12 +303,11 @@ public class TransferReader implements XmlProcessor {
 
     private List<URI> parseTargets(Element root, Namespace vosNS, String targetScheme) throws URISyntaxException {
         List<URI> rtn = null;
-        List targs = root.getChildren("target", vosNS);
+        List<Element> targs = root.getChildren("target", vosNS);
 
-        if (targs != null && targs.size() > 0) {
+        if (targs.size() > 0) {
             rtn = new ArrayList<URI>(targs.size());
-            for (Object obj : targs) {
-                Element targetElement = (Element) obj;
+            for (Element targetElement : targs) {
                 URI target = new URI(targetElement.getText());
                 log.debug("target: " + target);
 

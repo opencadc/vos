@@ -65,50 +65,33 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
-
-import java.net.URI;
-
-import org.apache.log4j.Logger;
+package org.opencadc.vospace;
 
 /**
- * A VOSpace node that points to a resource of any type.
+ * Exception indicating that a node already exists in the database.
  * 
- * @author yeunga
+ * @author majorb
+ *
  */
-public class LinkNode extends Node {
-    
-    private static Logger log = Logger.getLogger(LinkNode.class);
-    
-    // A URI that points to any type of resource.
-    private URI target;
+public class NodeAlreadyExistsException extends VOSException {
 
     /**
-     * LinkNode constructor.
-     * @param name The name of the node.
-     * @param target The URI to the node resource.
+     * Constructor with message and cause.
+     * 
+     * @param message
+     * @param cause
      */
-    public LinkNode(String name, URI target) {
-        super(name);
-        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
-        this.target = target;
+    public NodeAlreadyExistsException(String message, Throwable cause) {
+        super(message, cause);
     }
 
     /**
-     * @return Target URI of this LinkNode instance.
-     */    
-    public URI getTarget() {
-        return this.target;
-    }
-
-    /**
-     * Sets the target URI of this LinkNode instance.
-     *
-     * @param target The URI to the node resource.
+     * Constructor with message.
+     * 
+     * @param message
      */
-    public void setTarget(URI target) {
-        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
-        this.target = target;
+    public NodeAlreadyExistsException(String message) {
+        super(message);
     }
 
 }

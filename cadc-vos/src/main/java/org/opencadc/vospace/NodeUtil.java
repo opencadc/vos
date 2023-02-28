@@ -65,22 +65,45 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-/**
- * Tagging interface that holds XML related constants.
- * 
- * @author pdowler
- */
-public interface XmlProcessor {
-    static final String VOSPACE_NS_20 = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    static final String VOSPACE_MINOR_VERSION_21 = "2.1";
-    
-    static final String VOSPACE_SCHEMA_RESOURCE_20 = "VOSpace-2.0.xsd";
-    static final String VOSPACE_SCHEMA_RESOURCE_21 = "VOSpace-2.1.xsd";
-    
-    static final String XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
-    static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
-    
-    static final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+import java.net.URI;
+import java.net.URISyntaxException;
+
+public class NodeUtil {
+
+    /**
+     * Utility method so constructors can validate arguments.
+     *
+     * @param caller class doing test
+     * @param name field name being checked
+     * @param test object to test
+     * @throws IllegalArgumentException if the value is invalid
+     */
+    public static void assertNotNull(Class caller, String name, Object test)
+        throws IllegalArgumentException {
+        if (test == null) {
+            throw new IllegalArgumentException("invalid " + caller.getSimpleName() + "." + name + ": null");
+        }
+    }
+
+    // Get the VOSURI for a child node.
+
+    /**
+     * Build the VOSURI for a child node.
+     *
+     * @param parent the parent node.
+     * @param child the name of the child node.
+     * @return VOSURI for the child node.
+     */
+    public static VOSURI getChildURI(VOSURI parent, String child) {
+        try {
+            return new VOSURI(
+                new URI(parent.getScheme(), parent.getAuthority(), parent.getPath() + "/" + child,
+                        parent.getQuery(), parent.getFragment()));
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(String.format("invalid VOSURI: %s/%s", parent, child), e);
+        }
+    }
+
 }

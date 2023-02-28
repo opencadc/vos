@@ -65,15 +65,33 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-public class NodeParsingException extends VOSException {
-    public NodeParsingException(String message) {
+/**
+ * Exception indicating that a node type is not supported.
+ * 
+ * @author yeunga
+ *
+ */
+public class NodeNotSupportedException extends VOSException {
+
+    /**
+     * Constructor with message and cause.
+     *
+     * @param message
+     * @param cause
+     */
+    public NodeNotSupportedException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    /**
+     * Constructor with message.
+     * 
+     * @param message
+     */
+    public NodeNotSupportedException(String message) {
         super(message);
     }
 
-    public NodeParsingException(String message, Throwable cause) {
-        super(message, cause);
-    }
-    
 }

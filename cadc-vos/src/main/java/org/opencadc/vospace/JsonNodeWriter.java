@@ -65,33 +65,42 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
+
+import ca.nrc.cadc.xml.JsonOutputter;
+
+import java.io.IOException;
+import java.io.Writer;
+
+import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
 
 /**
- * Exception indicating that a node type is not supported.
- * 
- * @author yeunga
  *
+ * @author pdowler
  */
-public class NodeNotSupportedException extends VOSException {
+public class JsonNodeWriter extends NodeWriter {
+    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
-    /**
-     * Constructor with message and cause.
-     *
-     * @param message
-     * @param cause
-     */
-    public NodeNotSupportedException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    @Override
+    protected void write(Element root, Writer writer) 
+        throws IOException {
+        JsonOutputter outputter = new JsonOutputter();
+        outputter.getListElementNames().add("nodes");
+        outputter.getListElementNames().add("properties");
+        outputter.getListElementNames().add("accepts");
+        outputter.getListElementNames().add("provides");
 
-    /**
-     * Constructor with message.
-     * 
-     * @param message
-     */
-    public NodeNotSupportedException(String message) {
-        super(message);
+        // WebRT 72612
+        // Treat all property values as Strings.
+        // jenkinsd 2016.01.20
+        outputter.getStringElementNames().add("property");
+        
+        outputter.setFormat(Format.getPrettyFormat());
+        Document document = new Document(root);
+        outputter.output(document, writer);
     }
 
 }

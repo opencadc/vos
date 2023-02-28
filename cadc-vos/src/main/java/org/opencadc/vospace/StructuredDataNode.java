@@ -65,142 +65,39 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 
 /**
- * A View describes the data format and contents available for importing
- * and exporting data to or from a VOSpace node.
+ * A VOSpace node that describes a structured data item.
  * 
- * @author majorb
+ * @author yeunga
  */
-public class View {
-    // The view identifier
-    private URI uri;
-    
-    // Whether the view is showing original data.
-    private boolean original;
-    
-    // The list of name value pair parameters for this view.
-    private List<Parameter> params;
-    
-    /**
-     * View constructor.
-     */
-    protected View() {
-
-    }
-    
-    /**
-     * View constructor.
-     * 
-     * @param uri The view identifier.
-     */
-    public View(URI uri) {
-        this(uri, false);
-    }
+public class StructuredDataNode extends DataNode {
 
     /**
-     * View constructor for service-side.
+     * StructuredDataNode constructor.
      *
-     * @param uri The view identifier.
-     * @param original 
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
      */
-    public View(URI uri, boolean original) {
-        this.uri = uri;
-        this.original = original;
-        params = new ArrayList<Parameter>();
+    public StructuredDataNode(String name, URI storageID) {
+        super(name, storageID);
     }
 
     /**
-     * View URI setter.
+     * UnstructuredDataNode constructor.
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
+     * @param contentChecksum The artifact checksum.
+     * @param contentLastModified The artifact lastModified date.
+     * @param contentLength The artifact contentLength.
      */
-    
-    protected void setURI(URI uri) {
-        this.uri = uri;
-    }
-
-    /**
-     * @return The view identifier.
-     */
-    public URI getURI() {
-        return uri;
-    }
-
-    /**
-     * @return The view param list.
-     */
-    public List<Parameter> getParameters() {
-        return params;
-    }
-
-    /**
-     * Sets the view param list.
-     * 
-     * @param params
-     */
-    public void setParameters(List<Parameter> params) {
-        this.params = params;
-    }
-
-    /**
-     * @return True if the view is showing the orignal data.
-     */
-    public boolean isOriginal() {
-        return original;
-    }
-    
-    /**
-     * Class representing a view param.
-     * 
-     * @author majorb
-     */
-    public static class Parameter {
-        // The URI of the parameter
-        private URI uri;
-        
-        // The value of the parameter
-        private String value;
-        
-        /**
-         * Param constructor.
-         * 
-         * @param uri The param URI.
-         * @param value The param value.
-         */
-        public Parameter(URI uri, String value) {
-            this.uri = uri;
-            this.value = value;
-        }
-
-        public URI getUri() {
-            return uri;
-        }
-
-        public String getValue() {
-            return value;
-        }
-        
-        /**
-         * Compare this object to o.
-         */
-        public boolean equals(Object o) {
-            if (o != null && o instanceof Parameter) {
-                Parameter p = (Parameter) o;
-                return p.getUri().toString().equals(uri.toString())
-                    && p.getValue().equals(value);
-            }
-            return false;
-        }
-        
-    }
-
-    @Override
-    public String toString() {
-        return "View[" + uri + "," + original + "]";
+    public StructuredDataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
+        super(name, contentChecksum, contentLastModified, contentLength, storageID);
     }
 
 }

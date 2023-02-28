@@ -65,116 +65,118 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
-import java.util.Map;
 
 /**
- * @author zhangsa
+ * A VOSpace property representing metadata for a node.
+ * 
+ * @author majorb
  *
  */
-public class Protocol {
-    protected String uri; // the formal URI
-    protected String endpoint; 
-    protected URI securityMethod;
-    protected Map<String, String> param;
+public class NodeProperty implements Comparable<NodeProperty> {
 
-    /**
-     * Constructor for use in transfer requests. In a transfer request, one only
-     * specifies the protocols.
-     *
-     * @param uri a VOSpace protocol URI
-     */
-    public Protocol(String uri) {
-        this.uri = uri;
-    }
-
-    /**
-     * @param uri a VOSpace protocol URI
-     * @param endpoint
-     * @param param
-     */
-    public Protocol(String uri, String endpoint, Map<String, String> param) {
-        super();
-        this.uri = uri;
-        this.endpoint = endpoint;
-        this.param = param;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj.getClass() != this.getClass()) {
-            return false;
-        }
-        Protocol p = (Protocol) obj;
-
-        if (!this.uri.equals(p.uri)) {
-            return false;
-        }
-        
-        //if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
-        //        || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
-        //    return false;
-
-        if ((this.securityMethod != null && !this.securityMethod.equals(p.securityMethod))
-            || (p.securityMethod != null && !p.securityMethod.equals(this.securityMethod))) {
-            return false;
-        }
-        
-        if (this.param == p.param) { // both null or same object
-            return true;
-        }
-
-        if ((this.param != null && p.param == null) || (this.param == null && p.param != null)) {
-            return false;
-        }
-
-        // neither param map null, not sure if this compares
-        // keys and values or not
-        if (!this.param.entrySet().containsAll(p.param.entrySet())) {
-            return false;
-        }
-        if (!p.param.entrySet().containsAll(this.param.entrySet())) {
-            return false;
-        }
-        return true;
-    }
-
-    public String getUri() {
-        return this.uri;
-    }
-
-    public URI getSecurityMethod() {
-        return securityMethod;
-    }
-
-    public void setSecurityMethod(URI securityMethod) {
-        this.securityMethod = securityMethod;
-    }
+    public Boolean readOnly;
+    private final URI key;
+    private String value;
     
-    public String getEndpoint() {
-        return this.endpoint;
+    // true if this property is marked for deletion
+    private transient boolean markedForDeletion;
+
+    /**
+     * Property constructor.
+     * Sets the property key and value.
+     * 
+     * @param key The property identifier.
+     * @param value The property value.
+     */
+    public NodeProperty(URI key, String value) {
+        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
+        NodeUtil.assertNotNull(NodeProperty.class, "value", "value");
+        this.key = key;
+        this.value = value;
+        this.markedForDeletion = false;
     }
 
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
-
-    public Map<String, String> getParam() {
-        return this.param;
-    }
-
-    public void setParam(Map<String, String> param) {
-        this.param = param;
+    /**
+     * Property constructor.
+     * Set the property key and flag the property as markedForDeletion.
+     *
+     * @param key The property identifier.
+     */
+    public NodeProperty(URI key) {
+        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
+        this.key = key;
+        this.value = null;
+        this.markedForDeletion = true;
     }
 
     @Override
     public String toString() {
-        return "Protocol[" + uri + "," + endpoint + "," + securityMethod + "," + param + "]";
+        return this.key + ": " + this.value;
+    }
+
+    /**
+     * @return true iff the property URI are equal.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof NodeProperty) {
+            NodeProperty np = (NodeProperty) o;
+            return this.key == np.key;
+        }
+        return false;
+    }
+
+    /**
+     * Order by the URI key.
+     *
+     * @param np the NodeProperty to be compared.
+     * @return an integer denoting the display order for two NodeProperty objects.
+     */
+    @Override
+    public int compareTo(NodeProperty np) {
+        if (np == null) {
+            return -1;
+        }
+        return this.key.compareTo(np.key);
+    }
+
+    /**
+     * Get the property identifier.
+     *
+     * @return The property identifier.
+     */
+    public URI getKey() {
+        return this.key;
+    }
+
+    /**
+     * Get the property value.
+     *
+     * @return The property value.
+     */
+    public String getValue() {
+        return this.value;
+    }
+
+    /**
+     * Set the property value.
+     * TODO Should setting a value toggle markedForDeletion to false?
+     * Does a property have only 2 states:
+     * - a null value with markedForDeletion == true.
+     * - a non-null value and markedForDeletion == false.
+     *
+     * @param value new property value.
+     */
+    public void setValue(String value) {
+        this.value = value;
+        this.markedForDeletion = false;
+    }
+
+    public boolean isMarkedForDeletion() {
+        return markedForDeletion;
     }
 
 }

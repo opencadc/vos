@@ -65,16 +65,50 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
+
+import java.net.URI;
+
+import org.apache.log4j.Logger;
 
 /**
- *
- * @author pdowler
+ * A VOSpace node that points to a resource of any type.
+ * 
+ * @author yeunga
  */
-public class TransferParsingException extends Exception {
+public class LinkNode extends Node {
+    
+    private static Logger log = Logger.getLogger(LinkNode.class);
+    
+    // A URI that points to any type of resource.
+    private URI target;
 
-    public TransferParsingException(String msg, Throwable cause) {
-        super(msg, cause);
+    /**
+     * LinkNode constructor.
+     * @param name The name of the node.
+     * @param target The URI to the node resource.
+     */
+    public LinkNode(String name, URI target) {
+        super(name);
+        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
+        this.target = target;
+    }
+
+    /**
+     * @return Target URI of this LinkNode instance.
+     */    
+    public URI getTarget() {
+        return this.target;
+    }
+
+    /**
+     * Sets the target URI of this LinkNode instance.
+     *
+     * @param target The URI to the node resource.
+     */
+    public void setTarget(URI target) {
+        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
+        this.target = target;
     }
 
 }

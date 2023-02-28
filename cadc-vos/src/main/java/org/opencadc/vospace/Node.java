@@ -65,17 +65,146 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-public class NodeBusyException extends Exception {
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
+import javax.security.auth.Subject;
+import org.apache.log4j.Logger;
+import org.opencadc.persist.Entity;
+
+/**
+ * Abstract class defining an object within VOSpace.
+ *  
+ * @see DataNode
+ * @see ContainerNode
+ * 
+ * @author majorb
+ *
+ */
+public abstract class Node extends Entity implements Comparable<Node> {
+    private static final Logger log = Logger.getLogger(Node.class);
 
     /**
-     * Constructor with message.
-     * 
-     * @param message
+     * Keep track of the VOSpace version since some things differ. This field
+     * is here to facilitate reading and writing the same version of documents
+     * on the server side in order to maintain support for older clients.
      */
-    public NodeBusyException(String message) {
-        super(message);
+    public int version = VOS.VOSPACE_20;
+
+    private String name;
+    public Subject creatorID;
+    public Boolean isPublic;
+    public Boolean isLocked;
+    public final Set<URI> readOnlyGroup = new TreeSet<>();
+    public final Set<URI> readWriteGroup = new TreeSet<>();
+    public final Set<NodeProperty> properties = new TreeSet<>();
+
+    public final transient List<URI> accepts = new ArrayList<>();
+    public final transient List<URI> provides = new ArrayList<>();
+
+    // To be used by controlling applications as they wish.
+    public transient Object appData;
+
+    /**
+     * Node constructor.
+     *
+     * @param name The name of the node.
+     */
+    protected Node(String name) {
+        super();
+        NodeUtil.assertNotNull(Node.class, "name", "name");
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName()
+            + ", [name=" + name
+            + ", appData=" + appData
+            + ", properties=" + properties + "]";
+    }
+
+    /**
+     * Nodes are considered equal if the names are equal.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Node) {
+            Node node = (Node) o;
+            return this.name.equals(node.getName());
+        }
+        return false;
+    }
+
+    /**
+     * @param node the node for comparison.
+     * @return an integer denoting the display order for two nodes.
+     */
+    @Override
+    public int compareTo(Node node) {
+        if (node == null) {
+            return -1;
+        }
+        return this.name.compareTo(node.getName());
+    }
+
+    /**
+     * @return the hashcode of toString().
+     */
+    @Override
+    public int hashCode() {
+        return this.name.hashCode();
+    }
+
+    /**
+     * Get the name of the node.
+     *
+     * @return node name.
+     */
+    public String getName() {
+        return this.name;
+    }
+
+    /**
+     * Set the name of the node.
+     */
+    public void setName(String name) {
+        NodeUtil.assertNotNull(Node.class, "name", "name");
+        this.name = name;
+    }
+
+    /**
+     * Get a node property by its key.
+     * 
+     * @param uri the node property identifier.
+     * @return the node property object or null if not found.
+     */
+    public NodeProperty getProperty(URI uri) {
+        for (NodeProperty nodeProperty : this.properties) {
+            if (nodeProperty.getKey() == uri) {
+                return nodeProperty;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Return the value of the specified property.
+     *
+     * @param uri the node property identifier.
+     * @return the value or null if not found.
+     */
+    public String getPropertyValue(URI uri) {
+        NodeProperty nodeProperty = getProperty(uri);
+        if (nodeProperty != null) {
+            return nodeProperty.getValue();
+        }
+        return null;
     }
 
 }

@@ -65,19 +65,26 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.jdom2.Attribute;
@@ -126,20 +133,17 @@ public class NodeWriter implements XmlProcessor {
     }
 
     /**
-     * Write aNode to an OutputStream using UTF-8 encoding.
+     * Write a Node to an OutputStream using UTF-8 encoding.
      *
      * @param node Node to write.
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(Node node, OutputStream out) throws IOException {
+    public void write(VOSURI vosURI, Node node, OutputStream out)
+        throws IOException {
         OutputStreamWriter outWriter;
-        try {
-            outWriter = new OutputStreamWriter(out, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 encoding not supported", e);
-        }
-        write(node, outWriter);
+        outWriter = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+        write(vosURI, node, outWriter);
     }
 
     /**
@@ -149,13 +153,13 @@ public class NodeWriter implements XmlProcessor {
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    @SuppressWarnings("unchecked")
-    protected void write(Element root, Writer writer) throws IOException {
+    protected void write(Element root, Writer writer)
+        throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
         Document document = new Document(root);
         if (stylesheetURL != null) {
-            Map<String, String> instructionMap = new HashMap<String, String>(2);
+            Map<String, String> instructionMap = new HashMap<>(2);
             instructionMap.put("type", "text/xsl");
             instructionMap.put("href", stylesheetURL);
             ProcessingInstruction pi = new ProcessingInstruction("xml-stylesheet", instructionMap);
@@ -166,21 +170,25 @@ public class NodeWriter implements XmlProcessor {
 
     /**
      * Write a node to a StringBuilder.
-     * @param node
-     * @param builder
-     * @throws IOException
+     *
+     * @param vosURI The VOSURI of the node.
+     * @param node The node to write.
+     * @param builder A StringBuilder.
+     * @throws IOException if there is an error writing the node.
      */
-    public void write(Node node, StringBuilder builder) throws IOException {
-        write(node, new StringBuilderWriter(builder));
+    public void write(VOSURI vosURI, Node node, StringBuilder builder)
+        throws IOException {
+        write(vosURI, node, new StringBuilderWriter(builder));
     }
 
     /**
      * A wrapper to write node without specifying its type
      *
      */
-    public void write(Node node, Writer writer) throws IOException {
+    public void write(VOSURI vosURI, Node node, Writer writer)
+        throws IOException {
         long start = System.currentTimeMillis();
-        Element root = getRootElement(node);
+        Element root = getRootElement(vosURI, node);
         write(root, writer);
         long end = System.currentTimeMillis();
         log.debug("Write elapsed time: " + (end - start) + "ms");
@@ -192,9 +200,9 @@ public class NodeWriter implements XmlProcessor {
      * @param node Node.
      * @return root Element.
      */
-    protected Element getRootElement(Node node) {
+    protected Element getRootElement(VOSURI vosURI, Node node) {
         // Create the root element (node).
-        Element root = getNodeElement(node);
+        Element root = getNodeElement(vosURI, node);
         //root.addNamespaceDeclaration(vosNamespace);
         root.addNamespaceDeclaration(xsiNamespace);
         return root;
@@ -203,53 +211,183 @@ public class NodeWriter implements XmlProcessor {
     /**
      * Builds a single node element.
      *
-     * @param node
+     * @param node The node
      * @return
      */
-    protected Element getNodeElement(Node node) {
-        Element ret = new Element("node", vosNamespace);
-        ret.setAttribute("uri", node.getUri().toString());
-        ret.setAttribute("type", vosNamespace.getPrefix() + ":" + node.getClass().getSimpleName(), xsiNamespace);
+    protected Element getNodeElement(VOSURI vosURI, Node node) {
+        Element nodeElement = new Element("node", vosNamespace);
+        nodeElement.setAttribute("uri", vosURI.toString());
+        nodeElement.setAttribute("type", vosNamespace.getPrefix() + ":"
+            + node.getClass().getSimpleName(), xsiNamespace);
 
-        Element props = getPropertiesElement(node);
-        ret.addContent(props);
+
+        Set<NodeProperty> properties = new TreeSet<>();
 
         if (node instanceof ContainerNode) {
             ContainerNode cn = (ContainerNode) node;
-            ret.addContent(getNodesElement(cn));
-        } else if ((node instanceof DataNode)
-            || (node instanceof UnstructuredDataNode)
-            || (node instanceof StructuredDataNode)) {
-            ret.addContent(getAcceptsElement(node));
-            ret.addContent(getProvidesElement(node));
+
+            // Node variables serialized as node properties
+            addNodeVariablesToProperties(node, properties);
+
+            // ContainerNode variables serialized as node properties
+            addContainerNodeVariablesToProperties(cn, properties);
+
+            // add node properties to node field properties
+            properties.addAll(node.properties);
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
+
+            // add child node to the document
+            nodeElement.addContent(getNodesElement(vosURI, cn));
+        } else if (node instanceof DataNode) {
             DataNode dn = (DataNode) node;
-            ret.setAttribute("busy", (dn.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
+            nodeElement.setAttribute("busy", Boolean.toString(dn.busy));
+
+            // Node variables serialized as node properties
+            addNodeVariablesToProperties(node, properties);
+
+            // DataNode variables serialized as node properties
+            addDataNodeVariablesToProperties(dn, properties);
+
+            // add node properties to node field properties
+            properties.addAll(node.properties);
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
+
+            // add views to the DataNode in the document
+            nodeElement.addContent(getAcceptsElement(node));
+            nodeElement.addContent(getProvidesElement(node));
         } else if (node instanceof LinkNode) {
+
+            // Node variables serialized as node properties
+            addNodeVariablesToProperties(node, properties);
+
+            // add node properties to node field properties
+            properties.addAll(node.properties);
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
+
+            // add target element
             LinkNode ln = (LinkNode) node;
             Element targetEl = new Element("target", vosNamespace);
             targetEl.setText(ln.getTarget().toString());
-            ret.addContent(targetEl);
+            nodeElement.addContent(targetEl);
         }
-        return ret;
+
+        return nodeElement;
     }
-    
+
+    /**
+     * Add Node instance variables to the node properties.
+     *
+     * @param node a Node instance.
+     * @param properties a Set of NodeProperty.
+     */
+    protected void addNodeVariablesToProperties(Node node, Set<NodeProperty> properties) {
+        if (node.creatorID != null) {
+            IdentityManager identityManager = AuthenticationUtil.getIdentityManager();
+            String subjectString = identityManager.toDisplayString(node.creatorID);
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, subjectString));
+        }
+        if (node.isLocked != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(node.isLocked)));
+        }
+        if (node.isPublic != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic)));
+        }
+        if (!node.readOnlyGroup.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (URI group : node.readOnlyGroup) {
+                if (sb.length() > 0) {
+                    sb.append(VOS.PROPERTY_DELIM_GROUPREAD);
+                }
+                sb.append(group.toASCIIString());
+            }
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString()));
+        }
+        if (!node.readWriteGroup.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (URI group : node.readWriteGroup) {
+                if (sb.length() > 0) {
+                    sb.append(VOS.PROPERTY_DELIM_GROUPWRITE);
+                }
+                sb.append(group.toASCIIString());
+            }
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sb.toString()));
+        }
+    }
+
+    /**
+     * Add ContainerNode instance variables to the node properties.
+     *
+     * @param node a Node instance.
+     * @param properties a Set of NodeProperty.
+     */
+    protected void addContainerNodeVariablesToProperties(ContainerNode node, Set<NodeProperty> properties) {
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS,
+                                        Boolean.toString(node.isInheritPermissions())));
+    }
+
+    /**
+     * Add DataNode instance variables to the node properties.
+     *
+     * @param node a Node instance.
+     * @param properties a Set of NodeProperty.
+     */
+    protected void addDataNodeVariablesToProperties(DataNode node, Set<NodeProperty> properties) {
+
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_STORAGEID, node.getStorageID().toASCIIString()));
+
+        if (node.getContentChecksum() != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, node.getContentChecksum().toASCIIString()));
+        }
+
+        Date lastModified = null;
+        if (node.getContentLastModified() != null) {
+            lastModified = node.getContentLastModified();
+        } else if (node.getLastModified() != null) {
+            lastModified = node.getLastModified();
+        }
+        if (lastModified != null) {
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(lastModified)));
+        }
+
+        if (node.getContentLength() != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, node.getContentLength().toString()));
+        }
+
+        if (node.contentType != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, node.contentType));
+        }
+
+        if (node.contentEncoding != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, node.contentEncoding));
+        }
+    }
+
     /**
      * Build the properties Element of a Node.
      *
-     * @param node Node.
-     * @return properties Element.
+     * @param properties The set of NodeProperty's.
+     * @return A properties Element.
      */
-    protected Element getPropertiesElement(Node node) {
+    protected Element getPropertiesElement(Set<NodeProperty> properties) {
         Element ret = new Element("properties", vosNamespace);
-        for (NodeProperty nodeProperty : node.getProperties()) {
+        for (NodeProperty nodeProperty : properties) {
             Element property = new Element("property", vosNamespace);
             if (nodeProperty.isMarkedForDeletion()) {
                 property.setAttribute(new Attribute("nil", "true", xsiNamespace));
             } else {
-                property.setText(nodeProperty.getPropertyValue());
+                property.setText(nodeProperty.getValue());
             }
-            property.setAttribute("uri", nodeProperty.getPropertyURI()); 
-            property.setAttribute("readOnly", (nodeProperty.isReadOnly() ? "true" : "false"));
+            property.setAttribute("uri", nodeProperty.getKey().toASCIIString());
+            if (nodeProperty.readOnly != null) {
+                property.setAttribute("readOnly", Boolean.toString(nodeProperty.readOnly));
+            }
             ret.addContent(property);
         }
         return ret;
@@ -263,7 +401,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getAcceptsElement(Node node) {
         Element accepts = new Element("accepts", vosNamespace);
-        for (URI viewURI : node.accepts()) {
+        for (URI viewURI : node.accepts) {
             Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             accepts.addContent(viewElement);
@@ -279,7 +417,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getProvidesElement(Node node) {
         Element provides = new Element("provides", vosNamespace);
-        for (URI viewURI : node.provides()) {
+        for (URI viewURI : node.provides) {
             Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             provides.addContent(viewElement);
@@ -287,17 +425,17 @@ public class NodeWriter implements XmlProcessor {
         return provides;
     }
 
-    
     /**
      * Build the nodes Element of a ContainerNode.
      * 
      * @param node Node.
      * @return nodes Element.
      */
-    protected Element getNodesElement(ContainerNode node) {
+    protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
         Element nodes = new Element("nodes", vosNamespace);
         for (Node childNode : node.getNodes()) {
-            Element nodeElement = getNodeElement(childNode);
+            VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
+            Element nodeElement = getNodeElement(childURI, childNode);
             nodes.addContent(nodeElement);
         }
         return nodes;

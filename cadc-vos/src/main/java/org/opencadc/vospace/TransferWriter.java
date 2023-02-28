@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -177,7 +177,7 @@ public class TransferWriter implements XmlProcessor {
 
         for (Protocol protocol : transfer.getProtocols()) {
             Element pr = new Element("protocol", vosNamespace);
-            pr.setAttribute("uri", protocol.getUri());
+            pr.setAttribute("uri", protocol.getUri().toASCIIString());
             if (protocol.getEndpoint() != null) {
                 Element ep = new Element("endpoint", vosNamespace);
                 ep.addContent(protocol.getEndpoint());
@@ -204,7 +204,7 @@ public class TransferWriter implements XmlProcessor {
         // added in VOSpace-2.1
         if (transfer.version >= VOS.VOSPACE_21 && transfer.getContentLength() != null) {
             e = new Element("param", vosNamespace);
-            e.setAttribute("uri", VOS.PROPERTY_URI_CONTENTLENGTH);
+            e.setAttribute("uri", VOS.PROPERTY_URI_CONTENTLENGTH.toASCIIString());
             e.addContent(transfer.getContentLength().toString());
             root.addContent(e);
         }

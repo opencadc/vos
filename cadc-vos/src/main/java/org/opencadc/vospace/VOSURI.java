@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -243,7 +243,7 @@ public class VOSURI {
 
     @Override
     public String toString() {
-        return vosURI.toString();
+        return vosURI.toASCIIString();
     }
 
     public String getName() {

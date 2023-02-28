@@ -65,42 +65,142 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- *
- * @author pdowler
+ * A View describes the data format and contents available for importing
+ * and exporting data to or from a VOSpace node.
+ * 
+ * @author majorb
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class View {
+    // The view identifier
+    private URI uri;
+    
+    // Whether the view is showing original data.
+    private boolean original;
+    
+    // The list of name value pair parameters for this view.
+    private List<Parameter> params;
+    
+    /**
+     * View constructor.
+     */
+    protected View() {
+
+    }
+    
+    /**
+     * View constructor.
+     * 
+     * @param uri The view identifier.
+     */
+    public View(URI uri) {
+        this(uri, false);
+    }
+
+    /**
+     * View constructor for service-side.
+     *
+     * @param uri The view identifier.
+     * @param original 
+     */
+    public View(URI uri, boolean original) {
+        this.uri = uri;
+        this.original = original;
+        params = new ArrayList<Parameter>();
+    }
+
+    /**
+     * View URI setter.
+     */
+    
+    protected void setURI(URI uri) {
+        this.uri = uri;
+    }
+
+    /**
+     * @return The view identifier.
+     */
+    public URI getURI() {
+        return uri;
+    }
+
+    /**
+     * @return The view param list.
+     */
+    public List<Parameter> getParameters() {
+        return params;
+    }
+
+    /**
+     * Sets the view param list.
+     * 
+     * @param params
+     */
+    public void setParameters(List<Parameter> params) {
+        this.params = params;
+    }
+
+    /**
+     * @return True if the view is showing the orignal data.
+     */
+    public boolean isOriginal() {
+        return original;
+    }
+    
+    /**
+     * Class representing a view param.
+     * 
+     * @author majorb
+     */
+    public static class Parameter {
+        // The URI of the parameter
+        private URI uri;
+        
+        // The value of the parameter
+        private String value;
+        
+        /**
+         * Param constructor.
+         * 
+         * @param uri The param URI.
+         * @param value The param value.
+         */
+        public Parameter(URI uri, String value) {
+            this.uri = uri;
+            this.value = value;
+        }
+
+        public URI getUri() {
+            return uri;
+        }
+
+        public String getValue() {
+            return value;
+        }
+        
+        /**
+         * Compare this object to o.
+         */
+        public boolean equals(Object o) {
+            if (o != null && o instanceof Parameter) {
+                Parameter p = (Parameter) o;
+                return p.getUri().toString().equals(uri.toString())
+                    && p.getValue().equals(value);
+            }
+            return false;
+        }
+        
+    }
 
     @Override
-    protected void write(Element root, Writer writer) 
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public String toString() {
+        return "View[" + uri + "," + original + "]";
     }
 
 }

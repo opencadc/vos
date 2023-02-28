@@ -65,40 +65,80 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-public class VOSException extends Exception {
+import java.net.URI;
+import java.util.Date;
+
+import org.apache.log4j.Logger;
+
+/**
+ * A VOSpace node that describes a data item.
+ * 
+ * @author majorb
+ */
+public class DataNode extends Node {
+    
+    private static Logger log = Logger.getLogger(DataNode.class);
+
+    private final URI storageID;
+    private final URI contentChecksum;
+    private final Date contentLastModified;
+    private final Long contentLength;
+    public String contentType;
+    public String contentEncoding;
+    public boolean busy = false;
 
     /**
-     * Constructs a new runtime exception with the specified detail message and
-     * cause.
+     * DataNode constructor.
      *
-     * <p>Note that the detail message associated with
-     * <code>cause</code> is <i>not</i> automatically incorporated in
-     * this runtime exception's detail message.
-     *
-     * @param message the detail message (which is saved for later retrieval
-     *                by the {@link #getMessage()} method).
-     * @param cause   the cause (which is saved for later retrieval by the
-     *                {@link #getCause()} method).  (A <code>null</code> value is
-     *                permitted, and indicates that the cause is nonexistent or
-     *                unknown.)
-     * @since 1.4
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
      */
-    public VOSException(String message, Throwable cause) {
-        super(message, cause);
+    public DataNode(String name, URI storageID) {
+        super(name);
+        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
+        this.storageID = storageID;
+        this.contentChecksum = null;
+        this.contentLastModified = null;
+        this.contentLength = null;
     }
 
     /**
-     * Constructs a new runtime exception with the specified detail message.
-     * The cause is not initialized, and may subsequently be initialized by a
-     * call to {@link #initCause}.
+     * DataNode constructor.
      *
-     * @param message the detail message. The detail message is saved for
-     *                later retrieval by the {@link #getMessage()} method.
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
+     * @param contentChecksum The artifact checksum.
+     * @param contentLastModified The artifact lastModified date.
+     * @param contentLength The artifact contentLength.
      */
-    public VOSException(String message) {
-        super(message);
+    public DataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
+        super(name);
+        NodeUtil.assertNotNull(DataNode.class, "contentChecksum", "contentChecksum");
+        NodeUtil.assertNotNull(DataNode.class, "contentLastModified", "contentLastModified");
+        NodeUtil.assertNotNull(DataNode.class, "contentLength", "contentLength");
+        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
+        this.contentChecksum = contentChecksum;
+        this.contentLastModified = contentLastModified;
+        this.contentLength = contentLength;
+        this.storageID = storageID;
+    }
+
+    public URI getStorageID() {
+        return this.storageID;
+    }
+
+    public URI getContentChecksum() {
+        return this.contentChecksum;
+    }
+
+    public Date getContentLastModified() {
+        return this.contentLastModified;
+    }
+
+    public Long getContentLength() {
+        return this.contentLength;
     }
 
 }

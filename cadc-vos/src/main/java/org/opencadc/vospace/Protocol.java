@@ -65,145 +65,116 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-import org.apache.log4j.Logger;
-import org.opencadc.persist.Entity;
+import java.util.Map;
 
 /**
- * Abstract class defining an object within VOSpace.
- *  
- * @see ca.nrc.cadc.vos.DataNode
- * @see ca.nrc.cadc.vos.ContainerNode
- * 
- * @author majorb
+ * @author zhangsa
  *
  */
-public abstract class Node extends Entity implements Comparable<Node> {
-    private static final Logger log = Logger.getLogger(Node.class);
+public class Protocol {
+    protected URI uri; // the formal URI
+    protected String endpoint; 
+    protected URI securityMethod;
+    protected Map<String, String> param;
 
     /**
-     * Keep track of the VOSpace version since some things differ. This field
-     * is here to facilitate reading and writing the same version of documents
-     * on the server side in order to maintain support for older clients.
-     */
-    public int version = VOS.VOSPACE_20;
-
-    private String name;
-    public String creatorID;
-    public Boolean isPublic;
-    public Boolean isLocked;
-    public final Set<URI> readOnlyGroup = new TreeSet<>();
-    public final Set<URI> readWriteGroup = new TreeSet<>();
-    public final Set<NodeProperty> properties = new TreeSet<>();
-
-    public final transient List<URI> accepts = new ArrayList<>();
-    public final transient List<URI> provides = new ArrayList<>();
-
-    // To be used by controlling applications as they wish.
-    public transient Object appData;
-
-    /**
-     * Node constructor.
+     * Constructor for use in transfer requests. In a transfer request, one only
+     * specifies the protocols.
      *
-     * @param name The name of the node.
+     * @param uri a VOSpace protocol URI
      */
-    protected Node(String name) {
+    public Protocol(URI uri) {
+        this.uri = uri;
+    }
+
+    /**
+     * @param uri a VOSpace protocol URI
+     * @param endpoint
+     * @param param
+     */
+    public Protocol(URI uri, String endpoint, Map<String, String> param) {
         super();
-        NodeUtil.assertNotNull(Node.class, "name", "name");
-        this.name = name;
+        this.uri = uri;
+        this.endpoint = endpoint;
+        this.param = param;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj.getClass() != this.getClass()) {
+            return false;
+        }
+        Protocol p = (Protocol) obj;
+
+        if (!this.uri.equals(p.uri)) {
+            return false;
+        }
+        
+        //if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
+        //        || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
+        //    return false;
+
+        if ((this.securityMethod != null && !this.securityMethod.equals(p.securityMethod))
+            || (p.securityMethod != null && !p.securityMethod.equals(this.securityMethod))) {
+            return false;
+        }
+        
+        if (this.param == p.param) { // both null or same object
+            return true;
+        }
+
+        if ((this.param != null && p.param == null) || (this.param == null && p.param != null)) {
+            return false;
+        }
+
+        // neither param map null, not sure if this compares
+        // keys and values or not
+        if (!this.param.entrySet().containsAll(p.param.entrySet())) {
+            return false;
+        }
+        if (!p.param.entrySet().containsAll(this.param.entrySet())) {
+            return false;
+        }
+        return true;
+    }
+
+    public URI getUri() {
+        return this.uri;
+    }
+
+    public URI getSecurityMethod() {
+        return securityMethod;
+    }
+
+    public void setSecurityMethod(URI securityMethod) {
+        this.securityMethod = securityMethod;
+    }
+    
+    public String getEndpoint() {
+        return this.endpoint;
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+
+    public Map<String, String> getParam() {
+        return this.param;
+    }
+
+    public void setParam(Map<String, String> param) {
+        this.param = param;
     }
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName()
-            + ", [name=" + name
-            + ", appData=" + appData
-            + ", properties=" + properties + "]";
-    }
-
-    /**
-     * Nodes are considered equal if the names are equal.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Node) {
-            Node node = (Node) o;
-            return this.name.equals(node.getName());
-        }
-        return false;
-    }
-
-    /**
-     * @param node the node for comparison.
-     * @return an integer denoting the display order for two nodes.
-     */
-    @Override
-    public int compareTo(Node node) {
-        if (node == null) {
-            return -1;
-        }
-        return this.name.compareTo(node.getName());
-    }
-
-    /**
-     * @return the hashcode of toString().
-     */
-    @Override
-    public int hashCode() {
-        return this.name.hashCode();
-    }
-
-    /**
-     * Get the name of the node.
-     *
-     * @return node name.
-     */
-    public String getName() {
-        return this.name;
-    }
-
-    /**
-     * Set the name of the node.
-     */
-    public void setName(String name) {
-        NodeUtil.assertNotNull(Node.class, "name", "name");
-        this.name = name;
-    }
-
-    /**
-     * Get a node property by its key.
-     * 
-     * @param uri the node property identifier.
-     * @return the node property object or null if not found.
-     */
-    public NodeProperty getProperty(URI uri) {
-        for (NodeProperty nodeProperty : this.properties) {
-            if (nodeProperty.getKey() == uri) {
-                return nodeProperty;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Return the value of the specified property.
-     *
-     * @param uri the node property identifier.
-     * @return the value or null if not found.
-     */
-    public String getPropertyValue(URI uri) {
-        NodeProperty nodeProperty = getProperty(uri);
-        if (nodeProperty != null) {
-            return nodeProperty.getValue();
-        }
-        return null;
+        return "Protocol[" + uri + "," + endpoint + "," + securityMethod + "," + param + "]";
     }
 
 }

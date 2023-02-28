@@ -65,23 +65,16 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-public class NodeUtil {
+/**
+ *
+ * @author pdowler
+ */
+public class TransferParsingException extends Exception {
 
-    /**
-     * Utility method so constructors can validate arguments.
-     *
-     * @param caller class doing test
-     * @param name field name being checked
-     * @param test object to test
-     * @throws IllegalArgumentException if the value is invalid
-     */
-    public static void assertNotNull(Class caller, String name, Object test)
-        throws IllegalArgumentException {
-        if (test == null) {
-            throw new IllegalArgumentException("invalid " + caller.getSimpleName() + "." + name + ": null");
-        }
+    public TransferParsingException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 
 }

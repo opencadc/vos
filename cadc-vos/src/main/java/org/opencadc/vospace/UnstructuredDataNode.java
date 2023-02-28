@@ -65,33 +65,39 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
+
+import java.net.URI;
+import java.util.Date;
 
 /**
- * Exception indicating that a node already exists in the database.
+ * A VOSpace node that describes an unstructured data item.
  * 
- * @author majorb
- *
+ * @author yeunga
  */
-public class NodeAlreadyExistsException extends VOSException {
+public class UnstructuredDataNode extends DataNode {
 
     /**
-     * Constructor with message and cause.
-     * 
-     * @param message
-     * @param cause
+     * UnstructuredDataNode constructor.
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
      */
-    public NodeAlreadyExistsException(String message, Throwable cause) {
-        super(message, cause);
+    public UnstructuredDataNode(String name, URI storageID) {
+        super(name, storageID);
     }
 
     /**
-     * Constructor with message.
-     * 
-     * @param message
+     * UnstructuredDataNode constructor.
+     *
+     * @param name The name of the node.
+     * @param storageID The URI of associated artifact.
+     * @param contentChecksum The artifact checksum.
+     * @param contentLastModified The artifact lastModified date.
+     * @param contentLength The artifact contentLength.
      */
-    public NodeAlreadyExistsException(String message) {
-        super(message);
+    public UnstructuredDataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
+        super(name, contentChecksum, contentLastModified, contentLength, storageID);
     }
 
 }

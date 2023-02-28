@@ -65,118 +65,68 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
 
 /**
- * A VOSpace property representing metadata for a node.
+ * A VOSpace node that describes a data item that contains other data
+ * items.  A ContainerNode is similar to a directory.
  * 
  * @author majorb
  *
  */
-public class NodeProperty implements Comparable<NodeProperty> {
+public class ContainerNode extends Node {
+    private static Logger log = Logger.getLogger(ContainerNode.class);
 
-    public Boolean readOnly;
-    private final URI key;
-    private String value;
-    
-    // true if this property is marked for deletion
-    private transient boolean markedForDeletion;
+    // True if child nodes inherit permissions from the parent node, false otherwise.
+    private boolean inheritPermissions;
 
-    /**
-     * Property constructor.
-     * Sets the property key and value.
-     * 
-     * @param key The property identifier.
-     * @param value The property value.
-     */
-    public NodeProperty(URI key, String value) {
-        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
-        NodeUtil.assertNotNull(NodeProperty.class, "value", "value");
-        this.key = key;
-        this.value = value;
-        this.markedForDeletion = false;
-    }
+    // The list of child nodes.
+    private final transient List<Node> nodes = new ArrayList<>();
 
     /**
-     * Property constructor.
-     * Set the property key and flag the property as markedForDeletion.
+     * ContainerNode constructor.
      *
-     * @param key The property identifier.
+     * @param name The name of the node.
+     * @param inheritPermissions true if child nodes inherit permissions from parent,
+     *                           false otherwise.
      */
-    public NodeProperty(URI key) {
-        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
-        this.key = key;
-        this.value = null;
-        this.markedForDeletion = true;
-    }
-
-    @Override
-    public String toString() {
-        return this.key + ": " + this.value;
+    public ContainerNode(String name, boolean inheritPermissions) {
+        super(name);
+        this.inheritPermissions = inheritPermissions;
     }
 
     /**
-     * @return true iff the property URI are equal.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof NodeProperty) {
-            NodeProperty np = (NodeProperty) o;
-            return this.key == np.key;
-        }
-        return false;
-    }
-
-    /**
-     * Order by the URI key.
+     * Do the child node's inherit the parent nodes permissions.
      *
-     * @param np the NodeProperty to be compared.
-     * @return an integer denoting the display order for two NodeProperty objects.
+     * @return true if the child nodes inherit permissions from the parent,
+     *              false otherwise.
      */
-    @Override
-    public int compareTo(NodeProperty np) {
-        if (np == null) {
-            return -1;
-        }
-        return this.key.compareTo(np.key);
+    public boolean isInheritPermissions() {
+        return this.inheritPermissions;
     }
 
     /**
-     * Get the property identifier.
+     * Set whether the child node's inherit the parent nodes permissions.
      *
-     * @return The property identifier.
+     * @param inheritPermissions true if child nodes inherit permissions from parent,
+     *                           false otherwise.
      */
-    public URI getKey() {
-        return this.key;
+    public void setInheritPermissions(boolean inheritPermissions) {
+        this.inheritPermissions = inheritPermissions;
     }
 
     /**
-     * Get the property value.
+     * Get the list of all child nodes for this container node.
      *
-     * @return The property value.
+     * @return list of child nodes.
      */
-    public String getValue() {
-        return this.value;
-    }
-
-    /**
-     * Set the property value.
-     * TODO Should setting a value toggle markedForDeletion to false?
-     * Does a property have only 2 states:
-     * - a null value with markedForDeletion == true.
-     * - a non-null value and markedForDeletion == false.
-     *
-     * @param value new property value.
-     */
-    public void setValue(String value) {
-        this.value = value;
-        this.markedForDeletion = false;
-    }
-
-    public boolean isMarkedForDeletion() {
-        return markedForDeletion;
+    public List<Node> getNodes() {
+        return this.nodes;
     }
 
 }

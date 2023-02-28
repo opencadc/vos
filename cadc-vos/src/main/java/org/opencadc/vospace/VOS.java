@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
 
@@ -80,31 +80,6 @@ public class VOS {
 
     public static final int VOSPACE_20 = 20;
     public static final int VOSPACE_21 = 21;
-
-    // Enumeration for Node busy states
-    public static enum NodeBusyState {
-        notBusy("N"),
-        busyWithWrite("W");
-
-        private String value;
-
-        private NodeBusyState(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public static NodeBusyState getStateFromValue(String value) {
-            if (value.equals(notBusy.getValue())) {
-                return notBusy;
-            } else if (value.equals(busyWithWrite.getValue())) {
-                return busyWithWrite;
-            }
-            return null;
-        }
-    }
 
     public static enum Detail {
         min("min"),
@@ -270,7 +245,11 @@ public class VOS {
     // Flag indicating that the Node passed a write-permission check
     public static final URI PROPERTY_URI_WRITABLE = URI.create("ivo://cadc.nrc.ca/vospace/core#writable");
 
+    // Flag indicating that the Node children inherit the parent node permissions
+    public static final URI PROPERTY_URI_INHERIT_PERMISSIONS = URI.create("ivo://cadc.nrc.ca/vospace/core#inheritPermissions");
 
+    // Flag indicating that the Node children inherit the parent node permissions
+    public static final URI PROPERTY_URI_STORAGEID = URI.create("ivo://cadc.nrc.ca/vospace/core#storageID");
 
 
     /*

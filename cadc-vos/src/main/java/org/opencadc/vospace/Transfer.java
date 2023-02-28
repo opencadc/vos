@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -156,7 +156,7 @@ public class Transfer {
         String rtn = null;
         if (this.protocols != null) {
             for (Protocol p : this.protocols) {
-                if (p.getUri().equalsIgnoreCase(strProtocol)) {
+                if (p.getUri().toASCIIString().equalsIgnoreCase(strProtocol)) {
                     rtn = p.getEndpoint();
                     break;
                 }
@@ -192,7 +192,7 @@ public class Transfer {
         List<String> rtn = new ArrayList<String>();
         if (this.protocols != null) {
             for (Protocol p : this.protocols) {
-                if (p.getUri().equalsIgnoreCase(strProtocol)) {
+                if (p.getUri().toASCIIString().equalsIgnoreCase(strProtocol)) {
                     rtn.add(p.getEndpoint());
                 }
             }

@@ -65,25 +65,15 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
-import java.net.URI;
-
-/**
- * A VOSpace node that describes an unstructured data item.
- * 
- * @author yeunga
- */
-public class UnstructuredDataNode extends DataNode {
-
-    /**
-     * UnstructuredDataNode constructor.
-     *
-     * @param name The name of the node.
-     * @param storageID The URI of associated artifact.
-     */
-    public UnstructuredDataNode(String name, URI storageID) {
-        super(name, storageID);
+public class NodeParsingException extends VOSException {
+    public NodeParsingException(String message) {
+        super(message);
     }
 
+    public NodeParsingException(String message, Throwable cause) {
+        super(message, cause);
+    }
+    
 }

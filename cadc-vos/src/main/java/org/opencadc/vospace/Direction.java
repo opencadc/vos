@@ -65,33 +65,66 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package org.opencadc.vospace;
 
 /**
- * Exception indicating that a node could not be found in the database.
- * 
+ * Class to hold the direction information for a transfer.
+ *
  * @author majorb
  *
  */
-public class NodeNotFoundException extends VOSException {
+public class Direction {
+
+    // predefined direction values
+    public static final String pushToVoSpaceValue = "pushToVoSpace";
+    public static final String pullToVoSpaceValue = "pullToVoSpace";
+    public static final String pushFromVoSpaceValue = "pushFromVoSpace";
+    public static final String pullFromVoSpaceValue = "pullFromVoSpace";
+    
+    // predefined directions
+    public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
+    public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
+    public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
+    public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
+
+    public static final Direction BIDIRECTIONAL = new Direction("ivo://cadc.nrc.ca/vospace#biDirectional");
+    
+    private final String value;
 
     /**
-     * Constructor with message and cause.
-     * 
-     * @param message
-     * @param cause
+     * Direction constructor.
+     * @param value direction value.
      */
-    public NodeNotFoundException(String message, Throwable cause) {
-        super(message, cause);
+    public Direction(String value) {
+        this.value = value;
     }
 
     /**
-     * Constructor with message.
-     * 
-     * @param message
+     * Get the value of this direction.
+     *
+     * @return direction value.
      */
-    public NodeNotFoundException(String message) {
-        super(message);
+    public String getValue() {
+        return value;
+    }
+
+    /**
+     * Return true if the values are equal, ignoring case.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Direction) {
+            String value = ((Direction) o).getValue();
+            if (value != null) {
+                return value.equalsIgnoreCase(value);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Direction[" + value +  "]";
     }
 
 }
