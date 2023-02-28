@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
@@ -81,22 +81,6 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeLockedException;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.StructuredDataNode;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.UnstructuredDataNode;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.View.Parameter;
 
 import java.io.File;
 import java.io.FileReader;
@@ -113,10 +97,25 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.Direction;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeLockedException;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.NodeUtil;
+import org.opencadc.vospace.Protocol;
+import org.opencadc.vospace.Transfer;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.View;
 
 /**
  * Main method for the command-line VOSpace client.
@@ -152,6 +151,8 @@ public class Main implements Runnable {
     public static final String ARG_RECURSIVE = "recursive";
     public static final String ARG_LOCK = "lock";
     public static final String ARG_QUICK = "quick";
+    public static final String ARG_INHERIT_PERMISSIONS = "inheritPermissions";
+    public static final String ARG_STORAGE_ID = "storageID";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -165,7 +166,7 @@ public class Main implements Runnable {
      * Supported node type
      */
     public enum NodeType {
-        CONTAINER_NODE, LINK_NODE, STRUCTURED_DATA_NODE, UNSTRUCTURED_DATA_NODE
+        CONTAINER_NODE, LINK_NODE, DATA_NODE
     }
 
     /**
@@ -178,7 +179,7 @@ public class Main implements Runnable {
     private NodeType nodeType;
     private Operation operation;
     private VOSURI target;
-    private List<NodeProperty> properties;
+    private Set<NodeProperty> properties;
     private String contentType;
     private String contentEncoding;
 
@@ -192,8 +193,9 @@ public class Main implements Runnable {
 
     private boolean recursiveMode = false;
 
-    // target of a LinkNode
+    private boolean inheritPermissions;
     private URI link;
+    private URI storageID;
 
     /**
      * @param args  The arguments passed into this command.
@@ -279,17 +281,28 @@ public class Main implements Runnable {
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
             if (n instanceof ContainerNode) {
-                up = new ContainerNode(target, properties);
+                up = new ContainerNode(target.getName(), ((ContainerNode) n).isInheritPermissions());
+                up.properties.addAll(properties);
             } else if (n instanceof DataNode) {
-                up = new DataNode(target, properties);
+                DataNode dn = (DataNode) n;
+                if (dn.getContentChecksum() != null
+                    && dn.getContentLastModified() != null
+                    && dn.getContentLength() != null) {
+                    up = new DataNode(target.getName(), dn.getContentChecksum(), dn.getContentLastModified(),
+                                      dn.getContentLength(), dn.getStorageID());
+                } else {
+                    up = new DataNode(target.getName(), dn.getStorageID());
+                }
+                up.properties.addAll(properties);
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
-                up = new LinkNode(target, properties, link);
+                up = new LinkNode(target.getName(), link);
+                up.properties.addAll(properties);
             } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             }
 
-            this.client.setNode(up);
+            this.client.setNode(this.target, up);
             log.info("updated properties: " + this.target);
         } catch (NodeNotFoundException ex) {
             msg("not found: " + target);
@@ -420,29 +433,26 @@ public class Main implements Runnable {
         }
     }
 
-
     private void doCreate() {
         try {
             Node node;
             switch (this.nodeType) {
                 case CONTAINER_NODE:
-                    node = new ContainerNode(this.target, this.properties);
+                    node = new ContainerNode(this.target.getName(), this.inheritPermissions);
                     break;
                 case LINK_NODE:
-                    node = new LinkNode(this.target, this.properties, this.link);
+                    node = new LinkNode(this.target.getName(), this.link);
                     break;
-                case STRUCTURED_DATA_NODE:
-                    node = new StructuredDataNode(this.target, this.properties);
-                    break;
-                case UNSTRUCTURED_DATA_NODE:
-                    node = new UnstructuredDataNode(this.target, this.properties);
+                case DATA_NODE:
+                    node = new DataNode(this.target.getName(), this.storageID);
                     break;
                 default:
                     throw new RuntimeException("BUG. Unsupported node type " + this.nodeType);
             }
+            node.properties.addAll(this.properties);
 
-            Node nodeRtn = client.createNode(node);
-            log.info("created: " + nodeRtn.getUri());
+            Node nodeRtn = client.createNode(this.target, node);
+            log.info("created: " + nodeRtn.getName());
         } catch (Throwable t) {
             msg("failed to create: " + target);
             if (t.getMessage() != null) {
@@ -482,7 +492,7 @@ public class Main implements Runnable {
         try {
             Node n = client.getNode(target.getPath(), queryString);
 
-            msg(getType(n) + ": " + n.getUri());
+            msg(getType(n) + ": " + target);
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
             msg("is locked: " + safePropertyRef(n, VOS.PROPERTY_URI_ISLOCKED));
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
@@ -511,7 +521,7 @@ public class Main implements Runnable {
                 }
 
                 log.debug("get container node returned : " + cn.getNodes().size() + " children.");
-                printChildList(n, cn.getNodes());
+                printChildList(target, cn.getNodes());
 
                 // get remaining children if the user isn't explicitly controlling paging
                 if (!explicitPaging) {
@@ -519,7 +529,8 @@ public class Main implements Runnable {
                     String uriQueryParam = null;
                     while (cn.getNodes().size() > 0) {
                         log.debug("Getting next set of children.");
-                        uriQueryObj = cn.getNodes().get(cn.getNodes().size() - 1).getUri();
+                        Node child = cn.getNodes().get(cn.getNodes().size() - 1);
+                        uriQueryObj = NodeUtil.getChildURI(target, child.getName());
                         uriQueryParam = "uri=" + NetUtil.encode(uriQueryObj.toString());
                         cn = null;
 
@@ -536,10 +547,10 @@ public class Main implements Runnable {
                         log.debug("next set has : " + cn.getNodes().size() + " children.");
 
                         // remove the first child if it is the one matching the uri parameter
-                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getUri().equals(uriQueryObj)) {
+                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getName().equals(uriQueryObj.getName())) {
                             cn.getNodes().remove(0);
                         }
-                        printChildList(n, cn.getNodes());
+                        printChildList(target, cn.getNodes());
                     }
                 }
             } else if (n instanceof DataNode) {
@@ -560,7 +571,7 @@ public class Main implements Runnable {
         }
     }
 
-    private void printChildList(Node n, List<Node> children) {
+    private void printChildList(VOSURI parent, List<Node> children) {
         StringBuilder sb = null;
         for (Node child : children) {
             sb = new StringBuilder();
@@ -568,11 +579,12 @@ public class Main implements Runnable {
             if (child instanceof ContainerNode) {
                 name += "/";
             }
+            VOSURI childURI = NodeUtil.getChildURI(parent, child.getName());
             sb.append(pad(name,32));
             sb.append(pad(getContentLength(child,true),12));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26));
-            sb.append(child.getUri().toString());
+            sb.append(childURI);
             msg(sb.toString());
         }
     }
@@ -614,7 +626,7 @@ public class Main implements Runnable {
             view = createAcceptsView(new VOSURI(originalDestination), null);
         }
         if (view == null) {
-            view = new View(new URI(VOS.VIEW_DEFAULT));
+            view = new View(VOS.VIEW_DEFAULT);
         }
 
         Protocol proto = null;
@@ -664,36 +676,36 @@ public class Main implements Runnable {
 
         boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
         if (checkProps || log.isDebugEnabled()) {
+            VOSURI destinationURI = new VOSURI(destination);
             log.debug("clientTransfer getTarget: " + node);
-            Node cur = this.client.getNode(node.getUri().getPath());
-            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(cur));
+            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node));
             if (checkProps) {
-                log.debug("checking properties after put: " + cur.getUri());
+                log.debug("checking properties after put: " + node.getName());
                 boolean updateProps = false;
                 for (NodeProperty np : properties) {
-                    updateProps = updateProps || updateProperty(cur, np.getPropertyURI(), np.getPropertyValue());
+                    updateProps = updateProps || updateProperty(node, np.getKey(), np.getValue());
                 }
                 if (updateProps) {
-                    log.debug("updating properties after put: " + cur.getUri());
-                    client.setNode(cur);
+                    log.debug("updating properties after put: " + node.getName());
+                    client.setNode(destinationURI, node);
                 }
             }
         }
     }
 
-    private boolean updateProperty(Node n, String propURI, String propValue) {
-        log.debug("checking property: " + propURI + " vs " + propValue);
+    private boolean updateProperty(Node node, URI key, String value) {
+        log.debug("checking property: " + key + " vs " + value);
         boolean ret = false;
-        if (propValue != null) {
-            NodeProperty cur = n.findProperty(propURI);
+        if (value != null) {
+            NodeProperty cur = node.getProperty(key);
             if (cur == null) {
-                log.debug("adding property: " + propURI + " = " + propValue);
-                n.getProperties().add(new NodeProperty(propURI, propValue));
+                log.debug("adding property: " + key + " = " + value);
+                node.properties.add(new NodeProperty(key, value));
                 ret = true;
-            } else if (!propValue.equals(cur.getPropertyValue())) {
-                log.debug("setting property: " + propURI + " = '" + propValue
-                              + "', was '" + cur.getPropertyValue() + "'");
-                cur.setValue(propValue);
+            } else if (!value.equals(cur.getValue())) {
+                log.debug("setting property: " + key + " = '" + value
+                              + "', was '" + cur.getValue() + "'");
+                cur.setValue(value);
                 ret = true;
             }
         }
@@ -708,7 +720,7 @@ public class Main implements Runnable {
             source = new URI(source.toString().replace("?" + source.getQuery(), ""));
         }
         if (view == null) {
-            view = new View(new URI(VOS.VIEW_DEFAULT));
+            view = new View(VOS.VIEW_DEFAULT);
         }
 
         Protocol proto = null;
@@ -761,8 +773,8 @@ public class Main implements Runnable {
             msg("Failed to upload, keeping local file.");
             System.exit(-1);
         }
-        NodeProperty uploadedSizeProp = uploadedNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-        long uploadedSize = Long.parseLong(uploadedSizeProp.getPropertyValue());
+        NodeProperty uploadedSizeProp = uploadedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        long uploadedSize = Long.parseLong(uploadedSizeProp.getValue());
         log.debug("uploaded size: " + uploadedSize);
         log.debug("original size: " + sourceFile.length());
         if (uploadedSize != sourceFile.length()) {
@@ -783,9 +795,9 @@ public class Main implements Runnable {
         copyFromVOSpace();
         log.debug("copied " + this.destination.getPath() + " to local file " + source);
 
-        NodeProperty downloadedSizeProp = sourceNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        NodeProperty downloadedSizeProp = sourceNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
         File destFile = new File(destination);
-        long downloadedSize = Long.parseLong(downloadedSizeProp.getPropertyValue());
+        long downloadedSize = Long.parseLong(downloadedSizeProp.getValue());
         log.debug("downloaded size: " + downloadedSize);
         log.debug("original size: " + destFile.length());
         if (downloadedSize != destFile.length()) {
@@ -804,17 +816,18 @@ public class Main implements Runnable {
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
             if (n instanceof ContainerNode) {
-                up = new ContainerNode(target, properties);
+                up = new ContainerNode(target.getName(), this.inheritPermissions);
             } else if (n instanceof DataNode) {
-                up = new DataNode(target, properties);
+                up = new DataNode(target.getName(), this.storageID);
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
-                up = new LinkNode(target, properties, link);
+                up = new LinkNode(target.getName(), link);
             } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             }
+            up.properties.addAll(properties);
 
-            ClientRecursiveSetNode recSetNode = client.setNodeRecursive(up);
+            ClientRecursiveSetNode recSetNode = client.setNodeRecursive(target, up);
 
             Thread abortThread = new ClientAbortThread(recSetNode.getJobURL());
             Runtime.getRuntime().addShutdownHook(abortThread);
@@ -893,7 +906,7 @@ public class Main implements Runnable {
         throws URISyntaxException {
         AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
             public List<URI> getViews(Node node) { 
-                return node.accepts(); 
+                return node.accepts;
             }
         };
         return createView(vosuri, nodeViewWrapper, node);
@@ -911,7 +924,7 @@ public class Main implements Runnable {
         throws URISyntaxException {
         AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
             public List<URI> getViews(Node node) { 
-                return node.provides(); 
+                return node.provides;
             }
         };
         return createView(vosuri, nodeViewWrapper, node);
@@ -920,20 +933,20 @@ public class Main implements Runnable {
     /**
      * Create a view based on the query string in the vosuri.
      *
-     * @param vosuri
+     * @param vosURI
      * @param acceptsOrProvides
      * @param node The node object if available.
      * @return view
      * @throws URISyntaxException for invalid vosuri.
      */
-    private View createView(VOSURI vosuri, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
+    private View createView(VOSURI vosURI, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
             throws URISyntaxException {
         // parse the query string
-        String queryString = vosuri.getQuery();
+        String queryString = vosURI.getQuery();
         final String viewKey = "view=";
         String[] queries = queryString.split("&");
         String viewRef = null;
-        List<String> params = new ArrayList<String>();
+        List<String> params = new ArrayList<>();
         for (String query : queries) {
             if (query.startsWith(viewKey)) {
                 if (viewRef != null) {
@@ -952,9 +965,9 @@ public class Main implements Runnable {
         // get the node object if necessary
         if (node == null) {
             try {
-                node = client.getNode(vosuri.getPath(), "limit=0");
+                node = client.getNode(vosURI.getPath(), "limit=0");
             } catch (NodeNotFoundException e) {
-                throw new IllegalArgumentException("Node " + vosuri.getPath() + " not found.");
+                throw new IllegalArgumentException("Node " + vosURI.getPath() + " not found.");
             }
         }
 
@@ -967,8 +980,7 @@ public class Main implements Runnable {
         }
 
         if (viewURI == null) {
-            throw new IllegalArgumentException("View '" + viewRef + "' not supported by node " 
-            + node.getUri().toString());
+            throw new IllegalArgumentException("View '" + viewRef + "' not supported by node " + vosURI);
         }
 
         // add the view parameters
@@ -981,7 +993,7 @@ public class Main implements Runnable {
                 if (eqIndex > 0) {
                     String key = param.substring(0, eqIndex);
                     URI paramURI = new URI(paramURIBase + "#" + key);
-                    Parameter viewParam = new Parameter(paramURI, param.substring(eqIndex + 1));
+                    View.Parameter viewParam = new View.Parameter(paramURI, param.substring(eqIndex + 1));
                     view.getParameters().add(viewParam);
                 }
             }
@@ -991,15 +1003,11 @@ public class Main implements Runnable {
 
     private static String ZERO_LENGTH = "";
 
-    private String safePropertyRef(Node n, String key) {
+    private String safePropertyRef(Node n, URI key) {
         if (n == null || key == null) {
             return ZERO_LENGTH;
         }
-        NodeProperty p = n.findProperty(key);
-        if (p == null) {
-            return ZERO_LENGTH;
-        }
-        String ret = p.getPropertyValue();
+        String ret = n.getPropertyValue(key);
         if (ret == null) {
             return ZERO_LENGTH;
         }
@@ -1251,40 +1259,52 @@ public class Main implements Runnable {
         if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
             String strSrc = argMap.getValue(ARG_SRC);
             if (strSrc == null) {
-                throw new IllegalArgumentException("Argument src is required for " + this.operation);
+                throw new IllegalArgumentException("Argument --src is required for " + this.operation);
             }
 
             String strDest = argMap.getValue(ARG_DEST);
             if (strDest == null) {
-                throw new IllegalArgumentException("Argument dest is required for " + this.operation);
+                throw new IllegalArgumentException("Argument --dest is required for " + this.operation);
             }
         } else {
             String strTarget = argMap.getValue(ARG_TARGET);
             if (strTarget == null) {
-                throw new IllegalArgumentException("Argument target is required for " + this.operation);
+                throw new IllegalArgumentException("Argument --target is required for " + this.operation);
             }
 
             if (this.operation.equals(Operation.CREATE)) {
+                // create default (true) is a ContainerNode
                 String strNodeType = argMap.getValue(ARG_CREATE);
-                if (("true".equalsIgnoreCase(strNodeType)) || ("ContainerNode".equalsIgnoreCase(strNodeType))) {
+                if (("true".equalsIgnoreCase(strNodeType))
+                    || (ContainerNode.class.getSimpleName().equalsIgnoreCase(strNodeType))) {
                     this.nodeType = NodeType.CONTAINER_NODE;
-                } else if (("DataNode".equalsIgnoreCase(strNodeType))
-                    || ("UnstructuredDataNode".equalsIgnoreCase(strNodeType))) {
-                    this.nodeType = NodeType.UNSTRUCTURED_DATA_NODE;
-                } else if ("LinkNode".equalsIgnoreCase(strNodeType)) {
-                    String strLink = argMap.getValue(ARG_LINK);
-                    if (strLink == null) {
-                        throw new IllegalArgumentException("Argument link is required for node type " + strNodeType);
+                    String inheritPermissions = argMap.getValue(ARG_INHERIT_PERMISSIONS);
+                    if (inheritPermissions == null) {
+                        throw new IllegalArgumentException("Argument --inheritPermissions is required for ContainerNode");
+                    }
+                    this.inheritPermissions = Boolean.parseBoolean(inheritPermissions);
+                } else if ((DataNode.class.getSimpleName().equalsIgnoreCase(strNodeType))) {
+                    this.nodeType = NodeType.DATA_NODE;
+                    String storageID = argMap.getValue(ARG_STORAGE_ID);
+                    if (storageID == null) {
+                        throw new IllegalArgumentException("Argument --inheritPermissions is required for DateNode");
                     }
                     try {
-                        this.link = new URI(strLink);
+                        this.storageID = new URI(storageID);
                     } catch (URISyntaxException e) {
-                        throw new IllegalArgumentException("Invalid URI: " + strLink);
+                        throw new IllegalArgumentException("Invalid DataNode --storageID URI: " + storageID);
                     }
-
+                } else if (LinkNode.class.getSimpleName().equalsIgnoreCase(strNodeType)) {
                     this.nodeType = NodeType.LINK_NODE;
-                } else if ("StructuredDataNode".equalsIgnoreCase(strNodeType)) {
-                    this.nodeType = NodeType.STRUCTURED_DATA_NODE;
+                    String link = argMap.getValue(ARG_LINK);
+                    if (link == null) {
+                        throw new IllegalArgumentException("Argument --link is required for LinkNode");
+                    }
+                    try {
+                        this.link = new URI(link);
+                    } catch (URISyntaxException e) {
+                        throw new IllegalArgumentException("Invalid LinkNode --link URI: " + link);
+                    }
                 } else {
                     throw new IllegalArgumentException("Unsupported node type: " + strNodeType);
                 }
@@ -1292,7 +1312,7 @@ public class Main implements Runnable {
         }
 
         // optional properties
-        this.properties = new ArrayList<NodeProperty>();
+        this.properties = new TreeSet<NodeProperty>();
 
         String propFile = argMap.getValue(ARG_PROP);
         if (propFile != null) {
@@ -1303,8 +1323,14 @@ public class Main implements Runnable {
                         Properties p = new Properties();
                         p.load(new FileReader(f));
                         for (String key : p.stringPropertyNames()) {
+                            URI keyURI;
+                            try {
+                                keyURI = new URI(key);
+                            } catch (URISyntaxException e) {
+                                throw new IllegalArgumentException("invalid node properties key: " + key);
+                            }
                             String val = p.getProperty(key);
-                            properties.add(new NodeProperty(key, val));
+                            properties.add(new NodeProperty(keyURI, val));
                         }
                     } catch (IOException ex) {
                         log.info("failed to read properties file: " + f.getAbsolutePath()
@@ -1413,15 +1439,23 @@ public class Main implements Runnable {
             "",
             "Create node:                                                                                      ",
             "",
-            "    --create[=<ContainerNode|LinkNode|StructuredDataNode|UnstructuredDataNode>]                   ",
+            "    --create[=<ContainerNode|LinkNode|DataNode>]                                                  ",
             "    --target=<node URI>                                                                           ",
+            "    [--inheritPermissions=<true|false>}                                                           ",
             "    [--link=<link URI>]                                                                           ",
+            "    [--storageID=<storageID URI>]                                                                 ",
             "    [--prop=<properties file>]                                                                    ",
             "",
             "  Note: --create defaults to creating a ContainerNode (directory).                                ",
             "",
+            "  Note: --inheritPermissions is only required when creating a ContainerNode. If true,             ",
+            "          child nodes inherit the parent ContainerNode's permissions.                             ",
+            "",
             "  Note: --link is only required when creating a LinkNode.  It is the URI to which                 ",
             "          the LinkNode is pointing.                                                               ",
+            "",
+            "  Note: --storageID is only required when creating a DataNode.  It is the URI to                  ",
+            "          the DataNode resource.                                                                  ",
             "",
             "View node:                                                                                        ",
             "",
@@ -1476,7 +1510,7 @@ public class Main implements Runnable {
             "  Note: Only files can be moved from the local file system to VOSpace.  Similarly, only files     ",
             "  can be moved from VOSpace to the local file system.                                             ",
             "",
-            "  Note: If the destination URI referes to a VOSpace node, that node must be a directory.  If the  ",
+            "  Note: If the destination URI refers to a VOSpace node, that node must be a directory.  If the  ",
             "  directory exists, the source URI will be moved into that directory.  If the directory doesn't   ",
             "  exist, the source URI will be moved into the parent directory and will be renamed to the name   ",
             "  specified in destination URI.                                                                   "

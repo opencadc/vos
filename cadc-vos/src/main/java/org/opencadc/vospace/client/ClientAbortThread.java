@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.HttpPost;
 

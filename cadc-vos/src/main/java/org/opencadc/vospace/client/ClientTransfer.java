@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
@@ -79,9 +79,6 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.XmlProcessor;
 import ca.nrc.cadc.xml.XmlUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -99,6 +96,9 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
+import org.opencadc.vospace.Direction;
+import org.opencadc.vospace.Transfer;
+import org.opencadc.vospace.XmlProcessor;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.

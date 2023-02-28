@@ -2,12 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package ca.nrc.cadc.vos.client.integration;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.client.ClientAbortThread;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.util.HashMap;
@@ -23,39 +22,35 @@ import static org.junit.Assert.*;
  *
  * @author jburke
  */
-public class ClientAbortThreadTest
-{
+public class ClientAbortThreadTest {
     private static Logger log = Logger.getLogger(ClientAbortThreadTest.class);
 
     protected static String serviceUrl;
 
-    public ClientAbortThreadTest()
-    {
+    public ClientAbortThreadTest() {
         // Base URL of the service to be tested.
         serviceUrl = System.getProperty("service.url");
-        if (serviceUrl == null)
+        if (serviceUrl == null) {
             throw new RuntimeException("service.url System property not set");
+        }
         log.debug("serviceUrl: " + serviceUrl);
     }
 
     @BeforeClass
-    public static void setUpClass()
-    {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
+    public static void setUpClass() {
+        Log4jInit.setLevel("org.opencadc.vospace.client", Level.INFO);
     }
 
     /**
      * Test of run method, of class ClientAbortThread.
      */
     @Test
-    public void testRun()
-    {
-        try
-        {
+    public void testRun() {
+        try {
             URL uwsService = new URL(serviceUrl);
 
             // Create a UWS Job.
-            Map<String, Object> parameters = new HashMap<String, Object>();
+            Map<String, Object> parameters = new HashMap<>();
             parameters.put("runId", new String[] {"INTTEST"});
 
             HttpPost post = new HttpPost(uwsService, parameters, false);
@@ -89,9 +84,7 @@ public class ClientAbortThreadTest
             phase = out.toString("UTF-8");
             log.debug("GET phase: " + out.toString("UTF-8"));
             assertTrue("phase should be ABORTED", phase.equalsIgnoreCase("ABORTED"));
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }

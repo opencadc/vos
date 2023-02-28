@@ -68,7 +68,6 @@
 package org.opencadc.persist;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.vos.NodeUtil;
 
 import java.net.URI;
 import java.text.DateFormat;
@@ -76,6 +75,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.NodeUtil;
 
 public abstract class Entity {
     private static final Logger log = Logger.getLogger(Entity.class);

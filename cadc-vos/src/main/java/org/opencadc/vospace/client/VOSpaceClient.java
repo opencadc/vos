@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
@@ -80,22 +80,6 @@ import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -114,6 +98,22 @@ import java.util.Map;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.Direction;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.NodeParsingException;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.NodeReader;
+import org.opencadc.vospace.NodeWriter;
+import org.opencadc.vospace.Protocol;
+import org.opencadc.vospace.Transfer;
+import org.opencadc.vospace.TransferParsingException;
+import org.opencadc.vospace.TransferReader;
+import org.opencadc.vospace.TransferWriter;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.View;
 
 /**
  * VOSpace client library. This implementation
@@ -158,8 +158,8 @@ public class VOSpaceClient {
      * @param node
      * @return the created node
      */
-    public Node createNode(Node node) {
-        return this.createNode(node, true);
+    public Node createNode(VOSURI vosURI, Node node) {
+        return this.createNode(vosURI, node, true);
     }
 
     /**
@@ -170,53 +170,55 @@ public class VOSpaceClient {
      * @param checkForDuplicate If true, throw duplicate node exception if node already exists.
      * @return the created node
      */
-    public Node createNode(Node node, boolean checkForDuplicate) {
+    public Node createNode(VOSURI vosURI, Node node, boolean checkForDuplicate) {
         Node rtnNode = null;
-        log.debug("createNode(), node=" + node + ", checkForDuplicate=" + checkForDuplicate);
+        log.debug("createNode(), node=" + vosURI + ", checkForDuplicate=" + checkForDuplicate);
         try {
-            VOSURI parentURI = node.getUri().getParentURI();
-            ContainerNode parent = null;
+            VOSURI parentURI = vosURI.getParentURI();
             if (parentURI == null) {
-                throw new RuntimeException("parent (root node) not found and cannot create: " + node.getUri());
+                throw new RuntimeException("parent (root node) not found and cannot create: " + vosURI);
             }
 
+            ContainerNode parent;
             try {
-                // check for existence--get the node with minimal content.  get the target child
+                // check for existence --get the node with minimal content.  Get the target child
                 // if we need to check for duplicates.
-                Node p = null;
+                Node parentNode;
                 if (checkForDuplicate) {
-                    p = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri=" + NetUtil.encode(node.getUri().toString()));
+                    parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri="
+                        + NetUtil.encode(vosURI.toString()));
                 } else {
-                    p = this.getNode(parentURI.getPath(), "detail=min&limit=0");
+                    parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=0");
                 }
 
                 log.debug("found parent: " + parentURI);
-                if (p instanceof ContainerNode) {
-                    parent = (ContainerNode) p;
+                if (parentNode instanceof ContainerNode) {
+                    parent = (ContainerNode) parentNode;
                 } else {
-                    throw new IllegalArgumentException("cannot create a child, parent is a " + p.getClass().getSimpleName());
+                    throw new IllegalArgumentException("cannot create a child, parent is a "
+                                                           + parentNode.getClass().getSimpleName());
                 }
             } catch (NodeNotFoundException ex) {
                 // if parent does not exist, just create it!!
                 log.info("creating parent: " + parentURI);
-                ContainerNode cn = new ContainerNode(parentURI);
-                parent = (ContainerNode) createNode(cn, false);
+                ContainerNode cn = new ContainerNode(parentURI.getName(), false);
+                parent = (ContainerNode) createNode(parentURI, cn, false);
             }
 
             // check if target already exists: also could fail like this below due to race condition
             if (checkForDuplicate) {
                 for (Node n : parent.getNodes()) {
                     if (n.getName().equals(node.getName())) {
-                        throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURI().toASCIIString());
+                        throw new IllegalArgumentException("DuplicateNode: " + vosURI);
                     }
                 }
             }
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
 
-            URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
+            URL url = new URL(vospaceURL.toExternalForm() + vosURI.getPath());
             log.debug("createNode(), URL=" + url);
 
-            NodeOutputStream out = new NodeOutputStream(node);
+            NodeOutputStream out = new NodeOutputStream(vosURI, node);
             HttpUpload put = new HttpUpload(out, url);
             put.setRequestProperty(HttpTransfer.CONTENT_TYPE, "text/xml");
 
@@ -235,7 +237,8 @@ public class VOSpaceClient {
             }
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            rtnNode = nodeReader.read(put.getInputStream());
+            NodeReader.NodeReaderResult result = nodeReader.read(put.getInputStream());
+            rtnNode = result.node;
             log.debug("createNode, created node: " + rtnNode);
         } catch (IOException e) {
             log.debug("failed to create node", e);
@@ -299,7 +302,8 @@ public class VOSpaceClient {
             log.debug("node xml:\n" + xml);
                     
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            rtnNode = nodeReader.read(xml);
+            NodeReader.NodeReaderResult result = nodeReader.read(xml);
+            rtnNode = result.node;
             log.debug("getNode, returned node: " + rtnNode);
         } catch (IOException ex) {
             log.debug("failed to get node", ex);
@@ -322,17 +326,17 @@ public class VOSpaceClient {
      * @param node
      * @return
      */
-    public Node setNode(Node node) {
+    public Node setNode(VOSURI vosURI, Node node) {
         Node rtnNode = null;
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
-            URL url = new URL(vospaceURL.toExternalForm() + node.getUri().getPath());
-            log.debug("setNode: " + VOSClientUtil.xmlString(node));
+            URL url = new URL(vospaceURL.toExternalForm() + vosURI.getPath());
+            log.debug("setNode: " + VOSClientUtil.xmlString(vosURI, node));
             log.debug("setNode: " + url);
 
             NodeWriter nodeWriter = new NodeWriter();
             StringBuilder nodeXML = new StringBuilder();
-            nodeWriter.write(node, nodeXML);
+            nodeWriter.write(vosURI, node, nodeXML);
 
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
@@ -344,8 +348,8 @@ public class VOSpaceClient {
             }
 
             NodeReader nodeReader = new NodeReader();
-            rtnNode = nodeReader.read(httpPost.getInputStream());
-
+            NodeReader.NodeReaderResult result = nodeReader.read(httpPost.getInputStream());
+            rtnNode =  result.node;
         } catch (IOException e) {
             throw new IllegalStateException("failed to set node", e);
         } catch (NodeParsingException e) {
@@ -360,14 +364,14 @@ public class VOSpaceClient {
     }
 
     // create an async transfer job
-    public ClientRecursiveSetNode setNodeRecursive(Node node) {
+    public ClientRecursiveSetNode setNodeRecursive(VOSURI vosURI, Node node) {
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODEPROPS_20);
 
             //String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
             Writer stringWriter = new StringWriter();
-            nodeWriter.write(node, stringWriter);
+            nodeWriter.write(vosURI, node, stringWriter);
             //URL postUrl = new URL(asyncNodePropsUrl);
 
             FileContent nodeContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
@@ -648,15 +652,17 @@ public class VOSpaceClient {
     }
 
     private class NodeOutputStream implements OutputStreamWrapper {
+        private VOSURI vosURI;
         private Node node;
 
-        public NodeOutputStream(Node node) {
+        public NodeOutputStream(VOSURI vosURI, Node node) {
+            this.vosURI = vosURI;
             this.node = node;
         }
 
         public void write(OutputStream out) throws IOException {
             NodeWriter writer = new NodeWriter();
-            writer.write(node, out);
+            writer.write(this.vosURI, this.node, out);
         }
     }
 

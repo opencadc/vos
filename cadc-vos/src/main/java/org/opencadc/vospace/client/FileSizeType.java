@@ -65,67 +65,63 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
-import ca.nrc.cadc.net.event.TransferEvent;
-import ca.nrc.cadc.net.event.TransferListener;
-
-import org.apache.log4j.Logger;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 
 /**
- * Simple impelmentation that logs events at debug or info level.
- *
- * @author pdowler
+ * Enumerated type to represent a FileSizeType.  This will lay out the size of
+ * any one type, be it a Byte, Kilobyte, Megabyte, Gigabyte, or Terrabyte.
  */
-public class VOSpaceTransferListener implements TransferListener {
-    private static Logger log = Logger.getLogger(VOSpaceTransferListener.class);
+public enum FileSizeType {
+    BYTE(1L),
+    KILOBYTE(BYTE.getSize() * 1024L),
+    MEGABYTE(KILOBYTE.getSize() * 1024L),
+    GIGABYTE(MEGABYTE.getSize() * 1024L),
+    TERRABYTE(GIGABYTE.getSize() * 1024L);
 
-    private boolean download;
-    
-    public VOSpaceTransferListener(boolean download) {
-        this.download = download;
+    private static final String DECIMAL_FORMAT = "0.00";
+
+    private long size;
+
+    FileSizeType(final long size) {
+        this.size = size;
     }
 
-    public String getEventHeader() {
-        return null;
+    /**
+     * Obtain the size in Bytes.
+     *
+     * @return      Long bytes.
+     */
+    public long getSize() {
+        return size;
     }
 
-    public void transferEvent(TransferEvent e) {
-        switch (e.getState()) {
-            case TransferEvent.CONNECTING:
-            case TransferEvent.CONNECTED:
-                log.info(e.getStateLabel() + ": " + e.getURL());
-                break;
+    /**
+     * Produce the Human Readable file size.  This is useful for display.
+     *
+     * @param size  The size of the item to be displayed.
+     * @return      String human readable (i.e. 10MB).
+     */
+    public static String getHumanReadableSize(final long size) {
+        final NumberFormat formatter = new DecimalFormat(DECIMAL_FORMAT);
 
-
-            case TransferEvent.RETRYING:
-                log.info(e.getStateLabel() + ": " + e.getURL() + " -- retrying...");
-                break;
-
-            case TransferEvent.FAILED:
-                if (e.getFile() == null) {
-                    log.info(e.getStateLabel() + ": " + e.getURL() + " -- " + e.getError().getMessage());
-                } else if (download) {
-                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile() + " -- " + e.getError().getMessage());
-                } else {
-                    log.info(e.getStateLabel() + ": " + e.getFile() + " -> " + e.getURL() + " -- " + e.getError().getMessage());
-                }
-                break;
-
-            case TransferEvent.TRANSFERING:
-            case TransferEvent.CANCELLED:
-            case TransferEvent.COMPLETED:
-                if (download) {
-                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
-                } else {
-                    log.info(e.getStateLabel() + ": " + e.getFile() + " -> " + e.getURL());
-                }
-                break;
-
-            default:
-                log.debug("transferEvent: " + e);
+        if (size < KILOBYTE.getSize()) {
+            return size + "B";
+        } else if (size < MEGABYTE.getSize()) {
+            return formatter.format(
+                    (size / (KILOBYTE.getSize() * 1.0d))) + "KB";
+        } else if (size < GIGABYTE.getSize()) {
+            return formatter.format(
+                    (size / (MEGABYTE.getSize() * 1.0d))) + "MB";
+        } else if (size < TERRABYTE.getSize()) {
+            return formatter.format(
+                    (size / (GIGABYTE.getSize() * 1.0d))) + "GB";
+        } else {
+            return formatter.format(
+                    (size / (TERRABYTE.getSize() * 1.0d))) + "TB";
         }
     }
-
 
 }

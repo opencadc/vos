@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.client;
+package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
@@ -73,10 +73,6 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -87,6 +83,11 @@ import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.NodeWriter;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  * @author zhangsa
@@ -125,14 +126,13 @@ public class VOSClientUtil {
      *
      * @author Sailor Zhang
      */
-    public static String xmlString(Node node) {
-        String xml = null;
-        StringWriter sw = new StringWriter();
+    public static String xmlString(VOSURI vosURI, Node node) {
+        String xml;
+        StringBuilder sb = new StringBuilder();
         try {
             NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.write(node, sw);
-            xml = sw.toString();
-            sw.close();
+            nodeWriter.write(vosURI, node, sb);
+            xml = sb.toString();
         } catch (IOException e) {
             xml = "Error getting XML string from node: " + e.getMessage();
         }
