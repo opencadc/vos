@@ -69,67 +69,53 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.net.URI;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
-import ca.nrc.cadc.util.Log4jInit;
-
 /**
- *
  * @author pdowler
  */
-public class VOSURITest 
-{
+public class VOSURITest {
     private static Logger log = Logger.getLogger(VOSURITest.class);
 
-    String AUTHORITY = "cadc.nrc.ca!vospace";
-    String SERVICE = "ivo://cadc.nrc.ca/vospace";
+    public static String AUTHORITY = "cadc.nrc.ca!vospace";
+    public static String SERVICE = "ivo://cadc.nrc.ca/vospace";
 
-    static
-    {
+    static {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
     @Test
-    public void testInvalidScheme()
-    {
+    public void testInvalidScheme() {
         // VOSURI(URI)
-        try
-        {
+        try {
             URI abc = new URI("abc://" + AUTHORITY + "container/data");
             VOSURI vos = new VOSURI(abc);
             Assert.fail("expected IllegalArgumentException, created: " + vos);
-        }
-        catch(IllegalArgumentException expected) { }
-        catch(Exception unexpected)
-        {
+        } catch (IllegalArgumentException expected) {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
 
         // VOSURI(String) convenience method
-        try
-        {
+        try {
             VOSURI vos = new VOSURI("abc://" + AUTHORITY + "container/data");
             Assert.fail("expected IllegalArgumentException, created: " + vos);
-        }
-        catch(IllegalArgumentException expected) { }
-        catch(Exception unexpected)
-        {
+        } catch (IllegalArgumentException expected) {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testAuthority()
-    {
-        try
-        {
+    public void testAuthority() {
+        try {
             String base = "vos://" + AUTHORITY;
             URI uri = new URI(base);
             VOSURI vos = new VOSURI(uri);
@@ -150,22 +136,18 @@ public class VOSURITest
             uri = new URI(base + "/foo?bar");
             vos = new VOSURI(uri);
             Assert.assertEquals(AUTHORITY, vos.getAuthority());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testServiceURI()
-    {
-        try
-        {
+    public void testServiceURI() {
+        try {
             URI srvURI = new URI(SERVICE);
             String base = "vos://" + AUTHORITY;
-            
+
             URI uri = new URI(base);
             VOSURI vos = new VOSURI(uri);
             Assert.assertEquals(srvURI, vos.getServiceURI());
@@ -173,19 +155,15 @@ public class VOSURITest
             uri = new URI(base + "/foo");
             vos = new VOSURI(uri);
             Assert.assertEquals(srvURI, vos.getServiceURI());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testPath()
-    {
-        try
-        {
+    public void testPath() {
+        try {
             String base = "vos://" + AUTHORITY;
             String path = "/container/data";
 
@@ -197,19 +175,15 @@ public class VOSURITest
             vos = new VOSURI(uri);
             Assert.assertNotNull(vos.getPath());
             Assert.assertEquals(vos.getPath().length(), 0);
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testTildeSeparator()
-    {
-        try
-        {
+    public void testTildeSeparator() {
+        try {
             URI srvURI = new URI(SERVICE);
             String base = "vos://cadc.nrc.ca~vospace";
             String path = "/container/data";
@@ -218,19 +192,15 @@ public class VOSURITest
 
             Assert.assertEquals(srvURI, vos.getServiceURI());
             Assert.assertEquals(path, vos.getPath());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testMultipleSeparators()
-    {
-        try
-        {
+    public void testMultipleSeparators() {
+        try {
             URI srvURI = new URI("ivo://cadc.nrc.ca/vospace/666");
 
             String base;
@@ -255,70 +225,60 @@ public class VOSURITest
             vos = vos = new VOSURI(new URI(base + path));
             Assert.assertEquals(srvURI, vos.getServiceURI());
             Assert.assertEquals(path, vos.getPath());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testEquals()
-    {
-        try
-        {
+    public void testEquals() {
+        try {
             String[] base = { "vos://cadc.nrc.ca!foo", "vos://ca.nrc.cadc!foo", "vos://cadc.nrc.ca!bar" };
             String[] path = { "/foo", "/bar" };
 
-            for (String b1 : base)
-               for (String b2 : base)
-                   for (String p1 : path)
-                       for (String p2 : path)
-                       {
+            for (String b1 : base) {
+                for (String b2 : base) {
+                    for (String p1 : path) {
+                        for (String p2 : path) {
                             VOSURI vos1 = new VOSURI(new URI(b1 + p1));
                             VOSURI vos2 = new VOSURI(new URI(b2 + p2));
-                            if (b1 == b2 && p1 == p2)
-                               Assert.assertEquals(vos1, vos2);
-                            else
+                            if (b1 == b2 && p1 == p2) {
+                                Assert.assertEquals(vos1, vos2);
+                            } else {
                                 junit.framework.Assert.assertNotSame(vos1, vos2);
-                       }
-        }
-        catch(Exception unexpected)
-        {
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     @Test
-    public void testTrailingSlash()
-    {
-        try
-        {
+    public void testTrailingSlash() {
+        try {
             VOSURI uri1 = new VOSURI("vos://cadc.nrc.ca!foo/bar");
             VOSURI uri2 = new VOSURI("vos://cadc.nrc.ca!foo/bar/");
             Assert.assertEquals("URIs should be equal", uri1, uri2);
             Assert.assertEquals("Paths should be equal", uri1.getPath(), uri2.getPath());
             Assert.assertEquals("Names should be equal", uri1.getName(), uri2.getName());
             Assert.assertEquals("Parents should be equal", uri1.getParent(), uri2.getParent());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
 
     @Test
-    public void testBangTildeEquivalent()
-    {
-        try
-        {
+    public void testBangTildeEquivalent() {
+        try {
             URI srvURI = new URI(SERVICE);
 
-            String bang  = "vos://cadc.nrc.ca!vospace";
+            String bang = "vos://cadc.nrc.ca!vospace";
             String tilde = "vos://cadc.nrc.ca~vospace";
             String path = "/container/data";
 
@@ -336,20 +296,16 @@ public class VOSURITest
             vosTilde = new VOSURI(new URI(tilde + path + "#foo"));
             Assert.assertNotSame(bang, tilde);
             Assert.assertTrue("! and ~ are equivalent in uri", vosBang.equals(vosTilde));
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testGetParent()
-    {
-        try
-        {
-            String bang  = "vos://cadc.nrc.ca!vospace";
+    public void testGetParent() {
+        try {
+            String bang = "vos://cadc.nrc.ca!vospace";
             String tilde = "vos://cadc.nrc.ca~vospace";
             String path = "/container/data";
 
@@ -364,20 +320,16 @@ public class VOSURITest
             VOSURI parentTilde = vosTilde.getParentURI();
             Assert.assertNotNull(parentTilde);
             Assert.assertEquals(tilde + "/container", parentTilde.getURI().toASCIIString());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testRoot()
-    {
-        try
-        {
-            String auth  = "cadc.nrc.ca!vospace";
+    public void testRoot() {
+        try {
+            String auth = "cadc.nrc.ca!vospace";
             URI uri;
             VOSURI vos;
 
@@ -392,20 +344,16 @@ public class VOSURITest
             uri = new URI("vos", auth, "/", null, null);
             vos = new VOSURI(uri);
             Assert.assertTrue("/ path in URI is root", vos.isRoot());
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testGetParentRoot()
-    {
-        try
-        {
-            String bang  = "vos://cadc.nrc.ca!vospace";
+    public void testGetParentRoot() {
+        try {
+            String bang = "vos://cadc.nrc.ca!vospace";
             String tilde = "vos://cadc.nrc.ca~vospace";
             String path = "/path";
 
@@ -424,19 +372,15 @@ public class VOSURITest
             VOSURI root = new VOSURI(new URI(tilde));
             VOSURI noParent = root.getParentURI();
             Assert.assertNull(noParent);
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testCommonForm()
-    {
-        try
-        {
+    public void testCommonForm() {
+        try {
             VOSURI expectedURI = new VOSURI(new URI("vos://cadc.nrc.ca~vospace/test/file.txt"));
             String fileURI = "vos://cadc.nrc.ca!vospace/test/file.txt";
             VOSURI vos = new VOSURI(new URI(fileURI));
@@ -444,8 +388,8 @@ public class VOSURITest
             VOSURI commonFormURI = vos.getCommonFormURI();
             log.debug("common form URI: " + commonFormURI.toString());
             Assert.assertEquals(expectedURI, commonFormURI);
-            Assert.assertTrue("common form authority doesn't have ~: "
-                + commonFormURI, commonFormURI.getAuthority().contains("~"));
+            Assert.assertTrue("common form authority doesn't have ~: " + commonFormURI,
+                              commonFormURI.getAuthority().contains("~"));
 
             // This one should stay the same
             fileURI = "vos://cadc.nrc.ca~vospace/test/file.txt";
@@ -454,12 +398,10 @@ public class VOSURITest
             commonFormURI = vos.getCommonFormURI();
             log.debug("common form URI: " + commonFormURI.toString());
             Assert.assertEquals(expectedURI, commonFormURI);
-            Assert.assertTrue("common form authority doesn't have ~: "
-                + commonFormURI, commonFormURI.getAuthority().contains("~"));
+            Assert.assertTrue("common form authority doesn't have ~: " + commonFormURI,
+                              commonFormURI.getAuthority().contains("~"));
 
-        }
-        catch(Exception unexpected)
-        {
+        } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
