@@ -24,7 +24,7 @@ dependencies {
     compile 'org.json:json:20160212'
 
     compile 'org.opencadc:cadc-util:[1.6,2.0)'
-    compile 'org.opencadc:cadc-vos:[1.2.1,)'
+    compile 'org.opencadc:cadc-vos:[2.0,)'
     compile 'org.opencadc:cadc-uws:[1.0,2.0)'
     compile 'org.opencadc:cadc-registry:[1.5.15,2.0)'
 
