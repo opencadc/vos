@@ -66,6 +66,31 @@
     </init-param>
   </servlet>
 
+   <!-- async recursive node property setting servlet-->
+   <servlet>
+     <servlet-name>RecursiveSetNodeServlet</servlet-name>
+     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+     <init-param>
+         <param-name>get</param-name>
+         <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
+     </init-param>
+     <init-param>
+         <param-name>post</param-name>
+         <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
+     </init-param>
+     <init-param>
+         <param-name>delete</param-name>
+         <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+     </init-param>
+     <init-param>
+         <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+         <param-value>org.opencadc.cavern.RecursiveSetNodeJobManager</param-value>
+     </init-param>
+     <init-param>
+         <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+         <param-value>ca.nrc.cadc.vos.server.RecursiveSetNodeInlineContentHandler</param-value>
+     </init-param>
+   </servlet>
 
   <!-- sync transfer servlet-->
   <servlet>
@@ -223,6 +248,12 @@
   <servlet-mapping>
     <servlet-name>TransferServlet</servlet-name>
     <url-pattern>/transfers/*</url-pattern>
+  </servlet-mapping>
+
+  <!-- Resursive Set Node servlet endpoints -->
+  <servlet-mapping>
+    <servlet-name>RecursiveSetNodeServlet</servlet-name>
+    <url-pattern>/nodeprops/*</url-pattern>
   </servlet-mapping>
   
     <!-- Client transfer servlet endpoints -->
