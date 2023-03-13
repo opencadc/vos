@@ -65,70 +65,100 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.web.restlet.action;
+package ca.nrc.cadc.vos.server.actions;
 
-import java.net.URL;
-
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
-
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.ResponseStatus;
-import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeFault;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
+import org.apache.log4j.Logger;
 
-public class NodeActionResult
+/**
+ * Class to perform the deletion of a Node.
+ *
+ * @author majorb
+ */
+public class DeleteNodeAction extends NodeAction
 {
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
-    private ResponseStatus status = ResponseStatus.SUCCESS_OK;
-    private NodeFault nodeFault;
-    private Representation representation;
-    private URL redirectURL;
-
-    public NodeActionResult(Representation representation)
+    @Override
+    public Node getClientNode()
+            throws URISyntaxException, NodeParsingException, IOException
     {
-        this.representation = representation;
+        // No client node in a DELETE
+        return null;
     }
 
-    public NodeActionResult(Representation representation, Status status)
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
     {
-        this.representation = representation;
-        this.status = status;
-    }
-
-    public NodeActionResult(NodeFault nodeFault)
-    {
-        this.nodeFault = nodeFault;
-        this.status = nodeFault.getStatus();
-    }
-
-    public NodeActionResult(URL redirectURL)
-    {
-        this.status = ResponseStatus.REDIRECTION_SEE_OTHER;
-        this.redirectURL = redirectURL;
-    }
-
-    public ResponseStatus getStatus()
-    {
-        return status;
-    }
-
-    public URL getRedirectURL()
-    {
-        return redirectURL;
-    }
-
-    public NodeFault getNodeFault()
-    {
-        return nodeFault;
-    }
-
-    public Representation getRepresentation()
-    {
-        if (nodeFault != null)
+        try
         {
-            return new NodeErrorRepresentation(nodeFault);
+            // no one can delete the root or something in the root
+            VOSURI parentURI = vosURI.getParentURI();
+            if (vosURI.isRoot() || parentURI.isRoot())
+                throw new AccessControlException("permission denied");
+
+            Node target = nodePersistence.get(vosURI);
+
+            log.debug("Checking delete privilege on: " + target.getUri());
+            voSpaceAuthorizer.getDeletePermission(target);
+
+            return target;
         }
-        return representation;
+        catch (NodeNotFoundException ex)
+        {
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
+        }
     }
+
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+        return null;
+    }
+
+    @Override
+    protected NodeFault handleException(FileNotFoundException fnf)
+        throws TransientException
+    {
+        // need to determine if the parent container exists
+        if (vosURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        VOSURI parentURI = vosURI.getParentURI();
+        if (parentURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        try
+        {
+            Node target = nodePersistence.get(parentURI);
+            // check read permission so we do not leak info about the existence
+            voSpaceAuthorizer.getReadPermission(target);
+        }
+        catch(NodeNotFoundException nnf)
+        {
+            return NodeFault.ContainerNotFound;
+        }
+        catch(AccessControlException ac)
+        {
+            return NodeFault.PermissionDenied;
+        }
+        finally { }
+
+        return NodeFault.NodeNotFound;
+    }
+
 
 }

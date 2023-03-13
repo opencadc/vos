@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,70 +65,25 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.web.restlet.action;
+package ca.nrc.cadc.vos;
 
-import java.net.URL;
-
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
-
-import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.ResponseStatus;
-import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
-
-public class NodeActionResult
+/**
+ * Class to map HTTP status to VOSpace errors
+ */
+public class ResponseStatus
 {
+    int code;
+    String name;
+    String description;
+    String specification;
 
-    private ResponseStatus status = ResponseStatus.SUCCESS_OK;
-    private NodeFault nodeFault;
-    private Representation representation;
-    private URL redirectURL;
-
-    public NodeActionResult(Representation representation)
-    {
-        this.representation = representation;
+    public ResponseStatus(int code, String name, String description, String specification) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+        this.specification = specification;
     }
 
-    public NodeActionResult(Representation representation, Status status)
-    {
-        this.representation = representation;
-        this.status = status;
-    }
-
-    public NodeActionResult(NodeFault nodeFault)
-    {
-        this.nodeFault = nodeFault;
-        this.status = nodeFault.getStatus();
-    }
-
-    public NodeActionResult(URL redirectURL)
-    {
-        this.status = ResponseStatus.REDIRECTION_SEE_OTHER;
-        this.redirectURL = redirectURL;
-    }
-
-    public ResponseStatus getStatus()
-    {
-        return status;
-    }
-
-    public URL getRedirectURL()
-    {
-        return redirectURL;
-    }
-
-    public NodeFault getNodeFault()
-    {
-        return nodeFault;
-    }
-
-    public Representation getRepresentation()
-    {
-        if (nodeFault != null)
-        {
-            return new NodeErrorRepresentation(nodeFault);
-        }
-        return representation;
-    }
 
 }
+

@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,21 +65,17 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.web.restlet.action;
-
-import java.net.URL;
-
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
+package ca.nrc.cadc.vos.server.actions;
 
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.ResponseStatus;
+import ca.nrc.cadc.vos.server.NodeFault;
 import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
+import java.net.URL;
 
 public class NodeActionResult
 {
 
-    private ResponseStatus status = ResponseStatus.SUCCESS_OK;
+    private Status status = Status.SUCCESS_OK;
     private NodeFault nodeFault;
     private Representation representation;
     private URL redirectURL;
@@ -103,11 +99,11 @@ public class NodeActionResult
 
     public NodeActionResult(URL redirectURL)
     {
-        this.status = ResponseStatus.REDIRECTION_SEE_OTHER;
+        this.status = Status.REDIRECTION_SEE_OTHER;
         this.redirectURL = redirectURL;
     }
 
-    public ResponseStatus getStatus()
+    public Status getStatus()
     {
         return status;
     }

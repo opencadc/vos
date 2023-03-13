@@ -65,70 +65,108 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.web.restlet.action;
+package ca.nrc.cadc.vos.server.actions;
 
-import java.net.URL;
-
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
-
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.ResponseStatus;
-import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeFault;
+import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
+import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.AccessControlException;
+import org.apache.log4j.Logger;
+import org.restlet.data.Status;
 
-public class NodeActionResult
+/**
+ * Class to perform the creation of a Node.
+ *
+ * @author majorb
+ */
+public class CreateNodeAction extends NodeAction
 {
 
-    private ResponseStatus status = ResponseStatus.SUCCESS_OK;
-    private NodeFault nodeFault;
-    private Representation representation;
-    private URL redirectURL;
+    protected static Logger log = Logger.getLogger(CreateNodeAction.class);
 
-    public NodeActionResult(Representation representation)
+    @Override
+    public Node getClientNode()
+        throws URISyntaxException, NodeParsingException, IOException
     {
-        this.representation = representation;
+        NodeInputRepresentation nodeInputRepresentation =
+            new NodeInputRepresentation(nodeXML, vosURI.getPath());
+        return nodeInputRepresentation.getNode();
     }
 
-    public NodeActionResult(Representation representation, Status status)
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
     {
-        this.representation = representation;
-        this.status = status;
-    }
-
-    public NodeActionResult(NodeFault nodeFault)
-    {
-        this.nodeFault = nodeFault;
-        this.status = nodeFault.getStatus();
-    }
-
-    public NodeActionResult(URL redirectURL)
-    {
-        this.status = ResponseStatus.REDIRECTION_SEE_OTHER;
-        this.redirectURL = redirectURL;
-    }
-
-    public ResponseStatus getStatus()
-    {
-        return status;
-    }
-
-    public URL getRedirectURL()
-    {
-        return redirectURL;
-    }
-
-    public NodeFault getNodeFault()
-    {
-        return nodeFault;
-    }
-
-    public Representation getRepresentation()
-    {
-        if (nodeFault != null)
+        try
         {
-            return new NodeErrorRepresentation(nodeFault);
+            VOSURI parentURI = vosURI.getParentURI();
+            Node node = (Node) nodePersistence.get(parentURI);
+            voSpaceAuthorizer.getWritePermission(node);
+
+            return node;
         }
-        return representation;
+        catch (NodeNotFoundException ex)
+        {
+            // parent does not exist: FAIL
+            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
+        }
     }
 
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        try
+        {
+            if (serverNode instanceof ContainerNode)
+            {
+                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
+
+                nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
+                for (Node n : parent.getNodes())
+                {
+                    if (n.getName().equals(clientNode.getName()))
+                        throw new NodeAlreadyExistsException(vosURI.getURI().toASCIIString());
+                }
+
+                clientNode.setParent(parent);
+                Node storedNode = nodePersistence.put(clientNode);
+
+                // return the node in xml format
+                NodeOutputRepresentation nodeOutputRepresentation =
+                    new NodeOutputRepresentation(storedNode, getNodeWriter(), getMediaType());
+                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_OK);
+            }
+            log.debug("parent is not a container: " + clientNode.getUri().getPath());
+            NodeFault nodeFault = NodeFault.ContainerNotFound;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+        catch (NodeAlreadyExistsException e)
+        {
+            log.debug("Node already exists: " + clientNode.getUri().getPath(), e);
+            NodeFault nodeFault = NodeFault.DuplicateNode;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+        catch (NodeNotSupportedException e)
+        {
+            log.debug("Node type not supported: " + clientNode.getUri().getPath(), e);
+            NodeFault nodeFault = NodeFault.TypeNotSupported;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+    }
 }

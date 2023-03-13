@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,7 +65,9 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
+
+import ca.nrc.cadc.vos.VOS;
 
 /**
  * Enumeration of type types of faults that can occur
@@ -79,56 +81,56 @@ public enum NodeFault
     // IVOA Standard Faults - not an exhaustive list
     InternalFault
     (
-        new ResponseStatus(500,
+        new Status(500,
                    VOS.IVOA_FAULT_INTERNAL_FAULT,
                    "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     PermissionDenied
     (
-        new ResponseStatus(401,
+        new Status(401,
                     VOS.IVOA_FAULT_PERMISSION_DENIED,
                    "A HTTP 401 status code with a PermissionDenied fault in the body is thrown if the user does not have permission to perform the operation",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidURI
     (
-        new ResponseStatus(400,
+        new Status(400,
                     VOS.IVOA_FAULT_INVALID_URI,
                    "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NodeNotFound
     (
-        new ResponseStatus(404,
+        new Status(404,
                    VOS.IVOA_FAULT_NODE_NOT_FOUND,
                    "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the specified node does not exist",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     DuplicateNode
     (
-        new ResponseStatus(409,
+        new Status(409,
                    VOS.IVOA_FAULT_DUPLICATE_NODE,
                    "A HTTP 409 status code with a DuplicateFault fault in the body is thrown if the specified node already exists",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidToken
     (
-        new ResponseStatus(400,
+        new Status(400,
                    VOS.IVOA_FAULT_INVALID_TOKEN,
                    "A HTTP 400 status code with a InvalidToken fault in the body is thrown if ?????",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     InvalidArgument
     (
-        new ResponseStatus(400,
+        new Status(400,
                    VOS.IVOA_FAULT_INVALID_ARG,
                    "A HTTP 400 status code with a InvalidArgument fault in the body is thrown if a specified value is invalid",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     TypeNotSupported
     (
-        new ResponseStatus(400,
+        new Status(400,
                    VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED,
                    "A HTTP 400 status code with a TypeNotSupported fault in the body is thrown if the type specified in xsi:type is not supported",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
@@ -137,42 +139,42 @@ public enum NodeFault
     // Other Faults
     ContainerNotFound
     (
-        new ResponseStatus(404,
+        new Status(404,
                    VOS.CADC_FAULT_CONTAINER_NOT_FOUND,
                    "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     RequestEntityTooLarge
     (
-        new ResponseStatus(413,
+        new Status(413,
                    VOS.CADC_FAULT_REQUEST_TOO_LARGE, // "InvalidArgument",
                    "A HTTP 413 status code with a InvalidArgument fault in the body is thrown if the XML document on the input stream is too large.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     UnreadableLinkTarget
     (
-        new ResponseStatus(404,
+        new Status(404,
                    VOS.CADC_FAULT_UNREADABLE_LINK, // 'NodeNotFound'
                    "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     ServiceBusy
     (
-        new ResponseStatus(503,
+        new Status(503,
                    VOS.CADC_FAULT_SERVICE_BUSY,
                    "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the service is too busy to handle the request.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NodeLocked
     (
-        new ResponseStatus(423,
+        new Status(423,
                    VOS.CADC_FAULT_NODE_LOCKED,
                    "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     ),
     NotAuthenticated
     (
-        new ResponseStatus(401,
+        new Status(401,
                    "NotAuthenticated",
                    "A HTTP 401 status code with a NotAuthenticated fault in the body is thrown if the credentials provided are not valid.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
@@ -181,17 +183,17 @@ public enum NodeFault
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
 //    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
-    private ResponseStatus status;
+    private Status status;
     private String message;
     private boolean serviceFailure;
 
-    private NodeFault(ResponseStatus status)
+    private NodeFault(Status status)
     {
         this.status = status;
         this.serviceFailure = false;
     }
 
-    public ResponseStatus getStatus()
+    public Status getStatus()
     {
         return status;
     }
