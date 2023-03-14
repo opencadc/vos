@@ -130,32 +130,13 @@ public class TransferTest extends VOSTest {
 
             put(nodeURL, testFile);
 
-            // create a transfer
-            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            // post the transfer and get the resulting transfer
+            Transfer result = doTransfer(nodeURI.getURI(), name);
 
-            // post to sync transfer
-            TransferWriter transferWriter = new TransferWriter();
-            StringWriter stringWriter = new StringWriter();
-            transferWriter.write(transfer, stringWriter);
-            FileContent fileContent = new FileContent(stringWriter.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-            URL transferURL = new URL(String.format("%s/%s", synctransServiceURL, name));
-            log.debug("transferURL: " + transferURL);
-            HttpPost post = new HttpPost(transferURL, fileContent, true);
-            Subject.doAs(authSubject, new RunnableAction(post));
-
-            Assert.assertEquals("POST response code should be " + 200,
-                                200, post.getResponseCode());
-            Assert.assertNull("PUT throwable should be null", post.getThrowable());
-
-            TransferReader transferReader = new TransferReader();
-            Transfer actual = transferReader.read(post.getInputStream(), XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21);
-
-            Assert.assertEquals("transfer direction", Direction.pullFromVoSpace, actual.getDirection());
-            Assert.assertNotNull("", actual.getProtocols());
+            Assert.assertEquals("transfer direction", Direction.pullFromVoSpace, result.getDirection());
+            Assert.assertNotNull("", result.getProtocols());
             String endpoint = null;
-            for (Protocol protocol : actual.getProtocols()) {
+            for (Protocol protocol : result.getProtocols()) {
                 try {
                     endpoint = protocol.getEndpoint();
                     log.debug("endpoint: " + endpoint);
@@ -164,6 +145,9 @@ public class TransferTest extends VOSTest {
                     Assert.fail("invalid protocol endpoint: " + endpoint);
                 }
             }
+
+            // delete the nodes
+            delete(nodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -192,8 +176,25 @@ public class TransferTest extends VOSTest {
 
             put(linkNodeURL, linkNodeURI, linkNode);
 
-            // post and verify the transfer urls.
-            doTransfer(linkNodeURI.getURI(), linkName);
+            // post the transfer and get the resulting transfer
+            Transfer result = doTransfer(linkNodeURI.getURI(), linkName);
+
+            Assert.assertEquals("transfer direction", Direction.pullFromVoSpace, result.getDirection());
+            Assert.assertNotNull("", result.getProtocols());
+            String endpoint = null;
+            for (Protocol protocol : result.getProtocols()) {
+                try {
+                    endpoint = protocol.getEndpoint();
+                    log.debug("endpoint: " + endpoint);
+                    new URL(endpoint);
+                } catch (MalformedURLException e) {
+                    Assert.fail("invalid protocol endpoint: " + endpoint);
+                }
+            }
+
+            // delete the nodes
+            delete(linkNodeURL);
+            delete(dataNodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -201,7 +202,7 @@ public class TransferTest extends VOSTest {
         }
     }
 
-    public void doTransfer(URI nodeURI, String nodePath)
+    public Transfer doTransfer(URI nodeURI, String nodePath)
         throws IOException, TransferParsingException {
         Transfer transfer = new Transfer(nodeURI, Direction.pullFromVoSpace);
         transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
@@ -222,20 +223,7 @@ public class TransferTest extends VOSTest {
         Assert.assertNull("PUT throwable should be null", post.getThrowable());
 
         TransferReader transferReader = new TransferReader();
-        Transfer result = transferReader.read(post.getInputStream(), XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21);
-
-        Assert.assertEquals("transfer direction", Direction.pullFromVoSpace, result.getDirection());
-        Assert.assertNotNull("", result.getProtocols());
-        String endpoint = null;
-        for (Protocol protocol : result.getProtocols()) {
-            try {
-                endpoint = protocol.getEndpoint();
-                log.debug("endpoint: " + endpoint);
-                new URL(endpoint);
-            } catch (MalformedURLException e) {
-                Assert.fail("invalid protocol endpoint: " + endpoint);
-            }
-        }
+        return transferReader.read(post.getInputStream(), XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21);
     }
 
     public URL getTranferURL(VOSURI uri)
