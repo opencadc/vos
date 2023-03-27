@@ -69,28 +69,19 @@
 
 package org.opencadc.vospace.client;
 
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import java.io.File;
-import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
-import junit.framework.Assert;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.auth.BasicX509TrustManager;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ExecutionPhase;
-
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Direction;
@@ -102,9 +93,6 @@ import org.opencadc.vospace.Transfer;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
-import org.opencadc.vospace.client.ClientTransfer;
-import org.opencadc.vospace.client.VOSClientUtil;
-import org.opencadc.vospace.client.VOSpaceClient;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service

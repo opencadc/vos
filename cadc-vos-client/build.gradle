@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'maven'
+    id 'maven-publish'
+    id 'application'
+    id 'checkstyle'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+apply from: '../opencadc.gradle'
+
+sourceCompatibility = 1.8
+
+group = 'org.opencadc'
+
+version = '2.0'
+
+description = 'OpenCADC VOSpace client library'
+def git_url = 'https://github.com/opencadc/vos'
+
+mainClassName = 'org.opencadc.vospace.client.Main'
+  
+dependencies {
+    compile 'org.opencadc:cadc-util:[1.9,2.0)'
+    compile 'org.opencadc:cadc-uws:[1.0,2.0)'
+    compile 'org.opencadc:cadc-registry:[1.7,2.0)'
+    compile 'org.opencadc:cadc-vos:[2.0,3.0)'
+
+    testCompile 'junit:junit:[4.0,5.0)'
+}
+
+configurations {
+  runtime.exclude group: 'org.springframework'
+}
