@@ -3,12 +3,12 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,112 +62,44 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
- */
+*/
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.auth.NotAuthenticatedException;
-import java.io.IOException;
-import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
-import java.security.Principal;
-import java.util.HashSet;
-import java.util.Set;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
-import org.apache.log4j.Logger;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.vos.VOSException;
 
 /**
- * An IdentityManager implementation that can map from POSIX file system object
- * owner to subject. This implementation should only be used for NodePersistence
- * operations as the toOwner/toSubject uses file system identities and that might
- * conflict with what's expected for JobPersistence usage.
+ * Exception indicating the a job has been aborted by the client.
+ * 
+ * @author yeunga
  *
- * @author pdowler
  */
-public class PosixIdentityManager implements IdentityManager {
+public class JobAbortedException extends VOSException
+{
 
-    private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
-
-    private UserPrincipalLookupService users;
+    private static final long serialVersionUID = -4453433718383619175L;
     
-    private PosixIdentityManager() {
-    }
+    private Job job;
     
-    public PosixIdentityManager(UserPrincipalLookupService users) {
-        this.users = users;
-    }
-
-    @Override
-    public Subject toSubject(Object o) {
-        if (o == null) {
-            return null;
-        }
-        
-        if (o instanceof UserPrincipal) {
-            // convert posix UserPrincipal to external HttpPrincipal
-            UserPrincipal p = (UserPrincipal) o;
-            HttpPrincipal hp = new HttpPrincipal(p.getName());
-            Set<Principal> pset = new HashSet<Principal>();
-            pset.add(hp);
-            Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
-            // TODO: augment subject?
-            return ret;
-        }
-        throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
+    public JobAbortedException(Job job)
+    {
+        super("job aborted");
+        this.job = job;
     }
 
-    public UserPrincipal toUserPrincipal(Subject subject) throws IOException {
-        if (subject == null) {
-            return null;
-        }
-        
-        Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
-        if (!principals.isEmpty()) {
-            HttpPrincipal hp = principals.iterator().next();
-            return users.lookupPrincipalByName(hp.getName());
-        }
-        return null;
+    public JobAbortedException(Job job, String message)
+    {
+        super(message);
+        this.job = job;
     }
     
-    @Override
-    public Object toOwner(Subject subject) {
-        try {
-            UserPrincipal up = toUserPrincipal(subject);
-            if (up == null) {
-                return null;
-            }
-            return up.getName();
-        } catch (IOException ex) {
-            // probably means someone configured this IM such that it's also 
-            // being used by UWS JobPersistence
-            log.warn("username did not map to local identity known to UserPrincipalLookupService", ex);
-            return null;
-        }
-    }
-    
-    @Override
-    public String toDisplayString(Subject subject) {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.toDisplayString(subject);
-    }
-    
-    @Override
-    public Subject validate(Subject subject) throws NotAuthenticatedException {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
+    public Job getJob()
+    {
+        return job;
     }
 
-    @Override
-    public Subject augment(Subject subject) {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
-    }
 }

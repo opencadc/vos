@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,112 +62,43 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
- */
+*/
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.auth.NotAuthenticatedException;
-import java.io.IOException;
-import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
-import java.security.Principal;
-import java.util.HashSet;
-import java.util.Set;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+
 /**
- * An IdentityManager implementation that can map from POSIX file system object
- * owner to subject. This implementation should only be used for NodePersistence
- * operations as the toOwner/toSubject uses file system identities and that might
- * conflict with what's expected for JobPersistence usage.
  *
- * @author pdowler
+ * @author pdowler, majorb, yeunga
  */
-public class PosixIdentityManager implements IdentityManager {
+public class RecursiveSetNodeJobManager extends JobManager
+{
+    private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
 
-    private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
+    private static final Long MAX_EXEC_DURATION = Long.valueOf(12*7200L); // 24 hours?
+    private static final Long MAX_DESTRUCTION = Long.valueOf(7*24*3600L); // 1 week
+    private static final Long MAX_QUOTE = Long.valueOf(12*7200L); // same as exec
 
-    private UserPrincipalLookupService users;
-    
-    private PosixIdentityManager() {
-    }
-    
-    public PosixIdentityManager(UserPrincipalLookupService users) {
-        this.users = users;
-    }
+    public RecursiveSetNodeJobManager()
+    {
+        super();
+        // jp is instantiated in parent org.opencadc.cavern.JobManager
+        JobUpdater ju = (JobUpdater) jp;
+        super.setJobPersistence(jp);
 
-    @Override
-    public Subject toSubject(Object o) {
-        if (o == null) {
-            return null;
-        }
+        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
+        super.setJobExecutor(jobExec);
         
-        if (o instanceof UserPrincipal) {
-            // convert posix UserPrincipal to external HttpPrincipal
-            UserPrincipal p = (UserPrincipal) o;
-            HttpPrincipal hp = new HttpPrincipal(p.getName());
-            Set<Principal> pset = new HashSet<Principal>();
-            pset.add(hp);
-            Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
-            // TODO: augment subject?
-            return ret;
-        }
-        throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
-    }
-
-    public UserPrincipal toUserPrincipal(Subject subject) throws IOException {
-        if (subject == null) {
-            return null;
-        }
-        
-        Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
-        if (!principals.isEmpty()) {
-            HttpPrincipal hp = principals.iterator().next();
-            return users.lookupPrincipalByName(hp.getName());
-        }
-        return null;
-    }
-    
-    @Override
-    public Object toOwner(Subject subject) {
-        try {
-            UserPrincipal up = toUserPrincipal(subject);
-            if (up == null) {
-                return null;
-            }
-            return up.getName();
-        } catch (IOException ex) {
-            // probably means someone configured this IM such that it's also 
-            // being used by UWS JobPersistence
-            log.warn("username did not map to local identity known to UserPrincipalLookupService", ex);
-            return null;
-        }
-    }
-    
-    @Override
-    public String toDisplayString(Subject subject) {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.toDisplayString(subject);
-    }
-    
-    @Override
-    public Subject validate(Subject subject) throws NotAuthenticatedException {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
-    }
-
-    @Override
-    public Subject augment(Subject subject) {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
+        super.setMaxExecDuration(MAX_EXEC_DURATION);
+        super.setMaxDestruction(MAX_DESTRUCTION);
+        super.setMaxQuote(MAX_QUOTE);
     }
 }
