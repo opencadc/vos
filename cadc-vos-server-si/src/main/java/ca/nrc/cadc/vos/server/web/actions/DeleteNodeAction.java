@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2010.                            (c) 2010.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,66 +65,67 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.actions;
+package ca.nrc.cadc.vos.server.web.actions;
 
-import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.server.NodeFault;
-import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
-import java.net.URL;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.VOSURI;
+import java.io.FileNotFoundException;
+import java.security.AccessControlException;
+import org.apache.log4j.Logger;
 
-public class NodeActionResult
+/**
+ * Class to perform the deletion of a Node.
+ *
+ * @author majorb
+ */
+public class DeleteNodeAction extends NodeAction
 {
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
-    private Status status = Status.SUCCESS_OK;
-    private NodeFault nodeFault;
-    private Representation representation;
-    private URL redirectURL;
-
-    public NodeActionResult(Representation representation)
+    @Override
+    public Node getClientNode()
     {
-        this.representation = representation;
+        // No client node in a DELETE
+        return null;
     }
 
-    public NodeActionResult(Representation representation, Status status)
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
     {
-        this.representation = representation;
-        this.status = status;
-    }
-
-    public NodeActionResult(NodeFault nodeFault)
-    {
-        this.nodeFault = nodeFault;
-        this.status = nodeFault.getStatus();
-    }
-
-    public NodeActionResult(URL redirectURL)
-    {
-        this.status = Status.REDIRECTION_SEE_OTHER;
-        this.redirectURL = redirectURL;
-    }
-
-    public Status getStatus()
-    {
-        return status;
-    }
-
-    public URL getRedirectURL()
-    {
-        return redirectURL;
-    }
-
-    public NodeFault getNodeFault()
-    {
-        return nodeFault;
-    }
-
-    public Representation getRepresentation()
-    {
-        if (nodeFault != null)
+        try
         {
-            return new NodeErrorRepresentation(nodeFault);
+            // no one can delete the root or something in the root
+            VOSURI parentURI = nodeURI.getParentURI();
+            if (nodeURI.isRoot() || parentURI.isRoot())
+                throw new AccessControlException("permission denied");
+
+            Node target = nodePersistence.get(nodeURI);
+
+            log.debug("Checking delete privilege on: " + target.getUri());
+            voSpaceAuthorizer.getDeletePermission(target);
+
+            return target;
         }
-        return representation;
+        catch (NodeNotFoundException ex)
+        {
+            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
+        }
     }
 
+    @Override
+    public void performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+    }
+
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return null;
+    }
 }

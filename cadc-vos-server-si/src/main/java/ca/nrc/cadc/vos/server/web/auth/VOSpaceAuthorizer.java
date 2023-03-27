@@ -64,7 +64,7 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos.server.auth;
+package ca.nrc.cadc.vos.server.web.auth;
 
 import ca.nrc.cadc.ac.Role;
 import ca.nrc.cadc.ac.UserNotFoundException;
@@ -83,13 +83,12 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.web.NodeID;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -179,7 +178,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
-     * @throws TransientException
+     * @throws TransientException If transient network problem
      */
     @Override
     public Object getReadPermission(URI uri)
@@ -257,7 +256,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
      * @throws NodeLockedException    If the node is locked
-     * @throws TransientException
+     * @throws TransientException If transient network problem
      */
     @Override
     public Object getWritePermission(URI uri)
@@ -342,10 +341,10 @@ public class VOSpaceAuthorizer implements Authorizer
      * non-empty containers. The argument and all child nodes must not
      * be locked (unless locks are being ignored).
      *
-     * @param node
-     * @throws AccessControlException
-     * @throws NodeLockedException
-     * @throws TransientException
+     * @param node node to be checked
+     * @throws AccessControlException If user does not have write permission
+     * @throws NodeLockedException If node is currently locked
+     * @throws TransientException If transient network problems
      */
     public void getDeletePermission(Node node)
         throws AccessControlException, NodeLockedException, TransientException
@@ -371,7 +370,7 @@ public class VOSpaceAuthorizer implements Authorizer
             ContainerNode container = (ContainerNode) node;
             getWritePermission(container); // checks lock and rw permission
 
-            Integer batchSize = new Integer(1000); // TODO: any value in not hard-coding this?
+            Integer batchSize = 1000; // TODO: any value in not hard-coding this?
             VOSURI startURI = null;
             nodePersistence.getChildren(container, startURI, batchSize, resolveMetadata);
             while ( !container.getNodes().isEmpty() )
@@ -425,7 +424,7 @@ public class VOSpaceAuthorizer implements Authorizer
                     try
                     {
                         LOG.debug("Checking GMS on groupURI: " + groupURI);
-                        GroupURI guri = new GroupURI(groupURI);
+                        GroupURI guri = new GroupURI(URI.create(groupURI));
                         URI serviceID = guri.getServiceID();
                         LOG.debug("Using GMS service ID: " + serviceID);
                         GMSClient gmsClient = new GMSClient(serviceID);
@@ -433,12 +432,7 @@ public class VOSpaceAuthorizer implements Authorizer
                         profiler.checkpoint("gmsClient.ismember");
                         if (isMember)
                             return true;
-                    }
-                    catch (URISyntaxException e)
-                    {
-                        LOG.warn("skipping invalid group URI: " + groupURI, e);
-                    }
-                    catch(UserNotFoundException ex)
+                    } catch(UserNotFoundException ex)
                     {
                         LOG.debug("failed to call canfar gms service", ex);
                         if (firstFail == null)
@@ -463,7 +457,6 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             wrapException = new RuntimeException("failed credentials check", ex);
         }
-        finally { }
 
         if (wrapException != null)
             throw wrapException;
@@ -483,8 +476,8 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Check if the specified subject is the owner of the node.
      *
-     * @param subject
-     * @param node
+     * @param subject subject
+     * @param node node to check
      * @return true of the current subject is the owner, otherwise false
      */
     private boolean isOwner(Node node, Subject subject)
@@ -578,9 +571,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
                 if (applyMaskOnGroupReadWrite(node)) {
-                    if (hasMembership(groupWrite, subject)) {
-                        return true; // OK
-                    }
+                    return hasMembership(groupWrite, subject); // OK
                 }
             }
         }
@@ -619,9 +610,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
                 if (applyMaskOnGroupReadWrite(node)) {
-                    if (hasMembership(groupWrite, subject)) {
-                        return true; // OK
-                    }
+                    return hasMembership(groupWrite, subject); // OK
                 }
             }
         }

@@ -76,7 +76,7 @@ import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import ca.nrc.cadc.vos.server.web.auth.VOSpaceAuthorizer;
 import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -111,7 +111,7 @@ public class PathResolver
     /**
      * Constructor.
      * 
-     * @param nodePersistence
+     * @param nodePersistence node persistence to use
      */
     public PathResolver(NodePersistence nodePersistence)
     {
@@ -131,11 +131,11 @@ public class PathResolver
     /**
      * Resolve the path of the node identified by parameter uri.
      * 
-     * @param uri
-     * @return
-     * @throws NodeNotFoundException
-     * @throws LinkingException
-     * @throws TransientException
+     * @param uri node URI
+     * @return node instance
+     * @throws NodeNotFoundException If node not found
+     * @throws LinkingException If node link exception
+     * @throws TransientException If a transient error occurs
      */
     public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException, TransientException
     {
@@ -148,7 +148,7 @@ public class PathResolver
             throws NodeNotFoundException, LinkingException, TransientException
     {
         visitCount = 0;
-        visitedPaths = new ArrayList<String>();
+        visitedPaths = new ArrayList<>();
         Node n = doResolve(uri, readAuthorizer);
         if (resolveLeafNodes)
             return resolveLeafNodeWithReadPermissionCheck(uri, n, readAuthorizer);
@@ -160,13 +160,12 @@ public class PathResolver
      * each link node resolution. This method expects that the argument node was 
      * returned from resolveWithReadPermissionCheck with resolveLeafNodes == false.
      * 
-     * @param uri
-     * @param node
-     * @param readAuthorizer
-     * @return
-     * @throws NodeNotFoundException
-     * @throws LinkingException
-     * @throws TransientException
+     * @param uri leaf node identifier to resolve
+     * @param node node
+     * @return resolved node
+     * @throws NodeNotFoundException If node is not found
+     * @throws LinkingException If linked URI is invalid
+     * @throws TransientException If a transient error occurs
      */
     public Node resolveLeafNodeWithReadPermissionCheck(VOSURI uri, Node node, 
             VOSpaceAuthorizer readAuthorizer)
@@ -214,12 +213,12 @@ public class PathResolver
 
 
     /**
-     *
+     * Resolves a node URI following potential links
      * @param vosuri requested path
-     * @param readAuthorizer
-     * @return
-     * @throws NodeNotFoundException
-     * @throws LinkingException
+     * @param readAuthorizer authorizer to use
+     * @return resolved node
+     * @throws NodeNotFoundException If node not found
+     * @throws LinkingException If a transient error occurs
      */
     private Node doResolve(VOSURI vosuri,  VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException, TransientException
@@ -231,7 +230,7 @@ public class PathResolver
         visitCount++;
         LOG.debug("visit number " + visitCount);
 
-        Node node = null;
+        Node node;
         if (readAuthorizer != null)
         {
             try
@@ -293,7 +292,7 @@ public class PathResolver
     /**
      * Return a new VOSURI representing the target URI of the link node.
      * 
-     * @param linkNode
+     * @param linkNode node to validate
      * @return A VOSURI of the target of the link node.
      * @throws LinkingException If the target is non vospace, not local, or
      * an invalid URI.
@@ -343,7 +342,7 @@ public class PathResolver
     /**
      * Set the limit for number of link reference resolutions.
      * Default The value is 20.
-     * @param visitLimit
+     * @param visitLimit link reference resolutions
      */
     public void setVisitLimit(int visitLimit)
     {
@@ -353,13 +352,6 @@ public class PathResolver
                     "Too high a visit limit.  Must be below " + VISIT_LIMIT_MAX);
         }
         this.visitLimit = visitLimit;
-    }
-
-    private void copy(Node src, Node dest)
-    {
-        src.setAccepts(dest.accepts());
-        src.getProperties().addAll(dest.getProperties());
-        src.setProvides(dest.provides());
     }
 
 }

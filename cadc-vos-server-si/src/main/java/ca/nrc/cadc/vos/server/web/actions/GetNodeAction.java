@@ -65,8 +65,9 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.actions;
+package ca.nrc.cadc.vos.server.web.actions;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.ObjectUtil;
@@ -76,24 +77,27 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
+import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.PersistenceOptions;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
-import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
+import ca.nrc.cadc.vos.server.VOSpacePluginFactory;
+import ca.nrc.cadc.vos.server.Views;
+import ca.nrc.cadc.vos.server.web.auth.VOSpaceAuthorizer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
 
 /**
@@ -119,13 +123,7 @@ public class GetNodeAction extends NodeAction
     }
 
     @Override
-    public void doAction() throws Exception {
-
-    }
-
-    @Override
-    protected Node getClientNode() throws URISyntaxException,
-            NodeParsingException, IOException
+    protected Node getClientNode()
     {
         // No client node in a GET
         return null;
@@ -149,9 +147,8 @@ public class GetNodeAction extends NodeAction
     }
 
     @Override
-    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
-        throws URISyntaxException, TransientException, IOException
-    {
+    public void performNodeAction(Node clientNode, Node serverNode)
+            throws URISyntaxException, TransientException, ResourceNotFoundException, IOException {
         long start;
         long end;
 
@@ -160,11 +157,11 @@ public class GetNodeAction extends NodeAction
             String path = syncInput.getPath();
             log.debug("path: " + path);
             if (path == null) {
-                sendError(404, "Not Found");
-                return null;
+                throw new ResourceNotFoundException("No path");
             }
 
-            String vosURIPrefix = BeanUtil.getVosUriBase();
+            LocalServiceURI localServiceURI = new LocalServiceURI();
+            String vosURIPrefix = localServiceURI.getVOSBase().toString();
             String nodeURI = vosURIPrefix + "/" + path;
             VOSURI vosURI = new VOSURI(nodeURI);
 
@@ -174,29 +171,25 @@ public class GetNodeAction extends NodeAction
             authorizer.setNodePersistence(np);
             PathResolver resolver = new PathResolver(np, false);
 
-            Node node = null;
+            Node node;
             try {
                 node = resolver.resolveWithReadPermissionCheck(vosURI, authorizer, true);
-            } catch (NodeNotFoundException e) {
-                sendError(404, "Not Found");
-                return;
+            } catch (NodeNotFoundException | LinkingException e) {
+                throw new ResourceNotFoundException("Not Found");
             }
 
             log.debug("node: " + node);
             // only data nodes (link nodes resolved above)
             if (!(node instanceof DataNode)) {
-                sendError(400, "Not a DataNode");
-                return;
+                throw new IllegalArgumentException("Not a DataNode");
             }
 
-
-
             // Paging parameters
-            String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
-            String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
+            String startURI = syncInput.getParameter(QUERY_PARAM_URI);
+            String pageLimitString = syncInput.getParameter(QUERY_PARAM_LIMIT);
 
             // Sorting parameters
-            String sortParam = queryForm.getFirstValue(QUERY_PARAM_SORT_KEY);
+            String sortParam = syncInput.getParameter(QUERY_PARAM_SORT_KEY);
             URI sortParamURI = null;
 
             // Validate sortCol passed in against values in cadc-vos/vos.java
@@ -213,7 +206,7 @@ public class GetNodeAction extends NodeAction
             }
 
             // Asc/Desc order parameter
-            String sortOrderParam = queryForm.getFirstValue(QUERY_PARAM_ORDER_KEY);
+            String sortOrderParam = syncInput.getParameter(QUERY_PARAM_ORDER_KEY);
             Boolean sortAsc = null;
             if (sortOrderParam != null) {
                 if (sortOrderParam.equalsIgnoreCase("asc")) {
@@ -301,7 +294,7 @@ public class GetNodeAction extends NodeAction
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
 
         AbstractView view;
-        String viewReference = queryForm.getFirstValue(QUERY_PARAM_VIEW);
+        String viewReference = syncInput.getParameter(QUERY_PARAM_VIEW);
         try
         {
             view = getView();
@@ -326,28 +319,34 @@ public class GetNodeAction extends NodeAction
 
             // if the request has gone through a link, change the
             // node paths back to be the 'unresolved path'
-            if (!vosURI.getPath().equals(serverNode.getUri().getPath()))
+            if (!nodeURI.getPath().equals(serverNode.getUri().getPath()))
             {
                 log.debug("returning node paths back to one that include a link");
-                unresolveNodePaths(vosURI, serverNode);
+                unresolveNodePaths(nodeURI, serverNode);
             }
-
-            return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter, getMediaType()));
+            fillAcceptsAndProvides(serverNode);
+            syncOutput.setHeader("Content-Type", getMediaType());
+            nodeWriter.write(serverNode, syncOutput.getOutputStream());
         }
         else
         {
-            Reference ref = request.getOriginalRef();
-            URL url = ref.toUrl();
+            URL url = new URL(syncInput.getRequestURI());
             view.setNode(serverNode, viewReference, url);
             URL redirectURL = view.getRedirectURL();
             if (redirectURL != null)
             {
-                return new NodeActionResult(redirectURL);
+                syncOutput.setCode(HttpURLConnection.HTTP_SEE_OTHER);
+                syncOutput.setHeader("Location", redirectURL);
             }
             else
             {
                 // return a representation for the view
-                return new NodeActionResult(new ViewRepresentation(view));
+                String contentMD5 = view.getContentMD5();
+                if (contentMD5 != null && (contentMD5.length() == 32)) {
+                    //TODO is contentMD5 in hex format?
+                    syncOutput.setDigest(URI.create("md5:" + contentMD5));
+                }
+                view.write(syncOutput.getOutputStream());
             }
         }
     }
@@ -362,8 +361,8 @@ public class GetNodeAction extends NodeAction
         log.debug("Stylesheet Reference is: " + stylesheetReference);
         if (stylesheetReference != null)
         {
-            String scheme = request.getHostRef().getScheme();
-            String server = request.getHostRef().getHostDomain();
+            String scheme = URI.create(syncInput.getRequestURI()).getScheme();
+            String server = URI.create(syncInput.getRequestURI()).getAuthority();
             StringBuilder url = new StringBuilder();
             url.append(scheme);
             url.append("://");
@@ -376,18 +375,18 @@ public class GetNodeAction extends NodeAction
         return null;
     }
 
-    private void unresolveNodePaths(VOSURI vosURI, Node node) throws URISyntaxException
+    private void unresolveNodePaths(VOSURI vosURI, Node node)
     {
         try
         {
             // change the target node
-            ObjectUtil.setField((Node) node, vosURI, "uri");
+            ObjectUtil.setField(node, vosURI, "uri");
 
             // change any children
             if (node instanceof ContainerNode)
             {
                 ContainerNode containerNode = (ContainerNode) node;
-                VOSURI childURI = null;
+                VOSURI childURI;
                 for (Node child : containerNode.getNodes())
                 {
                     childURI = new VOSURI(vosURI.toString() + "/" + child.getName());
@@ -464,6 +463,33 @@ public class GetNodeAction extends NodeAction
         {
             // error checking access, log a warning
             log.warn("Failed to check write permission", e);
+        }
+    }
+
+    private void fillAcceptsAndProvides(Node node)
+    {
+        Views views = new Views();
+        try
+        {
+            List<URI> accepts = new ArrayList<>();
+            List<URI> provides = new ArrayList<>();
+            List<AbstractView> viewList = views.getViews();
+            for (AbstractView view : viewList)
+            {
+                if (view.canAccept(node))
+                {
+                    accepts.add(view.getURI());
+                }
+                if (view.canProvide(node))
+                {
+                    provides.add(view.getURI());
+                }
+            }
+            node.setAccepts(accepts);
+            node.setProvides(provides);
+        } catch (Exception e)
+        {
+            log.error("Could not get view list: " + e.getMessage());
         }
     }
 

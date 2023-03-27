@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,26 +65,25 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.server.actions;
+package ca.nrc.cadc.vos.server.web.actions;
 
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeAlreadyExistsException;
-import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeFault;
-import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
-import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStream;
 import java.security.AccessControlException;
 import org.apache.log4j.Logger;
-import org.restlet.data.Status;
 
 /**
  * Class to perform the creation of a Node.
@@ -96,13 +95,17 @@ public class CreateNodeAction extends NodeAction
 
     protected static Logger log = Logger.getLogger(CreateNodeAction.class);
 
+    private static final String INLINE_CONTENT_TAG = "inputstream";
+
+    // 12Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 12288L;
+
     @Override
     public Node getClientNode()
-        throws URISyntaxException, NodeParsingException, IOException
+        throws NodeParsingException, IOException
     {
-        NodeInputRepresentation nodeInputRepresentation =
-            new NodeInputRepresentation(nodeXML, vosURI.getPath());
-        return nodeInputRepresentation.getNode();
+        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
+        return getNode(in);
     }
 
     @Override
@@ -111,8 +114,8 @@ public class CreateNodeAction extends NodeAction
     {
         try
         {
-            VOSURI parentURI = vosURI.getParentURI();
-            Node node = (Node) nodePersistence.get(parentURI);
+            VOSURI parentURI = nodeURI.getParentURI();
+            Node node = nodePersistence.get(parentURI);
             voSpaceAuthorizer.getWritePermission(node);
 
             return node;
@@ -120,53 +123,65 @@ public class CreateNodeAction extends NodeAction
         catch (NodeNotFoundException ex)
         {
             // parent does not exist: FAIL
-            throw new FileNotFoundException("not found: " + vosURI.getURI().toASCIIString());
+            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
         }
     }
 
     @Override
-    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
-        throws TransientException
-    {
-        try
+    public void performNodeAction(Node clientNode, Node serverNode)
+            throws Exception {
+
+        if (serverNode instanceof ContainerNode)
         {
-            if (serverNode instanceof ContainerNode)
+            ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
+
+            nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
+            for (Node n : parent.getNodes())
             {
-                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
-
-                nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
-                for (Node n : parent.getNodes())
-                {
-                    if (n.getName().equals(clientNode.getName()))
-                        throw new NodeAlreadyExistsException(vosURI.getURI().toASCIIString());
-                }
-
-                clientNode.setParent(parent);
-                Node storedNode = nodePersistence.put(clientNode);
-
-                // return the node in xml format
-                NodeOutputRepresentation nodeOutputRepresentation =
-                    new NodeOutputRepresentation(storedNode, getNodeWriter(), getMediaType());
-                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_OK);
+                if (n.getName().equals(clientNode.getName()))
+                    throw new ResourceAlreadyExistsException(nodeURI.getURI().toASCIIString());
             }
-            log.debug("parent is not a container: " + clientNode.getUri().getPath());
-            NodeFault nodeFault = NodeFault.ContainerNotFound;
-            nodeFault.setMessage(clientNode.getUri().toString());
-            return new NodeActionResult(nodeFault);
+
+            clientNode.setParent(parent);
+            Node storedNode = nodePersistence.put(clientNode);
+
+            // return the node in xml format
+            final NodeWriter nodeWriter = getNodeWriter();
+            syncOutput.setHeader("Content-Type", getMediaType());
+            nodeWriter.write(storedNode, syncOutput.getOutputStream());
         }
-        catch (NodeAlreadyExistsException e)
+        log.debug("parent is not a container: " + clientNode.getUri().getPath());
+        throw NodeFault.ContainerNotFound.getStatus();
+    }
+
+    private Node getNode(InputStream content) throws IOException, NodeParsingException {
+        ByteCountInputStream sizeLimitInputStream =
+                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
+
+        Node node = new NodeReader().read(sizeLimitInputStream);
+
+        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
+
+        // ensure the path in the XML URI matches the path in the URL
+        if (!node.getUri().getPath().equals(nodeURI.getPath()))
         {
-            log.debug("Node already exists: " + clientNode.getUri().getPath(), e);
-            NodeFault nodeFault = NodeFault.DuplicateNode;
-            nodeFault.setMessage(clientNode.getUri().toString());
-            return new NodeActionResult(nodeFault);
+            throw new NodeParsingException("Node path in URI XML ("
+                    + node.getUri().getPath()
+                    + ") not equal to node path in URL ("
+                    + nodeURI.getPath()
+                    + ")");
         }
-        catch (NodeNotSupportedException e)
-        {
-            log.debug("Node type not supported: " + clientNode.getUri().getPath(), e);
-            NodeFault nodeFault = NodeFault.TypeNotSupported;
-            nodeFault.setMessage(clientNode.getUri().toString());
-            return new NodeActionResult(nodeFault);
-        }
+
+        return node;
+    }
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return (name, contentType, inputStream) -> {
+            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            content.name = INLINE_CONTENT_TAG;
+            content.value = inputStream;
+            return content;
+        };
     }
 }

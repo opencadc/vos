@@ -100,8 +100,8 @@ public interface NodePersistence
      *
      * @param vos a node identifier
      * @return the specified node
-     * @throws NodeNotFoundException
-     * @throws TransientException
+     * @throws NodeNotFoundException If node not found
+     * @throws TransientException If transient network problems
      */
     Node get(VOSURI vos)
         throws NodeNotFoundException, TransientException;
@@ -120,8 +120,8 @@ public interface NodePersistence
      * @param vos a node identifier
      * @param allowPartialPaths true if partial path is allowed, false otherwise
      * @return the specified node
-     * @throws NodeNotFoundException
-     * @throws TransientException
+     * @throws NodeNotFoundException If node not found
+     * @throws TransientException If transient network problems
      */
     Node get(VOSURI vos, boolean allowPartialPaths)
         throws NodeNotFoundException, TransientException;
@@ -142,8 +142,8 @@ public interface NodePersistence
      * @param resolveMetadata If false, return raw system values for resolvable
      *                        metadata.
      * @return the specified node
-     * @throws NodeNotFoundException
-     * @throws TransientException
+     * @throws NodeNotFoundException If node not found
+     * @throws TransientException If transient network problems
      */
     Node get(VOSURI vos, boolean allowPartialPaths, boolean resolveMetadata)
         throws NodeNotFoundException, TransientException;
@@ -151,8 +151,8 @@ public interface NodePersistence
     /**
      * Load all the children of a container.
      *
-     * @param node
-     * @throws TransientException
+     * @param node the container node
+     * @throws TransientException If transient network errors
      */
     void getChildren(ContainerNode node)
         throws TransientException;
@@ -162,38 +162,35 @@ public interface NodePersistence
      * server-selected first node is used. If <code>limit</code> is null or
      * exceeds an arbitrary internal value, the internal value is used.
      * 
-     * @param parent
-     * @param start
-     * @param limit
-     * @throws TransientException
+     * @param parent parent container
+     * @param start URI of the first child
+     * @param limit children limit
+     * @throws TransientException If transient network error
      */
     void getChildren(ContainerNode parent, VOSURI start, Integer limit)
         throws TransientException;
 
     /**
      * Load all the children of a container based on the detail level.
-     * If resolveMetadata is false, do not look up the owner subject so as to reduce
-     * the time spent on the current service.
      *
-     * @param node
-     * @param resolveMetadata
-     * @throws TransientException
+     * @param node container node
+     * @param resolveMetadata false, do not look up the owner subject so as to reduce
+     *     the time spent on the current service.
+     * @throws TransientException If transient network error
      */
     void getChildren(ContainerNode node, boolean resolveMetadata)
         throws TransientException;
 
     /**
-     * Load some of the children of a container. If <code>uri</code> is null, a
-     * server-selected first node is used. If <code>limit</code> is null or
-     * exceeds an arbitrary internal value, the internal value is used.
-     * If resolveMetadata is false, do not look up the owner subject so as to reduce
-     * the time spent on the current service.
-     * 
-     * @param parent
-     * @param start
-     * @param limit
-     * @param resolveMetadata
-     * @throws TransientException
+     * Load some of the children of a container.
+     *
+     * @param parent parent container
+     * @param start URI of first child. If null, server-selected first node is used.
+     * @param limit children limit. If null or exceeds an arbitrary internal value,
+     *       the internal value is used.
+     * @param resolveMetadata is false, do not look up the owner subject so as to reduce
+     *      the time spent on the current service.
+     * @throws TransientException If transient network error
      */
     void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
         throws TransientException;
@@ -202,9 +199,9 @@ public interface NodePersistence
     /**
      * Load a single child of a container.
      * 
-     * @param parent
-     * @param name
-     * @throws TransientException
+     * @param parent parent container node
+     * @param name name of the child node to load
+     * @throws TransientException If transient network error
      */
     void getChild(ContainerNode parent, String name)
         throws TransientException;
@@ -212,11 +209,11 @@ public interface NodePersistence
     /**
      * Load a single child of a container.
      *
-     * @param parent
-     * @param name
+     * @param parent parent container node
+     * @param name name of the child node to load
      * @param resolveMetadata If false, return raw system values for resolvable
      *                        metadata.
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     void getChild(ContainerNode parent, String name, boolean resolveMetadata)
         throws TransientException;
@@ -224,8 +221,8 @@ public interface NodePersistence
     /**
      * Load all the properties of a node.
      * 
-     * @param node
-     * @throws TransientException
+     * @param node node
+     * @throws TransientException If a transient error occurs
      */
     void getProperties(Node node)
         throws TransientException;
@@ -233,12 +230,12 @@ public interface NodePersistence
     /**
      * Store the specified node.
      *
-     * @param node
+     * @param node node to store
      * @return the persisted node
-     * @throws NodeNotSupportedException
-     * @throws TransientException
+     * @throws NodeNotSupportedException If node type not supported
+     * @throws TransientException If a transient error occurs
      */
-    public Node put(Node node)
+    Node put(Node node)
         throws NodeNotSupportedException, TransientException;
 
     /**
@@ -247,10 +244,10 @@ public interface NodePersistence
      * merged with existing properties following the semantics specified in
      * the VOSpace 2.0 specification.
      * 
-     * @param node
-     * @param properties
+     * @param node node to update
+     * @param properties new properties
      * @return the modified node
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     Node updateProperties(Node node, List<NodeProperty> properties)
         throws TransientException;
@@ -258,8 +255,8 @@ public interface NodePersistence
     /**
      * Delete the specified node.
      * 
-     * @param node
-     * @throws TransientException
+     * @param node node to delete
+     * @throws TransientException If a transient error occurs
      */
     void delete(Node node)
         throws TransientException;
@@ -267,10 +264,10 @@ public interface NodePersistence
     /**
      * Update the node metadata after a transfer (put) is complete.
      *
-     * @param node
+     * @param node node to update
      * @param meta metadata from the successful put
      * @param strict If the update should only occur if the lastModified date is the same.
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     void setFileMetadata(DataNode node, FileMetadata meta, boolean strict)
         throws TransientException;
@@ -281,7 +278,7 @@ public interface NodePersistence
      * @param node The node on which to alter the busy state.
      * @param curState The current state of the node.
      * @param newState The new state for the node.
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
         throws TransientException;
@@ -292,7 +289,7 @@ public interface NodePersistence
      * 
      * @param src The node to move.
      * @param destination The destination container.
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     void move(Node src, ContainerNode destination)
         throws TransientException;
@@ -303,7 +300,7 @@ public interface NodePersistence
      * 
      * @param src The node to move.
      * @param destination The destination container.
-     * @throws TransientException
+     * @throws TransientException If a transient error occurs
      */
     void copy(Node src, ContainerNode destination)
         throws TransientException;

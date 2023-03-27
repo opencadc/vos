@@ -67,6 +67,12 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceLockedException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.VOS;
 
 /**
@@ -79,121 +85,82 @@ import ca.nrc.cadc.vos.VOS;
 public enum NodeFault
 {
     // IVOA Standard Faults - not an exhaustive list
-    InternalFault
-    (
-        new Status(500,
-                   VOS.IVOA_FAULT_INTERNAL_FAULT,
-                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
-    ),
+//    InternalFault
+//    (
+//        new Status(500,
+//                   VOS.IVOA_FAULT_INTERNAL_FAULT,
+//                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
+//                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+//    ),
     PermissionDenied
     (
-        new Status(401,
-                    VOS.IVOA_FAULT_PERMISSION_DENIED,
-                   "A HTTP 401 status code with a PermissionDenied fault in the body is thrown if the user does not have permission to perform the operation",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)
     ),
     InvalidURI
     (
-        new Status(400,
-                    VOS.IVOA_FAULT_INVALID_URI,
-                   "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_URI)
     ),
     NodeNotFound
     (
-        new Status(404,
-                   VOS.IVOA_FAULT_NODE_NOT_FOUND,
-                   "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the specified node does not exist",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new ResourceNotFoundException(VOS.IVOA_FAULT_NODE_NOT_FOUND)
     ),
     DuplicateNode
     (
-        new Status(409,
-                   VOS.IVOA_FAULT_DUPLICATE_NODE,
-                   "A HTTP 409 status code with a DuplicateFault fault in the body is thrown if the specified node already exists",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new ResourceAlreadyExistsException(VOS.IVOA_FAULT_DUPLICATE_NODE)
     ),
     InvalidToken
     (
-        new Status(400,
-                   VOS.IVOA_FAULT_INVALID_TOKEN,
-                   "A HTTP 400 status code with a InvalidToken fault in the body is thrown if ?????",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_TOKEN)
     ),
     InvalidArgument
     (
-        new Status(400,
-                   VOS.IVOA_FAULT_INVALID_ARG,
-                   "A HTTP 400 status code with a InvalidArgument fault in the body is thrown if a specified value is invalid",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG)
     ),
     TypeNotSupported
     (
-        new Status(400,
-                   VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED,
-                   "A HTTP 400 status code with a TypeNotSupported fault in the body is thrown if the type specified in xsi:type is not supported",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new IllegalArgumentException(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED)
     ),
 
     // Other Faults
     ContainerNotFound
     (
-        new Status(404,
-                   VOS.CADC_FAULT_CONTAINER_NOT_FOUND,
-                   "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)
     ),
-    RequestEntityTooLarge
-    (
-        new Status(413,
-                   VOS.CADC_FAULT_REQUEST_TOO_LARGE, // "InvalidArgument",
-                   "A HTTP 413 status code with a InvalidArgument fault in the body is thrown if the XML document on the input stream is too large.",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
-    ),
+//    RequestEntityTooLarge
+//    (
+//        new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)
+//    ),
     UnreadableLinkTarget
     (
-        new Status(404,
-                   VOS.CADC_FAULT_UNREADABLE_LINK, // 'NodeNotFound'
-                   "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new ResourceNotFoundException(VOS.CADC_FAULT_UNREADABLE_LINK)
     ),
     ServiceBusy
     (
-        new Status(503,
-                   VOS.CADC_FAULT_SERVICE_BUSY,
-                   "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the service is too busy to handle the request.",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new TransientException(VOS.CADC_FAULT_SERVICE_BUSY)
     ),
     NodeLocked
     (
-        new Status(423,
-                   VOS.CADC_FAULT_NODE_LOCKED,
-                   "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new ResourceLockedException(VOS.CADC_FAULT_NODE_LOCKED)
     ),
     NotAuthenticated
     (
-        new Status(401,
-                   "NotAuthenticated",
-                   "A HTTP 401 status code with a NotAuthenticated fault in the body is thrown if the credentials provided are not valid.",
-                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+        new NotAuthenticatedException("NotAuthenticated")
     );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
 //    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
-    private Status status;
+    private Exception status;
     private String message;
     private boolean serviceFailure;
 
-    private NodeFault(Status status)
+    private NodeFault(Exception ex)
     {
-        this.status = status;
+        this.status = ex;
         this.serviceFailure = false;
     }
 
-    public Status getStatus()
+    public Exception getStatus()
     {
         return status;
     }
@@ -205,7 +172,11 @@ public enum NodeFault
 
     public String getMessage()
     {
-        return message;
+        if (message != null) { return message; }
+        if (status != null) {
+            return status.getMessage();
+        }
+        return null;
     }
 
     public void setMessage(String message)
