@@ -67,6 +67,10 @@
 
 package org.opencadc.vospace;
 
+import ca.nrc.cadc.reg.XMLConstants;
+import ca.nrc.cadc.xml.W3CConstants;
+import java.net.URI;
+
 /**
  * Tagging interface that holds XML related constants.
  * 
@@ -79,8 +83,9 @@ public interface XmlProcessor {
     static final String VOSPACE_SCHEMA_RESOURCE_20 = "VOSpace-2.0.xsd";
     static final String VOSPACE_SCHEMA_RESOURCE_21 = "VOSpace-2.1.xsd";
     
-    static final String XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+    static final String XLINK_NAMESPACE = XMLConstants.XLINK_NS.toASCIIString();
+    // TODO: this filename constant should come from XMLConstants in cadc-registry
     static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
     
-    static final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+    static final String XSI_NAMESPACE = W3CConstants.XSI_NS.getURI();
 }
