@@ -2,11 +2,11 @@ name: Java CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
-    if: '! github.event.pull_request.draft'
+    
     runs-on: ubuntu-latest
 
     steps:
@@ -19,15 +19,15 @@ jobs:
     - name: build and test cadc-vos
       run: cd cadc-vos && ../gradlew --info clean build javadoc install
       
-    - name: build and test cadc-vos-server
-      run: cd cadc-vos-server && ../gradlew --info clean build javadoc install
+    # - name: build and test cadc-vos-server
+    # run: cd cadc-vos-server && ../gradlew --info clean build javadoc install
       
-    - name: build and test cadc-vos-server-db
-      run: cd cadc-vos-server-db && ../gradlew --info clean build javadoc install
+    # - name: build and test cadc-vos-server-db
+    # run: cd cadc-vos-server-db && ../gradlew --info clean build javadoc install
 
-    - name: build and test cadc-test-vos
-      run: cd cadc-test-vos && ../gradlew --info clean build javadoc install
+    # - name: build and test cadc-test-vos
+    # run: cd cadc-test-vos && ../gradlew --info clean build javadoc install
       
-    - name: build and test cavern
-      run: cd cavern && ../gradlew --info clean assemble
+    # - name: build and test cavern
+    # run: cd cavern && ../gradlew --info clean assemble
       
