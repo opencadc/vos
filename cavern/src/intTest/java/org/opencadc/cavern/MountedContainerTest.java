@@ -96,6 +96,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
@@ -119,6 +120,7 @@ public class MountedContainerTest {
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
     
     public MountedContainerTest() { 
@@ -127,6 +129,9 @@ public class MountedContainerTest {
     @BeforeClass
     public static void staticInit() throws Exception {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", TransferRunnerTest.class);
+
+        Properties properties = System.getProperties();
+        properties.forEach((k,v) -> log.info(k + ":" + v));
 
         String uriProp = MountedContainerTest.class.getName() + ".baseURI";
         String uri = System.getProperty(uriProp);

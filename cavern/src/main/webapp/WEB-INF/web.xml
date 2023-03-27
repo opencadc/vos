@@ -45,6 +45,10 @@
     <servlet-name>TransferServlet</servlet-name>
     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
     <init-param>
+        <param-name>init</param-name>
+        <param-value>org.opencadc.cavern.CavernInitAction</param-value>
+    </init-param>
+    <init-param>
         <param-name>get</param-name>
         <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
     </init-param>
