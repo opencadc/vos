@@ -74,7 +74,6 @@ import ca.nrc.cadc.uws.server.SimpleJobManager;
 import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
 import org.apache.log4j.Logger;
 
-//public abstract class JobManager extends SimpleJobManager
 public abstract class JobManager extends SimpleJobManager
 {
 
