@@ -72,7 +72,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.persist.Entity;
@@ -84,31 +83,34 @@ import org.opencadc.persist.Entity;
  * @see ContainerNode
  * 
  * @author majorb
+ * @author jburke
+ * @author pdowler
  *
  */
 public abstract class Node extends Entity implements Comparable<Node> {
     private static final Logger log = Logger.getLogger(Node.class);
 
-    /**
-     * Keep track of the VOSpace version since some things differ. This field
-     * is here to facilitate reading and writing the same version of documents
-     * on the server side in order to maintain support for older clients.
-     */
-    public int version = VOS.VOSPACE_20;
-
     private String name;
-    public Subject creatorID;
+    // do not include subject in metaChecksum, only persistent ownerID
+    public transient Subject creatorID;
+    public Object ownerID;
+    
     public Boolean isPublic;
     public Boolean isLocked;
+    
     public final Set<URI> readOnlyGroup = new TreeSet<>();
     public final Set<URI> readWriteGroup = new TreeSet<>();
+    
     public final Set<NodeProperty> properties = new TreeSet<>();
 
     public final transient List<URI> accepts = new ArrayList<>();
     public final transient List<URI> provides = new ArrayList<>();
 
     // To be used by controlling applications as they wish.
-    public transient Object appData;
+    //public transient Object appData; // do not include in metaChecksum
+    
+    // track version of vospace the client appeared to use in request??
+    //public transient int version = VOS.VOSPACE_21; // do not include in metaChecksum
 
     /**
      * Node constructor.
@@ -116,7 +118,7 @@ public abstract class Node extends Entity implements Comparable<Node> {
      * @param name The name of the node.
      */
     protected Node(String name) {
-        super();
+        super(false);
         NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
     }
@@ -125,7 +127,6 @@ public abstract class Node extends Entity implements Comparable<Node> {
     public String toString() {
         return this.getClass().getSimpleName()
             + ", [name=" + name
-            + ", appData=" + appData
             + ", properties=" + properties + "]";
     }
 

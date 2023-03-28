@@ -65,13 +65,12 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -90,13 +89,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.NodeUtil;
+import org.opencadc.vospace.StructuredDataNode;
+import org.opencadc.vospace.UnstructuredDataNode;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  * Constructs a Node from an XML source. This class is not thread safe but it is
@@ -264,7 +272,7 @@ public class NodeReader implements XmlProcessor {
         } else {
             throw new NodeParsingException("unsupported node type: " + type);
         }
-        node.version = version;
+        //node.version = version;
 
         return new NodeReaderResult(vosURI, node);
     }
@@ -319,21 +327,16 @@ public class NodeReader implements XmlProcessor {
      */
     protected Node buildContainerNode(Element element, Namespace namespace, VOSURI vosURI)
         throws NodeParsingException {
-
-        // get all node properties
         Set<NodeProperty> properties = getProperties(element, namespace);
-
+        
         // check node properties for inheritPermissions property
         Boolean inheritPermissions = getBooleanProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, properties);
         boolean inherit = inheritPermissions != null && inheritPermissions;
 
         // instantiate a ContainerNode class
         ContainerNode node = new ContainerNode(vosURI.getName(), inherit);
-
-        // set node variables from the properties
+        
         setNodeVariables(element, namespace, node, properties);
-
-        // add remaining properties as node properties
         node.properties.addAll(properties);
 
         // get nodes element
@@ -369,13 +372,13 @@ public class NodeReader implements XmlProcessor {
             log.debug("node type: " + type);
 
             if (type.equals(ContainerNode.class.getSimpleName())) {
-                node.getNodes().add(buildContainerNode(childNode, namespace, childVosURI));
+                node.nodes.add(buildContainerNode(childNode, namespace, childVosURI));
             } else if (type.equals(LinkNode.class.getSimpleName())) {
-                node.getNodes().add(buildLinkNode(childNode, namespace, childVosURI));
+                node.nodes.add(buildLinkNode(childNode, namespace, childVosURI));
             } else if (type.equals(DataNode.class.getSimpleName())
                 || type.equals(StructuredDataNode.class.getSimpleName())
                 || type.equals(UnstructuredDataNode.class.getSimpleName())) {
-                node.getNodes().add(buildDataNode(childNode, namespace, childVosURI, type));
+                node.nodes.add(buildDataNode(childNode, namespace, childVosURI, type));
             } else {
                 throw new NodeParsingException("unsupported node type " + type);
             }
@@ -398,42 +401,16 @@ public class NodeReader implements XmlProcessor {
     protected Node buildDataNode(Element element, Namespace namespace, VOSURI vosURI, String type)
         throws NodeParsingException {
 
-        // get all node properties
-        Set<NodeProperty> properties = getProperties(element, namespace);
-
-        // uri of the data node resource
-        URI storageID = getURIProperty(VOS.PROPERTY_URI_STORAGEID, properties);
-        if (storageID == null) {
-            throw new NodeParsingException("storageID property not found: " + vosURI);
-        }
-
-        // DataNode constructor properties, can be null
-        URI contentChecksum = getURIProperty(VOS.PROPERTY_URI_CONTENTMD5, properties);
-        Date contentLastModified = getDateProperty(VOS.PROPERTY_URI_DATE, properties);
-        Long contentLength = getLongProperty(VOS.PROPERTY_URI_CONTENTLENGTH, properties);
-
         // Instantiate a DataNode class
         DataNode node;
-        if (contentChecksum == null && contentLastModified == null && contentLength == null) {
-            if (type.equals(DataNode.class.getSimpleName())) {
-                node = new DataNode(vosURI.getName(), storageID);
-            } else if (type.equals(StructuredDataNode.class.getSimpleName())) {
-                node = new StructuredDataNode(vosURI.getName(), storageID);
-            } else if (type.equals(UnstructuredDataNode.class.getSimpleName())) {
-                node = new UnstructuredDataNode(vosURI.getName(), storageID);
-            } else {
-                throw new NodeParsingException("unsupported node type " + type);
-            }
+        if (type.equals(DataNode.class.getSimpleName())) {
+            node = new DataNode(vosURI.getName());
+        } else if (type.equals(StructuredDataNode.class.getSimpleName())) {
+            node = new StructuredDataNode(vosURI.getName());
+        } else if (type.equals(UnstructuredDataNode.class.getSimpleName())) {
+            node = new UnstructuredDataNode(vosURI.getName());
         } else {
-            if (type.equals(DataNode.class.getSimpleName())) {
-                node = new DataNode(vosURI.getName(), contentChecksum, contentLastModified, contentLength, storageID);
-            } else if (type.equals(StructuredDataNode.class.getSimpleName())) {
-                node = new StructuredDataNode(vosURI.getName(), contentChecksum, contentLastModified, contentLength, storageID);
-            } else if (type.equals(UnstructuredDataNode.class.getSimpleName())) {
-                node = new UnstructuredDataNode(vosURI.getName(), contentChecksum, contentLastModified, contentLength, storageID);
-            } else {
-                throw new NodeParsingException("unsupported node type " + type);
-            }
+            throw new NodeParsingException("unsupported node type " + type);
         }
 
         // node busy attribute
@@ -445,14 +422,8 @@ public class NodeReader implements XmlProcessor {
         node.busy = Boolean.parseBoolean(busy);
         log.debug("busy: " + node.busy);
 
-        // optional contentType & contentEncoding
-        node.contentType = getStringProperty(VOS.PROPERTY_URI_TYPE, properties);
-        node.contentEncoding = getStringProperty(VOS.PROPERTY_URI_CONTENTENCODING, properties);
-
-        // set node variables from the properties
+        Set<NodeProperty> properties = getProperties(element, namespace);
         setNodeVariables(element, namespace, node, properties);
-
-        // add remaining properties as node properties
         node.properties.addAll(properties);
 
         return node;

@@ -65,66 +65,16 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.transfer;
 
 /**
- * Class to hold the direction information for a transfer.
  *
- * @author majorb
- *
+ * @author pdowler
  */
-public class Direction {
+public class TransferParsingException extends Exception {
 
-    // predefined direction values
-    public static final String pushToVoSpaceValue = "pushToVoSpace";
-    public static final String pullToVoSpaceValue = "pullToVoSpace";
-    public static final String pushFromVoSpaceValue = "pushFromVoSpace";
-    public static final String pullFromVoSpaceValue = "pullFromVoSpace";
-    
-    // predefined directions
-    public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
-    public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
-    public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
-    public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
-
-    public static final Direction BIDIRECTIONAL = new Direction("ivo://cadc.nrc.ca/vospace#biDirectional");
-    
-    private final String value;
-
-    /**
-     * Direction constructor.
-     * @param value direction value.
-     */
-    public Direction(String value) {
-        this.value = value;
-    }
-
-    /**
-     * Get the value of this direction.
-     *
-     * @return direction value.
-     */
-    public String getValue() {
-        return value;
-    }
-
-    /**
-     * Return true if the values are equal, ignoring case.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Direction) {
-            String value = ((Direction) o).getValue();
-            if (value != null) {
-                return value.equalsIgnoreCase(value);
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "Direction[" + value +  "]";
+    public TransferParsingException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 
 }

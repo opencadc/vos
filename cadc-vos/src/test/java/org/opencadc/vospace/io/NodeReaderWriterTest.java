@@ -65,8 +65,11 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
 import static org.junit.Assert.fail;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
@@ -93,6 +96,15 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.StructuredDataNode;
+import org.opencadc.vospace.UnstructuredDataNode;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  * Test read-write of Nodes using the NodeReader and NodeWriter. Every test here
@@ -105,7 +117,7 @@ public class NodeReaderWriterTest {
     private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
 
     DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
@@ -141,59 +153,59 @@ public class NodeReaderWriterTest {
     @Before
     public void setUp() throws Exception {
 
-        URI storageID = URI.create("cadc:TEST/file.fits");
-
         // ContainerNode
-        containerURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir");
+        containerURI = new VOSURI("vos://opencadc.org~vospace/dir");
         containerNode = new ContainerNode(containerURI.getName(), false);
-        DataNode dn1 = new DataNode("ngc4323", storageID);
+        DataNode dn1 = new DataNode("ngc4323");
         dn1.busy = true;
-        containerNode.getNodes().add(dn1);
-        DataNode dn2 = new DataNode("ngc5796", storageID);
+        containerNode.nodes.add(dn1);
+        DataNode dn2 = new DataNode("ngc5796");
         dn2.busy = false;
-        containerNode.getNodes().add(dn2);
-        DataNode dn3 = new DataNode("ngc6801", storageID);
+        containerNode.nodes.add(dn2);
+        DataNode dn3 = new DataNode("ngc6801");
         dn3.busy = true;
-        containerNode.getNodes().add(dn3);
+        containerNode.nodes.add(dn3);
         addStandardNodeVariables(containerNode);
         addNodeProperties(containerNode);
 
         // LinkNode
-        linkURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir/link");
-        URI target = URI.create("vos://cadc.nrc.ca!vospace/dir/target");
+        linkURI = new VOSURI("vos://opencadc.org~vospace/dir/link");
+        URI target = URI.create("vos://opencadc.org~vospace/dir/target");
         linkNode = new LinkNode(linkURI.getName(), target);
         addStandardNodeVariables(linkNode);
         addNodeProperties(linkNode);
 
         // minimum detail DataNode
-        dataURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir/dataFile");
-        minDataNode = new DataNode(dataURI.getName(), storageID);
+        dataURI = new VOSURI("vos://opencadc.org~vospace/dir/dataFile");
+        minDataNode = new DataNode(dataURI.getName());
         minDataNode.busy = false;
 
         // maximum detail DataNode
-        dataURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir/dataFile");
-        URI contentChecksum = URI.create("md5:fd02b367a37f1ec989be20be40672fc5");
-        Date contentLastModified = dateFormat.parse("2023-02-03T08:45:12.345");
-        Long contentLength = 540000L;
-        maxDataNode = new DataNode(dataURI.getName(), contentChecksum, contentLastModified,
-                                   contentLength, storageID);
+        dataURI = new VOSURI("vos://opencadc.org~vospace/dir/dataFile");
+        maxDataNode = new DataNode(dataURI.getName());
         maxDataNode.busy = true;
-        maxDataNode.contentType = "content-type";
-        maxDataNode.contentEncoding = "content-encoding";
+        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "content-type"));
+        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "content-encoding"));
+        URI contentChecksum = URI.create("md5:fd02b367a37f1ec989be20be40672fc5");
+        String contentLastModified = "2023-02-03T08:45:12.345";
+        Long contentLength = 540000L;
+        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentChecksum.toASCIIString()));
+        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, contentLastModified));
         maxDataNode.accepts.add(VOS.VIEW_ANY);
         maxDataNode.provides.add(VOS.VIEW_BINARY);
         addStandardNodeVariables(maxDataNode);
         addNodeProperties(maxDataNode);
 
         // StructuredDataNode
-        structuredURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir/structuredFile");
-        structuredDataNode = new StructuredDataNode(structuredURI.getName(), storageID);
+        structuredURI = new VOSURI("vos://opencadc.org~vospace/dir/structuredFile");
+        structuredDataNode = new StructuredDataNode(structuredURI.getName());
         structuredDataNode.busy = true;
         addStandardNodeVariables(structuredDataNode);
 
         // UnstructuredDataNode
-        unstructuredURI = new VOSURI("vos://cadc.nrc.ca!vospace/dir/unstructuredFile");
-        unstructuredDataNode = new UnstructuredDataNode(unstructuredURI.getName(), storageID);
+        unstructuredURI = new VOSURI("vos://opencadc.org~vospace/dir/unstructuredFile");
+        unstructuredDataNode = new UnstructuredDataNode(unstructuredURI.getName());
         unstructuredDataNode.busy = true;
         addStandardNodeVariables(unstructuredDataNode);
     }
@@ -238,8 +250,8 @@ public class NodeReaderWriterTest {
     }
 
     private void compareContainerNodes(ContainerNode n1, ContainerNode n2) {
-        List<Node> cn1 = n1.getNodes();
-        List<Node> cn2 = n2.getNodes();
+        List<Node> cn1 = n1.nodes;
+        List<Node> cn2 = n2.nodes;
 
         Assert.assertEquals("nodes.size()", cn1.size(), cn2.size());
         for (int i = 0; i < cn1.size(); i++) {
@@ -290,7 +302,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(containerURI, containerNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -312,7 +324,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(dataURI, minDataNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -320,7 +332,7 @@ public class NodeReaderWriterTest {
             Node n2 = result.node;
 
             // make sure default version is still 2.0
-            Assert.assertEquals(VOS.VOSPACE_20, n2.version);
+            //Assert.assertEquals(VOS.VOSPACE_20, n2.version);
             Assert.assertTrue(n2 instanceof DataNode);
             Assert.assertEquals(dataURI, result.vosURI);
             compareNodes(minDataNode, n2);
@@ -337,7 +349,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(dataURI, maxDataNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -345,7 +357,7 @@ public class NodeReaderWriterTest {
             Node n2 = result.node;
 
             // make sure default version is still 2.0
-            Assert.assertEquals(VOS.VOSPACE_20, n2.version);
+            //Assert.assertEquals(VOS.VOSPACE_20, n2.version);
             Assert.assertTrue(n2 instanceof DataNode);
             Assert.assertEquals(dataURI, result.vosURI);
             compareNodes(maxDataNode, n2);
@@ -362,7 +374,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(unstructuredURI, unstructuredDataNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -384,7 +396,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(structuredURI, structuredDataNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -406,7 +418,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             instance.write(linkURI, linkNode, sb);
-            log.debug(sb.toString());
+            log.info(sb.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -485,7 +497,7 @@ public class NodeReaderWriterTest {
             instance.write(detailedURI, detailedNode, sw);
             sw.close();
 
-            log.debug(sw.toString());
+            log.info(sw.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -507,7 +519,7 @@ public class NodeReaderWriterTest {
             String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                 + "<vos:node xmlns:vos=\"http://www.ivoa.net/xml/VOSpace/v2.0\""
                 + " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
-                + " uri=\"vos://cadc.nrc.ca!vospace/dir/dataFile\" xsi:type=\"vos:DataNode\" busy=\"false\">\n"
+                + " uri=\"vos://opencadc.org~vospace/dir/dataFile\" xsi:type=\"vos:DataNode\" busy=\"false\">\n"
                 + "  <vos:accepts />\n"
                 + "  <vos:properties>\n"
                 + "    <vos:property uri=\"ivo://cadc.nrc.ca/vospace/core#storageID\">cadc:TEST/file.fits</vos:property>\n"
@@ -536,11 +548,11 @@ public class NodeReaderWriterTest {
     private ContainerNode createDetailedNode() throws URISyntaxException {
 
         // root ContainerNode
-        detailedURI = new VOSURI("vos://cadc.nrc.ca!vospace/testContainer");
+        detailedURI = new VOSURI("vos://opencadc.org~vospace/testContainer");
         detailedNode = new ContainerNode(detailedURI.getName(), true);
 
         // child DataNode with some props
-        VOSURI dataURI1 = new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/ngc4323");
+        VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
         URI storageID1 = URI.create("cadc:TEST/file1.fits");
         DataNode dataNode1 = new DataNode(dataURI1.getName(), storageID1);
         dataNode1.busy = true;
@@ -550,29 +562,29 @@ public class NodeReaderWriterTest {
         dataNode1.accepts.add(URI.create("ivo://cadc.nrc.ca/vospace/view#view2"));
         dataNode1.provides.add(URI.create("ivo://cadc.nrc.ca/vospace/view#something"));
         dataNode1.provides.add(URI.create("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
-        detailedNode.getNodes().add(dataNode1);
+        detailedNode.nodes.add(dataNode1);
 
         // add a ContainerNode with some props
-        VOSURI containerURI = new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/foo");
+        VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/testContainer/foo");
         ContainerNode containerNode = new ContainerNode(containerURI.getName(), false);
         containerNode.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
-        detailedNode.getNodes().add(containerNode);
+        detailedNode.nodes.add(containerNode);
 
         // add a LinkNode with some props
-        VOSURI linkURI = new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/aLink");
-        URI target = URI.create("vos://cadc.nrc.ca!vospace/testContainer/baz");
+        VOSURI linkURI = new VOSURI("vos://opencadc.org~vospace/testContainer/aLink");
+        URI target = URI.create("vos://opencadc.org~vospace/testContainer/baz");
         LinkNode linkNode = new LinkNode(linkURI.getName(), target);
         linkNode.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
-        detailedNode.getNodes().add(linkNode);
+        detailedNode.nodes.add(linkNode);
 
         // add another DataNode below
-        VOSURI dataURI2 = new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/baz");
+        VOSURI dataURI2 = new VOSURI("vos://opencadc.org~vospace/testContainer/baz");
         URI storageID2 = URI.create("cadc:TEST/file2.fits");
         DataNode dataNode2 = new DataNode(dataURI2.getName(), storageID2);
         dataNode2.busy = false;
         dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
         dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
-        detailedNode.getNodes().add(dataNode2);
+        detailedNode.nodes.add(dataNode2);
 
         return detailedNode;
     }

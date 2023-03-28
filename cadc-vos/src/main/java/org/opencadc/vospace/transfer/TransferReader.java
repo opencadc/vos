@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.transfer;
 
 import ca.nrc.cadc.xml.XmlUtil;
 
@@ -87,7 +87,10 @@ import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.View;
 import org.opencadc.vospace.View.Parameter;
+import org.opencadc.vospace.io.XmlProcessor;
 
 /**
  * Constructs a Transfer from an XML source. This class is not thread safe but it is

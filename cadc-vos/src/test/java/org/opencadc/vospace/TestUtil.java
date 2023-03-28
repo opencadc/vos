@@ -67,6 +67,8 @@
 
 package org.opencadc.vospace;
 
+import org.opencadc.vospace.io.XmlProcessor;
+import org.opencadc.vospace.transfer.TransferReader;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.File;

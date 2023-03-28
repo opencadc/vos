@@ -67,6 +67,8 @@
 
 package org.opencadc.vospace;
 
+import org.opencadc.vospace.io.JsonNodeWriter;
+import org.opencadc.vospace.io.NodeReader;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import ca.nrc.cadc.auth.IdentityManager;
