@@ -90,8 +90,9 @@ import org.opencadc.persist.Entity;
 public abstract class Node extends Entity implements Comparable<Node> {
     private static final Logger log = Logger.getLogger(Node.class);
 
+    public transient ContainerNode parent;
     private String name;
-    // do not include subject in metaChecksum, only persistent ownerID
+    
     public transient Subject creatorID;
     public Object ownerID;
     
@@ -106,6 +107,8 @@ public abstract class Node extends Entity implements Comparable<Node> {
     public final transient List<URI> accepts = new ArrayList<>();
     public final transient List<URI> provides = new ArrayList<>();
 
+    
+    
     // To be used by controlling applications as they wish.
     //public transient Object appData; // do not include in metaChecksum
     
