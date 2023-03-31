@@ -105,7 +105,6 @@ import org.junit.Test;
 public class AuthPutActionTest {
 
     protected static Logger log = Logger.getLogger(AuthPutActionTest.class);
-
     protected static Subject cadcauthSubject;
     protected static Subject cadcregSubject;
     protected static String baseURIStr;
@@ -365,21 +364,24 @@ public class AuthPutActionTest {
 
 
     private static void verifyPut(VOSURI fileURI, String sourceFilename, String md5Sum) throws Throwable {
-        final Path filePath = Paths.get(sourceFilename);
+        // Pulls file from the build/resources/intTest directory
+        final File expectedFile = new File(sourceFilename);
         try {
             Subject.doAs(cadcauthSubject, new PrivilegedExceptionAction() {
                 @Override
                 public Object run() throws Exception {
                     Node n = vos.getNode(fileURI.getPath());
                     log.debug("MD5: " + n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5) + " (expecting " + md5Sum + ")");
-                    Assert.assertEquals(("filename not as expected: "), filePath.getFileName().toString(), n.getName());
+                    Assert.assertEquals(("filename not as expected: "), expectedFile.getName(), n.getName());
                     long contentLength = Long.parseLong(n.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
-                    Assert.assertEquals(Files.size(filePath), contentLength);
+                    long expectedFileLength = expectedFile.length();
+                    Assert.assertEquals(expectedFileLength, contentLength);
                     Assert.assertEquals(md5Sum, n.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
                     return null;
                 }
             });
         } catch (PrivilegedActionException ioe) {
+            log.debug("verifyPut exception:" + ioe);
             Assert.fail("unable to set up test node");
         }
     }
