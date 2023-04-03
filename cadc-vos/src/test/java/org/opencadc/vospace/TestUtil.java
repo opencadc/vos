@@ -67,14 +67,13 @@
 
 package org.opencadc.vospace;
 
-import org.opencadc.vospace.io.XmlProcessor;
-import org.opencadc.vospace.transfer.TransferReader;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.io.XmlProcessor;
 
 /**
  * @author zhangsa
@@ -99,7 +98,7 @@ public class TestUtil {
      * @return
      */
     public static File getTestFile() {
-        String strUrl = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, TransferReader.class);
+        String strUrl = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_20, XmlProcessor.class);
         strUrl = strUrl.substring(5);
         log.debug("test file URL: " + strUrl);
         File testFile = new File(strUrl);

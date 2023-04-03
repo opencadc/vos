@@ -67,11 +67,6 @@
 
 package org.opencadc.vospace.io;
 
-import org.opencadc.vospace.io.NodeWriter;
-import org.opencadc.vospace.io.NodeParsingException;
-import org.opencadc.vospace.io.NodeReader;
-import static org.junit.Assert.fail;
-
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
@@ -80,13 +75,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.Principal;
 import java.text.DateFormat;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -313,7 +305,7 @@ public class NodeReaderWriterTest {
             compareNodes(containerNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -338,7 +330,7 @@ public class NodeReaderWriterTest {
             compareNodes(minDataNode, n2);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -363,7 +355,7 @@ public class NodeReaderWriterTest {
             compareNodes(maxDataNode, n2);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -385,7 +377,7 @@ public class NodeReaderWriterTest {
             compareNodes(unstructuredDataNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -407,7 +399,7 @@ public class NodeReaderWriterTest {
             compareNodes(structuredDataNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -429,7 +421,7 @@ public class NodeReaderWriterTest {
             compareNodes(linkNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -454,7 +446,7 @@ public class NodeReaderWriterTest {
             compareNodes(minDataNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -481,7 +473,7 @@ public class NodeReaderWriterTest {
             compareNodes(minDataNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -508,7 +500,7 @@ public class NodeReaderWriterTest {
             compareNodes(detailedNode, result.node);
         } catch (Exception t) {
             log.error(t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 
@@ -530,7 +522,7 @@ public class NodeReaderWriterTest {
             try {
                 NodeReader reader = new NodeReader(true);
                 reader.read(xml);
-                fail("test XML is actually valid - test is broken");
+                Assert.fail("test XML is actually valid - test is broken");
             } catch (NodeParsingException expected) {
             }
 
@@ -540,7 +532,7 @@ public class NodeReaderWriterTest {
         } catch (Exception t) {
             t.printStackTrace();
             log.error("unexpected exception", t);
-            fail(t.getMessage());
+            Assert.fail(t.getMessage());
         }
     }
 

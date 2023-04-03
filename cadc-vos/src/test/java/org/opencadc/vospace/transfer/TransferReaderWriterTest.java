@@ -67,12 +67,8 @@
 
 package org.opencadc.vospace.transfer;
 
-import org.opencadc.vospace.transfer.TransferReader;
-import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferWriter;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
-
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
