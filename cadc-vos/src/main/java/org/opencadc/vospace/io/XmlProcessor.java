@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.reg.XMLConstants;
 import ca.nrc.cadc.xml.W3CConstants;
