@@ -319,7 +319,6 @@ public abstract class NodeUtil {
 
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
                         log.debug("setting group-read property to: " + guri);
-                        acl.clearACL();
                         acl.setReadOnlyACL(gp, isDir);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
@@ -346,15 +345,12 @@ public abstract class NodeUtil {
 
                         GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
                         log.debug("setting group-write property to: " + guri);
-                        acl.clearACL();
                         acl.setReadWriteACL(gp, isDir);
                     } catch (UserPrincipalNotFoundException ex) {
                         throw new RuntimeException("failed to find existing group: " + guri, ex);
                     }
                 }
             }
-            
-            
         }
     }
 
