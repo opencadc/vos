@@ -77,27 +77,11 @@ import java.util.Date;
  */
 public class UnstructuredDataNode extends DataNode {
 
-    /**
-     * UnstructuredDataNode constructor.
-     *
-     * @param name The name of the node.
-     * @param storageID The URI of associated artifact.
-     */
+    public UnstructuredDataNode(String name) {
+        super(name);
+    }
+
     public UnstructuredDataNode(String name, URI storageID) {
         super(name, storageID);
     }
-
-    /**
-     * UnstructuredDataNode constructor.
-     *
-     * @param name The name of the node.
-     * @param storageID The URI of associated artifact.
-     * @param contentChecksum The artifact checksum.
-     * @param contentLastModified The artifact lastModified date.
-     * @param contentLength The artifact contentLength.
-     */
-    public UnstructuredDataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
-        super(name, contentChecksum, contentLastModified, contentLength, storageID);
-    }
-
 }

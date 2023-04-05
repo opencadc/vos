@@ -65,116 +65,42 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
-import java.net.URI;
-import java.util.Map;
+import ca.nrc.cadc.xml.JsonOutputter;
+
+import java.io.IOException;
+import java.io.Writer;
+
+import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
 
 /**
- * @author zhangsa
  *
+ * @author pdowler
  */
-public class Protocol {
-    protected URI uri; // the formal URI
-    protected String endpoint; 
-    protected URI securityMethod;
-    protected Map<String, String> param;
-
-    /**
-     * Constructor for use in transfer requests. In a transfer request, one only
-     * specifies the protocols.
-     *
-     * @param uri a VOSpace protocol URI
-     */
-    public Protocol(URI uri) {
-        this.uri = uri;
-    }
-
-    /**
-     * @param uri a VOSpace protocol URI
-     * @param endpoint
-     * @param param
-     */
-    public Protocol(URI uri, String endpoint, Map<String, String> param) {
-        super();
-        this.uri = uri;
-        this.endpoint = endpoint;
-        this.param = param;
-    }
+public class JsonNodeWriter extends NodeWriter {
+    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj.getClass() != this.getClass()) {
-            return false;
-        }
-        Protocol p = (Protocol) obj;
+    protected void write(Element root, Writer writer) 
+        throws IOException {
+        JsonOutputter outputter = new JsonOutputter();
+        outputter.getListElementNames().add("nodes");
+        outputter.getListElementNames().add("properties");
+        outputter.getListElementNames().add("accepts");
+        outputter.getListElementNames().add("provides");
 
-        if (!this.uri.equals(p.uri)) {
-            return false;
-        }
+        // WebRT 72612
+        // Treat all property values as Strings.
+        // jenkinsd 2016.01.20
+        outputter.getStringElementNames().add("property");
         
-        //if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
-        //        || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
-        //    return false;
-
-        if ((this.securityMethod != null && !this.securityMethod.equals(p.securityMethod))
-            || (p.securityMethod != null && !p.securityMethod.equals(this.securityMethod))) {
-            return false;
-        }
-        
-        if (this.param == p.param) { // both null or same object
-            return true;
-        }
-
-        if ((this.param != null && p.param == null) || (this.param == null && p.param != null)) {
-            return false;
-        }
-
-        // neither param map null, not sure if this compares
-        // keys and values or not
-        if (!this.param.entrySet().containsAll(p.param.entrySet())) {
-            return false;
-        }
-        if (!p.param.entrySet().containsAll(this.param.entrySet())) {
-            return false;
-        }
-        return true;
-    }
-
-    public URI getUri() {
-        return this.uri;
-    }
-
-    public URI getSecurityMethod() {
-        return securityMethod;
-    }
-
-    public void setSecurityMethod(URI securityMethod) {
-        this.securityMethod = securityMethod;
-    }
-    
-    public String getEndpoint() {
-        return this.endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
-
-    public Map<String, String> getParam() {
-        return this.param;
-    }
-
-    public void setParam(Map<String, String> param) {
-        this.param = param;
-    }
-
-    @Override
-    public String toString() {
-        return "Protocol[" + uri + "," + endpoint + "," + securityMethod + "," + param + "]";
+        outputter.setFormat(Format.getPrettyFormat());
+        Document document = new Document(root);
+        outputter.output(document, writer);
     }
 
 }

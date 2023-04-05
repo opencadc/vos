@@ -65,8 +65,10 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
+import org.opencadc.vospace.io.JsonNodeWriter;
+import org.opencadc.vospace.io.NodeReader;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import ca.nrc.cadc.auth.IdentityManager;
@@ -77,6 +79,7 @@ import java.net.URI;
 
 import org.json.JSONObject;
 import org.junit.Test;
+import org.opencadc.vospace.VOSURI;
 
 public class JsonNodeWriterTest {
     @Test

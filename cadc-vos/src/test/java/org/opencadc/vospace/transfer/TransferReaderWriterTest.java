@@ -65,11 +65,10 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.transfer;
 
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
-
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
@@ -82,6 +81,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.View;
 
 /**
  * @author zhangsa

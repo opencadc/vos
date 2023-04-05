@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.transfer;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -79,6 +79,9 @@ import org.jdom2.Element;
 import org.jdom2.Namespace;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.View;
+import org.opencadc.vospace.io.XmlProcessor;
 
 /**
  * Writes a Transfer as XML to an output.

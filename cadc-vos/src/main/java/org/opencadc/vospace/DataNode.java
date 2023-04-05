@@ -81,14 +81,15 @@ public class DataNode extends Node {
     
     private static Logger log = Logger.getLogger(DataNode.class);
 
-    private final URI storageID;
-    private final URI contentChecksum;
-    private final Date contentLastModified;
-    private final Long contentLength;
-    public String contentType;
-    public String contentEncoding;
     public boolean busy = false;
+    
+    private final transient URI storageID;
 
+    public DataNode(String name) {
+        super(name);
+        this.storageID = null;
+    }
+    
     /**
      * DataNode constructor.
      *
@@ -99,46 +100,9 @@ public class DataNode extends Node {
         super(name);
         NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
         this.storageID = storageID;
-        this.contentChecksum = null;
-        this.contentLastModified = null;
-        this.contentLength = null;
-    }
-
-    /**
-     * DataNode constructor.
-     *
-     * @param name The name of the node.
-     * @param storageID The URI of associated artifact.
-     * @param contentChecksum The artifact checksum.
-     * @param contentLastModified The artifact lastModified date.
-     * @param contentLength The artifact contentLength.
-     */
-    public DataNode(String name, URI contentChecksum, Date contentLastModified, Long contentLength, URI storageID) {
-        super(name);
-        NodeUtil.assertNotNull(DataNode.class, "contentChecksum", "contentChecksum");
-        NodeUtil.assertNotNull(DataNode.class, "contentLastModified", "contentLastModified");
-        NodeUtil.assertNotNull(DataNode.class, "contentLength", "contentLength");
-        NodeUtil.assertNotNull(DataNode.class, "storageID", "storageID");
-        this.contentChecksum = contentChecksum;
-        this.contentLastModified = contentLastModified;
-        this.contentLength = contentLength;
-        this.storageID = storageID;
     }
 
     public URI getStorageID() {
         return this.storageID;
     }
-
-    public URI getContentChecksum() {
-        return this.contentChecksum;
-    }
-
-    public Date getContentLastModified() {
-        return this.contentLastModified;
-    }
-
-    public Long getContentLength() {
-        return this.contentLength;
-    }
-
 }

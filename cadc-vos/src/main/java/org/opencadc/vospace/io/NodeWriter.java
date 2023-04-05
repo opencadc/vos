@@ -65,27 +65,21 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.log4j.Logger;
 import org.jdom2.Attribute;
 import org.jdom2.Document;
@@ -94,6 +88,14 @@ import org.jdom2.Namespace;
 import org.jdom2.ProcessingInstruction;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.NodeUtil;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  * Writes a Node as XML to an output.
@@ -135,8 +137,9 @@ public class NodeWriter implements XmlProcessor {
     /**
      * Write a Node to an OutputStream using UTF-8 encoding.
      *
-     * @param node Node to write.
-     * @param out OutputStream to write to.
+     * @param vosURI absolute URI of the node
+     * @param node the node
+     * @param out destination
      * @throws IOException if the writer fails to write.
      */
     public void write(VOSURI vosURI, Node node, OutputStream out)
@@ -184,6 +187,10 @@ public class NodeWriter implements XmlProcessor {
     /**
      * A wrapper to write node without specifying its type
      *
+     * @param vosURI absolute URI of the node
+     * @param node the node
+     * @param writer destination
+     * @throws IOException if the writer fails to write.
      */
     public void write(VOSURI vosURI, Node node, Writer writer)
         throws IOException {
@@ -338,35 +345,7 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addDataNodeVariablesToProperties(DataNode node, Set<NodeProperty> properties) {
-
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_STORAGEID, node.getStorageID().toASCIIString()));
-
-        if (node.getContentChecksum() != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, node.getContentChecksum().toASCIIString()));
-        }
-
-        Date lastModified = null;
-        if (node.getContentLastModified() != null) {
-            lastModified = node.getContentLastModified();
-        } else if (node.getLastModified() != null) {
-            lastModified = node.getLastModified();
-        }
-        if (lastModified != null) {
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(lastModified)));
-        }
-
-        if (node.getContentLength() != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, node.getContentLength().toString()));
-        }
-
-        if (node.contentType != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, node.contentType));
-        }
-
-        if (node.contentEncoding != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, node.contentEncoding));
-        }
+        // currently none since busy is an attribute handled elsewhere
     }
 
     /**
@@ -433,7 +412,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
         Element nodes = new Element("nodes", vosNamespace);
-        for (Node childNode : node.getNodes()) {
+        for (Node childNode : node.nodes) {
             VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
             Element nodeElement = getNodeElement(childURI, childNode);
             nodes.addContent(nodeElement);
