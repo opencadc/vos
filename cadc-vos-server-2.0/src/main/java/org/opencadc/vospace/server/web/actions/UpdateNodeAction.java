@@ -65,42 +65,115 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server.web.actions;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.Writer;
-
+import java.io.InputStream;
+import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
+ * Class to perform the creation of a Node.
  *
- * @author pdowler
+ * @author adriand
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class UpdateNodeAction extends NodeAction
+{
+
+    protected static Logger log = Logger.getLogger(UpdateNodeAction.class);
+
+    private static final String INLINE_CONTENT_TAG = "inputstream";
+
+    // 12Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 12288L;
 
     @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public Node getClientNode()
+        throws NodeParsingException, IOException
+    {
+        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
+        return getNode(in);
     }
 
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
+    {
+        try
+        {
+            Node node = nodePersistence.get(nodeURI);
+            voSpaceAuthorizer.getWritePermission(node);
+
+            return node;
+        }
+        catch (NodeNotFoundException ex)
+        {
+            // node does not exist: FAIL
+            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
+        }
+    }
+
+    @Override
+    public void performNodeAction(Node clientNode, Node serverNode)
+            throws Exception {
+
+        //TODO This should not be required. In fact the update should take the clientNode
+        // and check if they are different
+        List<NodeProperty> props = new ArrayList<>();
+        props.addAll(clientNode.properties);
+        Node storedNode = nodePersistence.updateProperties(serverNode, props);
+
+        // return the node in xml format
+        final NodeWriter nodeWriter = getNodeWriter();
+        syncOutput.setHeader("Content-Type", getMediaType());
+        nodeWriter.write(LocalServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
+    }
+
+    private Node getNode(InputStream content) throws IOException, NodeParsingException {
+        ByteCountInputStream sizeLimitInputStream =
+                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
+
+        NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
+
+        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
+
+        // ensure the path in the XML URI matches the path in the URL
+        if (!nrr.vosURI.getPath().equals(nodeURI.getPath()))
+        {
+            throw new NodeParsingException("Node path in URI XML ("
+                    + nrr.vosURI.getPath()
+                    + ") not equal to node path in URL ("
+                    + nodeURI.getPath()
+                    + ")");
+        }
+
+        return nrr.node;
+    }
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return (name, contentType, inputStream) -> {
+            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            content.name = INLINE_CONTENT_TAG;
+            content.value = inputStream;
+            return content;
+        };
+    }
 }

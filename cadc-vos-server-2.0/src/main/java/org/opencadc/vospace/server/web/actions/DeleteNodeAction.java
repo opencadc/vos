@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2010.                            (c) 2010.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,42 +65,67 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server.web.actions;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import java.io.FileNotFoundException;
+import java.security.AccessControlException;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOSURI;
 
 /**
+ * Class to perform the deletion of a Node.
  *
- * @author pdowler
+ * @author majorb
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class DeleteNodeAction extends NodeAction
+{
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
     @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public Node getClientNode()
+    {
+        // No client node in a DELETE
+        return null;
     }
 
+    @Override
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException, TransientException
+    {
+        try
+        {
+            // no one can delete the root or something in the root
+            VOSURI parentURI = nodeURI.getParentURI();
+            if (nodeURI.isRoot() || parentURI.isRoot())
+                throw new AccessControlException("permission denied");
+
+            Node target = nodePersistence.get(nodeURI);
+
+            log.debug("Checking delete privilege on: " + target.getPath());
+            voSpaceAuthorizer.getDeletePermission(target);
+
+            return target;
+        }
+        catch (NodeNotFoundException ex)
+        {
+            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
+        }
+    }
+
+    @Override
+    public void performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
+    {
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+    }
+
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return null;
+    }
 }
