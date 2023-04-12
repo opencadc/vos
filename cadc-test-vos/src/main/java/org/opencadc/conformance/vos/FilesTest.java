@@ -70,28 +70,34 @@
 package org.opencadc.conformance.vos;
 
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
-import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.util.StringUtil;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.net.URI;
+import java.io.StringWriter;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferReader;
+import org.opencadc.vospace.transfer.TransferWriter;
 
 public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
     static {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vos", Level.INFO);
     }
 
     public FilesTest() {
@@ -99,29 +105,77 @@ public class FilesTest extends VOSTest {
     }
 
     @Test
-    public void getFileTest() {
+    public void fileTest() {
         try {
-            // upload test file
-            String name = "get-text-file.txt";
-            URL nodeURL = new URL(String.format("%s/%s", filesServiceURL, name));
-            VOSURI nodeURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            File testFile = FileUtil.getFileFromResource(name, FilesTest.class);
+            // Put a DataNode
+            String name = "files-data-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
+            log.debug("files-data-node URL: " + nodeURL);
 
-            put(nodeURL, testFile);
+            // Create a Transfer
+            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
+            transfer.version = VOS.VOSPACE_21;
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            transfer.getProtocols().add(protocol);
+
+            // Get the transfer document
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+            log.debug("files-data-node transfer XML: " + sw);
+
+            // POST the transfer document
+            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            URL transferURL = getNodeURL(synctransServiceURL, name);
+            log.debug("transfer URL: " + transferURL);
+            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(authSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
+            Assert.assertNull("expected PUT throwable == null", post.getThrowable());
+
+            // Get the transfer details
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpGet get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(authSubject, new RunnableAction(get));
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
+                              get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+            // Get the endpoint from the transfer details
+            log.debug("transfer details XML: " + out);
+            TransferReader transferReader = new TransferReader();
+            Transfer details = transferReader.read(out.toString(), "vos");
+            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
+                                Direction.pushToVoSpace, details.getDirection());
+            Assert.assertTrue("expected >0 endpoints", details.getProtocols().size() > 0);
+            URL endpoint = new URL(details.getProtocols().get(0).getEndpoint());
+            log.debug("endpoint: " + endpoint);
+
+            // PUT a file to the endpoint
+            String expected = "test content for files endpoint";
+            ByteArrayInputStream is = new ByteArrayInputStream(expected.getBytes());
+            put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
 
             // get the file using files endpoint
-            URL fileURL = new URL(String.format("%s/files/%s", nodesServiceURL, name));
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(fileURL, out);
+            URL fileURL = getNodeURL(filesServiceURL, name);
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(fileURL, out);
             Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("responseCode: " + get.getResponseCode());
-            Assert.assertEquals("GET response code should be " + 200,
-                                200, get.getResponseCode());
-            Assert.assertNull("PUT throwable should be null", get.getThrowable());
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
 
-            String expected = new String(FileUtil.readFile(testFile), StandardCharsets.UTF_8);
-            String actual = StringUtil.readFromInputStream(get.getInputStream(), StandardCharsets.UTF_8.name());
-            Assert.assertEquals("file content does not match", expected, actual);
+            String actual = out.toString();
+            log.debug("file content: " + actual);
+            Assert.assertEquals("expected file content to match", expected, actual);
+
+            // Delete the node
+            delete(nodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);

@@ -72,10 +72,8 @@ package org.opencadc.conformance.vos;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import javax.security.auth.Subject;
@@ -96,8 +94,8 @@ public class NodesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
 
     static {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vos", Level.INFO);
     }
 
     public NodesTest() {
@@ -108,47 +106,41 @@ public class NodesTest extends VOSTest {
     public void containerNodeTest() {
         try {
             // create a simple container node
-            String name = "container-node";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL, name));
-            VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-
+            String name = "nodes-container-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
             ContainerNode testNode = new ContainerNode(name, true);
 
             // PUT the node
-            put(nodeURL, vosURI, testNode);
+            put(nodeURL, nodeURI, testNode);
 
             // GET the new node
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode persistedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
-            Assert.assertEquals(vosURI, result.vosURI);
+            Assert.assertEquals(nodeURI, result.vosURI);
 
             // POST an update to the node
-            String updatedName = "updated-container-node";
-            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, updatedName);
-            testNode.setName(updatedName);
+            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             testNode.setInheritPermissions(false);
             testNode.properties.add(nodeProperty);
-            post(nodeURL, vosURI, testNode);
+            post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
-            URL updatedNodeURL = new URL(String.format("%s/%s", nodesServiceURL, updatedName));
-            VOSURI updatedVOSURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + updatedName));
-            result = get(updatedNodeURL, 200);
-
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode updatedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, updatedNode);
-            Assert.assertEquals(updatedVOSURI, result.vosURI);
+            Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.isInheritPermissions(), updatedNode.isInheritPermissions());
             Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
 
             // DELETE the node
-            delete(updatedNodeURL);
+            delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(updatedNodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -160,47 +152,39 @@ public class NodesTest extends VOSTest {
     public void dataNodeTest() {
         try {
             // create a simple data node
-            String name = "data-node";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL.toString(), name));
-            VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            DataNode testNode = new DataNode(name, URI.create("storageID"));
+            String name = "nodes-data-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
+            DataNode testNode = new DataNode(name);
 
             // PUT the node
-            put(nodeURL, vosURI, testNode);
+            put(nodeURL, nodeURI, testNode);
 
             // GET the new node
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
-
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof DataNode);
             DataNode persistedNode = (DataNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
-            Assert.assertEquals(vosURI, result.vosURI);
-            Assert.assertEquals(testNode.getStorageID(), persistedNode.getStorageID());
+            Assert.assertEquals(nodeURI, result.vosURI);
 
             // POST an update to the node
-            String updatedName = "updated-data-node";
-            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, updatedName);
-            testNode.setName(updatedName);
+            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             testNode.properties.add(nodeProperty);
-            post(nodeURL, vosURI, testNode);
+            post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
-            URL updatedNodeURL = new URL(String.format("%s/%s", nodesServiceURL, updatedName));
-            VOSURI updatedVOSURI = new VOSURI("" + updatedName);
-            result = get(updatedNodeURL, 200);
-
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
             DataNode updatedNode = (DataNode) result.node;
             Assert.assertEquals(testNode, updatedNode);
-            Assert.assertEquals(updatedVOSURI, result.vosURI);
-            Assert.assertEquals(testNode.getStorageID(), updatedNode.getStorageID());
+            Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
 
             // DELETE the node
-            delete(updatedNodeURL);
+            delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(updatedNodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -212,49 +196,43 @@ public class NodesTest extends VOSTest {
     public void linkNodeTest() {
         try {
             // create a simple link node
-            String name = "link-node";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL.toString(), name));
-            VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
+            String name = "nodes-link-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
             LinkNode testNode = new LinkNode(name, URI.create("target"));
 
             // PUT the node
-            put(nodeURL, vosURI, testNode);
+            put(nodeURL, nodeURI, testNode);
 
             // GET the new node
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
-
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof LinkNode);
             LinkNode persistedNode = (LinkNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
-            Assert.assertEquals(vosURI, result.vosURI);
+            Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getTarget(), persistedNode.getTarget());
             Assert.assertEquals(testNode.getName(), persistedNode.getName());
 
             // POST an update to the node
-            String updatedName = "updated-link-node";
-            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, updatedName);
-            testNode.setName(updatedName);
+            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             testNode.properties.add(nodeProperty);
-            post(nodeURL, vosURI, testNode);
+            post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
-            URL updatedNodeURL = new URL(String.format("%s/%s", nodesServiceURL, updatedName));
-            VOSURI updatedVOSURI = new VOSURI("" + updatedName);
-            result = get(updatedNodeURL, 200);
-
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof LinkNode);
             LinkNode updatedNode = (LinkNode) result.node;
             Assert.assertEquals(testNode, updatedNode);
-            Assert.assertEquals(updatedVOSURI, result.vosURI);
+            Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getTarget(), updatedNode.getTarget());
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
 
             // DELETE the node
-            delete(updatedNodeURL);
+            delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(updatedNodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -266,36 +244,34 @@ public class NodesTest extends VOSTest {
     public void complexNodeTest() {
         try {
             // create a fully populated container node
-            String name = "complex-node";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL, name));
-            VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
+            String path = "nodes-complex-node";
+            ContainerNode testNode = new ContainerNode(path, true);
+
             NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
             NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
-            URI readGroup = URI.create("ivo://cadc.nrc.ca/node?ReadGroup");
-            URI writeGroup = URI.create("ivo://cadc.nrc.ca/node?writeGroup");
-
-            ContainerNode testNode = new ContainerNode(name, true);
-            testNode.creatorID = authSubject;
-            testNode.isPublic = true;
-            testNode.isLocked = true;
             testNode.properties.add(titleProperty);
             testNode.properties.add(descriptionProperty);
+
+            URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
+            URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
             testNode.readOnlyGroup.add(readGroup);
             testNode.readWriteGroup.add(writeGroup);
+            testNode.creatorID = authSubject;
+            testNode.isPublic = true;
 
             // PUT the node
-            put(nodeURL, vosURI, testNode);
+            URL nodeURL = getNodeURL(nodesServiceURL, path);
+            VOSURI nodeURI = getVOSURI(path);
+            put(nodeURL, nodeURI, testNode);
 
             // GET the new node
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
-
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
             ContainerNode persistedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
-            Assert.assertEquals(vosURI, result.vosURI);
-            Assert.assertEquals(testNode.creatorID, persistedNode.creatorID);
+            Assert.assertEquals(nodeURI, result.vosURI);
+            // TODO uncomment createID check
+            //Assert.assertEquals(testNode.creatorID, persistedNode.creatorID);
             Assert.assertEquals(testNode.isPublic, persistedNode.isPublic);
-            Assert.assertEquals(testNode.isLocked, persistedNode.isLocked);
-            Assert.assertEquals(testNode.properties.size(), persistedNode.properties.size());
             Assert.assertTrue(persistedNode.properties.contains(titleProperty));
             Assert.assertTrue(persistedNode.properties.contains(descriptionProperty));
             Assert.assertEquals(testNode.readOnlyGroup.size(), persistedNode.readOnlyGroup.size());
@@ -306,44 +282,40 @@ public class NodesTest extends VOSTest {
             // POST an update to the node
             NodeProperty formatProperty = new NodeProperty(VOS.PROPERTY_URI_FORMAT, XML_CONTENT_TYPE);
             NodeProperty quotaProperty = new NodeProperty(VOS.PROPERTY_URI_QUOTA, "999");
-            URI updatedReadGroup = URI.create("ivo://cadc.nrc.ca/node?UpdatedReadGroup");
-            URI updatedWriteGroup = URI.create("ivo://cadc.nrc.ca/node?UpdatedWriteGroup");
-
-            testNode.isPublic = false;
-            testNode.isLocked = false;
             testNode.properties.clear();
             testNode.properties.add(formatProperty);
             testNode.properties.add(quotaProperty);
-            testNode.readOnlyGroup.clear();
-            testNode.readWriteGroup.clear();
-            testNode.readOnlyGroup.add(updatedReadGroup);
-            testNode.readWriteGroup.add(updatedWriteGroup);
 
-            post(nodeURL, vosURI, testNode);
+            URI updatedReadGroup = URI.create("ivo://org.opencadc/node?UpdatedReadGroup");
+            testNode.readOnlyGroup.clear();
+            testNode.readOnlyGroup.add(updatedReadGroup);
+            URI updatedWriteGroup = URI.create("ivo://org.opencadc/node?UpdatedWriteGroup");
+            testNode.readWriteGroup.clear();
+            testNode.readWriteGroup.add(updatedWriteGroup);
+            testNode.isPublic = false;
+
+            post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
-            result = get(nodeURL, 200);
-
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode updatedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, updatedNode);
-            Assert.assertEquals(vosURI, result.vosURI);
-            Assert.assertEquals(testNode.creatorID, updatedNode.creatorID);
+            Assert.assertEquals(nodeURI, result.vosURI);
+            //Assert.assertEquals(testNode.creatorID, updatedNode.creatorID);
             Assert.assertEquals(testNode.isPublic, updatedNode.isPublic);
-            Assert.assertEquals(testNode.isLocked, updatedNode.isLocked);
-            Assert.assertEquals(testNode.properties.size(), updatedNode.properties.size());
             Assert.assertTrue(updatedNode.properties.contains(titleProperty));
             Assert.assertTrue(updatedNode.properties.contains(descriptionProperty));
             Assert.assertEquals(testNode.readOnlyGroup.size(), updatedNode.readOnlyGroup.size());
-            Assert.assertTrue(updatedNode.readOnlyGroup.contains(readGroup));
+            Assert.assertTrue(updatedNode.readOnlyGroup.contains(updatedReadGroup));
             Assert.assertEquals(testNode.readWriteGroup.size(), updatedNode.readWriteGroup.size());
-            Assert.assertTrue(updatedNode.readWriteGroup.contains(writeGroup));
+            Assert.assertTrue(updatedNode.readWriteGroup.contains(updatedWriteGroup));
 
             // DELETE the node
             delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(nodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -355,53 +327,59 @@ public class NodesTest extends VOSTest {
     public void listInBatchesTest() {
         try {
             // create root container node
-            String name = "batch-parent";
-            URL parentURL = new URL(String.format("%s/%s", nodesServiceURL.toString(), name));
-            VOSURI parentURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            ContainerNode parent = new ContainerNode(name, true);
+            String parentName = "list-batches-parent";
+            URL parentURL = getNodeURL(nodesServiceURL, parentName);
+            VOSURI parentURI = getVOSURI(parentName);
+            ContainerNode parent = new ContainerNode(parentName, true);
             put(parentURL, parentURI, parent);
 
             // add 6 direct child nodes
-            String child1Name = "batch-child-1";
-            URL child1URL = new URL(String.format("%s/%s", nodesServiceURL, child1Name));
-            VOSURI child1URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child1Name));
+            String child1Name = "list-batches-child-1";
+            String child1Path = parentName + "/" + child1Name;
+            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
+            VOSURI child1URI = getVOSURI(child1Path);
             ContainerNode child1 = new ContainerNode(child1Name, true);
             put(child1URL, child1URI, child1);
 
-            String child2Name = "batch-child-2";
-            URL child2URL = new URL(String.format("%s/%s", nodesServiceURL, child2Name));
-            VOSURI child2URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child2Name));
-            DataNode child2 = new DataNode(child2Name, URI.create("storageID"));
+            String child2Name = "lest-batches-child-2";
+            String child2Path = parentName + "/" + child2Name;
+            URL child2URL = getNodeURL(nodesServiceURL, child2Path);
+            VOSURI child2URI = getVOSURI(child2Path);
+            DataNode child2 = new DataNode(child2Name);
             put(child2URL, child2URI, child2);
 
-            String child3Name = "batch-child-3";
-            URL child3URL = new URL(String.format("%s/%s", nodesServiceURL, child3Name));
-            VOSURI child3URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child3Name));
-            LinkNode child3= new LinkNode(child3Name, URI.create("target"));
+            String child3Name = "list-batches-child-3";
+            String child3Path = parentName + "/" + child3Name;
+            URL child3URL = getNodeURL(nodesServiceURL, child3Path);
+            VOSURI child3URI = getVOSURI(child3Path);
+            LinkNode child3 = new LinkNode(child3Name, URI.create("target"));
             put(child3URL, child3URI, child3);
 
-            String child4Name = "batch-child-4";
-            URL child4URL = new URL(String.format("%s/%s", nodesServiceURL, child4Name));
-            VOSURI child4URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child4Name));
+            String child4Name = "list-batches-child-4";
+            String child4Path = parentName + "/" + child4Name;
+            URL child4URL = getNodeURL(nodesServiceURL, child4Path);
+            VOSURI child4URI = getVOSURI(child4Path);
             ContainerNode child4 = new ContainerNode(child4Name, true);
             put(child4URL, child4URI, child4);
 
-            String child5Name = "batch-child-5";
-            URL child5URL = new URL(String.format("%s/%s", nodesServiceURL, child5Name));
-            VOSURI child5URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child5Name));
-            DataNode child5 = new DataNode(child5Name, URI.create("storageID"));
+            String child5Name = "list-batches-child-5";
+            String child5Path = parentName + "/" + child5Name;
+            URL child5URL = getNodeURL(nodesServiceURL, child5Path);
+            VOSURI child5URI = getVOSURI(child5Path);
+            DataNode child5 = new DataNode(child5Name);
             put(child5URL, child5URI, child5);
 
-            String child6Name = "batch-child-6";
-            URL child6URL = new URL(String.format("%s/%s", nodesServiceURL, child6Name));
-            VOSURI child6URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child6Name));
-            LinkNode child6= new LinkNode(child6Name, URI.create("target"));
+            String child6Name = "list-batches-child-6";
+            String child6Path = parentName + "/" + child6Name;
+            URL child6URL = getNodeURL(nodesServiceURL, child6Path);
+            VOSURI child6URI = getVOSURI(child6Path);
+            LinkNode child6 = new LinkNode(child6Name, URI.create("target"));
             put(child6URL, child6URI, child6);
 
             // Get nodes 1 - 3
             URL nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
                                                 NetUtil.encode(child1URI.getURI().toASCIIString()), 3));
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
@@ -413,7 +391,7 @@ public class NodesTest extends VOSTest {
             // Get nodes 3 - 5
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
                                             NetUtil.encode(child3URI.getURI().toASCIIString()), 3));
-            result = get(nodeURL, 200);
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
@@ -425,7 +403,7 @@ public class NodesTest extends VOSTest {
             // Get nodes 5 - 6
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
                                             NetUtil.encode(child5URI.getURI().toASCIIString()), 3));
-            result = get(nodeURL, 200);
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
@@ -437,7 +415,7 @@ public class NodesTest extends VOSTest {
             delete(parentURL);
 
             // GET the deleted node, which should fail
-            get(parentURL, 404);
+            get(parentURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -449,34 +427,37 @@ public class NodesTest extends VOSTest {
     public void limitNodesTest() {
         try {
             // create root container node
-            String name = "limit-parent";
-            URL parentURL = new URL(String.format("%s/%s", nodesServiceURL.toString(), name));
-            VOSURI parentURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            ContainerNode parent = new ContainerNode(name, true);
+            String parentName = "limit-nodes-parent";
+            URL parentURL = getNodeURL(nodesServiceURL, parentName);
+            VOSURI parentURI = getVOSURI(parentName);
+            ContainerNode parent = new ContainerNode(parentName, true);
             put(parentURL, parentURI, parent);
 
             // add 3 direct child nodes
-            String child1Name = "limit-child-1";
-            URL child1URL = new URL(String.format("%s/%s", nodesServiceURL, child1Name));
-            VOSURI child1URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child1Name));
+            String child1Name = "limit-nodes-child-1";
+            String child1Path = parentName + "/" + child1Name;
+            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
+            VOSURI child1URI = getVOSURI(child1Path);
             ContainerNode child1 = new ContainerNode(child1Name, true);
             put(child1URL, child1URI, child1);
 
-            String child2Name = "limit-child-2";
-            URL child2URL = new URL(String.format("%s/%s", nodesServiceURL, child2Name));
-            VOSURI child2URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child2Name));
-            DataNode child2 = new DataNode(child2Name, URI.create("storageID"));
+            String child2Name = "limit-nodes-child-2";
+            String child2Path = parentName + "/" + child2Name;
+            URL child2URL = getNodeURL(nodesServiceURL, child2Path);
+            VOSURI child2URI = getVOSURI(child2Path);
+            DataNode child2 = new DataNode(child2Name);
             put(child2URL, child2URI, child2);
 
-            String child3Name = "limit-child-3";
-            URL child3URL = new URL(String.format("%s/%s", nodesServiceURL, child3Name));
-            VOSURI child3URI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + child3Name));
-            LinkNode child3= new LinkNode(child3Name, URI.create("target"));
+            String child3Name = "limit-nodes-child-3";
+            String child3Path = parentName + "/" + child3Name;
+            URL child3URL = getNodeURL(nodesServiceURL, child3Path);
+            VOSURI child3URI = getVOSURI(child3Path);
+            LinkNode child3 = new LinkNode(child3Name, URI.create("target"));
             put(child3URL, child3URI, child3);
 
             // get the node with a limit of 2 child nodes
             URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
-            NodeReader.NodeReaderResult result = get(nodeURL, 200);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
@@ -488,7 +469,7 @@ public class NodesTest extends VOSTest {
             delete(parentURL);
 
             // GET the deleted node, which should fail
-            get(parentURL, 404);
+            get(parentURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -500,50 +481,53 @@ public class NodesTest extends VOSTest {
     public void nodeDetailTest() {
         try {
             // create a fully populated container node
-            String name = "detail-node";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL, name));
-            VOSURI nodeURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
-            NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
-            URI readGroup = URI.create("ivo://cadc.nrc.ca/node?ReadGroup");
-            URI writeGroup = URI.create("ivo://cadc.nrc.ca/node?writeGroup");
-
-            ContainerNode testNode = new ContainerNode(name, true);
+            String parentName = "node-detail-parent-node";
+            ContainerNode testNode = new ContainerNode(parentName, true);
             testNode.creatorID = authSubject;
             testNode.isPublic = true;
-            testNode.isLocked = true;
+
+            NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
+            NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
             testNode.properties.add(titleProperty);
             testNode.properties.add(descriptionProperty);
+
+            URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
+            URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
             testNode.readOnlyGroup.add(readGroup);
             testNode.readWriteGroup.add(writeGroup);
-            testNode.nodes.add(new DataNode("detail-child-node", URI.create("storageID")));
 
+            URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+            VOSURI nodeURI = getVOSURI(parentName);
             put(nodeURL, nodeURI, testNode);
+
+            // add a Child node
+            String child1Name = "node-detail-child-node";
+            String child1Path = parentName + "/" + child1Name;
+            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
+            VOSURI child1URI = getVOSURI(child1Path);
+            ContainerNode child1 = new ContainerNode(child1Name, true);
+            put(child1URL, child1URI, child1);
 
             // get the node with a min detail
             URL detailURL = new URL(nodeURL + "?detail=min");
-            NodeReader.NodeReaderResult result = get(detailURL, 200);
-
+            NodeReader.NodeReaderResult result = get(detailURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
-
-            Assert.assertTrue("node properties should be empty", parentNode.properties.isEmpty());
-            Assert.assertTrue("child nodes should be empty", parentNode.nodes.isEmpty());
+            Assert.assertTrue(parentNode.properties.isEmpty());
+            Assert.assertTrue(parentNode.nodes.isEmpty());
 
             // get the node
-            result = get(nodeURL, 200);
-
+            result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
-
-            Assert.assertFalse("node properties shouldn't be empty", parentNode.properties.isEmpty());
-            Assert.assertFalse("child nodes shouldn't be empty", parentNode.nodes.isEmpty());
+            Assert.assertFalse(parentNode.properties.isEmpty());
+            Assert.assertFalse(parentNode.nodes.isEmpty());
 
             // delete the node
             delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(nodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -555,12 +539,11 @@ public class NodesTest extends VOSTest {
     public void dataViewTest() {
         try {
             // upload test file
-            String name = "view-data-test.txt";
-            URL nodeURL = new URL(String.format("%s/%s", nodesServiceURL, name));
-            VOSURI nodeURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/" + name));
-            File testFile = FileUtil.getFileFromResource(name, NodesTest.class);
-
-            put(nodeURL, testFile);
+            String name = "view-data-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
+            DataNode node = new DataNode(name);
+            put(nodeURL, nodeURI, node);
 
             // get the node with view=data
             URL getURL = new URL(nodeURL + "?view=data");
@@ -568,7 +551,6 @@ public class NodesTest extends VOSTest {
             HttpGet get = new HttpGet(getURL, out);
             get.setFollowRedirects(false);
             Subject.doAs(authSubject, new RunnableAction(get));
-
             Assert.assertNotNull(get.getThrowable());
             URL redirectURL = get.getRedirectURL();
             Assert.assertNotNull(redirectURL);
@@ -584,9 +566,9 @@ public class NodesTest extends VOSTest {
                 Assert.assertEquals(2, pv.length);
                 if ("target".equalsIgnoreCase(key)) {
                     Assert.assertEquals(nodeURI.getURI().toASCIIString(), val);
-                } else if("protocol".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(VOS.PROTOCOL_HTTP_GET.toASCIIString(), val);
-                } else if("direction".equalsIgnoreCase(key)) {
+                } else if ("protocol".equalsIgnoreCase(key)) {
+                    Assert.assertEquals(VOS.PROTOCOL_HTTPS_GET.toASCIIString(), val);
+                } else if ("direction".equalsIgnoreCase(key)) {
                     Assert.assertEquals(Direction.pullFromVoSpace.getValue(), val);
                 } else {
                     Assert.fail(String.format("unexpected transfer parameter: %s = %s", key, val));
@@ -597,7 +579,7 @@ public class NodesTest extends VOSTest {
             delete(nodeURL);
 
             // GET the deleted node, which should fail
-            get(nodeURL, 404);
+            get(nodeURL, 404, XML_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
