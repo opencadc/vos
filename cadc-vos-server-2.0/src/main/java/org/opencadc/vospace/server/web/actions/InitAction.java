@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,69 +62,82 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
 */
 
-package org.opencadc.vospace.server;
+package org.opencadc.vospace.server.web.actions;
 
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.web.actions.InitAction;
 
 /**
- * Class used to retrieve the resourceID and base VOS URI of the running
- * VOSpace instance.
  *
+ * @author adriand
  */
-public class LocalServiceURI {
-    private static final Logger log = Logger.getLogger(LocalServiceURI.class);
+public class InitAction extends ca.nrc.cadc.rest.InitAction {
+    private static final Logger log = Logger.getLogger(InitAction.class);
 
-    private static final String CONFIG_FILE = "VOSpaceWS.properties";
-    private static final String RESOURCE_ID_KEY = "resourceID";
+    // config keys
+    private static final String VAULT_KEY = "org.opencadc.vospace";
+    public static final String RESOURCE_ID_KEY = VAULT_KEY + ".resourceID";
 
+    // set init initConfig, used by subsequent init methods
+
+    MultiValuedProperties props;
     private URI resourceID;
-    private VOSURI vosURIBase;
 
-    public LocalServiceURI() {
-        MultiValuedProperties mvp = InitAction.getConfig();
-        String id = mvp.getFirstPropertyValue(InitAction.RESOURCE_ID_KEY);
-        if (id == null) {
-            throw new RuntimeException("Cannot find value for " + InitAction.RESOURCE_ID_KEY + " in " + CONFIG_FILE);
-        }
-        try {
-            resourceID = new URI(id);
-            log.debug("VOSpace resourceID: " + resourceID);
-            String name = resourceID.getPath().substring(1);  // remove slash
-            String vosuri = "vos://" + resourceID.getAuthority() + "~" + name;
-            vosURIBase = new VOSURI(vosuri);
-            log.debug("VOSpace URI base: " + vosURIBase);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Invalid " + RESOURCE_ID_KEY + " in " + CONFIG_FILE, e);
-        }
+    public InitAction() {
+        super();
     }
 
-    public URI getURI() {
-        return resourceID;
+    @Override
+    public void doInit() {
+        initConfig();
     }
     
-    public VOSURI getVOSBase() {
-        return vosURIBase;
+    /**
+     * Read config file and verify that all required entries are present.
+     * 
+     * @return MultiValuedProperties containing the application config
+     * @throws IllegalStateException if required config items are missing
+     */
+    public static MultiValuedProperties getConfig() {
+        PropertiesReader r = new PropertiesReader("vault.properties");
+        MultiValuedProperties mvp = r.getAllProperties();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("incomplete config: ");
+        boolean ok = true;
+
+        String rid = mvp.getFirstPropertyValue(RESOURCE_ID_KEY);
+        sb.append("\n\t" + RESOURCE_ID_KEY + ": ");
+        if (rid == null) {
+            sb.append("MISSING");
+            ok = false;
+        } else {
+            sb.append("OK");
+        }
+
+        if (!ok) {
+            throw new IllegalStateException(sb.toString());
+        }
+
+        return mvp;
     }
 
-    public static VOSURI getURI(Node node) {
-        LocalServiceURI ls = new LocalServiceURI();
-        String uri = ls.getURI() + node.getPath();
+    private void initConfig() {
+        log.info("initConfig: START");
+        this.props = getConfig();
+        String rid = props.getFirstPropertyValue(RESOURCE_ID_KEY);
+
         try {
-            return new VOSURI(uri);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("BUG: VOURI syntax: " + uri, e);
+            this.resourceID = new URI(rid);
+            log.info("initConfig: OK");
+        } catch (URISyntaxException ex) {
+            throw new IllegalStateException("invalid config: " + RESOURCE_ID_KEY + " must be a valid URI");
         }
     }
 }

@@ -69,6 +69,7 @@ package org.opencadc.vospace.server.web.actions;
 
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.RestAction;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
@@ -119,6 +120,20 @@ public abstract class NodeAction extends RestAction {
     protected String stylesheetReference;
     protected String detailLevel;
     protected boolean resolveMetadata = true;
+
+    // immutable state set in constructor
+    protected final MultiValuedProperties config;
+
+    // constructor for unit tests with no config/init
+    NodeAction(boolean init) {
+        super();
+        this.config = null;
+    }
+
+    protected NodeAction() {
+        super();
+        this.config = InitAction.getConfig();
+    }
 
     /**
      * Set the URI for this action.

@@ -41,23 +41,23 @@
         </init-param>
         <init-param>
             <param-name>init</param-name>
-            <param-value>org.opencadc.vault.VaultInitAction</param-value>
+            <param-value>org.opencadc.vospace.server.web.actions.InitAction</param-value>
         </init-param>
         <init-param>
             <param-name>get</param-name>
-            <param-value>org.opencadc.vospace.server.actions.GetNodeAction</param-value>
+            <param-value>org.opencadc.vospace.server.web.actions.GetNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>put</param-name>
-            <param-value>org.opencadc.vospace.server.actions.CreateNodeAction</param-value>
+            <param-value>org.opencadc.vospace.server.web.actions.CreateNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>post</param-name>
-            <param-value>org.opencadc.vospace.server.actions.UpdateNodeAction</param-value>
+            <param-value>org.opencadc.vospace.server.web.actions.UpdateNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>delete</param-name>
-            <param-value>org.opencadc.vospace.server.actions.DeleteNodeAction</param-value>
+            <param-value>org.opencadc.vospace.server.web.actions.DeleteNodeAction</param-value>
         </init-param>
         <load-on-startup>2</load-on-startup>
     </servlet>
@@ -104,7 +104,7 @@
 
     <servlet-mapping>
         <servlet-name>NodeServlet</servlet-name>
-        <url-pattern>/files/*</url-pattern>
+        <url-pattern>/nodes/*</url-pattern>
     </servlet-mapping>
 
     <!-- Availability servlet endpoint -->
