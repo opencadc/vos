@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -248,34 +248,8 @@ public class CavernURLGenerator implements TransferGenerator {
                 return new ArrayList<URI>(0);
             }
 
-            // Use TokenTool to generate a preauth token
-            File privateKeyFile = findFile(PRIV_KEY_FILENAME);
-            File pubKeyFile = findFile(PUB_KEY_FILENAME);
-
-            TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
-
-            // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
-            Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
-            String callingUser = "";
-            if (authUsers.size() > 0) {
-                callingUser = authUsers.iterator().next();
-            } else {
-                callingUser = ANON_USER;
-            }
-
-            // Use this function in case the incoming URI uses '!' instead of '~'
-            // in the authority.
-            // This will translate the URI to use '~' in it's authority.
-            log.debug("URI passed in :" + target.getURI());
-            VOSURI commonFormURI = target.getCommonFormURI();
-            log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
-            String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
-            String encodedToken = new String(Base64.encode(token.getBytes()));
-
             // build the request path
             StringBuilder path = new StringBuilder();
-            path.append("/");
-            path.append(encodedToken);
             path.append("/");
 
             if (Direction.pushToVoSpace.equals(dir)) {
@@ -376,7 +350,7 @@ public class CavernURLGenerator implements TransferGenerator {
         try {
             RegistryClient rc = new RegistryClient();
             Capabilities caps = rc.getCapabilities(serviceURI);
-            Capability cap = caps.findCapability(Standards.DATA_10);
+            Capability cap = caps.findCapability(Standards.VOSPACE_FILES_20);
             List<Interface> interfaces = cap.getInterfaces();
             for (Interface ifc : interfaces) {
                 log.debug("securityMethod match? " + securityMethod + " vs " + ifc.getSecurityMethods().size());
