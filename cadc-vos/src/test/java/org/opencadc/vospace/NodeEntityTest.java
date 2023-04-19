@@ -103,33 +103,28 @@ public class NodeEntityTest {
             ContainerNode n = new ContainerNode("foo", false);
             final URI mcs1 = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             
-            // not state
-            //n.appData = 1L;
-            //URI mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
-            //Assert.assertEquals(mcs1, mcs);
-            
-            //n.version = VOS.VOSPACE_20;
-            //mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
-            //Assert.assertEquals(mcs1, mcs);
-            
             NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
             HttpPrincipal up = new HttpPrincipal("foo");
             Set<Principal> pset = new TreeSet<>();
-            n.creatorID = new Subject();
-            n.creatorID.getPrincipals().add(up);
-            n.creatorID.getPrincipals().add(np);
+            n.owner = new Subject();
+            n.owner.getPrincipals().add(up);
+            n.owner.getPrincipals().add(np);
             URI mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
-            n.accepts.add(VOS.VIEW_BINARY);
+            UUID rootID = new UUID(0L, 0L);
+            ContainerNode root = new ContainerNode(rootID, "root", false);
+            n.parent = root;
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
-            
-            n.provides.add(VOS.VIEW_DEFAULT);
-            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
-            Assert.assertEquals(mcs1, mcs);
+            n.parent = null;
             
             // state
+            n.parentID = UUID.randomUUID();
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.parentID = null;
+            
             n.ownerID = np;
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
@@ -184,6 +179,100 @@ public class NodeEntityTest {
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testDataNode() {
+        try {
+            DataNode n = new DataNode("foo");
+            final URI mcs1 = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            
+            NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
+            HttpPrincipal up = new HttpPrincipal("foo");
+            Set<Principal> pset = new TreeSet<>();
+            n.owner = new Subject();
+            n.owner.getPrincipals().add(up);
+            n.owner.getPrincipals().add(np);
+            URI mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(mcs1, mcs);
+            
+            n.accepts.add(VOS.VIEW_BINARY);
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(mcs1, mcs);
+            
+            n.provides.add(VOS.VIEW_DEFAULT);
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(mcs1, mcs);
+            
+            UUID rootID = new UUID(0L, 0L);
+            ContainerNode root = new ContainerNode(rootID, "root", false);
+            n.parent = root;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(mcs1, mcs);
+            n.parent = null;
+            
+            // state
+            n.parentID = UUID.randomUUID();
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.parentID = null;
+            
+            n.ownerID = np;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.ownerID = null;
+            
+            n.storageID = URI.create("cadc:vospace/stored-bytes");
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.storageID = null;
+            
+            n.isLocked = true;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.isLocked = null;
+            
+            n.isPublic = true;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.isPublic = null;
+            
+            n.busy = true;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.isPublic = false;
+            
+            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            final URI rog1 = mcs;
+            n.readOnlyGroup.clear();
+            
+            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(rog1, mcs); // must be sorted
+            Assert.assertNotEquals(mcs1, mcs);
+            n.readOnlyGroup.clear();
+            
+            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            final URI rwg1 = mcs;
+            n.readWriteGroup.clear();
+            
+            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertEquals(rwg1, mcs); // must be sorted
+            Assert.assertNotEquals(mcs1, mcs);
+            n.readWriteGroup.clear();
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);

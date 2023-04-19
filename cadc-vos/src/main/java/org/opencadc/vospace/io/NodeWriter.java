@@ -264,8 +264,8 @@ public class NodeWriter implements XmlProcessor {
             nodeElement.addContent(getPropertiesElement(properties));
 
             // add views to the DataNode in the document
-            nodeElement.addContent(getAcceptsElement(node));
-            nodeElement.addContent(getProvidesElement(node));
+            nodeElement.addContent(getAcceptsElement(dn));
+            nodeElement.addContent(getProvidesElement(dn));
         } else if (node instanceof LinkNode) {
 
             // Node variables serialized as node properties
@@ -294,9 +294,9 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addNodeVariablesToProperties(Node node, Set<NodeProperty> properties) {
-        if (node.creatorID != null) {
+        if (node.owner != null) {
             IdentityManager identityManager = AuthenticationUtil.getIdentityManager();
-            String subjectString = identityManager.toDisplayString(node.creatorID);
+            String subjectString = identityManager.toDisplayString(node.owner);
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, subjectString));
         }
         if (node.isLocked != null) {
@@ -335,7 +335,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected void addContainerNodeVariablesToProperties(ContainerNode node, Set<NodeProperty> properties) {
         properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS,
-                                        Boolean.toString(node.isInheritPermissions())));
+                                        Boolean.toString(node.inheritPermissions)));
     }
 
     /**
@@ -378,7 +378,7 @@ public class NodeWriter implements XmlProcessor {
      * @param node Node.
      * @return accepts Element.
      */
-    protected Element getAcceptsElement(Node node) {
+    protected Element getAcceptsElement(DataNode node) {
         Element accepts = new Element("accepts", vosNamespace);
         for (URI viewURI : node.accepts) {
             Element viewElement = new Element("view", vosNamespace);
@@ -394,7 +394,7 @@ public class NodeWriter implements XmlProcessor {
      * @param node Node.
      * @return accepts Element.
      */
-    protected Element getProvidesElement(Node node) {
+    protected Element getProvidesElement(DataNode node) {
         Element provides = new Element("provides", vosNamespace);
         for (URI viewURI : node.provides) {
             Element viewElement = new Element("view", vosNamespace);
