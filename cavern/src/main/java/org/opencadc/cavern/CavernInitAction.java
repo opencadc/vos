@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,23 +67,32 @@
 
 package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.SimpleJobManager;
-
-import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
+import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.rest.InitAction;
+import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
+import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
-public abstract class JobManager extends SimpleJobManager
-{
+/**
+ * Based on similar files from storage-inventory (luskan, by example)
+ * @author jeevesh
+ */
+public class CavernInitAction extends InitAction {
+    private static final Logger log = Logger.getLogger(CavernInitAction.class);
 
-    private static final Logger log = Logger.getLogger(JobManager.class);
-
-    protected static JobPersistence jp;
-
-    static {
-        log.info("Creating shared (postgres) job manager");
-        jp = new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    public CavernInitAction() {
     }
 
+    @Override
+    public void doInit() {
+        try {
+            // Init UWS database
+            DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
+            InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");
+            uwsi.doInit();
+
+        } catch (Exception ex) {
+            throw new RuntimeException("INIT FAIL", ex);
+        }
+    }
 }
