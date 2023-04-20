@@ -203,7 +203,31 @@ public class CavernURLGenerator implements TransferGenerator {
         }
     }
 
+    private String getEncodedToken(VOSURI target, Class<? extends Grant> grantClass) {
+        // Use TokenTool to generate a preauth token
+        File privateKeyFile = findFile(PRIV_KEY_FILENAME);
+        File pubKeyFile = findFile(PUB_KEY_FILENAME);
 
+        TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
+
+        // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
+        Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
+        String callingUser = "";
+        if (authUsers.size() > 0) {
+            callingUser = authUsers.iterator().next();
+        } else {
+            callingUser = ANON_USER;
+        }
+
+        // Use this function in case the incoming URI uses '!' instead of '~'
+        // in the authority.
+        // This will translate the URI to use '~' in it's authority.
+        log.debug("URI passed in :" + target.getURI());
+        VOSURI commonFormURI = target.getCommonFormURI();
+        log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
+        String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
+        return new String(Base64.encode(token.getBytes()));
+    }
 
     private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol, Subject s) {
         String scheme = null;
@@ -252,18 +276,23 @@ public class CavernURLGenerator implements TransferGenerator {
             StringBuilder path = new StringBuilder();
             path.append("/");
 
-            if (Direction.pushToVoSpace.equals(dir)) {
-                // put to resolved path
-                path.append(node.getUri().getPath());
-            } else {
-                // get from unresolved path so filename at end of url is correct
-                path.append(target.getURI().getPath());
-            }
-            log.debug("Created request path: " + path.toString());
-
             // add the request path to each of the base URLs
             List<URI> returnList = new ArrayList<URI>(baseURLs.size());
             for (URL baseURL : baseURLs) {
+                if (baseURL.toString().contains("preauth")) {
+                    path.append(getEncodedToken(target, grantClass));
+                    path.append("/");
+                }
+
+                if (Direction.pushToVoSpace.equals(dir)) {
+                    // put to resolved path
+                    path.append(node.getUri().getPath());
+                } else {
+                    // get from unresolved path so filename at end of url is correct
+                    path.append(target.getURI().getPath());
+                }
+                log.debug("Created request path: " + path.toString());
+
                 URI next;
                 try {
                     next = new URI(baseURL.toString() + path.toString());
@@ -350,7 +379,7 @@ public class CavernURLGenerator implements TransferGenerator {
         try {
             RegistryClient rc = new RegistryClient();
             Capabilities caps = rc.getCapabilities(serviceURI);
-            Capability cap = caps.findCapability(Standards.VOSPACE_FILES_20);
+            Capability cap = caps.findCapability(Standards.DATA_10);
             List<Interface> interfaces = cap.getInterfaces();
             for (Interface ifc : interfaces) {
                 log.debug("securityMethod match? " + securityMethod + " vs " + ifc.getSecurityMethods().size());
@@ -360,7 +389,16 @@ public class CavernURLGenerator implements TransferGenerator {
                         && ifc.getAccessURL().getURL().getProtocol().equals(scheme))) {
                     baseURLs.add(ifc.getAccessURL().getURL());
                     log.debug("Added anon interface");
-                } else if (ifc.getSecurityMethods().contains(securityMethod)
+                }
+            }
+
+            cap = caps.findCapability(Standards.VOSPACE_FILES_20);
+            interfaces = cap.getInterfaces();
+            for (Interface ifc : interfaces) {
+                log.debug("securityMethod match? " + securityMethod + " vs " + ifc.getSecurityMethods().size());
+                log.debug("scheme match? " + scheme + " vs " + ifc.getAccessURL().getURL().getProtocol());
+                if (securityMethod != null 
+                        && !ifc.getSecurityMethods().isEmpty() && ifc.getSecurityMethods().contains(securityMethod)
                         && ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
                     baseURLs.add(ifc.getAccessURL().getURL());
                     log.debug("Added auth interface.");
