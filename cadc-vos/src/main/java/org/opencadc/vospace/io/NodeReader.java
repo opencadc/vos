@@ -515,11 +515,14 @@ public class NodeReader implements XmlProcessor {
                                     Node node, Set<NodeProperty> properties)
         throws NodeParsingException {
 
-        node.creatorID = getSubjectProperty(VOS.PROPERTY_URI_CREATOR, properties);
+        node.owner = getSubjectProperty(VOS.PROPERTY_URI_CREATOR, properties);
         node.isLocked = getBooleanProperty(VOS.PROPERTY_URI_ISLOCKED, properties);
         node.isPublic = getBooleanProperty(VOS.PROPERTY_URI_ISPUBLIC, properties);
-        node.accepts.addAll(getViewURIs(element, namespace, "accepts"));
-        node.provides.addAll(getViewURIs(element, namespace, "provides"));
+        if (node instanceof DataNode) {
+            DataNode dn = (DataNode) node;
+            dn.accepts.addAll(getViewURIs(element, namespace, "accepts"));
+            dn.provides.addAll(getViewURIs(element, namespace, "provides"));
+        }
         node.readOnlyGroup.addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPREAD, VOS.PROPERTY_DELIM_GROUPREAD, properties));
         node.readWriteGroup.addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPWRITE, VOS.PROPERTY_DELIM_GROUPWRITE, properties));
     }

@@ -209,7 +209,7 @@ public class NodeReaderWriterTest {
     private void addStandardNodeVariables(Node node) {
         Subject subject = new Subject();
         subject.getPrincipals().add(new HttpPrincipal("creatorID"));
-        node.creatorID = subject;
+        node.owner = subject;
         node.isPublic = true;
         node.isLocked = false;
         node.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1"));
@@ -271,8 +271,12 @@ public class NodeReaderWriterTest {
         Assert.assertEquals("owner", n1.getPropertyValue(VOS.PROPERTY_URI_CREATOR),
                             n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
         comparePropertyList(n1.properties, n2.properties);
-        compareURIList(n1.accepts, n2.accepts);
-        compareURIList(n1.provides, n2.provides);
+        if (n1 instanceof DataNode) {
+            DataNode dn1 = (DataNode) n1;
+            DataNode dn2 = (DataNode) n2;
+            compareURIList(dn1.accepts, dn2.accepts);
+            compareURIList(dn1.provides, dn2.provides);
+        }
         if (n1 instanceof ContainerNode) {
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
         } else if (n1 instanceof DataNode) {
@@ -545,8 +549,7 @@ public class NodeReaderWriterTest {
 
         // child DataNode with some props
         VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
-        URI storageID1 = URI.create("cadc:TEST/file1.fits");
-        DataNode dataNode1 = new DataNode(dataURI1.getName(), storageID1);
+        DataNode dataNode1 = new DataNode(dataURI1.getName());
         dataNode1.busy = true;
         dataNode1.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
         dataNode1.properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
@@ -571,8 +574,7 @@ public class NodeReaderWriterTest {
 
         // add another DataNode below
         VOSURI dataURI2 = new VOSURI("vos://opencadc.org~vospace/testContainer/baz");
-        URI storageID2 = URI.create("cadc:TEST/file2.fits");
-        DataNode dataNode2 = new DataNode(dataURI2.getName(), storageID2);
+        DataNode dataNode2 = new DataNode(dataURI2.getName());
         dataNode2.busy = false;
         dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
         dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));

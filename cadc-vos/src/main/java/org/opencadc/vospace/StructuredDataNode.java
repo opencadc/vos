@@ -80,8 +80,4 @@ public class StructuredDataNode extends DataNode {
     public StructuredDataNode(String name) {
         super(name);
     }
-
-    public StructuredDataNode(String name, URI storageID) {
-        super(name, storageID);
-    }
 }
