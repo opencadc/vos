@@ -1,6 +1,7 @@
 FROM images.opencadc.org/library/cadc-tomcat:1
 
 ## cavern specific
+RUN dnf install -y sssd-client acl && dnf clean all
 
 # cavern needs:
 # - sssd-client 
