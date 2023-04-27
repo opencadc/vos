@@ -69,6 +69,7 @@ package org.opencadc.vospace;
 
 import java.net.URI;
 
+import java.util.UUID;
 import org.apache.log4j.Logger;
 
 /**
@@ -90,6 +91,19 @@ public class LinkNode extends Node {
      */
     public LinkNode(String name, URI target) {
         super(name);
+        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
+        this.target = target;
+    }
+    
+    /**
+     * Reconstruct persistent node.
+     * 
+     * @param id Entity.id
+     * @param name Node.name
+     * @param target target resource for this link
+     */
+    public LinkNode(UUID id, String name, URI target) {
+        super(id, name);
         NodeUtil.assertNotNull(LinkNode.class, "target", "target");
         this.target = target;
     }
