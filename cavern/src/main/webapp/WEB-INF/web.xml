@@ -267,22 +267,27 @@
   </servlet-mapping>
 
   <!--  PackageServlet and pkg endpoint -->
+<!--  <servlet>-->
+<!--    <servlet-name>PackageServlet</servlet-name>-->
+<!--    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>-->
+<!--    <init-param>-->
+<!--      <param-name>get</param-name>-->
+<!--      <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>-->
+<!--    </init-param>-->
+<!--    <init-param>-->
+<!--      <param-name>post</param-name>-->
+<!--      <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>-->
+<!--    </init-param>-->
+<!--    <init-param>-->
+<!--      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>-->
+<!--      <param-value>org.opencadc.cavern.PackageJobManager</param-value>-->
+<!--    </init-param>-->
+<!--    <load-on-startup>2</load-on-startup>-->
+<!--  </servlet>-->
   <servlet>
-    <servlet-name>PackageServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-    <init-param>
-      <param-name>get</param-name>
-      <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
-    </init-param>
-    <init-param>
-      <param-name>post</param-name>
-      <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
-    </init-param>
-    <init-param>
-      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-      <param-value>org.opencadc.cavern.PackageJobManager</param-value>
-    </init-param>
-    <load-on-startup>2</load-on-startup>
+      <servlet-name>PackageServlet</servlet-name>
+      <servlet-class>org.opencadc.cavern.PackageUnavailableServlet</servlet-class>
+      <load-on-startup>2</load-on-startup>
   </servlet>
 
   <servlet-mapping>
