@@ -164,6 +164,8 @@ public abstract class VOSpaceTransfer
         }
     }
 
+
+
     protected void updateTransferJob(Node target, URI resolvedPath, ExecutionPhase end)
         throws JobNotFoundException, JobPersistenceException, IOException, TransientException
     {
@@ -187,13 +189,17 @@ public abstract class VOSpaceTransfer
         // Job Results
         List<Result> resultsList = new ArrayList<Result>();
         resultsList.add(new Result("transferDetails", uri));
-        if (resolvedPath != null)
-        {
-            resultsList.add(new Result(TransferDetailsServlet.DATA_NODE, resolvedPath));
-        }
-        if (target instanceof LinkNode)
-        {
-            resultsList.add(new Result(TransferDetailsServlet.LINK_NODE, target.getUri().getURI()));
+        if (resolvedPath == null && target == null) {
+            // Just the transferDetails result is required here
+           log.debug("package transfer being processed");
+        } else {
+            log.debug("data or link node transfer.");
+            if (resolvedPath != null) {
+                resultsList.add(new Result(TransferDetailsServlet.DATA_NODE, resolvedPath));
+            }
+            if (target instanceof LinkNode) {
+                resultsList.add(new Result(TransferDetailsServlet.LINK_NODE, target.getUri().getURI()));
+            }
         }
         job.setResultsList(resultsList);
         ExecutionPhase ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED,

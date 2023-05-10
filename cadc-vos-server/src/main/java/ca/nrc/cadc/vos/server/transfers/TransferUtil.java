@@ -69,12 +69,21 @@
 
 package ca.nrc.cadc.vos.server.transfers;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Capabilities;
+import ca.nrc.cadc.reg.Capability;
+import ca.nrc.cadc.reg.Interface;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.security.auth.Subject;
@@ -209,7 +218,14 @@ public class TransferUtil
         VOSpacePluginFactory storageFactory = new VOSpacePluginFactory();
         TransferGenerator transferGenerator = storageFactory.createTransferGenerator();
 
-        VOSURI target = new VOSURI(transfer.getTarget());
+        // CADC-10640: For now, only 1 target is supported for all vospace functions.
+        // When zip & tar views are supported, there will be more than one, and this code
+        // section will have to adjust. For now, it will check there is something in the
+        // list and use the first entry.
+        if (transfer.getTargets().isEmpty()) {
+            throw new IllegalArgumentException(("No targets found in transfer."));
+        }
+        VOSURI target = new VOSURI(transfer.getTargets().get(0));
         View view = createView(transfer, additionalParameters);
 
         if (transfer.getContentLength() != null)
@@ -221,6 +237,74 @@ public class TransferUtil
         log.debug(transferGenerator.getClass().getSimpleName() + " generated: " + protocolList.size());
         return protocolList;
     }
+
+    /**
+     * Generate a Protocol list with endpoints set to /vault/pkg/jobid. One entry for every protocol in
+     * the transfer provided. Use the jobID from the job provided.
+     * @param transfer
+     * @param job
+     * @return
+     * @throws MalformedURLException
+     * @throws MalformedURLException
+     */
+    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
+        throws IOException, IllegalArgumentException, ResourceNotFoundException {
+
+        // package view is redirected to /vault/pkg/<jobid>
+        // making an endpoint for each protocol provided
+
+        List<Protocol> protocolList = transfer.getProtocols();
+        List<Protocol> augmentedList = new ArrayList<>();
+
+        if (!protocolList.isEmpty()) {
+
+            StringBuilder sb = new StringBuilder();
+            String jobID = job.getID();
+            sb.append("/").append(jobID).append("/run");
+
+            RegistryClient regClient = new RegistryClient();
+            LocalServiceURI localServiceURI = new LocalServiceURI();
+            URI serviceURI = localServiceURI.getURI();
+            AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
+
+            // get capabilities list
+            // For each protocol get the right entry.
+            Capabilities caps = regClient.getCapabilities(serviceURI);
+            if (caps == null) {
+                throw new RuntimeException("Couldn't get serviceURL for URI: " + serviceURI.toString());
+            }
+
+            Capability cap = caps.findCapability(Standards.PKG_10);
+            if (cap == null) {
+                throw new RuntimeException("Couldn't get capabilities for URI: " + serviceURI.toString());
+            }
+
+            // Get the interface that matches the current authMethod
+            Interface intf = cap.findInterface(authMethod);
+
+            if (intf != null) {
+                URL url = intf.getAccessURL().getURL();
+                URL location = new URL(url.toExternalForm() + sb.toString());
+                String loc = location.toExternalForm();
+                // go through each protocol and see which one the interface matches
+                for (Protocol p: protocolList) {
+                    if (getScheme(p.getUri()).equals(url.getProtocol())) {
+                            log.debug("setting package endpoint " + loc + " for protocol: " + url.getProtocol());
+                            p.setEndpoint(loc);
+                            augmentedList.add(p);
+                        }
+                    }
+
+                }
+            }
+
+
+        // Sort the protocols
+        Collections.sort(augmentedList, new ProtocolComparator());
+        // return the list even if it is empty
+        return augmentedList;
+    }
+
 
     private static View createView(Transfer transfer, List<Parameter> additionalParameters) throws Exception
     {
@@ -282,6 +366,100 @@ public class TransferUtil
         if (ns.endsWith("/") && ns.length() > 1)
             ns = ns.substring(0, ns.length() - 1);
         return ns;
+    }
+
+    /**
+     * Check target list size in transfer provided.
+     * @param transfer
+     * @throws TransferException
+     */
+    public static void confirmSingleTarget(Transfer transfer) throws TransferException {
+        int targetListSize = transfer.getTargets().size();
+        if (targetListSize > 1) {
+            throw new TransferException("TooManyTargets (" + targetListSize + ")");
+        }
+
+        if (targetListSize == 0) {
+            throw new TransferException("NoTargetsFound");
+        }
+
+    }
+
+    public static boolean isPackageTransfer(Transfer transfer) {
+        boolean isPackageRequest = false;
+        if (transfer.getView() != null) {
+            if (Standards.PKG_10.equals(transfer.getView().getURI())) {
+               isPackageRequest = true;
+            }
+        }
+        return isPackageRequest;
+    }
+
+    public static Parameter viewParam2JobParam(String viewParamURI, String paramName, Transfer transfer) {
+        View v = transfer.getView();
+        Parameter uwsParam = null;
+
+        if (v != null) {
+            for (View.Parameter p: v.getParameters()) {
+                if (p.getUri().toString().equals(viewParamURI)) {
+                    log.debug("found View param" + viewParamURI + ": " + p.getValue());
+                    uwsParam = new Parameter(paramName, p.getValue());
+                }
+            }
+        }
+        return uwsParam;
+    }
+
+
+    // For sorting Protocols
+
+    private static final List<String> PROTOCOL_PREF = Arrays.asList(
+        VOS.PROTOCOL_HTTPS_GET,
+        VOS.PROTOCOL_HTTP_GET,
+        VOS.PROTOCOL_HTTPS_PUT,
+        VOS.PROTOCOL_HTTP_PUT,
+        VOS.PROTOCOL_SSHFS);
+
+    private static final List<URI> SECURITY_METHOD_PREF = Arrays.asList(
+        Standards.SECURITY_METHOD_ANON,
+        Standards.SECURITY_METHOD_CERT,
+        Standards.SECURITY_METHOD_COOKIE,
+        Standards.SECURITY_METHOD_TOKEN,
+        Standards.SECURITY_METHOD_HTTP_BASIC);
+
+    public static class ProtocolComparator implements Comparator<Protocol> {
+
+        @Override
+        public int compare(Protocol lhs, Protocol rhs) {
+            // http before https
+            int i1 = PROTOCOL_PREF.indexOf(lhs.getUri());
+            int i2 = PROTOCOL_PREF.indexOf(rhs.getUri());
+            if (i1 < i2) {
+                return -1;
+            } else if (i1 > i2) {
+                return 1;
+            } // else: same protocol
+
+            // anon before auth
+            URI lhsURI = lhs.getSecurityMethod();
+            URI rhsURI = rhs.getSecurityMethod();
+            if (lhs.getSecurityMethod() == null) {
+                lhsURI = Standards.SECURITY_METHOD_ANON;
+            } else if (rhs.getSecurityMethod() == null) {
+                rhsURI = Standards.SECURITY_METHOD_ANON;
+            }
+            // explicit
+            i1 = SECURITY_METHOD_PREF.indexOf(lhsURI);
+            i2 = SECURITY_METHOD_PREF.indexOf(rhsURI);
+            if (i1 < i2) {
+                return -1;
+            } else if (i1 > i2) {
+                return 1;
+            } // else: same securityMethod
+
+            // leave order alone
+            return 0;
+        }
     }
 
 

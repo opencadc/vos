@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -79,10 +79,10 @@ import javax.security.auth.Subject;
  */
 public class NodeID
 {
-    Long id;
-    Subject owner;
-    Object ownerObject;
-    String storageID;
+    public Long id;
+    public Subject owner;
+    public Object ownerObject;
+    public String storageID;
 
     public NodeID() { }
 

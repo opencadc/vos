@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -136,6 +136,7 @@ public abstract class VOSBaseTest
     protected URI nodeStandardID;
 
     protected boolean supportLinkNodes;
+    protected boolean supportLinkNodeProperties;
     protected boolean resolvePathNodes;
     protected boolean resolveTargetNode;
 
@@ -199,6 +200,19 @@ public abstract class VOSBaseTest
             else
             {
                 supportLinkNodes = false;
+            }
+            
+            // Service supports LinkNodes.
+            propertyName = VOSTestSuite.class.getName() + ".supportLinkNodeProperties";
+            propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
+                supportLinkNodeProperties = new Boolean(propertyValue);
+            }
+            else
+            {
+                supportLinkNodeProperties = false;
             }
 
             // Service resolves LinkNodes in the path.

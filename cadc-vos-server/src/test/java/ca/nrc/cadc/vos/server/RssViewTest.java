@@ -75,12 +75,13 @@ import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
-import javax.sql.DataSource;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -95,6 +96,7 @@ import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.xml.XmlUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -140,7 +142,7 @@ public class RssViewTest
     
     public RssViewTest()
     {
-        nodePersistence = new TestNodePersistence(SERVER, DATABASE, SCHEMA);
+        nodePersistence = new TestNodePersistence();
         voSpaceAuthorizer = new VOSpaceAuthorizer();
     }
 
@@ -182,12 +184,6 @@ public class RssViewTest
     @Test
     public void testSetNodeReturnsDenied()
     {
-        if (nodePersistence.getDataSource() == null)
-        {
-            log.warn("Skipping integration test testSetNodeReturnsDenied().  Could not find datasource in ~/.dbrc");
-            return;
-        }
-
         log.debug("testSetNodeReturnsDenied - START");
         try
         {
@@ -241,12 +237,6 @@ public class RssViewTest
     @Test
     public void testSetNode()
     {
-        if (nodePersistence.getDataSource() == null)
-        {
-            log.warn("Skipping integration test testSetNode().  Could not find datasource in ~/.dbrc");
-            return;
-        }
-
         try
         {
             Subject subject = new Subject();
@@ -379,78 +369,130 @@ public class RssViewTest
         }
     }
 
-    @Test
-    public void testSetStructuredDataNode()
-    {
-        if (nodePersistence.getDataSource() == null)
-        {
-            log.warn("Skipping integration test testSetStructuredDataNode().  Could not find datasource in ~/.dbrc");
-            return;
-        }
 
-        try
-        {
-            Subject subject = new Subject();
-            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
+    /**
+     * Test class that mimics a very basic persistence layer. Only get and put methods are implemented
+     */
+    class TestNodePersistence implements NodePersistence {
+        private HashMap<String, Node> nodes = new HashMap<>();
+        private Random rand = new Random();
 
-            // Get the root container node for the test.
-            GetRootNodeActionOnStructuredDataNode getRootNodeAction = 
-            		new GetRootNodeActionOnStructuredDataNode(nodePersistence);
-            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
-            log.debug("root node: " + root);
-            Assert.fail("Expected NodeNotSupportedException from StructuredDataNode, but was not thrown.");
-        }
-        catch(Exception ex)
-        {
-        	if (ex.getCause() instanceof NodeNotSupportedException)
-        		log.info("testSetStructuredDataNode passed");
-        	else
-        	{
-	            log.error("unexpected exception", ex);
-	            Assert.fail("unexpected exception: " + ex);
-        	}
-        }
-    }
 
-    class TestNodePersistence extends DatabaseNodePersistence
-    {
-        private String server;
-        private String database;
-        private String schema;
-        private DataSource dataSource;
-
-        public TestNodePersistence(String server, String database, String schema)
-        {
-            super(new NodeDAO.NodeSchema(
-                    database + "." + schema + ".Node", 
-                    database + "." + schema + ".NodeProperty",
-                    true), DELETED_NODES
-                );
-            this.server = server;
-            this.database = database;
-            this.schema = schema;
+        @Override
+        public Node get(VOSURI vos) throws NodeNotFoundException, TransientException {
+            if (nodes.containsKey(vos.toString())) {
+                return nodes.get(vos.toString());
+            } else {
+                throw new NodeNotFoundException(vos.toString());
+            }
         }
 
         @Override
-        public DataSource getDataSource()
-        {
-            if (dataSource != null)
-                return dataSource;
+        public Node put(Node node) throws NodeNotSupportedException, TransientException {
+            // if parent is null, this is just a new root-level node,
+            if (node.getParent() != null && node.getParent().appData == null)
+                throw new IllegalArgumentException("parent of node is not a persistent node: " + node.getUri().getPath());
 
-            try
-            {
-                DBConfig dbConfig = new DBConfig();
-                ConnectionConfig connConfig = dbConfig.getConnectionConfig(server, database);
-                dataSource = DBUtil.getDataSource(connConfig);
-                return dataSource;
+            if (node.appData != null)
+                throw new UnsupportedOperationException("update of existing node not supported; try updateProperties");
+
+            NodeID nodeID = new NodeID();
+            nodeID.id = rand.nextLong();
+            if (node.getPropertyValue(VOS.PROPERTY_URI_CREATOR) != null) {
+                Subject owner = new Subject();
+                owner.getPrincipals().add(new X500Principal(node.getPropertyValue(VOS.PROPERTY_URI_CREATOR)));
+                nodeID.owner = owner;
             }
-            catch (Exception e)
-            {
-                log.error(e);
-                return null;
+            //nodeID.ownerObject = identManager.toOwner(creator);
+            node.appData = nodeID;
+            Date now = new Date();
+            DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(now)));
+            if (node.getParent() != null) {
+                ((ContainerNode) node.getParent()).getNodes().add(node);
             }
+            nodes.put(node.getUri().toString(), node);
+            try {
+                Thread.sleep(100);  // needed since the feed uses a map of nodes with the timestamp as the key
+            } catch (InterruptedException ignore) {}
+            return node;
         }
 
+        @Override
+        public Node get(VOSURI vos, boolean allowPartialPaths) throws NodeNotFoundException, TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public Node get(VOSURI vos, boolean allowPartialPaths, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getChildren(ContainerNode node) throws TransientException {
+            // called but not required to returned the correct result
+        }
+
+        @Override
+        public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getChildren(ContainerNode node, boolean resolveMetadata) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getChild(ContainerNode parent, String name) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getChild(ContainerNode parent, String name, boolean resolveMetadata) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void getProperties(Node node) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+
+        @Override
+        public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void delete(Node node) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void setFileMetadata(DataNode node, FileMetadata meta, boolean strict) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void setBusyState(DataNode node, VOS.NodeBusyState curState, VOS.NodeBusyState newState) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void move(Node src, ContainerNode destination) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
+
+        @Override
+        public void copy(Node src, ContainerNode destination) throws TransientException {
+            throw new UnsupportedOperationException("Not required for the test");
+        }
     }
 
     private class GetRootNodeAction implements PrivilegedExceptionAction<Object>

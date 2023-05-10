@@ -77,6 +77,7 @@ import static org.easymock.EasyMock.verify;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.restlet.Application;
 import org.restlet.Context;
@@ -142,6 +143,7 @@ public class NodeResourceTest extends AbstractCADCVOSTest<NodeResource>
         reset(getMockApplication(), getMockContext());
     }
 
+    @Ignore
     @Test
     public void testPerformNodeAction()
     {

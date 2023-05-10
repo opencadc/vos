@@ -84,6 +84,7 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -115,6 +116,8 @@ public class AclCommandExecutorTest {
     public AclCommandExecutorTest() { 
     }
     
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testFileACL() {
         try {
@@ -167,6 +170,8 @@ public class AclCommandExecutorTest {
         }
     }
     
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testDirectoryACL() {
         try {

@@ -127,20 +127,6 @@ public class NodesApplication extends Application
 
         Context context = getContext();
 
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-
         // stylesheet reference
         String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
         context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);

@@ -18,7 +18,8 @@
   
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/LOGGING#logControl-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std" version="1.0">
-      <accessURL use="full">https://replace.com/cavern/logControl</accessURL>
+      <accessURL use="full">https://replace.me.com/cavern/logControl</accessURL>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
     </interface>
   </capability>
 
@@ -30,124 +31,83 @@
 
   <capability standardID="ivo://ivoa.net/std/VOSpace/v2.0#nodes">
     <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/nodes</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/nodes</accessURL>
-      <securityMethod standardID="vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0"/> 
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/nodes</accessURL>
+      <accessURL use="base">https://replace.me.com/cavern/nodes</accessURL>
+      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/nodes</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
-    </interface>
-  </capability>
-  
-  <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/files</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/files</accessURL>
-      <securityMethod standardID="vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0"/> 
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/files</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="base">https://replace.com/cavern/files</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
 
   <capability standardID="ivo://ivoa.net/std/VOSpace/v2.0#transfers">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/transfers</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/transfers</accessURL>
-      <securityMethod standardID="vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0"/> 
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/transfers</accessURL>
+      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/transfers</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
 
   <capability standardID="ivo://ivoa.net/std/VOSpace#sync-2.1">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/synctrans</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/synctrans</accessURL>
-      <securityMethod standardID="vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0"/> 
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/synctrans</accessURL>
+      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/synctrans</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
 
-  <!--  not supported in cavern
+  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/Pkg-1.0">
+    <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="full">https://replace.me.com/cavern/pkg</accessURL>
+      <securityMethod/>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
+    </interface>
+  </capability>
+
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
+      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
-   -->
+
+  <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
+    <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="base">https://replace.com/cavern/files</accessURL>
+      <securityMethod/>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
+    </interface>
+  </capability>
   
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/archive#file-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/files</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/files</accessURL>
+      <accessURL use="full">https://replace.com/cavern/preauth</accessURL>
+      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/files</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
   
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#xfer">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/xfer</accessURL>
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/xfer</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#cookie" />
-    </interface>
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/xfer</accessURL>
-      <securityMethod standardID="vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0" />
-    </interface>
-    <interface xsi:type="vs:ParamHTTP">
-      <accessURL use="full">https://replace.com/cavern/xfer</accessURL>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate" />
+      <securityMethod/>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
-
 
 </vosi:capabilities>
 

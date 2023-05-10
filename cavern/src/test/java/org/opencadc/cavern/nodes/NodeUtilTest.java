@@ -88,6 +88,7 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -98,7 +99,7 @@ public class NodeUtilTest {
     private static final Logger log = Logger.getLogger(NodeUtilTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
         Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
@@ -107,6 +108,8 @@ public class NodeUtilTest {
 
     static final String OWNER = System.getProperty("user.name");
     static final String GROUP = System.getProperty("user.name");
+    
+    static String baseURI = "vos://cadc.nrc.ca~cavern";
 
     static {
         try {
@@ -138,7 +141,7 @@ public class NodeUtilTest {
     //@Test
     public void testGetRoot() {
         try {
-            VOSURI uri = new VOSURI(URI.create("vos://canfar.net~cavern"));
+            VOSURI uri = new VOSURI(URI.create(baseURI));
             Path root = FileSystems.getDefault().getPath(ROOT);
 
             Node rootNode = NodeUtil.get(root, uri);
@@ -148,7 +151,7 @@ public class NodeUtilTest {
             Assert.assertTrue(rootNode.getUri().isRoot());
             Assert.assertTrue(rootNode.isPublic());
 
-            uri = new VOSURI(URI.create("vos://canfar.net~cavern/"));
+            uri = new VOSURI(URI.create(baseURI + "/"));
             root = FileSystems.getDefault().getPath(ROOT);
 
             rootNode = NodeUtil.get(root, uri);
@@ -164,12 +167,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreateDir() {
         try {
             // top-level test dir
             String name = "testCreateDir-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -210,12 +215,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreateFile() {
         try {
             // top-level test dir
             String name = "testCreateFile-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -265,12 +272,14 @@ public class NodeUtilTest {
         }
     }
     
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testSetProperties() {
         try {
             // top-level test dir
             String name = "testSetProperties-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -347,7 +356,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testNoSuchGroupFail-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -379,7 +388,7 @@ public class NodeUtilTest {
         try {
             // top-level test dir
             String name = "testExternalGroupFail-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -406,12 +415,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreateLink() {
         try {
             // top-level test dir
             String name = "testCreateLink-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -463,6 +474,8 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCreatePath() {
 
@@ -472,7 +485,7 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
             String name = "testCreatePath-" + UUID.randomUUID().toString();
-            VOSURI testURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testURI = new VOSURI(URI.create(baseURI + "/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
             Path dir = doCreate(root, n, up);
@@ -516,6 +529,8 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testList() {
 
@@ -525,7 +540,7 @@ public class NodeUtilTest {
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
 
             String name = "testList-" + UUID.randomUUID().toString();
-            VOSURI testURI = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testURI = new VOSURI(URI.create(baseURI + "/" + name));
             ContainerNode n = new ContainerNode(testURI);
             NodeUtil.setOwner(n, up);
             Path dir = doCreate(root, n, up);
@@ -596,12 +611,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testMove() {
         try {
             // top-level test dir
             String name = "testMove-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -612,7 +629,7 @@ public class NodeUtilTest {
 
             // make move target dir
             String name2 = "testMove-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -671,12 +688,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyFile() {
         try {
             // top-level test dir
             String name = "testCopyFile-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -687,7 +706,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -731,12 +750,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyDirectory() {
         try {
             // top-level test dir
             String name = "testCopyDirectory-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -747,7 +768,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = "testCopyDirectory-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);
@@ -822,12 +843,14 @@ public class NodeUtilTest {
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testCopyDirectoryWithLinks() {
         try {
             // top-level test dir
             String name = "testCopyDirectoryWithLinks-src-" + UUID.randomUUID().toString();
-            VOSURI testDir = new VOSURI(URI.create("vos://canfar.net~cavern/" + name));
+            VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
             Path root = FileSystems.getDefault().getPath(ROOT);
             UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
             UserPrincipal up = users.lookupPrincipalByName(OWNER);
@@ -848,7 +871,7 @@ public class NodeUtilTest {
 
             // make copy target dir
             String name2 = "testCopyDirectoryWithLinks-dest-" + UUID.randomUUID().toString();
-            VOSURI testDir2 = new VOSURI(URI.create("vos://canfar.net~cavern/" + name2));
+            VOSURI testDir2 = new VOSURI(URI.create(baseURI + "/" + name2));
             ContainerNode n2 = new ContainerNode(testDir2);
             NodeUtil.setOwner(n2, up);
             Path dir2 = doCreate(root, n2, up);

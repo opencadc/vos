@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2021.                            (c) 2021.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -139,7 +139,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -215,7 +216,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -278,7 +280,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(linkNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -345,7 +348,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(linkNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -424,7 +428,9 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -432,7 +438,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
 
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue("no protocols", result.transfer.getProtocols() == null || result.transfer.getProtocols().isEmpty());
+            assertTrue("no protocols",
+                result.transfer.getProtocols() == null || result.transfer.getProtocols().isEmpty());
 
             // Get the Job.
             response = get(result.location);
@@ -477,7 +484,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);
@@ -526,7 +534,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doSyncTransfer(transfer);

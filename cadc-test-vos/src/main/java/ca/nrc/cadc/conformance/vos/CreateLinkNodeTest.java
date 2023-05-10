@@ -117,12 +117,6 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("createLinkNode");
 
-            if (!supportLinkNodes)
-            {
-                log.debug("LinkNodes not supported, skipping test.");
-                return;
-            }
-
             // Get a LinkNode.
             LinkNode targetNode = getSampleLinkNode(); // non-existent relative target
             LinkNode node = getSampleLinkNode(targetNode);
@@ -169,9 +163,9 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("createLinkNode");
 
-            if (!supportLinkNodes)
+            if (!supportLinkNodes || !supportLinkNodeProperties)
             {
-                log.debug("LinkNodes not supported, skipping test.");
+                log.debug("LinkNode properties not supported, skipping test.");
                 return;
             }
 

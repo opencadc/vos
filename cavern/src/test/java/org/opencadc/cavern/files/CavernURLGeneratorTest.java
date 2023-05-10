@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -80,6 +80,7 @@ import ca.nrc.cadc.vos.View;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -87,7 +88,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.AccessControlException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -98,12 +98,12 @@ import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.xerces.impl.dv.util.Base64;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class CavernURLGeneratorTest
@@ -112,13 +112,15 @@ public class CavernURLGeneratorTest
     private static final Logger log = Logger.getLogger(CavernURLGeneratorTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
     static final String OWNER = System.getProperty("user.name");
     static String TEST_DIR = "dir-" + UUID.randomUUID().toString();
     static String TEST_FILE = "file-" + UUID.randomUUID().toString();
+    
+    static String baseURI;
 
     File pubFile, privFile;
 
@@ -141,6 +143,12 @@ public class CavernURLGeneratorTest
 
             Files.createDirectories(dir, PosixFilePermissions.asFileAttribute(dirPerms));
             Files.createFile(node, PosixFilePermissions.asFileAttribute(filePerms));
+            
+            baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+            if (baseURI == null) {
+                throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
+            }
+
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -183,6 +191,8 @@ public class CavernURLGeneratorTest
         privFile.delete();
     }
     
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testNegotiateMount() {
         try {
@@ -191,10 +201,11 @@ public class CavernURLGeneratorTest
             p.add(new HttpPrincipal(System.getProperty("user.name")));
             Subject s = new Subject(false, p, new HashSet(), new HashSet()); 
             
-            final VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR);
+            final VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR);
             List<Protocol> protos = new ArrayList<>();
             protos.add(new Protocol(VOS.PROTOCOL_SSHFS));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protos);
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL);
+            trans.getProtocols().addAll(protos);
             final View view = null;
             final Job job = null;
             
@@ -218,15 +229,28 @@ public class CavernURLGeneratorTest
         }
     }
 
+    private VOSURI getTargetVOSURI(String path) throws URISyntaxException {
+        int firstSlashIndex = path.indexOf("/");
+        String pathStr = path.substring(firstSlashIndex + 1);
+        log.debug("path: " + pathStr);
+        String targetURIStr = baseURI.toString() + "/" + pathStr;
+        log.debug("target URI from path: " + targetURIStr);
+        return new VOSURI(new URI(targetURIStr));
+
+    }
+
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
     public void testRoundTripSuccess() {
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -235,16 +259,19 @@ public class CavernURLGeneratorTest
             String suri = p.getEndpoint();
             log.debug("Transfer URI: " + suri);
             Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
+            VOSURI transferURI = new VOSURI(new URI(suri));
             Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
 
             String path = transferURI.getPath();
             log.debug("Path: " + path);
             String[] parts = path.split("/");
-            String sig = parts[4];
-            String meta = parts[3];
-            VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
-            Assert.assertEquals(nodeURI, retURI);
+            String token = parts[3];
+
+            VOSURI targetURI = getTargetVOSURI(path);
+
+            // Will throw exception if is invalid
+            VOSURI returnURI = urlGen.validateToken(token, targetURI, Direction.pullFromVoSpace);
+            Assert.assertEquals("URI was altered? ", returnURI, targetURI);
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -252,15 +279,18 @@ public class CavernURLGeneratorTest
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
-    public void testWrongDirection() {
+    public void testWrongDirectionPull() {
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -270,13 +300,12 @@ public class CavernURLGeneratorTest
             log.debug("Transfer URI: " + suri);
             Assert.assertNotNull(suri);
             URI transferURI = new URI(suri);
-            
+
             String path = transferURI.getPath();
             String[] parts = path.split("/");
-            String sig = parts[4];
-            String meta = parts[3];
+            String token = parts[3];
             try {
-                urlGen.getNodeURI(meta, sig, Direction.pushToVoSpace);
+                urlGen.validateToken(token, nodeURI, Direction.pushToVoSpace);
                 Assert.fail();
             } catch (IllegalArgumentException e) {
                 Assert.assertTrue(e.getMessage().contains("Wrong direction"));
@@ -288,15 +317,18 @@ public class CavernURLGeneratorTest
         }
     }
 
+    // TODO: acl specific codes will be moved to a library, enable the test after
+    @Ignore
     @Test
-    public void testInvalidSignature() {
+    public void testWrongDirectionPush() {
         try {
 
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
             List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
+            protos.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
+            trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
             List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
@@ -306,16 +338,15 @@ public class CavernURLGeneratorTest
             log.debug("Transfer URI: " + suri);
             Assert.assertNotNull(suri);
             URI transferURI = new URI(suri);
-            
+
             String path = transferURI.getPath();
             String[] parts = path.split("/");
-            //String sig = parts[4];
-            String meta = parts[3];
+            String token = parts[3];
             try {
-                urlGen.getNodeURI(meta, "12345", Direction.pushToVoSpace);
+                urlGen.validateToken(token, nodeURI, Direction.pullFromVoSpace);
                 Assert.fail();
-            } catch (AccessControlException e) {
-                // expected
+            } catch (IllegalArgumentException e) {
+                Assert.assertTrue(e.getMessage().contains("Wrong direction"));
             }
 
         } catch (Exception unexpected) {
@@ -324,58 +355,26 @@ public class CavernURLGeneratorTest
         }
     }
 
+
     @Test
-    public void testMetaTampered() {
+    public void testInvalidToken() {
         try {
-
+            // CavernURLGenerator.validateToken will try to Base64 decode the token passed
+            // in before passing it to TokenTool.
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-            VOSURI nodeURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/" + TEST_FILE);
-            List<Protocol> protos = new ArrayList<>();
-            protos.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            final Transfer trans = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace, protos);
-            View view = null;
-            Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
-            Protocol p = result.get(0);
-            Assert.assertNotNull(p);
-            String suri = p.getEndpoint();
-            log.debug("Transfer URI: " + suri);
-            Assert.assertNotNull(suri);
-            URI transferURI = new URI(suri);
-            
-            Assert.assertTrue(transferURI.getPath().endsWith("/" + TEST_FILE));
+            VOSURI nodeURI = new VOSURI(baseURI + "/" + TEST_DIR + "/" + TEST_FILE);
+            String badToken = "something clearly not base 64";
 
-            String path = transferURI.getPath();
-            log.debug("Path: " + path);
-            String[] parts = path.split("/");
-            String sig = parts[4];
-            //String meta = parts[3];
-            VOSURI altURI = new VOSURI("vos://canfar.net~cavern/" + TEST_DIR + "/fakeFile");
-            String meta = new String(Base64.encode(("node=" + altURI.toString() + "&dir=pullFromVoSpace").getBytes()));
             try {
-                VOSURI retURI = urlGen.getNodeURI(meta, sig, Direction.pullFromVoSpace);
+                urlGen.validateToken(badToken, nodeURI, Direction.pushToVoSpace);
                 Assert.fail();
-            } catch (AccessControlException e) {
+            } catch (IllegalArgumentException e) {
                 // expected
             }
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testBase64URI() {
-        String[] testStrings = {
-            "abcde",
-            "ab//de",
-            "ab/de",
-            "ab++///+de"
-        };
-        for (String s : testStrings) {
-            log.debug("testing: " + s);
-            Assert.assertEquals(CavernURLGenerator.base64URLDecode(CavernURLGenerator.base64URLEncode(s)), s);
         }
     }
 
@@ -396,5 +395,4 @@ public class CavernURLGeneratorTest
             return list;
         }
     }
-
 }

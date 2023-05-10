@@ -132,7 +132,8 @@ public class TransferInlineContentHandlerTest
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-        transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+        transfer = new Transfer(target, Direction.pullFromVoSpace);
+        transfer.getProtocols().addAll(protocols);
     }
 
     @Test
@@ -178,7 +179,7 @@ public class TransferInlineContentHandlerTest
             TransferReader reader = new TransferReader();
             Transfer newTransfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
 
-            Assert.assertEquals("vos uri", transfer.getTarget(), newTransfer.getTarget());
+            Assert.assertEquals("vos uri", transfer.getTargets().get(0), newTransfer.getTargets().get(0));
             Assert.assertEquals("dirdction", transfer.getDirection(), newTransfer.getDirection());
             Assert.assertEquals("view", transfer.getView(), newTransfer.getView());
             Assert.assertEquals("protocol uri", transfer.getProtocols().get(0).getUri(), newTransfer.getProtocols().get(0).getUri());

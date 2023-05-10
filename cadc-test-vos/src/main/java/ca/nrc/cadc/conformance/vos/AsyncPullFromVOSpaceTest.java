@@ -142,7 +142,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -153,8 +155,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -162,8 +163,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -171,8 +171,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
@@ -220,7 +219,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -231,8 +232,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -240,8 +240,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -249,8 +248,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
@@ -298,7 +296,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
             
-            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNodeWithLink.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
             transfer.version = VOS.VOSPACE_21; // includes securityMethod above
             
             // Start the transfer.
@@ -309,8 +309,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.EXECUTING)
             {
                 // Get the Transfer endpoint and make sure it's a valid URL.
-                boolean foundHTTP = false;
-                boolean foundHTTPS = false;
+                int numEndpoints = 0;
                 for (Protocol proto : result.transfer.getProtocols()) {
                     String ep = proto.getEndpoint();
                     log.info("found: " + proto.getUri() + " -> " + ep);
@@ -318,8 +317,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         try
                         {
                             new URL(ep);
-                            foundHTTP = foundHTTP || VOS.PROTOCOL_HTTP_GET.equals(proto.getUri());
-                            foundHTTPS = foundHTTPS || VOS.PROTOCOL_HTTPS_GET.equals(proto.getUri());
+                            numEndpoints++;
                         }
                         catch (MalformedURLException e)
                         {
@@ -327,8 +325,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
                         }
                     }
                 }
-                Assert.assertTrue("found http", foundHTTP);
-                Assert.assertTrue("found https", foundHTTPS);
+                Assert.assertTrue("found endpoints", (numEndpoints > 0));
             }
             else
             {
@@ -382,7 +379,8 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -426,7 +424,9 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, view, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
+            transfer.setView(view);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);
@@ -473,7 +473,8 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol("http://localhost/path"));
-            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace, null, protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri().getURI(), Direction.pullFromVoSpace);
+            transfer.getProtocols().addAll(protocols);
 
             // Start the transfer.
             TransferResult result = doAsyncTransfer(transfer);

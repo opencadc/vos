@@ -104,9 +104,15 @@ public class ExternalCertIntTest
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
+    
+    String baseURI;
 
     public ExternalCertIntTest()
     {
+        baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+        if (baseURI == null) {
+            throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
+        }
     }
 
     @Test
@@ -122,14 +128,16 @@ public class ExternalCertIntTest
                 public Object run() throws Exception
                 {
                     // node uri to a public file
-                    VOSURI vosURI = new VOSURI("vos://cadc.nrc.ca~vospace/CADCAuthtest1/a1");
+                    VOSURI vosURI = new VOSURI(baseURI + "/home/cadcauthtest1/atest");
                     VOSpaceClient c = new VOSpaceClient(vosURI.getServiceURI());
 
                     View view = new View(new URI(VOS.VIEW_DEFAULT));
                     List<Protocol> protocols = new ArrayList<Protocol>();
                     protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
-                    Transfer transfer = new Transfer(vosURI.getURI(), Direction.pullFromVoSpace, view, protocols);
+                    Transfer transfer = new Transfer(vosURI.getURI(), Direction.pullFromVoSpace);
+                    transfer.setView(view);
+                    transfer.getProtocols().addAll(protocols);
                     ClientTransfer clientTransfer = c.createTransfer(transfer);
                     clientTransfer.run();
 

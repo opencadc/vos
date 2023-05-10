@@ -246,7 +246,9 @@ public final class TestActions {
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             protocols.add(p);
 
-            Transfer transfer = new Transfer(uri.getURI(), Direction.pushToVoSpace, view, protocols);
+            Transfer transfer = new Transfer(uri.getURI(), Direction.pushToVoSpace);
+            transfer.setView(view);
+            transfer.getProtocols().addAll(protocols);
             transfer.version = VOS.VOSPACE_21; // needed to write securityMethod in xml
             ClientTransfer clientTransfer = vos.createTransfer(transfer);
 

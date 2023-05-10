@@ -555,7 +555,7 @@
     </xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:element name="target" type="xs:anyURI" minOccurs="1" maxOccurs="1">
+      <xs:element name="target" type="xs:anyURI" minOccurs="1" maxOccurs="unbounded">
         <xs:annotation>
           <xs:documentation>
             The target of a transfer operation - the node to/from which data is to be transferred.
