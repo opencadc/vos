@@ -69,6 +69,7 @@ package org.opencadc.vospace;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * A VOSpace node that describes an unstructured data item.
@@ -79,9 +80,5 @@ public class UnstructuredDataNode extends DataNode {
 
     public UnstructuredDataNode(String name) {
         super(name);
-    }
-
-    public UnstructuredDataNode(String name, URI storageID) {
-        super(name, storageID);
     }
 }

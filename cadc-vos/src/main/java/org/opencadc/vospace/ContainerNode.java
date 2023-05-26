@@ -69,7 +69,7 @@ package org.opencadc.vospace;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.UUID;
 import org.apache.log4j.Logger;
 
 /**
@@ -82,8 +82,8 @@ import org.apache.log4j.Logger;
 public class ContainerNode extends Node {
     private static Logger log = Logger.getLogger(ContainerNode.class);
 
-    // True if child nodes inherit permissions from the parent node, false otherwise.
-    private boolean inheritPermissions;
+    // True if new child nodes inherit permissions from the parent node, false otherwise.
+    public boolean inheritPermissions = false;
 
     // The list of child nodes.
     public final transient List<Node> nodes = new ArrayList<>();
@@ -101,22 +101,14 @@ public class ContainerNode extends Node {
     }
 
     /**
-     * Do the child node's inherit the parent nodes permissions.
-     *
-     * @return true if the child nodes inherit permissions from the parent,
-     *              false otherwise.
+     * Reconstruct persistent node.
+     * 
+     * @param id Entity.id
+     * @param name Node.name
+     * @param inheritPermissions ContainerNode.inheritPermissions
      */
-    public boolean isInheritPermissions() {
-        return this.inheritPermissions;
-    }
-
-    /**
-     * Set whether the child node's inherit the parent nodes permissions.
-     *
-     * @param inheritPermissions true if child nodes inherit permissions from parent,
-     *                           false otherwise.
-     */
-    public void setInheritPermissions(boolean inheritPermissions) {
+    public ContainerNode(UUID id, String name, boolean inheritPermissions) {
+        super(id, name);
         this.inheritPermissions = inheritPermissions;
     }
 }

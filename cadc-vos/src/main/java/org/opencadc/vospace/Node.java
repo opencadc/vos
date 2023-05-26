@@ -73,6 +73,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.persist.Entity;
@@ -91,10 +92,31 @@ import org.opencadc.persist.Entity;
 public abstract class Node extends Entity implements Comparable<Node> {
     private static final Logger log = Logger.getLogger(Node.class);
 
+    /**
+     * Server-side support for connecting a node to a parent container node. 
+     * This reference is included to support reconstructing a node-path from
+     * persistent state on the server side. Use cases: permission checking,
+     * correct VOSURI construction. In principle, the client side could use
+     * this to construct a node-path or to re-use/cache container node objects.
+     */
     public transient ContainerNode parent;
-    private String name;
     
-    public transient Subject creatorID;
+    /**
+     * Server-side support for including parent container Entity.id in the 
+     * Entity.metaChecksum. This value is needed to correctly implement
+     * metadata synchronization and validation of the nodes.
+     */
+    public UUID parentID;
+    
+    private String name;
+
+    /**
+     * Server-side support for tracking the owner of a node. This reference is
+     * included to support server-side permission checking and is generally
+     * reconstructed from the persisted ownerID.
+     */
+    public transient Subject owner;
+    
     public Object ownerID;
     
     public Boolean isPublic;
@@ -105,11 +127,6 @@ public abstract class Node extends Entity implements Comparable<Node> {
     
     public final Set<NodeProperty> properties = new TreeSet<>();
 
-    public final transient List<URI> accepts = new ArrayList<>();
-    public final transient List<URI> provides = new ArrayList<>();
-
-    
-    
     // To be used by controlling applications as they wish.
     //public transient Object appData; // do not include in metaChecksum
     
@@ -123,6 +140,12 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     protected Node(String name) {
         super(false);
+        NodeUtil.assertNotNull(Node.class, "name", "name");
+        this.name = name;
+    }
+    
+    protected Node(UUID id, String name) {
+        super(id, false);
         NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
     }
