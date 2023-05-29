@@ -81,7 +81,6 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -99,23 +98,22 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Direction;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeLockedException;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.NodeUtil;
-import org.opencadc.vospace.Protocol;
-import org.opencadc.vospace.Transfer;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Main method for the command-line VOSpace client.
@@ -152,7 +150,6 @@ public class Main implements Runnable {
     public static final String ARG_LOCK = "lock";
     public static final String ARG_QUICK = "quick";
     public static final String ARG_INHERIT_PERMISSIONS = "inheritPermissions";
-    public static final String ARG_STORAGE_ID = "storageID";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -195,7 +192,6 @@ public class Main implements Runnable {
 
     private boolean inheritPermissions;
     private URI link;
-    private URI storageID;
 
     /**
      * @param args  The arguments passed into this command.
@@ -211,12 +207,13 @@ public class Main implements Runnable {
 
         // Set debug mode
         if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D)) {
-            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+            Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
-            Log4jInit.setLevel("ca.nrc.cadc.reg", Level.DEBUG);
+            //Log4jInit.setLevel("ca.nrc.cadc.reg", Level.DEBUG);
         } else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V)) {
-            Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
-            Log4jInit.setLevel("ca.nrc.cadc.reg", Level.INFO);
+            Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+            Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
+            //Log4jInit.setLevel("ca.nrc.cadc.reg", Level.INFO);
         } else {
             Log4jInit.setLevel("ca", Level.WARN);
         }
@@ -233,6 +230,7 @@ public class Main implements Runnable {
 
         try {
             command.init(argMap);
+            log.debug("calling subject: " + command.subject);
             Subject.doAs(command.subject, new RunnableAction(command));
         } catch (IllegalArgumentException ex) {
             msg("illegal arguments(s): " + ex.getMessage());
@@ -281,18 +279,10 @@ public class Main implements Runnable {
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
             if (n instanceof ContainerNode) {
-                up = new ContainerNode(target.getName(), ((ContainerNode) n).isInheritPermissions());
+                up = new ContainerNode(target.getName(), ((ContainerNode) n).inheritPermissions);
                 up.properties.addAll(properties);
             } else if (n instanceof DataNode) {
-                DataNode dn = (DataNode) n;
-                if (dn.getContentChecksum() != null
-                    && dn.getContentLastModified() != null
-                    && dn.getContentLength() != null) {
-                    up = new DataNode(target.getName(), dn.getContentChecksum(), dn.getContentLastModified(),
-                                      dn.getContentLength(), dn.getStorageID());
-                } else {
-                    up = new DataNode(target.getName(), dn.getStorageID());
-                }
+                up = new DataNode(target.getName());
                 up.properties.addAll(properties);
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
@@ -444,7 +434,7 @@ public class Main implements Runnable {
                     node = new LinkNode(this.target.getName(), this.link);
                     break;
                 case DATA_NODE:
-                    node = new DataNode(this.target.getName(), this.storageID);
+                    node = new DataNode(this.target.getName());
                     break;
                 default:
                     throw new RuntimeException("BUG. Unsupported node type " + this.nodeType);
@@ -493,13 +483,19 @@ public class Main implements Runnable {
             Node n = client.getNode(target.getPath(), queryString);
 
             msg(getType(n) + ": " + target);
-            msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
-            msg("is locked: " + safePropertyRef(n, VOS.PROPERTY_URI_ISLOCKED));
+            msg("creator: " + n.owner);
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
-            msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
-            msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
-            msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
             msg("size: " + getContentLength(n,true));
+            msg("is locked: " + n.isLocked);
+            msg("is public: " + n.isPublic);
+            msg("readable by:");
+            for (URI ro : n.readOnlyGroup) {
+                msg("\t" + ro);
+            }
+            msg("readable and writable by:");
+            for (URI rw : n.readWriteGroup) {
+                msg("\t" + rw);
+            }
 
             if (n instanceof ContainerNode) {
                 final String quotaSize = safePropertyRef(n, VOS.PROPERTY_URI_QUOTA);
@@ -621,20 +617,17 @@ public class Main implements Runnable {
             destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         }
 
-        View view = null;
-        if (originalDestination != null) {
-            view = createAcceptsView(new VOSURI(originalDestination), null);
-        }
-        if (view == null) {
-            view = new View(VOS.VIEW_DEFAULT);
-        }
+        View view = new View(VOS.VIEW_DEFAULT);
+        //if (originalDestination != null) {
+        //    view = createAcceptsView(new VOSURI(originalDestination), null);
+        //}
 
         Protocol proto = null;
         if (subject != null) {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             proto.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
         } else {
-            proto = new Protocol(VOS.PROTOCOL_HTTP_PUT);
+            proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
         }
         log.debug("copyToVOSpace: " + proto);
         List<Protocol> protocols = new ArrayList<Protocol>();
@@ -714,14 +707,11 @@ public class Main implements Runnable {
 
     private void copyFromVOSpace()
         throws Throwable {
-        View view = null;
-        if (StringUtil.hasText(source.getQuery())) {
-            view = createProvidesView(new VOSURI(source), null);
-            source = new URI(source.toString().replace("?" + source.getQuery(), ""));
-        }
-        if (view == null) {
-            view = new View(VOS.VIEW_DEFAULT);
-        }
+        View view = new View(VOS.VIEW_DEFAULT);
+        //if (StringUtil.hasText(source.getQuery())) {
+        //    view = createProvidesView(new VOSURI(source), null);
+        //    source = new URI(source.toString().replace("?" + source.getQuery(), ""));
+        //}
 
         Protocol proto = null;
         if (subject != null) {
@@ -818,7 +808,7 @@ public class Main implements Runnable {
             if (n instanceof ContainerNode) {
                 up = new ContainerNode(target.getName(), this.inheritPermissions);
             } else if (n instanceof DataNode) {
-                up = new DataNode(target.getName(), this.storageID);
+                up = new DataNode(target.getName());
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
                 up = new LinkNode(target.getName(), link);
@@ -894,14 +884,7 @@ public class Main implements Runnable {
         }
     }
 
-    /**
-     * Create a view used in node.accepts based on the query string in the vosuri.
-     *
-     * @param vosuri
-     * @param node The node object if available.
-     * @return  accepts view
-     * @throws URISyntaxException invalid vosuri
-     */
+    /*
     private View createAcceptsView(VOSURI vosuri, Node node) 
         throws URISyntaxException {
         AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
@@ -912,14 +895,7 @@ public class Main implements Runnable {
         return createView(vosuri, nodeViewWrapper, node);
     }
 
-    /**
-     * Create a view used in node.provides based on the query string in the vosuri.
-     *
-     * @param vosuri
-     * @param node The node object if available.
-     * @return provides view
-     * @throws URISyntaxException for invalid vosuri.
-     */
+    
     private View createProvidesView(VOSURI vosuri, Node node) 
         throws URISyntaxException {
         AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
@@ -929,16 +905,9 @@ public class Main implements Runnable {
         };
         return createView(vosuri, nodeViewWrapper, node);
     }
-
-    /**
-     * Create a view based on the query string in the vosuri.
-     *
-     * @param vosURI
-     * @param acceptsOrProvides
-     * @param node The node object if available.
-     * @return view
-     * @throws URISyntaxException for invalid vosuri.
-     */
+    */
+    
+    /*
     private View createView(VOSURI vosURI, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
             throws URISyntaxException {
         // parse the query string
@@ -1000,7 +969,8 @@ public class Main implements Runnable {
         }
         return view;
     }
-
+    */
+    
     private static String ZERO_LENGTH = "";
 
     private String safePropertyRef(Node n, URI key) {
@@ -1285,15 +1255,6 @@ public class Main implements Runnable {
                     this.inheritPermissions = Boolean.parseBoolean(inheritPermissions);
                 } else if ((DataNode.class.getSimpleName().equalsIgnoreCase(strNodeType))) {
                     this.nodeType = NodeType.DATA_NODE;
-                    String storageID = argMap.getValue(ARG_STORAGE_ID);
-                    if (storageID == null) {
-                        throw new IllegalArgumentException("Argument --inheritPermissions is required for DateNode");
-                    }
-                    try {
-                        this.storageID = new URI(storageID);
-                    } catch (URISyntaxException e) {
-                        throw new IllegalArgumentException("Invalid DataNode --storageID URI: " + storageID);
-                    }
                 } else if (LinkNode.class.getSimpleName().equalsIgnoreCase(strNodeType)) {
                     this.nodeType = NodeType.LINK_NODE;
                     String link = argMap.getValue(ARG_LINK);

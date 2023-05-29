@@ -412,7 +412,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
         Element nodes = new Element("nodes", vosNamespace);
-        for (Node childNode : node.nodes) {
+        for (Node childNode : node.getNodes()) {
             VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
             Element nodeElement = getNodeElement(childURI, childNode);
             nodes.addContent(nodeElement);

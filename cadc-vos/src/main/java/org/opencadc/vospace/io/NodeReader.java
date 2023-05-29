@@ -372,13 +372,13 @@ public class NodeReader implements XmlProcessor {
             log.debug("node type: " + type);
 
             if (type.equals(ContainerNode.class.getSimpleName())) {
-                node.nodes.add(buildContainerNode(childNode, namespace, childVosURI));
+                node.getNodes().add(buildContainerNode(childNode, namespace, childVosURI));
             } else if (type.equals(LinkNode.class.getSimpleName())) {
-                node.nodes.add(buildLinkNode(childNode, namespace, childVosURI));
+                node.getNodes().add(buildLinkNode(childNode, namespace, childVosURI));
             } else if (type.equals(DataNode.class.getSimpleName())
                 || type.equals(StructuredDataNode.class.getSimpleName())
                 || type.equals(UnstructuredDataNode.class.getSimpleName())) {
-                node.nodes.add(buildDataNode(childNode, namespace, childVosURI, type));
+                node.getNodes().add(buildDataNode(childNode, namespace, childVosURI, type));
             } else {
                 throw new NodeParsingException("unsupported node type " + type);
             }

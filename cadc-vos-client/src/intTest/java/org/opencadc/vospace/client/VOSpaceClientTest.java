@@ -69,6 +69,7 @@
 
 package org.opencadc.vospace.client;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -80,19 +81,19 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Direction;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.Protocol;
-import org.opencadc.vospace.TestUtil;
-import org.opencadc.vospace.Transfer;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
@@ -145,7 +146,7 @@ public class VOSpaceClientTest {
         //        log.debug("hostname=" + hostname);
         //        endpoint = "https://" + hostname;
         //        log.debug("endpoint=" + endpoint);
-        client = new VOSpaceClient(URI.create("ivo://cadc.nrc.ca/vospace"));
+        //client = new VOSpaceClient(URI.create("ivo://cadc.nrc.ca/vospace"));
     }
 
     /**

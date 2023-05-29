@@ -80,7 +80,6 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.xml.XmlUtil;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -93,12 +92,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
-import org.opencadc.vospace.Direction;
-import org.opencadc.vospace.Transfer;
-import org.opencadc.vospace.XmlProcessor;
+import org.opencadc.vospace.io.XmlProcessor;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.

@@ -213,7 +213,7 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     public NodeProperty getProperty(URI uri) {
         for (NodeProperty nodeProperty : this.properties) {
-            if (nodeProperty.getKey() == uri) {
+            if (nodeProperty.getKey().equals(uri)) {
                 return nodeProperty;
             }
         }

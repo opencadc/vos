@@ -99,21 +99,21 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.Direction;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.NodeParsingException;
 import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.NodeReader;
-import org.opencadc.vospace.NodeWriter;
-import org.opencadc.vospace.Protocol;
-import org.opencadc.vospace.Transfer;
-import org.opencadc.vospace.TransferParsingException;
-import org.opencadc.vospace.TransferReader;
-import org.opencadc.vospace.TransferWriter;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
+import org.opencadc.vospace.transfer.TransferReader;
+import org.opencadc.vospace.transfer.TransferWriter;
 
 /**
  * VOSpace client library. This implementation

@@ -174,8 +174,8 @@ public class NodeEntityTest {
             n.readWriteGroup.clear();
             
             // child entities
-            n.nodes.add(new ContainerNode("foo", false));
-            n.nodes.add(new DataNode("bar"));
+            n.getNodes().add(new ContainerNode("foo", false));
+            n.getNodes().add(new DataNode("bar"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
