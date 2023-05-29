@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,50 +62,37 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
 */
 
-package ca.nrc.cadc.conformance.vos;
+package org.opencadc.cavern;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeWriter;
-import org.jdom2.Element;
-import org.jdom2.Namespace;
+import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.rest.InitAction;
+import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
+import javax.sql.DataSource;
+import org.apache.log4j.Logger;
 
 /**
- * Class extends NodeWriter to create a Node with an invalid xsi:type
- * attribute.
- * 
- * @author jburke
+ * Based on similar files from storage-inventory (luskan, by example)
+ * @author jeevesh
  */
-public class InvalidTypeNodeWriter extends NodeWriter
-{
-    public InvalidTypeNodeWriter()
-    {
-        super();
-    }
-    
-    /**
-     * Returns the root JDOM Element of the node, with an invalid xsi:type
-     * attribute.
-     *
-     * @param node the Node.
-     * @return the root element.
-     */
-    @Override
-    protected Element getRootElement(Node node)
-    {
-        Namespace vosNamespace = Namespace.getNamespace("vos", VOSPACE_NS_20);
-        Namespace xsiNamespace = Namespace.getNamespace("xsi", XSI_NAMESPACE);
-        // Create the root element (node).
-        Element root = new Element("node", vosNamespace);
-        root.addNamespaceDeclaration(vosNamespace);
-        root.addNamespaceDeclaration(xsiNamespace);
-        root.setAttribute("uri", node.getUri().toString());
-        root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
-        return root;
+public class CavernInitAction extends InitAction {
+    private static final Logger log = Logger.getLogger(CavernInitAction.class);
+
+    public CavernInitAction() {
     }
 
+    @Override
+    public void doInit() {
+        try {
+            // Init UWS database
+            DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
+            InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");
+            uwsi.doInit();
+
+        } catch (Exception ex) {
+            throw new RuntimeException("INIT FAIL", ex);
+        }
+    }
 }
