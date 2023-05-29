@@ -176,16 +176,16 @@ public class NodeReaderWriterTest {
         dataURI = new VOSURI("vos://opencadc.org~vospace/dir/dataFile");
         maxDataNode = new DataNode(dataURI.getName());
         maxDataNode.busy = true;
-        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "content-type"));
-        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "content-encoding"));
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "content-type"));
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "content-encoding"));
         URI contentChecksum = URI.create("md5:fd02b367a37f1ec989be20be40672fc5");
         String contentLastModified = "2023-02-03T08:45:12.345";
         Long contentLength = 540000L;
-        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
-        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentChecksum.toASCIIString()));
-        maxDataNode.properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, contentLastModified));
-        maxDataNode.accepts.add(VOS.VIEW_ANY);
-        maxDataNode.provides.add(VOS.VIEW_BINARY);
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentChecksum.toASCIIString()));
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, contentLastModified));
+        maxDataNode.getAccepts().add(VOS.VIEW_ANY);
+        maxDataNode.getProvides().add(VOS.VIEW_BINARY);
         addStandardNodeVariables(maxDataNode);
         addNodeProperties(maxDataNode);
 
@@ -212,18 +212,18 @@ public class NodeReaderWriterTest {
         node.owner = subject;
         node.isPublic = true;
         node.isLocked = false;
-        node.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1"));
-        node.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2"));
-        node.readWriteGroup.add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1"));
-        node.readWriteGroup.add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2"));
+        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1"));
+        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2"));
+        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1"));
+        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2"));
     }
 
     private void addNodeProperties(Node node) {
         NodeProperty description = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "My award winning images");
         description.readOnly = true;
-        node.properties.add(description);
+        node.getProperties().add(description);
 
-        node.properties.add(new NodeProperty(VOS.PROPERTY_URI_READABLE));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_READABLE));
     }
 
     private void comparePropertyList(Set<NodeProperty> p1, Set<NodeProperty> p2) {
@@ -270,12 +270,12 @@ public class NodeReaderWriterTest {
         Assert.assertEquals("name", n1.getName(), n2.getName());
         Assert.assertEquals("owner", n1.getPropertyValue(VOS.PROPERTY_URI_CREATOR),
                             n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
-        comparePropertyList(n1.properties, n2.properties);
+        comparePropertyList(n1.getProperties(), n2.getProperties());
         if (n1 instanceof DataNode) {
             DataNode dn1 = (DataNode) n1;
             DataNode dn2 = (DataNode) n2;
-            compareURIList(dn1.accepts, dn2.accepts);
-            compareURIList(dn1.provides, dn2.provides);
+            compareURIList(dn1.getAccepts(), dn2.getAccepts());
+            compareURIList(dn1.getProvides(), dn2.getProvides());
         }
         if (n1 instanceof ContainerNode) {
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
@@ -551,33 +551,33 @@ public class NodeReaderWriterTest {
         VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
         DataNode dataNode1 = new DataNode(dataURI1.getName());
         dataNode1.busy = true;
-        dataNode1.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
-        dataNode1.properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
-        dataNode1.accepts.add(URI.create("ivo://cadc.nrc.ca/vospace/view#view1"));
-        dataNode1.accepts.add(URI.create("ivo://cadc.nrc.ca/vospace/view#view2"));
-        dataNode1.provides.add(URI.create("ivo://cadc.nrc.ca/vospace/view#something"));
-        dataNode1.provides.add(URI.create("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
+        dataNode1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
+        dataNode1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
+        dataNode1.getAccepts().add(URI.create("ivo://cadc.nrc.ca/vospace/view#view1"));
+        dataNode1.getAccepts().add(URI.create("ivo://cadc.nrc.ca/vospace/view#view2"));
+        dataNode1.getProvides().add(URI.create("ivo://cadc.nrc.ca/vospace/view#something"));
+        dataNode1.getProvides().add(URI.create("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
         detailedNode.getNodes().add(dataNode1);
 
         // add a ContainerNode with some props
         VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/testContainer/foo");
         ContainerNode containerNode = new ContainerNode(containerURI.getName(), false);
-        containerNode.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        containerNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
         detailedNode.getNodes().add(containerNode);
 
         // add a LinkNode with some props
         VOSURI linkURI = new VOSURI("vos://opencadc.org~vospace/testContainer/aLink");
         URI target = URI.create("vos://opencadc.org~vospace/testContainer/baz");
         LinkNode linkNode = new LinkNode(linkURI.getName(), target);
-        linkNode.readOnlyGroup.add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        linkNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
         detailedNode.getNodes().add(linkNode);
 
         // add another DataNode below
         VOSURI dataURI2 = new VOSURI("vos://opencadc.org~vospace/testContainer/baz");
         DataNode dataNode2 = new DataNode(dataURI2.getName());
         dataNode2.busy = false;
-        dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
-        dataNode2.properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
+        dataNode2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "123"));
+        dataNode2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "The Title"));
         detailedNode.getNodes().add(dataNode2);
 
         return detailedNode;

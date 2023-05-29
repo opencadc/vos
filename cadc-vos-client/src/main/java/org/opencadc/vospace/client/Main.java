@@ -280,14 +280,14 @@ public class Main implements Runnable {
             Node up = null;
             if (n instanceof ContainerNode) {
                 up = new ContainerNode(target.getName(), ((ContainerNode) n).inheritPermissions);
-                up.properties.addAll(properties);
+                up.getProperties().addAll(properties);
             } else if (n instanceof DataNode) {
                 up = new DataNode(target.getName());
-                up.properties.addAll(properties);
+                up.getProperties().addAll(properties);
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
                 up = new LinkNode(target.getName(), link);
-                up.properties.addAll(properties);
+                up.getProperties().addAll(properties);
             } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             }
@@ -439,7 +439,7 @@ public class Main implements Runnable {
                 default:
                     throw new RuntimeException("BUG. Unsupported node type " + this.nodeType);
             }
-            node.properties.addAll(this.properties);
+            node.getProperties().addAll(this.properties);
 
             Node nodeRtn = client.createNode(this.target, node);
             log.info("created: " + nodeRtn.getName());
@@ -483,17 +483,17 @@ public class Main implements Runnable {
             Node n = client.getNode(target.getPath(), queryString);
 
             msg(getType(n) + ": " + target);
-            msg("creator: " + n.owner);
+            msg("owner: " + n.ownerDisplay);
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
             msg("size: " + getContentLength(n,true));
             msg("is locked: " + n.isLocked);
             msg("is public: " + n.isPublic);
             msg("readable by:");
-            for (URI ro : n.readOnlyGroup) {
+            for (URI ro : n.getReadOnlyGroup()) {
                 msg("\t" + ro);
             }
             msg("readable and writable by:");
-            for (URI rw : n.readWriteGroup) {
+            for (URI rw : n.getReadWriteGroup()) {
                 msg("\t" + rw);
             }
 
@@ -611,13 +611,12 @@ public class Main implements Runnable {
 
     private void copyToVOSpace()
         throws Throwable {
-        URI originalDestination = null;
-        if (StringUtil.hasText(destination.getQuery())) {
-            originalDestination = new URI(destination.toString());
-            destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
-        }
-
-        View view = new View(VOS.VIEW_DEFAULT);
+        //URI originalDestination = null;
+        //if (StringUtil.hasText(destination.getQuery())) {
+        //    originalDestination = new URI(destination.toString());
+        //    destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
+        //}
+        final View view = new View(VOS.VIEW_DEFAULT);
         //if (originalDestination != null) {
         //    view = createAcceptsView(new VOSURI(originalDestination), null);
         //}
@@ -630,7 +629,7 @@ public class Main implements Runnable {
             proto = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
         }
         log.debug("copyToVOSpace: " + proto);
-        List<Protocol> protocols = new ArrayList<Protocol>();
+        List<Protocol> protocols = new ArrayList<>();
         protocols.add(proto);
 
         log.debug("this.source: " + source);
@@ -641,7 +640,7 @@ public class Main implements Runnable {
         transfer.getProtocols().addAll(protocols);
         transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
-        transfer.version = VOS.VOSPACE_21; // testing VOSpace-2.1
+        transfer.version = VOS.VOSPACE_21;
 
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
@@ -667,7 +666,7 @@ public class Main implements Runnable {
         }
         Node node = client.getNode(destination.getPath());
 
-        boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
+        boolean checkProps = contentType != null || contentEncoding != null || !properties.isEmpty();
         if (checkProps || log.isDebugEnabled()) {
             VOSURI destinationURI = new VOSURI(destination);
             log.debug("clientTransfer getTarget: " + node);
@@ -693,7 +692,7 @@ public class Main implements Runnable {
             NodeProperty cur = node.getProperty(key);
             if (cur == null) {
                 log.debug("adding property: " + key + " = " + value);
-                node.properties.add(new NodeProperty(key, value));
+                node.getProperties().add(new NodeProperty(key, value));
                 ret = true;
             } else if (!value.equals(cur.getValue())) {
                 log.debug("setting property: " + key + " = '" + value
@@ -707,7 +706,7 @@ public class Main implements Runnable {
 
     private void copyFromVOSpace()
         throws Throwable {
-        View view = new View(VOS.VIEW_DEFAULT);
+        final View view = new View(VOS.VIEW_DEFAULT);
         //if (StringUtil.hasText(source.getQuery())) {
         //    view = createProvidesView(new VOSURI(source), null);
         //    source = new URI(source.toString().replace("?" + source.getQuery(), ""));
@@ -815,7 +814,7 @@ public class Main implements Runnable {
             } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             }
-            up.properties.addAll(properties);
+            up.getProperties().addAll(properties);
 
             ClientRecursiveSetNode recSetNode = client.setNodeRecursive(target, up);
 
@@ -1071,21 +1070,6 @@ public class Main implements Runnable {
                                                                + " does not exist or cannot be read.");
                     }
 
-                    // Predetermine delete permission on file -- fail on attempt for now
-                    // if (this.operation.equals(Operation.MOVE))
-                    // {
-                    //     try
-                    //     {
-                    //         SecurityManager sm = System.getSecurityManager();
-                    //         sm.checkDelete(strSrc);
-                    //     }
-                    //     catch (SecurityException secEx)
-                    //     {
-                    //         throw new IllegalArgumentException("Permission to remove source file "
-                    //                                              + strSrc + " denied.");
-                    //     }
-                    // }
-
                     try {
                         this.source = new URI("file", f.getAbsolutePath(), null);
                     } catch (URISyntaxException e) {
@@ -1177,7 +1161,7 @@ public class Main implements Runnable {
 
         this.retryEnabled = !argMap.isSet(ARG_NO_RETRY);
 
-        log.info("server uri: " + serverUri);
+        log.info("vospace: " + serverUri + " @ " + client.getBaseURL());
     }
 
     /**

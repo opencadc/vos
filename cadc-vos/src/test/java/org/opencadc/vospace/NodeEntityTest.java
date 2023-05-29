@@ -140,38 +140,38 @@ public class NodeEntityTest {
             Assert.assertNotEquals(mcs1, mcs);
             n.isPublic = null;
             
-            n.properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "666"));
+            n.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "666"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
-            n.properties.clear();
+            n.getProperties().clear();
             
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rog1 = mcs;
-            n.readOnlyGroup.clear();
+            n.getReadOnlyGroup().clear();
             
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rog1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
-            n.readOnlyGroup.clear();
+            n.getReadOnlyGroup().clear();
             
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rwg1 = mcs;
-            n.readWriteGroup.clear();
+            n.getReadWriteGroup().clear();
             
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rwg1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
-            n.readWriteGroup.clear();
+            n.getReadWriteGroup().clear();
             
             // child entities
             n.getNodes().add(new ContainerNode("foo", false));
@@ -200,11 +200,11 @@ public class NodeEntityTest {
             URI mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
-            n.accepts.add(VOS.VIEW_BINARY);
+            n.getAccepts().add(VOS.VIEW_BINARY);
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
-            n.provides.add(VOS.VIEW_DEFAULT);
+            n.getProvides().add(VOS.VIEW_DEFAULT);
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             
@@ -246,33 +246,33 @@ public class NodeEntityTest {
             Assert.assertNotEquals(mcs1, mcs);
             n.isPublic = false;
             
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rog1 = mcs;
-            n.readOnlyGroup.clear();
+            n.getReadOnlyGroup().clear();
             
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.readOnlyGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rog1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
-            n.readOnlyGroup.clear();
+            n.getReadOnlyGroup().clear();
             
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rwg1 = mcs;
-            n.readWriteGroup.clear();
+            n.getReadWriteGroup().clear();
             
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.readWriteGroup.add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rwg1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
-            n.readWriteGroup.clear();
+            n.getReadWriteGroup().clear();
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);

@@ -123,8 +123,8 @@ public class NodesTest extends VOSTest {
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            testNode.setInheritPermissions(false);
-            testNode.properties.add(nodeProperty);
+            testNode.inheritPermissions = false;
+            testNode.getProperties().add(nodeProperty);
             post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
@@ -133,8 +133,8 @@ public class NodesTest extends VOSTest {
             ContainerNode updatedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
-            Assert.assertEquals(testNode.isInheritPermissions(), updatedNode.isInheritPermissions());
-            Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
+            Assert.assertEquals(testNode.inheritPermissions, updatedNode.inheritPermissions);
+            Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
 
             // DELETE the node
             delete(nodeURL);
@@ -169,7 +169,7 @@ public class NodesTest extends VOSTest {
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            testNode.properties.add(nodeProperty);
+            testNode.getProperties().add(nodeProperty);
             post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
@@ -178,7 +178,7 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
-            Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
+            Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
 
             // DELETE the node
             delete(nodeURL);
@@ -215,7 +215,7 @@ public class NodesTest extends VOSTest {
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            testNode.properties.add(nodeProperty);
+            testNode.getProperties().add(nodeProperty);
             post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
@@ -226,7 +226,7 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getTarget(), updatedNode.getTarget());
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
-            Assert.assertTrue(updatedNode.properties.contains(nodeProperty));
+            Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
 
             // DELETE the node
             delete(nodeURL);
@@ -249,14 +249,14 @@ public class NodesTest extends VOSTest {
 
             NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
             NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
-            testNode.properties.add(titleProperty);
-            testNode.properties.add(descriptionProperty);
+            testNode.getProperties().add(titleProperty);
+            testNode.getProperties().add(descriptionProperty);
 
             URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
             URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
-            testNode.readOnlyGroup.add(readGroup);
-            testNode.readWriteGroup.add(writeGroup);
-            testNode.creatorID = authSubject;
+            testNode.getReadOnlyGroup().add(readGroup);
+            testNode.getReadWriteGroup().add(writeGroup);
+            testNode.owner = authSubject;
             testNode.isPublic = true;
 
             // PUT the node
@@ -272,26 +272,26 @@ public class NodesTest extends VOSTest {
             // TODO uncomment createID check
             //Assert.assertEquals(testNode.creatorID, persistedNode.creatorID);
             Assert.assertEquals(testNode.isPublic, persistedNode.isPublic);
-            Assert.assertTrue(persistedNode.properties.contains(titleProperty));
-            Assert.assertTrue(persistedNode.properties.contains(descriptionProperty));
-            Assert.assertEquals(testNode.readOnlyGroup.size(), persistedNode.readOnlyGroup.size());
-            Assert.assertTrue(persistedNode.readOnlyGroup.contains(readGroup));
-            Assert.assertEquals(testNode.readWriteGroup.size(), persistedNode.readWriteGroup.size());
-            Assert.assertTrue(persistedNode.readWriteGroup.contains(writeGroup));
+            Assert.assertTrue(persistedNode.getProperties().contains(titleProperty));
+            Assert.assertTrue(persistedNode.getProperties().contains(descriptionProperty));
+            Assert.assertEquals(testNode.getReadOnlyGroup().size(), persistedNode.getReadOnlyGroup().size());
+            Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(readGroup));
+            Assert.assertEquals(testNode.getReadWriteGroup().size(), persistedNode.getReadWriteGroup().size());
+            Assert.assertTrue(persistedNode.getReadWriteGroup().contains(writeGroup));
 
             // POST an update to the node
             NodeProperty formatProperty = new NodeProperty(VOS.PROPERTY_URI_FORMAT, XML_CONTENT_TYPE);
             NodeProperty quotaProperty = new NodeProperty(VOS.PROPERTY_URI_QUOTA, "999");
-            testNode.properties.clear();
-            testNode.properties.add(formatProperty);
-            testNode.properties.add(quotaProperty);
+            testNode.getProperties().clear();
+            testNode.getProperties().add(formatProperty);
+            testNode.getProperties().add(quotaProperty);
 
             URI updatedReadGroup = URI.create("ivo://org.opencadc/node?UpdatedReadGroup");
-            testNode.readOnlyGroup.clear();
-            testNode.readOnlyGroup.add(updatedReadGroup);
+            testNode.getReadOnlyGroup().clear();
+            testNode.getReadOnlyGroup().add(updatedReadGroup);
             URI updatedWriteGroup = URI.create("ivo://org.opencadc/node?UpdatedWriteGroup");
-            testNode.readWriteGroup.clear();
-            testNode.readWriteGroup.add(updatedWriteGroup);
+            testNode.getReadWriteGroup().clear();
+            testNode.getReadWriteGroup().add(updatedWriteGroup);
             testNode.isPublic = false;
 
             post(nodeURL, nodeURI, testNode);
@@ -304,12 +304,12 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(nodeURI, result.vosURI);
             //Assert.assertEquals(testNode.creatorID, updatedNode.creatorID);
             Assert.assertEquals(testNode.isPublic, updatedNode.isPublic);
-            Assert.assertTrue(updatedNode.properties.contains(titleProperty));
-            Assert.assertTrue(updatedNode.properties.contains(descriptionProperty));
-            Assert.assertEquals(testNode.readOnlyGroup.size(), updatedNode.readOnlyGroup.size());
-            Assert.assertTrue(updatedNode.readOnlyGroup.contains(updatedReadGroup));
-            Assert.assertEquals(testNode.readWriteGroup.size(), updatedNode.readWriteGroup.size());
-            Assert.assertTrue(updatedNode.readWriteGroup.contains(updatedWriteGroup));
+            Assert.assertTrue(updatedNode.getProperties().contains(titleProperty));
+            Assert.assertTrue(updatedNode.getProperties().contains(descriptionProperty));
+            Assert.assertEquals(testNode.getReadOnlyGroup().size(), updatedNode.getReadOnlyGroup().size());
+            Assert.assertTrue(updatedNode.getReadOnlyGroup().contains(updatedReadGroup));
+            Assert.assertEquals(testNode.getReadWriteGroup().size(), updatedNode.getReadWriteGroup().size());
+            Assert.assertTrue(updatedNode.getReadWriteGroup().contains(updatedWriteGroup));
 
             // DELETE the node
             delete(nodeURL);
@@ -383,10 +383,10 @@ public class NodesTest extends VOSTest {
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
-            Assert.assertEquals(parentNode.nodes.size(), 3);
-            Assert.assertTrue(parentNode.nodes.contains(child1));
-            Assert.assertTrue(parentNode.nodes.contains(child2));
-            Assert.assertTrue(parentNode.nodes.contains(child3));
+            Assert.assertEquals(parentNode.getNodes().size(), 3);
+            Assert.assertTrue(parentNode.getNodes().contains(child1));
+            Assert.assertTrue(parentNode.getNodes().contains(child2));
+            Assert.assertTrue(parentNode.getNodes().contains(child3));
 
             // Get nodes 3 - 5
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
@@ -395,10 +395,10 @@ public class NodesTest extends VOSTest {
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
-            Assert.assertEquals(parentNode.nodes.size(), 3);
-            Assert.assertTrue(parentNode.nodes.contains(child3));
-            Assert.assertTrue(parentNode.nodes.contains(child4));
-            Assert.assertTrue(parentNode.nodes.contains(child5));
+            Assert.assertEquals(parentNode.getNodes().size(), 3);
+            Assert.assertTrue(parentNode.getNodes().contains(child3));
+            Assert.assertTrue(parentNode.getNodes().contains(child4));
+            Assert.assertTrue(parentNode.getNodes().contains(child5));
 
             // Get nodes 5 - 6
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
@@ -407,9 +407,9 @@ public class NodesTest extends VOSTest {
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
-            Assert.assertEquals(parentNode.nodes.size(), 2);
-            Assert.assertTrue(parentNode.nodes.contains(child5));
-            Assert.assertTrue(parentNode.nodes.contains(child6));
+            Assert.assertEquals(parentNode.getNodes().size(), 2);
+            Assert.assertTrue(parentNode.getNodes().contains(child5));
+            Assert.assertTrue(parentNode.getNodes().contains(child6));
 
             // delete the parent node
             delete(parentURL);
@@ -461,9 +461,9 @@ public class NodesTest extends VOSTest {
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
-            Assert.assertEquals(parentNode.nodes.size(), 2);
-            Assert.assertTrue(parentNode.nodes.contains(child1));
-            Assert.assertTrue(parentNode.nodes.contains(child2));
+            Assert.assertEquals(parentNode.getNodes().size(), 2);
+            Assert.assertTrue(parentNode.getNodes().contains(child1));
+            Assert.assertTrue(parentNode.getNodes().contains(child2));
 
             // delete the parent node
             delete(parentURL);
@@ -483,18 +483,18 @@ public class NodesTest extends VOSTest {
             // create a fully populated container node
             String parentName = "node-detail-parent-node";
             ContainerNode testNode = new ContainerNode(parentName, true);
-            testNode.creatorID = authSubject;
+            testNode.owner = authSubject;
             testNode.isPublic = true;
 
             NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
             NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
-            testNode.properties.add(titleProperty);
-            testNode.properties.add(descriptionProperty);
+            testNode.getProperties().add(titleProperty);
+            testNode.getProperties().add(descriptionProperty);
 
             URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
             URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
-            testNode.readOnlyGroup.add(readGroup);
-            testNode.readWriteGroup.add(writeGroup);
+            testNode.getReadOnlyGroup().add(readGroup);
+            testNode.getReadWriteGroup().add(writeGroup);
 
             URL nodeURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI nodeURI = getVOSURI(parentName);
@@ -513,15 +513,15 @@ public class NodesTest extends VOSTest {
             NodeReader.NodeReaderResult result = get(detailURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
-            Assert.assertTrue(parentNode.properties.isEmpty());
-            Assert.assertTrue(parentNode.nodes.isEmpty());
+            Assert.assertTrue(parentNode.getProperties().isEmpty());
+            Assert.assertTrue(parentNode.getNodes().isEmpty());
 
             // get the node
             result = get(nodeURL, 200, XML_CONTENT_TYPE);
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
-            Assert.assertFalse(parentNode.properties.isEmpty());
-            Assert.assertFalse(parentNode.nodes.isEmpty());
+            Assert.assertFalse(parentNode.getProperties().isEmpty());
+            Assert.assertFalse(parentNode.getNodes().isEmpty());
 
             // delete the node
             delete(nodeURL);

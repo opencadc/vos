@@ -311,7 +311,7 @@ public class NodeReader implements XmlProcessor {
         setNodeVariables(element, namespace, node, properties);
 
         // add remaining properties as node properties
-        node.properties.addAll(properties);
+        node.getProperties().addAll(properties);
 
         return node;
     }
@@ -337,7 +337,7 @@ public class NodeReader implements XmlProcessor {
         ContainerNode node = new ContainerNode(vosURI.getName(), inherit);
         
         setNodeVariables(element, namespace, node, properties);
-        node.properties.addAll(properties);
+        node.getProperties().addAll(properties);
 
         // get nodes element
         Element nodes = element.getChild("nodes", namespace);
@@ -424,7 +424,7 @@ public class NodeReader implements XmlProcessor {
 
         Set<NodeProperty> properties = getProperties(element, namespace);
         setNodeVariables(element, namespace, node, properties);
-        node.properties.addAll(properties);
+        node.getProperties().addAll(properties);
 
         return node;
     }
@@ -515,16 +515,16 @@ public class NodeReader implements XmlProcessor {
                                     Node node, Set<NodeProperty> properties)
         throws NodeParsingException {
 
-        node.owner = getSubjectProperty(VOS.PROPERTY_URI_CREATOR, properties);
+        node.ownerDisplay = getStringProperty(VOS.PROPERTY_URI_CREATOR, properties);
         node.isLocked = getBooleanProperty(VOS.PROPERTY_URI_ISLOCKED, properties);
         node.isPublic = getBooleanProperty(VOS.PROPERTY_URI_ISPUBLIC, properties);
         if (node instanceof DataNode) {
             DataNode dn = (DataNode) node;
-            dn.accepts.addAll(getViewURIs(element, namespace, "accepts"));
-            dn.provides.addAll(getViewURIs(element, namespace, "provides"));
+            dn.getAccepts().addAll(getViewURIs(element, namespace, "accepts"));
+            dn.getProvides().addAll(getViewURIs(element, namespace, "provides"));
         }
-        node.readOnlyGroup.addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPREAD, VOS.PROPERTY_DELIM_GROUPREAD, properties));
-        node.readWriteGroup.addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPWRITE, VOS.PROPERTY_DELIM_GROUPWRITE, properties));
+        node.getReadOnlyGroup().addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPREAD, VOS.PROPERTY_DELIM_GROUPREAD, properties));
+        node.getReadWriteGroup().addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPWRITE, VOS.PROPERTY_DELIM_GROUPWRITE, properties));
     }
 
     /**
@@ -717,26 +717,6 @@ public class NodeReader implements XmlProcessor {
             properties.remove(nodeProperty);
             if (nodeProperty.getValue() != null) {
                 return Boolean.parseBoolean(nodeProperty.getValue());
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Get a Subject from a NodeProperty value for the given key. If the NodeProperty is
-     * found in the Set of all NodeProperty's it is removed from the Set.
-     *
-     * @param key a NodeProperty key.
-     * @param properties the set of all node properties.
-     * @return a Subject from the NodeProperty value for the given key, else null if not found.
-     */
-    public Subject getSubjectProperty(URI key, Set<NodeProperty> properties) {
-        NodeProperty nodeProperty = getNodeProperty(key, properties);
-        if (nodeProperty != null) {
-            properties.remove(nodeProperty);
-            if (nodeProperty.getValue() != null) {
-                IdentityManager identityManager = AuthenticationUtil.getIdentityManager();
-                return identityManager.toSubject(nodeProperty.getValue());
             }
         }
         return null;

@@ -78,6 +78,7 @@ import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 
@@ -125,36 +126,34 @@ public class VOSpaceClient {
 
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
-    private URI serviceID;
+    private URI resourceID;
     boolean schemaValidation;
+    
+    private final RegistryClient reg = new RegistryClient();
 
-    /**
-     * Constructor. XML Schema validation is enabled by default.
-     *
-     * @param serviceID
-     */
-    public VOSpaceClient(URI serviceID) {
-        this(serviceID, true);
+    public VOSpaceClient(URI resourceID) {
+        this(resourceID, true);
     }
 
-    /**
-     * Constructor. XML schema validation may be disabled, in which case the client
-     * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
-     * invalid VOSpace (node or transfer) or UWS (job) documents. However, performance
-     * may be improved.
-     *
-     * @param serviceID
-     * @param enableSchemaValidation
-     */
-    public VOSpaceClient(URI serviceID, boolean enableSchemaValidation) {
+    public VOSpaceClient(URI resourceID, boolean enableSchemaValidation) {
         this.schemaValidation = enableSchemaValidation;
-        this.serviceID = serviceID;
+        this.resourceID = resourceID;
     }
 
+    public String getBaseURL() {
+        URL u = reg.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+        if (u == null) {
+            throw new RuntimeException("not found: " + resourceID);
+        }
+        String ret = u.toExternalForm().replace("/nodes", "");
+        return ret;
+    }
+    
     /**
-     * Create the specified node. If the parent (container) nodes do not exist, they
-     * will also be created.
+     * Create the specified node.If the parent (container) nodes do not exist, they
+ will also be created.
      *
+     * @param vosURI
      * @param node
      * @return the created node
      */
@@ -163,9 +162,10 @@ public class VOSpaceClient {
     }
 
     /**
-     * Create the specified node. If the parent (container) nodes do not exist, they
-     * will also be created.
+     * Create the specified node.If the parent (container) nodes do not exist, 
+     * they will also be created.
      *
+     * @param vosURI
      * @param node
      * @param checkForDuplicate If true, throw duplicate node exception if node already exists.
      * @return the created node
@@ -319,12 +319,11 @@ public class VOSpaceClient {
     }
 
     /**
-     * Add --recursiveMode option to command line, used by set only, and if set
-     * setNode uses a different recursiveMode endpoint.
-     */
-    /**
+     * Set node properties.
+     * 
+     * @param vosURI
      * @param node
-     * @return
+     * @return modified node
      */
     public Node setNode(VOSURI vosURI, Node node) {
         Node rtnNode = null;
@@ -464,10 +463,6 @@ public class VOSpaceClient {
             throw new IllegalStateException("failed to delete node", e);
         }
 
-    }
-
-    protected RegistryClient getRegistryClient() {
-        return new RegistryClient();
     }
 
     protected URL getServiceURL(URI serviceID, URI standard, AuthMethod authMethod) {
@@ -672,12 +667,12 @@ public class VOSpaceClient {
         Subject subject = AuthenticationUtil.getCurrentSubject();
         AuthMethod am = AuthenticationUtil.getAuthMethodFromCredentials(subject);
 
-        URL serviceURL = getRegistryClient().getServiceURL(this.serviceID, standard, am);
+        URL serviceURL = reg.getServiceURL(this.resourceID, standard, am);
 
         if (serviceURL == null) {
             throw new RuntimeException(
                     String.format("Unable to get Service URL for '%s', '%s', '%s'",
-                                  serviceID.toString(), standard, am));
+                                  resourceID.toString(), standard, am));
         }
 
         return serviceURL;

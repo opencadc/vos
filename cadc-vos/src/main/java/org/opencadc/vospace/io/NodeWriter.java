@@ -67,8 +67,6 @@
 
 package org.opencadc.vospace.io;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -240,7 +238,7 @@ public class NodeWriter implements XmlProcessor {
             addContainerNodeVariablesToProperties(cn, properties);
 
             // add node properties to node field properties
-            properties.addAll(node.properties);
+            properties.addAll(node.getProperties());
 
             // add all properties to the document
             nodeElement.addContent(getPropertiesElement(properties));
@@ -258,7 +256,7 @@ public class NodeWriter implements XmlProcessor {
             addDataNodeVariablesToProperties(dn, properties);
 
             // add node properties to node field properties
-            properties.addAll(node.properties);
+            properties.addAll(node.getProperties());
 
             // add all properties to the document
             nodeElement.addContent(getPropertiesElement(properties));
@@ -272,7 +270,7 @@ public class NodeWriter implements XmlProcessor {
             addNodeVariablesToProperties(node, properties);
 
             // add node properties to node field properties
-            properties.addAll(node.properties);
+            properties.addAll(node.getProperties());
 
             // add all properties to the document
             nodeElement.addContent(getPropertiesElement(properties));
@@ -294,10 +292,8 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addNodeVariablesToProperties(Node node, Set<NodeProperty> properties) {
-        if (node.owner != null) {
-            IdentityManager identityManager = AuthenticationUtil.getIdentityManager();
-            String subjectString = identityManager.toDisplayString(node.owner);
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, subjectString));
+        if (node.ownerDisplay != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, node.ownerDisplay));
         }
         if (node.isLocked != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(node.isLocked)));
@@ -305,9 +301,9 @@ public class NodeWriter implements XmlProcessor {
         if (node.isPublic != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic)));
         }
-        if (!node.readOnlyGroup.isEmpty()) {
+        if (!node.getReadOnlyGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (URI group : node.readOnlyGroup) {
+            for (URI group : node.getReadOnlyGroup()) {
                 if (sb.length() > 0) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPREAD);
                 }
@@ -315,9 +311,9 @@ public class NodeWriter implements XmlProcessor {
             }
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString()));
         }
-        if (!node.readWriteGroup.isEmpty()) {
+        if (!node.getReadWriteGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (URI group : node.readWriteGroup) {
+            for (URI group : node.getReadWriteGroup()) {
                 if (sb.length() > 0) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPWRITE);
                 }
@@ -380,7 +376,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getAcceptsElement(DataNode node) {
         Element accepts = new Element("accepts", vosNamespace);
-        for (URI viewURI : node.accepts) {
+        for (URI viewURI : node.getAccepts()) {
             Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             accepts.addContent(viewElement);
@@ -396,7 +392,7 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getProvidesElement(DataNode node) {
         Element provides = new Element("provides", vosNamespace);
-        for (URI viewURI : node.provides) {
+        for (URI viewURI : node.getProvides()) {
             Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             provides.addContent(viewElement);
