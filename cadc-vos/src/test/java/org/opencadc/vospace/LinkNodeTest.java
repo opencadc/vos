@@ -118,11 +118,11 @@ public class LinkNodeTest {
         properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
 
         LinkNode node = new LinkNode(uri.getName(), target);
-        node.properties.addAll(properties);
+        node.getProperties().addAll(properties);
 
         Assert.assertEquals(uri.getName(), node.getName());
         Assert.assertEquals(target, node.getTarget());
-        Set<NodeProperty> actualProperties = node.properties;
+        Set<NodeProperty> actualProperties = node.getProperties();
         Assert.assertEquals(properties.size(), actualProperties.size());
         for (NodeProperty property : properties) {
             Assert.assertTrue(actualProperties.contains(property));

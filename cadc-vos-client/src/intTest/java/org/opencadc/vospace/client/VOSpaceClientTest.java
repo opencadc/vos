@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2009.                            (c) 2009.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,6 +69,7 @@
 
 package org.opencadc.vospace.client;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -80,23 +81,23 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Direction;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.Protocol;
-import org.opencadc.vospace.TestUtil;
-import org.opencadc.vospace.Transfer;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
- * and (probably) valid X509 proxy certficates. TODO: provide this as an integration
+ * and (probably) valid X509 proxy certificates. TODO: provide this as an integration
  * test  or rewrite it using a mock http layer (sounds hard).
  *
  * @author zhangsa
@@ -106,55 +107,19 @@ import org.opencadc.vospace.View;
 public class VOSpaceClientTest {
     private static Logger log = Logger.getLogger(VOSpaceClientTest.class);
     private static String ROOT_NODE;
-    private static String VOS_URI = "vos://cadc.nrc.ca!vospace";
-    private static String TEST_CERT = "proxy.crt";
-    private static String TEST_KEY = "proxy.key";
+    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/vospace"); //??
+    private static String VOS_URI = "vos://opencadc.org~vospace";
 
-    String endpoint;
-    VOSpaceClient client;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
-        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
-
-        //File cert = FileUtil.getFileFromResource(TEST_CERT, VOSpaceClientTest.class);
-        //File key = FileUtil.getFileFromResource(TEST_KEY, VOSpaceClientTest.class);
-        //SSLUtil.initSSL(cert, key);
-
+    static {
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         ROOT_NODE = System.getProperty("user.name") + "/";
     }
+    
+    String endpoint;
+    VOSpaceClient client = new VOSpaceClient(RESOURCE_ID);
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        //        InetAddress localhost = InetAddress.getLocalHost();
-        //        String hostname = localhost.getCanonicalHostName();
-        //        log.debug("hostname=" + hostname);
-        //        endpoint = "https://" + hostname;
-        //        log.debug("endpoint=" + endpoint);
-        client = new VOSpaceClient(URI.create("ivo://cadc.nrc.ca/vospace"));
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
-
+    // TODO: fix/rewrite these tests and document how to run them against a vospace service
+    
     //@Test
     public void testSetNode() throws Exception {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();

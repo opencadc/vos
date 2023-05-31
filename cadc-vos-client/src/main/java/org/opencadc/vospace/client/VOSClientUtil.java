@@ -73,21 +73,19 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.NodeWriter;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeWriter;
 
 /**
  * @author zhangsa

@@ -372,16 +372,16 @@ public class TransferTest extends VOSTest {
 
             // Get the destination node
             NodeReader.NodeReaderResult result = get(destinationNodeURL, 200, XML_CONTENT_TYPE);
-            List<Node> childNodes = ((ContainerNode) result.node).nodes;
+            List<Node> childNodes = ((ContainerNode) result.node).getNodes();
             Assert.assertEquals("expected single child node in destination node", 1, childNodes.size());
             Assert.assertTrue("expected source node as child node", childNodes.contains(sourceNode));
 
             // Get the moved source node
             result = get(new URL(destinationNodeURL + "/" + sourceName), 200, XML_CONTENT_TYPE);
             ContainerNode movedSourceNode = (ContainerNode) result.node;
-            Assert.assertEquals("expected 2 child nodes in source node", 2, movedSourceNode.nodes.size());
-            Assert.assertTrue("expected child container node", movedSourceNode.nodes.contains(childContainerNode));
-            Assert.assertTrue("expected child data node", movedSourceNode.nodes.contains(childDataNode));
+            Assert.assertEquals("expected 2 child nodes in source node", 2, movedSourceNode.getNodes().size());
+            Assert.assertTrue("expected child container node", movedSourceNode.getNodes().contains(childContainerNode));
+            Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode));
 
             // Delete nodes
             delete(destinationNodeURL);
