@@ -97,7 +97,7 @@ import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
- * and (probably) valid X509 proxy certficates. TODO: provide this as an integration
+ * and (probably) valid X509 proxy certificates. TODO: provide this as an integration
  * test  or rewrite it using a mock http layer (sounds hard).
  *
  * @author zhangsa
@@ -107,55 +107,19 @@ import org.opencadc.vospace.transfer.Transfer;
 public class VOSpaceClientTest {
     private static Logger log = Logger.getLogger(VOSpaceClientTest.class);
     private static String ROOT_NODE;
-    private static String VOS_URI = "vos://cadc.nrc.ca!vospace";
-    private static String TEST_CERT = "proxy.crt";
-    private static String TEST_KEY = "proxy.key";
+    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/vospace"); //??
+    private static String VOS_URI = "vos://opencadc.org~vospace";
 
-    String endpoint;
-    VOSpaceClient client;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
-        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
-
-        //File cert = FileUtil.getFileFromResource(TEST_CERT, VOSpaceClientTest.class);
-        //File key = FileUtil.getFileFromResource(TEST_KEY, VOSpaceClientTest.class);
-        //SSLUtil.initSSL(cert, key);
-
+    static {
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         ROOT_NODE = System.getProperty("user.name") + "/";
     }
+    
+    String endpoint;
+    VOSpaceClient client = new VOSpaceClient(RESOURCE_ID);
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        //        InetAddress localhost = InetAddress.getLocalHost();
-        //        String hostname = localhost.getCanonicalHostName();
-        //        log.debug("hostname=" + hostname);
-        //        endpoint = "https://" + hostname;
-        //        log.debug("endpoint=" + endpoint);
-        //client = new VOSpaceClient(URI.create("ivo://cadc.nrc.ca/vospace"));
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
-
+    // TODO: fix/rewrite these tests and document how to run them against a vospace service
+    
     //@Test
     public void testSetNode() throws Exception {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();

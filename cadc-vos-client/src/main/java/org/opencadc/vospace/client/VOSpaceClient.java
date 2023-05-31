@@ -513,6 +513,8 @@ public class VOSpaceClient {
     private ClientTransfer createTransferSync(Transfer transfer) {
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_SYNC_21);
+            
+            // OBSOLETE:
             //transfer.version = VOS.VOSPACE_21;
             //if (vospaceURL == null) {
             //    //fallback to 2.0

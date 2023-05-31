@@ -611,12 +611,14 @@ public class Main implements Runnable {
 
     private void copyToVOSpace()
         throws Throwable {
+        
+        // upload with view doesn't actually make any sense, maybe OBSOLETE?
         //URI originalDestination = null;
         //if (StringUtil.hasText(destination.getQuery())) {
         //    originalDestination = new URI(destination.toString());
         //    destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         //}
-        final View view = new View(VOS.VIEW_DEFAULT);
+        //final View view = new View(VOS.VIEW_DEFAULT);
         //if (originalDestination != null) {
         //    view = createAcceptsView(new VOSURI(originalDestination), null);
         //}
@@ -638,7 +640,7 @@ public class Main implements Runnable {
         Transfer transfer = new Transfer(destination, Direction.pushToVoSpace);
         transfer.setContentLength(fileToUpload.length());
         transfer.getProtocols().addAll(protocols);
-        transfer.setView(view);
+        //transfer.setView(view);
         transfer.setQuickTransfer(this.quickTransfer);
         transfer.version = VOS.VOSPACE_21;
 
