@@ -68,6 +68,7 @@
 package org.opencadc.vospace;
 
 import java.net.URI;
+import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.opencadc.persist.Entity;
 
@@ -78,18 +79,19 @@ import org.opencadc.persist.Entity;
 public class DeletedNodeEvent extends Entity {
     private static final Logger log = Logger.getLogger(DeletedNodeEvent.class);
 
-    private final char nodeType;
+    private final String nodeType;
     private final URI storageID;
     
-    public DeletedNodeEvent(char nodeType, URI storageID) {
-        super(false);
+    public DeletedNodeEvent(UUID id, Class nodeType, URI storageID) {
+        super(id, false);
         NodeUtil.assertNotNull(DeletedNodeEvent.class, "nodeType", nodeType);
-        this.nodeType = nodeType;
+        this.nodeType = nodeType.getSimpleName();
+        
         // storageID may be null
         this.storageID = storageID;
     }
 
-    public char getNodeType() {
+    public String getNodeType() {
         return nodeType;
     }
 

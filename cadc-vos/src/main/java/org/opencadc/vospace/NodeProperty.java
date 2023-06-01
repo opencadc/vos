@@ -68,6 +68,7 @@
 package org.opencadc.vospace;
 
 import java.net.URI;
+import java.util.Objects;
 
 /**
  * A VOSpace property representing metadata for a node.
@@ -117,16 +118,20 @@ public class NodeProperty implements Comparable<NodeProperty> {
         return this.key + ": " + this.value;
     }
 
-    /**
-     * @return true iff the property URI are equal.
-     */
     @Override
     public boolean equals(Object o) {
         if (o instanceof NodeProperty) {
             NodeProperty np = (NodeProperty) o;
-            return this.key == np.key;
+            return this.key.equals(np.key);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        // consistent with equals
+        String s = NodeProperty.class.getName() + key;
+        return s.hashCode();
     }
 
     /**
