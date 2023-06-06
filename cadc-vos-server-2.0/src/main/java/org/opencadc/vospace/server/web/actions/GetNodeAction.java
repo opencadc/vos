@@ -475,17 +475,17 @@ public class GetNodeAction extends NodeAction
             return;
         }
 
-        for (AbstractView view : viewList)
-        {
-            if (view.canAccept(node))
-            {
-                node.accepts.add(view.getURI());
-            }
-            if (view.canProvide(node))
-            {
-                node.provides.add(view.getURI());
-            }
-        }
+//        for (AbstractView view : viewList)
+//        {
+//            if (view.canAccept(node))
+//            {
+//                node.accepts.add(view.getURI());
+//            }
+//            if (view.canProvide(node))
+//            {
+//                node.provides.add(view.getURI());
+//            }
+//        }
 
     }
 

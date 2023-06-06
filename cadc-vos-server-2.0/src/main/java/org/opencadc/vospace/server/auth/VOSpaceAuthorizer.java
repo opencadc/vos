@@ -102,6 +102,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.web.NodeID;
 
 
@@ -229,7 +230,7 @@ public class VOSpaceAuthorizer implements Authorizer
 
         checkDelegation(node, subject);
 
-        LinkedList<Node> nodes = Node.getNodeList(node);
+        LinkedList<Node> nodes = Utils.getNodeList(node);
 
         // check for root ownership
         Node rootNode = nodes.getLast();
@@ -314,7 +315,7 @@ public class VOSpaceAuthorizer implements Authorizer
             throw new NodeLockedException(node.getPath().toString());
 
         // check for root ownership
-        LinkedList<Node> nodes = Node.getNodeList(node);
+        LinkedList<Node> nodes = Utils.getNodeList(node);
         Node rootNode = nodes.getLast();
         if (isOwner(rootNode, subject))
         {

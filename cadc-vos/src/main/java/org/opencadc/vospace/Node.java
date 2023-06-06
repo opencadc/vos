@@ -249,19 +249,4 @@ public abstract class Node extends Entity implements Comparable<Node> {
         return sb.toString();
     }
 
-    /**
-     * Get a linked list of nodes from leaf to root.
-     *
-     * @return list of nodes, with leaf first and root last
-     */
-    public static LinkedList<Node> getNodeList(Node leaf) {
-        LinkedList<Node> nodes = new LinkedList<Node>();
-        Node cur = leaf;
-        while (cur != null) {
-            nodes.add(cur);
-            cur = cur.parent;
-        }
-        return nodes;
-    }
-
 }
