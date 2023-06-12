@@ -64,43 +64,34 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
+package ca.nrc.cadc.vos;
 
 import org.junit.Assert;
 import org.junit.Before;
 
-
-public abstract class AbstractCADCVOSTest<T>
-{
+public abstract class AbstractCADCVOSTest<T> {
     private T testSubject;
 
-
     @Before
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         initializeTestSubject();
 
-        Assert.assertNotNull("Test subject should not be null.",
-                             getTestSubject());
+        Assert.assertNotNull("Test subject should not be null.", getTestSubject());
     }
-
 
     /**
      * Set and initialize the Test Subject.
      *
-     * @throws Exception    If anything goes awry.
+     * @throws Exception If anything goes awry.
      */
     protected abstract void initializeTestSubject() throws Exception;
 
-
-    public T getTestSubject()
-    {
+    public T getTestSubject() {
         return testSubject;
     }
 
-    public void setTestSubject(T testSubject)
-    {
+    public void setTestSubject(T testSubject) {
         this.testSubject = testSubject;
     }
 }

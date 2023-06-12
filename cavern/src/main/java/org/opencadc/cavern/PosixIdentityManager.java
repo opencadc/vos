@@ -67,8 +67,10 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.NotAuthenticatedException;
 import java.io.IOException;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -81,7 +83,9 @@ import org.apache.log4j.Logger;
 
 /**
  * An IdentityManager implementation that can map from POSIX file system object
- * owner to subject.
+ * owner to subject. This implementation should only be used for NodePersistence
+ * operations as the toOwner/toSubject uses file system identities and that might
+ * conflict with what's expected for JobPersistence usage.
  *
  * @author pdowler
  */
@@ -122,72 +126,48 @@ public class PosixIdentityManager implements IdentityManager {
             return null;
         }
         
-        X500Principal x500Principal = null;
-        Set<Principal> principals = subject.getPrincipals();
-        for (Principal principal : principals) {
-            if (principal instanceof HttpPrincipal) {
-                return users.lookupPrincipalByName(principal.getName());
-            }
+        Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
+        if (!principals.isEmpty()) {
+            HttpPrincipal hp = principals.iterator().next();
+            return users.lookupPrincipalByName(hp.getName());
         }
         return null;
     }
     
     @Override
     public Object toOwner(Subject subject) {
-        if (subject == null) {
+        try {
+            UserPrincipal up = toUserPrincipal(subject);
+            if (up == null) {
+                return null;
+            }
+            return up.getName();
+        } catch (IOException ex) {
+            // probably means someone configured this IM such that it's also 
+            // being used by UWS JobPersistence
+            log.warn("username did not map to local identity known to UserPrincipalLookupService", ex);
             return null;
         }
-        
-        X500Principal x500Principal = null;
-        Set<Principal> principals = subject.getPrincipals();
-        for (Principal principal : principals) {
-            if (principal instanceof HttpPrincipal) {
-                return principal.getName();
-            }
-            if (principal instanceof X500Principal) {
-                x500Principal = (X500Principal) principal;
-            }
-        }
-
-        if (x500Principal == null) {
-            return null;
-        }
-
-        // The user has connected with a valid client cert but does not have an account:
-        // create an auto-approved account with their x500Principal
-        UserPrincipal up = createX500User(x500Principal);
-        subject.getPrincipals().add(up);
-        return up.getName();
+    }
+    
+    @Override
+    public String toDisplayString(Subject subject) {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.toDisplayString(subject);
+    }
+    
+    @Override
+    public Subject validate(Subject subject) throws NotAuthenticatedException {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.validate(subject);
     }
 
     @Override
-    public int getOwnerType() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public String toOwnerString(Subject subject) {
-        if (subject == null) {
-            return null;
-        }
-        
-        Set<Principal> principals = subject.getPrincipals();
-        for (Principal principal : principals) {
-            // vospace output should be X500 DN
-            if (principal instanceof X500Principal) { 
-                return principal.getName();
-            }
-        }
-        
-        // TODO: lazy augment?
-        return null;
-    }
-
-    private UserPrincipal createX500User(X500Principal x500Principal) {
-        // TODO: 
-        // create a new username -- UUID.randomID()?
-        // create new User with X500principal and UserPrincipal
-        // wait for that user to be locally resolvable so we can return one that will work
-        throw new UnsupportedOperationException("create user from unknown X500Principal");
+    public Subject augment(Subject subject) {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.validate(subject);
     }
 }

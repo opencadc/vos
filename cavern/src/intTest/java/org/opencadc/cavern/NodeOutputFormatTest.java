@@ -105,12 +105,23 @@ public class NodeOutputFormatTest
     
     static final String VOSACE_SCHEMA = "http://www.ivoa.net/xml/VOSpace/v2.0";
     
-    static final String VOSPACE_NODES = "ivo://canfar.net/cavern";
-    
     static final String XML = "text/xml";
     static final String JSON = "application/json";
     
-    public NodeOutputFormatTest() { }
+    String resourceID;
+    String baseURI; 
+    
+    public NodeOutputFormatTest() {
+        resourceID = System.getProperty("ca.nrc.cadc.conformance.vos.VOSTestSuite.resourceIdentifier");
+        if (resourceID == null) {
+            throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.conformance.vos.VOSTestSuite.resourceIdentifier");
+        }
+        
+        baseURI = System.getProperty("ca.nrc.cadc.vos.server.vosUriBase");
+        if (baseURI == null) {
+            throw new RuntimeException("TEST SETUP: missing system property ca.nrc.cadc.vos.server.vosUriBase");
+        }
+    }
     
     @Test
     public void testXML()
@@ -119,7 +130,7 @@ public class NodeOutputFormatTest
         {
             RegistryClient rc = new RegistryClient();
 //            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), "http", null, AuthMethod.ANON);
-            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+            URL url = rc.getServiceURL(new URI(resourceID), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(url, bos);
             get.run();
@@ -146,7 +157,7 @@ public class NodeOutputFormatTest
         {
             RegistryClient rc = new RegistryClient();
 //            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), "http", null, AuthMethod.ANON);
-            URL url = rc.getServiceURL(new URI(VOSPACE_NODES), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+            URL url = rc.getServiceURL(new URI(resourceID), Standards.VOSPACE_NODES_20, AuthMethod.ANON);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(url, bos);
             get.setRequestProperty("Accept", JSON);
@@ -176,7 +187,7 @@ public class NodeOutputFormatTest
             
             String vosuri = node.getString("@uri");
             Assert.assertNotNull(vosuri);
-            Assert.assertEquals("vos://canfar.net~cavern", vosuri);
+            Assert.assertEquals(baseURI, vosuri);
         }
         catch(Exception ex)
         {

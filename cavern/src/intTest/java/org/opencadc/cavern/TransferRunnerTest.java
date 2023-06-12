@@ -122,8 +122,9 @@ public class TransferRunnerTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.rest", Level.DEBUG);
     }
 
     public TransferRunnerTest() {
@@ -152,7 +153,8 @@ public class TransferRunnerTest {
             VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
             DataNode data = new DataNode(new VOSURI(new URI(nodeURI + "/testFile.txt")));
             log.debug("uploading: " + data.getUri().getURI().toASCIIString());
-            Transfer t = new Transfer(data.getUri().getURI(), Direction.pushToVoSpace, protocols);
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pushToVoSpace);
+            t.getProtocols().addAll(protocols);
             t.version = VOS.VOSPACE_21;
             
             final ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
@@ -218,11 +220,13 @@ public class TransferRunnerTest {
             VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
             DataNode data = new DataNode(new VOSURI(new URI(nodeURI + "/testFile.txt")));
             log.debug("testTransferNegotiation21: " + data.getUri().getURI().toASCIIString());
-            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, protocols);
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(protocols);
             t.version = VOS.VOSPACE_21;
 
             ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             Transfer trans2 = trans.getTransfer();
+            log.debug("transfer result: " + trans2);
             Assert.assertEquals(VOS.VOSPACE_21, trans2.version);
             List<Protocol> plist = trans2.getProtocols();
             Assert.assertNotNull(plist);
@@ -249,7 +253,7 @@ public class TransferRunnerTest {
             //Assert.assertFalse("basicTLS", plist.contains(basicTLS));
 
             //Assert.assertFalse("token", plist.contains(token));
-            Assert.assertFalse("tokenTLS", plist.contains(tokenTLS));
+            Assert.assertTrue("tokenTLS", plist.contains(tokenTLS));
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -280,7 +284,8 @@ public class TransferRunnerTest {
 
             // https on transfer not supported
             //proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(proto);
             ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             List<Protocol> plist = trans.getTransfer().getProtocols();
             Assert.assertNotNull(plist);
@@ -315,6 +320,60 @@ public class TransferRunnerTest {
         }
     }
 
+
+    @Test
+    public void testPullFromVOSpaceNotCommonFormURI() {
+        try {
+            Subject s = SSLUtil.createSubject(SSL_CERT);
+
+            // Using '!' shouldn't stop the transfer from working
+            String notCommonFormURI = "vos://cadc.nrc.ca!arc/home/cadcregtest1/vospace-static-test/transfer";
+
+            VOSURI testURI = new VOSURI(new URI(notCommonFormURI));
+            VOSpaceClient vos = new VOSpaceClient(testURI.getServiceURI());
+            DataNode data = new DataNode(new VOSURI(new URI(testURI + "/testFile.txt")));
+            log.debug("testPullFromVOSpace: " + data.getUri().getURI().toASCIIString());
+
+            List<Protocol> proto = new ArrayList<Protocol>();
+            proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(proto);
+            ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
+            List<Protocol> plist = trans.getTransfer().getProtocols();
+            Assert.assertNotNull(plist);
+            log.debug("found: " + plist.size() + " protocols");
+
+            for (Protocol reqP : proto) {
+                int num = 0;
+                for (Protocol p : plist) {
+                    log.debug(p + " : " + data.getUri() + " -> " + p.getEndpoint());
+                    Assert.assertNotNull(p.getEndpoint());
+                    if (reqP.getUri().equals(p.getUri())) {
+                        num++;
+                    }
+                }
+                Assert.assertTrue("one or more endpoints for " + reqP.getUri(), (num > 0));
+            }
+
+            // check the file content
+            final byte[] buf = new byte[100];
+            TestWrapper tw = new TestWrapper(buf);
+            trans.setInputStreamWrapper(tw);
+            trans.runTransfer();
+            Assert.assertTrue(trans.getThrowable() == null);
+            int bytesRead = tw.size;
+            Assert.assertEquals(FILE_DATA.length(), bytesRead);
+            String result = new String(Arrays.copyOfRange(buf, 0, bytesRead));
+            Assert.assertEquals(FILE_DATA, result);
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
     @Test
     public void testNegotiateMount() {
         Protocol sp = new Protocol(VOS.PROTOCOL_SSHFS);
@@ -323,7 +382,8 @@ public class TransferRunnerTest {
             VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
             List<Protocol> protocols = new ArrayList<>();
             protocols.add(sp);
-            Transfer t = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL, protocols);
+            Transfer t = new Transfer(nodeURI.getURI(), Direction.BIDIRECTIONAL);
+            t.getProtocols().addAll(protocols);
             TransferWriter tw = new TransferWriter();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             tw.write(t, out);
@@ -363,7 +423,8 @@ public class TransferRunnerTest {
             List<Protocol> proto = new ArrayList<Protocol>();
             proto.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
-            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace, proto);
+            Transfer t = new Transfer(data.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(proto);
             ClientTransfer trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols()) {
@@ -377,7 +438,8 @@ public class TransferRunnerTest {
             Assert.assertNotNull(result);
             Assert.assertEquals(data.getUri().getName(), result.getName()); // download DataNode, got right name
 
-            t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace, proto);
+            t = new Transfer(link.getUri().getURI(), Direction.pullFromVoSpace);
+            t.getProtocols().addAll(proto);
             trans = Subject.doAs(s, new TestActions.CreateTransferAction(vos, t, false));
             trans.setFile(new File("/tmp"));
             for (Protocol p : trans.getTransfer().getProtocols()) {

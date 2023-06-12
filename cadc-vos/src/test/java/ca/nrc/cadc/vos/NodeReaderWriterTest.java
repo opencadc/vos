@@ -71,6 +71,8 @@ package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.fail;
 
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
@@ -78,7 +80,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -88,21 +89,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-
 /**
  * Test read-write of Nodes using the NodeReader and NodeWriter. Every test here
  * performs a round trip: create node, write as xml, read with xml schema
  * validation enabled, compare to original node.
- * 
+ *
  * @author jburke
  */
-public class NodeReaderWriterTest
-{
+public class NodeReaderWriterTest {
     private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
-    static
-    {
+
+    static {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
@@ -113,28 +110,24 @@ public class NodeReaderWriterTest
     UnstructuredDataNode unstructuredDataNode;
     StructuredDataNode structuredDataNode;
 
-    public NodeReaderWriterTest()
-    {
+    public NodeReaderWriterTest() {
     }
 
     @BeforeClass
-    public static void setUpClass() throws Exception
-    {
+    public static void setUpClass() throws Exception {
 
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception
-    {
+    public static void tearDownClass() throws Exception {
     }
 
     @Before
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         // List of NodeProperty
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description",
-                "My award winning images");
+                                                     "My award winning images");
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);
 
@@ -151,21 +144,21 @@ public class NodeReaderWriterTest
 
         // LinkNode
         linkNode = new LinkNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"),
-        		new URI("vos://cadc.nrc.ca!vospace/dir/sometarget"));
+                                new URI("vos://cadc.nrc.ca!vospace/dir/sometarget"));
         linkNode.setProperties(properties);
-        
+
         // UnstructuredDataNode
         unstructuredDataNode = new UnstructuredDataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
         unstructuredDataNode.setProperties(properties);
         unstructuredDataNode.setBusy(NodeBusyState.busyWithWrite);
         // TODO: add some standard props here
-        
+
         // StructuredDataNode
         structuredDataNode = new StructuredDataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
         structuredDataNode.setProperties(properties);
         structuredDataNode.setBusy(NodeBusyState.busyWithWrite);
         // TODO: add some standard props here
-        
+
         // DataNode
         dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
         dataNode.setProperties(properties);
@@ -174,22 +167,17 @@ public class NodeReaderWriterTest
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
     }
 
-    private void comparePropertyList(List<NodeProperty> p1, List<NodeProperty> p2)
-    {
+    private void comparePropertyList(List<NodeProperty> p1, List<NodeProperty> p2) {
         Assert.assertEquals("properties.size()", p1.size(), p2.size());
-        for (NodeProperty np1 : p1)
-        {
+        for (NodeProperty np1 : p1) {
             boolean found = false;
-            for (NodeProperty np2 : p2)
-            {
+            for (NodeProperty np2 : p2) {
                 log.debug("looking for " + np1);
-                if (np1.getPropertyURI().equals(np2.getPropertyURI())
-                        && np1.getPropertyValue().equals(np2.getPropertyValue()))
-                {
+                if (np1.getPropertyURI().equals(np2.getPropertyURI()) && np1.getPropertyValue()
+                    .equals(np2.getPropertyValue())) {
                     found = true;
                     break; // inner loop
                 }
@@ -198,52 +186,48 @@ public class NodeReaderWriterTest
         }
     }
 
-    private void compareContainerNodes(ContainerNode n1, ContainerNode n2)
-    {
+    private void compareContainerNodes(ContainerNode n1, ContainerNode n2) {
         List<Node> cn1 = n1.getNodes();
         List<Node> cn2 = n2.getNodes();
 
         Assert.assertEquals("nodes.size()", cn1.size(), cn2.size());
-        for (int i = 0; i < cn1.size(); i++)
+        for (int i = 0; i < cn1.size(); i++) {
             // order should be preserved since we use list
             compareNodes(cn1.get(i), cn2.get(i));
+        }
     }
 
-    private void compareDataNodes(DataNode n1, DataNode n2)
-    {
+    private void compareDataNodes(DataNode n1, DataNode n2) {
         Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
         Assert.assertEquals("structured", n1.isStructured(), n2.isStructured());
     }
 
-    private void compareLinkNodes(LinkNode n1, LinkNode n2)
-    {
+    private void compareLinkNodes(LinkNode n1, LinkNode n2) {
         Assert.assertEquals("target", n1.getTarget(), n2.getTarget());
     }
-    
-    private void compareURIList(List<URI> l1, List<URI> l2)
-    {
+
+    private void compareURIList(List<URI> l1, List<URI> l2) {
         Assert.assertTrue(l1.containsAll(l2));
         Assert.assertTrue(l2.containsAll(l1));
     }
 
-    private void compareNodes(Node n1, Node n2)
-    {
+    private void compareNodes(Node n1, Node n2) {
         Assert.assertEquals("same class", n1.getClass(), n2.getClass());
         Assert.assertEquals("VOSURI", n1.getUri(), n2.getUri());
         Assert.assertEquals("owner", n1.getPropertyValue(VOS.PROPERTY_URI_CREATOR),
-                n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
+                            n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
         comparePropertyList(n1.getProperties(), n2.getProperties());
         compareURIList(n1.accepts, n2.accepts);
         compareURIList(n1.provides, n2.provides);
-        if (n1 instanceof ContainerNode)
+        if (n1 instanceof ContainerNode) {
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
-        else if (n1 instanceof DataNode)
+        } else if (n1 instanceof DataNode) {
             compareDataNodes((DataNode) n1, (DataNode) n2);
-        else if (n1 instanceof LinkNode)
+        } else if (n1 instanceof LinkNode) {
             compareLinkNodes((LinkNode) n1, (LinkNode) n2);
-        else
-            throw new UnsupportedOperationException("no test comparison for node type "
-                    + n1.getClass().getName());
+        } else {
+            throw new UnsupportedOperationException("no test comparison for node type " + n1.getClass().getName());
+        }
 
     }
 
@@ -251,10 +235,8 @@ public class NodeReaderWriterTest
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void writeValidContainerNode()
-    {
-        try
-        {
+    public void writeValidContainerNode() {
+        try {
             log.debug("writeValidContainerNode");
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
@@ -266,19 +248,15 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(containerNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
     @Test
-    public void writeValidDataNode()
-    {
-        try
-        {
+    public void writeValidDataNode() {
+        try {
             log.debug("writeValidDataNode");
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
@@ -288,24 +266,20 @@ public class NodeReaderWriterTest
             // validate the XML
             NodeReader reader = new NodeReader();
             Node n2 = reader.read(sb.toString());
-            
+
             // make sure default version is still 2.0
             Assert.assertEquals(VOS.VOSPACE_20, n2.version);
 
             compareNodes(dataNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
     @Test
-    public void writeValidUnstructuredDataNode()
-    {
-        try
-        {
+    public void writeValidUnstructuredDataNode() {
+        try {
             log.debug("writeValidUnstructuredDataNode");
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
@@ -317,19 +291,15 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(unstructuredDataNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
     @Test
-    public void writeValidStructuredDataNode()
-    {
-        try
-        {
+    public void writeValidStructuredDataNode() {
+        try {
             log.debug("writeValidStructuredDataNode");
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
@@ -341,19 +311,15 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(structuredDataNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
-    
+
     @Test
-    public void writeValidLinkNode()
-    {
-        try
-        {
+    public void writeValidLinkNode() {
+        try {
             log.debug("writeValidLinkNode");
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
@@ -365,9 +331,7 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(linkNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
@@ -377,10 +341,8 @@ public class NodeReaderWriterTest
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void writeToOutputStream()
-    {
-        try
-        {
+    public void writeToOutputStream() {
+        try {
             log.debug("writeToOutputStream");
             NodeWriter instance = new NodeWriter();
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -392,9 +354,7 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(new ByteArrayInputStream(bos.toByteArray()));
 
             compareNodes(dataNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
@@ -404,10 +364,8 @@ public class NodeReaderWriterTest
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void writeToWriter()
-    {
-        try
-        {
+    public void writeToWriter() {
+        try {
             log.debug("writeToWriter");
             NodeWriter instance = new NodeWriter();
             StringWriter sw = new StringWriter();
@@ -421,19 +379,15 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sw.toString());
 
             compareNodes(dataNode, n2);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
     @Test
-    public void writeMaxDetailContainerNode()
-    {
-        try
-        {
+    public void writeMaxDetailContainerNode() {
+        try {
             // ContainerNode
             Node n = createDetailedNode();
 
@@ -451,19 +405,15 @@ public class NodeReaderWriterTest
 
             compareNodes(n, n2);
 
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
     @Test
-    public void testNoSchemaValidation()
-    {
-        try
-        {
+    public void testNoSchemaValidation() {
+        try {
             StringBuffer sb = new StringBuffer();
 
             sb.append("<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2.0\" \n");
@@ -479,22 +429,17 @@ public class NodeReaderWriterTest
             log.debug(xml);
 
             // make sure this is not valid
-            try
-            {
+            try {
                 NodeReader reader = new NodeReader(true);
                 Node n = reader.read(xml);
                 fail("test XML is actually valid - test is broken");
-            }
-            catch (NodeParsingException expected)
-            {
+            } catch (NodeParsingException expected) {
             }
 
             // read without validation
             NodeReader reader = new NodeReader(false);
             Node n = reader.read(xml);
-        }
-        catch (Exception t)
-        {
+        } catch (Exception t) {
             t.printStackTrace();
             log.error("unexpected exception", t);
             fail(t.getMessage());
@@ -502,10 +447,7 @@ public class NodeReaderWriterTest
     }
 
     // sample node with lots of detail in it
-    private ContainerNode createDetailedNode() throws URISyntaxException
-    {
-        // ContainerNode
-        ContainerNode cn = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer"));
+    private ContainerNode createDetailedNode() throws URISyntaxException {
 
         Node n;
         List<NodeProperty> properties;
@@ -524,25 +466,23 @@ public class NodeReaderWriterTest
         provides.add(new URI("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
         n.setAccepts(accepts);
         n.setProvides(provides);
-        
+
+        // ContainerNode
+        ContainerNode cn = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer"));
         cn.getNodes().add(n);
 
         // add a ContainerNode with some props
-        ContainerNode cn2 = new ContainerNode(new VOSURI(
-                "vos://cadc.nrc.ca!vospace/testContainer/foo"));
+        ContainerNode cn2 = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/foo"));
         properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group",
-                "ivo://cadc.nrc.ca/gms/groups#bar"));
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group", "ivo://cadc.nrc.ca/gms/groups#bar"));
         cn2.setProperties(properties);
         cn.getNodes().add(cn2);
-        
+
         // add a LinkNode with some props
-        LinkNode ln = new LinkNode (new VOSURI(
-        		"vos://cadc.nrc.ca!vospace/testContainer/aLink"), 
-        		new URI("vos://cadc.nrc.ca!vospace/testContainer/baz"));
+        LinkNode ln = new LinkNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/aLink"),
+                                   new URI("vos://cadc.nrc.ca!vospace/testContainer/baz"));
         properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group",
-                "ivo://cadc.nrc.ca/gms/groups#bar"));
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group", "ivo://cadc.nrc.ca/gms/groups#bar"));
         ln.setProperties(properties);
         cn2.getNodes().add(ln);
 

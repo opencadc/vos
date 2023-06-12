@@ -92,8 +92,12 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivilegedActionException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -116,6 +120,7 @@ public class MountedContainerTest {
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
     
     public MountedContainerTest() { 
@@ -124,6 +129,9 @@ public class MountedContainerTest {
     @BeforeClass
     public static void staticInit() throws Exception {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", TransferRunnerTest.class);
+
+        Properties properties = System.getProperties();
+        properties.forEach((k,v) -> log.info(k + ":" + v));
 
         String uriProp = MountedContainerTest.class.getName() + ".baseURI";
         String uri = System.getProperty(uriProp);
@@ -167,7 +175,8 @@ public class MountedContainerTest {
             // mount test container
             List<Protocol> protocols = new ArrayList<>();
             protocols.add(sp);
-            Transfer t = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL, protocols);
+            Transfer t = new Transfer(containerURI.getURI(), Direction.BIDIRECTIONAL);
+            t.getProtocols().addAll(protocols);
             TransferWriter tw = new TransferWriter();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             tw.write(t, out);
@@ -206,7 +215,7 @@ public class MountedContainerTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
     private void doMount(URI endpoint, Path testDir) throws Exception {
         // wrapper script provides password for ssh auth on stdin
         File wf = FileUtil.getFileFromResource("sshfs-wrapper", MountedContainerTest.class);
@@ -217,27 +226,26 @@ public class MountedContainerTest {
         StringBuilder mnt = new StringBuilder();
         mnt.append(ss[1]).append(":").append(ss[3]);
         String port = ss[2];
-        String[] cmd = new String[] {
-            "/bin/bash", wrapper, "-o", "password_stdin", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
-        };
+        String[] cmd = getMountCommand(wrapper, port, mnt, testDir);
         StringBuilder sb = new StringBuilder();
         for (String s : cmd) {
+            log.info("command: " + s);
             sb.append(s).append(" ");
         }
         log.info("mount command: " + sb.toString());
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
+        log.info("exit code from grabber for cmd: " + grabber.getExitValue());
         if (grabber.getExitValue() != 0) {
-            
             throw new IOException("FAIL: " + sb + "\n" + grabber.getErrorOutput());
         }
+
     }
     
     private void doUnmount(Path testDir) throws Exception {
-        String[] cmd = new String[] {
-            "fusermount", "-u", testDir.toFile().getAbsolutePath()
-        };
+        String[] cmd = getUnmountCommand(testDir);
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+
         grabber.captureOutput(cmd);
         if (grabber.getExitValue() != 0) {
             StringBuilder sb = new StringBuilder();
@@ -271,7 +279,7 @@ public class MountedContainerTest {
         */
         
         // HACK: uidnumber on the server is currently distinct from NumericPrincipal
-        long posixUID = 10111311L;
+        long posixUID = 20006L;
                 
         // create test nodes
         List<Node> testNodes = new ArrayList<>();
@@ -380,7 +388,12 @@ public class MountedContainerTest {
                         Assert.assertEquals(puri, posixUID, fsUID);
                     } else {
                         log.info("compare: " + puri + ": " + rsp + " vs " + fsp);
-                        Assert.assertEquals(puri, rsp, fsp);
+                        if (puri.contains("#date")) {
+                            Duration duration = Duration.between(LocalDateTime.parse(rsp), LocalDateTime.parse(fsp)).abs();
+                            Assert.assertTrue(puri, duration.getSeconds() == 0);
+                        } else {
+                            Assert.assertEquals(puri, rsp, fsp);
+                        }
                     }
                 }
             }
@@ -388,5 +401,52 @@ public class MountedContainerTest {
             System.clearProperty(NodeUtil.class.getName() + ".disable-get-attrs");
         }
         
+    }
+    
+    private String[] getMountCommand(String wrapper, String port, StringBuilder mnt, Path testDir) {
+        // default to Linux
+        String[] cmd = new String[] {
+            "/bin/bash", wrapper, "-o", "password_stdin", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
+        };
+
+        if (isMac()) {
+            // running on a MacOS
+            cmd = new String[] {
+                "/bin/bash", wrapper, "-o", "password_stdin", "-o", "allow_other,defer_permissions", "-p", port, mnt.toString(), testDir.toFile().getAbsolutePath()
+            };
+        }
+            
+        return cmd;
+    }
+    
+    private String[] getUnmountCommand(Path testDir) {
+        // default to Linux
+        String[] cmd = new String[] {
+            "fusermount", "-u", testDir.toFile().getAbsolutePath()
+        };
+
+        if (isMac()) {
+            // running on a MacOS
+            cmd = new String[] {
+                "umount", testDir.toFile().getAbsolutePath()
+            };
+        }
+            
+        return cmd;
+    }
+    
+    private boolean isMac() {
+        boolean isMac = false;
+
+        String[] cmd = new String[] {
+            "uname", "-s"
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if ((grabber.getExitValue() == 0) && ("Darwin".equals(grabber.getOutput()))) {
+            isMac = true;
+        }
+
+        return isMac;
     }
 }

@@ -106,7 +106,7 @@ public abstract class BaseResource extends ServerResource
         final Map<String, Object> attributes =
                 getApplication().getContext().getAttributes();
 
-        vosUriPrefix = (String) attributes.get(BeanUtil.IVOA_VOS_URI);
+        vosUriPrefix = BeanUtil.getVosUriBase();
         
         nodePersistence = (NodePersistence) attributes.get(
                 BeanUtil.VOS_NODE_PERSISTENCE);

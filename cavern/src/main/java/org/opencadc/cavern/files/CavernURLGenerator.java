@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern.files;
 
+
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
@@ -75,9 +76,9 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.PropertiesReader;
-import ca.nrc.cadc.util.RsaSignatureGenerator;
-import ca.nrc.cadc.util.RsaSignatureVerifier;
+import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -93,7 +94,7 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
-import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -103,18 +104,25 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
-import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.MissingResourceException;
+import java.util.Set;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.opencadc.cavern.FileSystemNodePersistence;
+import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.permissions.Grant;
+import org.opencadc.permissions.ReadGrant;
+import org.opencadc.permissions.TokenTool;
+import org.opencadc.permissions.WriteGrant;
 
 public class CavernURLGenerator implements TransferGenerator {
 
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
-    //private String root;
+    private static final String DEFAULT_CONFIG_DIR = System.getProperty("user.home") + "/config/";
+
     private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
 
@@ -125,6 +133,8 @@ public class CavernURLGenerator implements TransferGenerator {
     
     private static final String PUB_KEY_FILENAME = "CavernPub.key";
     private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
+    private static final String ANON_USER = "anon";
+
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
@@ -166,11 +176,13 @@ public class CavernURLGenerator implements TransferGenerator {
             List<Protocol> ret = new ArrayList<>();
             List<URI> uris;
             for (Protocol protocol : transfer.getProtocols()) {
+                log.debug("addressing protocol: " + protocol);
+                Subject currentSubject = AuthenticationUtil.getCurrentSubject();
                 if (node instanceof ContainerNode) {
-                    UserPrincipal caller = nodes.getPosixUser(AuthenticationUtil.getCurrentSubject());
+                    UserPrincipal caller = nodes.getPosixUser(currentSubject);
                     uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
                 } else if (node instanceof DataNode) {
-                    uris = handleDataNode(target, (DataNode) node, protocol);
+                    uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
                 } else {
                     throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
                         + node.getUri());
@@ -191,12 +203,18 @@ public class CavernURLGenerator implements TransferGenerator {
         }
     }
 
-    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol) {
+
+
+    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol, Subject s) {
         String scheme = null;
         Direction dir = null;
+
         try {
+            // Used in TokenTool.generateToken()
+            Class<? extends Grant> grantClass = null;
+
             switch (protocol.getUri()) {
-                /** 
+                /**
                  * HTTP not currently supported
                 case VOS.PROTOCOL_HTTP_GET:
                     scheme = "http";
@@ -210,12 +228,14 @@ public class CavernURLGenerator implements TransferGenerator {
                 case VOS.PROTOCOL_HTTPS_GET:
                     scheme = "https";
                     dir = Direction.pullFromVoSpace;
+                    grantClass = ReadGrant.class;
                     break;
                 case VOS.PROTOCOL_HTTPS_PUT:
                     scheme = "https";
                     dir = Direction.pushToVoSpace;
+                    grantClass = WriteGrant.class;
                     break;
-            }
+           }
 
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
             if (baseURLs == null || baseURLs.isEmpty()) {
@@ -223,38 +243,41 @@ public class CavernURLGenerator implements TransferGenerator {
                 return new ArrayList<URI>(0);
             }
 
-            // create the metadata and signature segments
-            StringBuilder metaSb = new StringBuilder();
-            metaSb.append(KEY_META_NODE).append("=").append(target.toString());
-            metaSb.append("&");
-            metaSb.append(KEY_META_DIRECTION).append("=").append(dir.getValue());
-            byte[] metaBytes = metaSb.toString().getBytes();
-
-            RsaSignatureGenerator sg = new RsaSignatureGenerator(PRIV_KEY_FILENAME);
-            String sig;
-            try {
-                byte[] sigBytes = sg.sign(new ByteArrayInputStream(metaBytes));
-                sig = new String(Base64.encode(sigBytes));
-                log.debug("Created signature: " + sig + " for meta: " + metaSb.toString());
-            } catch (InvalidKeyException | IOException | RuntimeException e) {
-                throw new IllegalStateException("Could not sign url", e);
+            if (dir == null) {
+                log.debug("no matching protocols");
+                return new ArrayList<URI>(0);
             }
-            String meta = new String(Base64.encode(metaBytes));
-            log.debug("meta: " + meta);
-            log.debug("sig: " + sig);
+
+            // Use TokenTool to generate a preauth token
+            File privateKeyFile = findFile(PRIV_KEY_FILENAME);
+            File pubKeyFile = findFile(PUB_KEY_FILENAME);
+
+            TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
+
+            // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
+            Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
+            String callingUser = "";
+            if (authUsers.size() > 0) {
+                callingUser = authUsers.iterator().next();
+            } else {
+                callingUser = ANON_USER;
+            }
+
+            // Use this function in case the incoming URI uses '!' instead of '~'
+            // in the authority.
+            // This will translate the URI to use '~' in it's authority.
+            log.debug("URI passed in :" + target.getURI());
+            VOSURI commonFormURI = target.getCommonFormURI();
+            log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
+            String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
+            String encodedToken = new String(Base64.encode(token.getBytes()));
 
             // build the request path
             StringBuilder path = new StringBuilder();
-            String metaURLEncoded = base64URLEncode(meta);
-            String sigURLEncoded = base64URLEncode(sig);
-
-            log.debug("metaURLEncoded: " + metaURLEncoded);
-            log.debug("sigURLEncoded: " + sigURLEncoded);
-
             path.append("/");
-            path.append(metaURLEncoded);
+            path.append(encodedToken);
             path.append("/");
-            path.append(sigURLEncoded);
+
             if (Direction.pushToVoSpace.equals(dir)) {
                 // put to resolved path
                 path.append(node.getUri().getPath());
@@ -273,7 +296,7 @@ public class CavernURLGenerator implements TransferGenerator {
                     log.debug("Added url: " + next);
                     returnList.add(next);
                 } catch (URISyntaxException e) {
-                    throw new IllegalStateException("Could not generate trannsfer endpoint uri", e);
+                    throw new IllegalStateException("Could not generate transfer endpoint uri", e);
                 }
             }
 
@@ -302,78 +325,47 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    public VOSURI getNodeURI(String meta, String sig, Direction direction) throws AccessControlException, IOException {
+    public VOSURI validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
 
-        if (sig == null || meta == null) {
-            throw new IllegalArgumentException("Missing signature or meta info");
-        }
+        log.debug("url encoded token: " + token);
+        log.debug("direction: " + direction.toString());
 
-        log.debug("sig: " + sig);
-        log.debug("meta: " + meta);
+        String decodedTokenbytes = new String(Base64.decode(token));
+        log.debug("url decoded token: " + decodedTokenbytes);
 
-        byte[] sigBytes = Base64.decode(base64URLDecode(sig));
-        byte[] metaBytes = Base64.decode(base64URLDecode(meta));
+        // Use this function in case the incoming URI uses '!' instead of '~'
+        // in the authority.
+        // This will translate the URI to use '~' in it's authority.
+        VOSURI commonFormURI = targetVOSURI.getCommonFormURI();
+        log.debug("targetURI passed in: " + targetVOSURI.toString());
+        log.debug("targetURI for validation: " + commonFormURI.toString());
+        if (token != null) {
 
-        RsaSignatureVerifier sv = new RsaSignatureVerifier(PUB_KEY_FILENAME);
-        boolean verified;
-        try {
-            verified = sv.verify(new ByteArrayInputStream(metaBytes), sigBytes);
-        } catch (InvalidKeyException | RuntimeException e) {
-            log.debug("Recieved invalid signature", e);
-            throw new AccessControlException("Invalid signature");
-        }
-        if (!verified) {
-            throw new AccessControlException("Invalid signature");
-        }
+            File publicKeyFile = findFile(PUB_KEY_FILENAME);
+            TokenTool tk = new TokenTool(publicKeyFile);
 
-        String[] metaParams = new String(metaBytes).split("&");
-        String nodeURI = null;
-        String dir = null;
-        for (String metaParam : metaParams) {
-            log.debug("Processing param: " + metaParam);
-            String[] keyValue = metaParam.split("=");
-            if (keyValue.length == 2) {
-                if (KEY_META_NODE.equals(keyValue[0])) {
-                    nodeURI = keyValue[1];
-                }
-                if (KEY_META_DIRECTION.equals(keyValue[0])) {
-                    dir = keyValue[1];
-                }
+            Class<? extends Grant> grantClass = null;
+            if (Direction.pushToVoSpace.equals(direction)) {
+                grantClass = WriteGrant.class;
+            } else if (Direction.pullFromVoSpace.equals(direction)) {
+                grantClass = ReadGrant.class;
             }
-        }
-        log.debug("nodeURI: " + nodeURI);
-        log.debug("dir: " + dir);
-        if (dir == null) {
-            throw new IllegalArgumentException("Direction not specified");
-        }
-        if (!direction.getValue().equals(dir)) {
-            throw new IllegalArgumentException("Wrong direction");
-        }
-        if (nodeURI != null) {
-            try {
-                VOSURI vosURI = new VOSURI(nodeURI);
-                return vosURI;
-            } catch (URISyntaxException e) {
-                throw new IllegalStateException("Invalid node URI");
+
+            log.debug("grant class: " + grantClass);
+
+            // This will throw an AccessControlException if something is wrong with the
+            // grantClass or targetURI. Can return null if user isn't in the meta key=value set
+            String tokenUser = tk.validateToken(decodedTokenbytes, commonFormURI.getURI(), grantClass);
+
+            if (tokenUser == null) {
+                throw new AccessControlException("invalid token");
             }
+
+            return commonFormURI;
+
         }
 
         throw new IllegalArgumentException("Missing node URI");
-
-    }
-
-    public static String base64URLEncode(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.replace("/", "-").replace("+", "_");
-    }
-
-    public static String base64URLDecode(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.replace("-", "/").replace("_", "+");
     }
 
     List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
@@ -400,12 +392,20 @@ public class CavernURLGenerator implements TransferGenerator {
                     log.debug("Added auth interface.");
                 }
             }
-        } catch (ResourceNotFoundException ex) {
-            throw new IllegalStateException("CONFIG: registry lookup failure " + serviceURI, ex);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Error creating transfer urls", ex);
+        } catch (IOException | ResourceNotFoundException e) {
+            throw new IllegalStateException("Error creating transfer urls", e);
         }
         return baseURLs;
     }
 
+    protected static final File findFile(String fname) throws MissingResourceException {
+        File ret = new File(DEFAULT_CONFIG_DIR, fname);
+        if (!ret.exists()) {
+            ret = FileUtil.getFileFromResource(fname, CavernURLGenerator.class);
+        }
+        return ret;
+    }
+
 }
+
+

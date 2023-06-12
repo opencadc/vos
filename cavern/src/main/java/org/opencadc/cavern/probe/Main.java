@@ -69,6 +69,8 @@ package org.opencadc.cavern.probe;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOSURI;
+
 import java.io.File;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -93,6 +95,7 @@ public class Main {
         System.out.println("              --owner=<posix username> ");
         System.out.println("              --target-owner=<posix username>)");
         System.out.println("              --dir=<test directory>");
+        System.out.println("              --baseURI=<base VOS URI (no trailing slash)>");
         System.out.println("              --group=<test group that target-owner belongs to>");
         
         System.out.println("Note: the target-owner owns the target of a link and should differ from");
@@ -164,6 +167,23 @@ public class Main {
                 ok = false;
             }
             
+            String baseURI = am.getValue("baseURI");
+            if (baseURI != null) {
+                try {
+                    new VOSURI(baseURI);
+                    if (baseURI.endsWith("/")) {
+                        log.error("trailing slash on base vos uri");
+                        ok = false;
+                    }
+                } catch (Throwable t) {
+                    log.error("not a valid vos uri: " + baseURI);
+                    ok = false;
+                }
+            } else {
+                log.error("missing required argument: --baseURI=<base VOS URI>");
+                ok = false;
+            }
+            
             if (!ok) {
                 usage();
                 System.exit(1);
@@ -172,7 +192,7 @@ public class Main {
             log.info("user: " + owner);
             log.info("alt user: " + targetOwner + " [owner of target file in symlink tests]");
 
-            FileSystemProbe probe = new FileSystemProbe(baseDir, owner, targetOwner, group);
+            FileSystemProbe probe = new FileSystemProbe(baseDir, baseURI, owner, targetOwner, group);
             Boolean success = probe.call();
             if (success == null || !success) {
                 System.exit(1);

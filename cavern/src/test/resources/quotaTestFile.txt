@@ -1,0 +1,18 @@
+###############################################################################
+#
+#  quotaTestFile.txt - File with size > 1K bytes to test quota limit. This file
+#                      is used by integration test QuotaTest which copies this
+#                      this file to
+#                      /cephfs/cavern/home/cadcauthtest1/do-not-delete/quotaTest/.
+#                      The underlying storage will detect quota limit exceeded
+#                      and will throw a ByteLimitExceededException. QuotaTest
+#                      looks for this exception to be thrown and catches it.
+#                      In this case, the test is successful; otherwise
+#                      the test is considered to have failed.
+#
+#                      Note that quota is set on the directory
+#                      /cephfs/cavern/home/cadcauthtest1/do-not-delete/quotaTest.
+#                      Hence this test file quotaTestFile.txt needs to be copied
+#                      to this directory and not another directory which does
+#                      not have this quota set.
+###############################################################################

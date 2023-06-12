@@ -72,6 +72,7 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -79,6 +80,10 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.File;
 import java.net.URI;
+import java.util.Iterator;
+import java.util.Properties;
+import java.util.Set;
+
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -101,9 +106,10 @@ public class GroupPermissionsTest {
     private static GroupURI testGroup;
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
     }
 
     public GroupPermissionsTest() {
@@ -114,6 +120,15 @@ public class GroupPermissionsTest {
         SSL_CERT = FileUtil.getFileFromResource("x509_CADCRegtest1.pem", MetadataIntTest.class);
 
         String uriProp = GroupPermissionsTest.class.getName() + ".baseURI";
+        if (log.isDebugEnabled()) {
+            Properties props = System.getProperties();
+            Set<Object> keys = props.keySet();
+            Iterator<Object> keyIt = keys.iterator();
+            while (keyIt.hasNext()) {
+                Object key = keyIt.next();
+                log.debug("System prop: " + key + "=" + props.getProperty((String) key));
+            }
+        }
         String uri = System.getProperty(uriProp);
         log.debug(uriProp + " = " + uri);
         if (StringUtil.hasText(uri)) {
@@ -132,7 +147,7 @@ public class GroupPermissionsTest {
         }
     }
     
-   @Test
+    @Test
     public void testCreateContainerGroupReadOnly() throws Exception {
         VOSpaceClient vos = new VOSpaceClient(baseURI.getServiceURI());
         String vosuripath = baseURI.toString() + "/groupPermissionsTest-" + System.currentTimeMillis();
@@ -243,4 +258,5 @@ public class GroupPermissionsTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
 }

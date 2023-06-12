@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *                                       
+ *
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *                                       
+ *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *                                       
+ *
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *                                       
+ *
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *                                       
+ *
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -75,149 +75,120 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class NodePropertyTest
-{
+public class NodePropertyTest {
 
     @Test
-    public void testMultipleGroupReadValues()
-    {
+    public void testMultipleGroupReadValues() {
         List<String> values = new ArrayList<String>();
         values.add("val1");
         values.add("val2");
         values.add("val3");
-        String stringValues = NodeProperty.serializePropertyValueList(
-                VOS.PROPERTY_URI_GROUPREAD, values);
-        String expected = "val1" + VOS.PROPERTY_DELIM_GROUPREAD + "val2"
-                + VOS.PROPERTY_DELIM_GROUPREAD + "val3";
+        String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_GROUPREAD, values);
+        String expected = "val1" + VOS.PROPERTY_DELIM_GROUPREAD + "val2" + VOS.PROPERTY_DELIM_GROUPREAD + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
         List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, stringValues).extractPropertyValueList();
-        Assert.assertArrayEquals("bad extraction",
-                values.toArray(new String[0]), extracted.toArray(new String[0]));
+        Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
 
         NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, values);
-        Assert.assertEquals("bad constructor", expected,
-                prop.getPropertyValue());
+        Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
 
-        try
-        {
+        try {
             values.clear();
-            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++)
-            {
+            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
                 values.add("val" + i);
             }
             new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, values);
             Assert.fail("Should have received illegal argument for too many property values.");
-        } catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             // expected
         }
-        
-        try
-        {
+
+        try {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++)
-            {
+            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
                 sb.append("val" + i);
-                if (i < NodeProperty.MAX_GROUPS)
+                if (i < NodeProperty.MAX_GROUPS) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPREAD);
+                }
             }
             new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString());
             Assert.fail("Should have received illegal argument for too many property values.");
-        } catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             // expected
         }
     }
 
     @Test
-    public void testMultipleGroupWriteValues()
-    {
+    public void testMultipleGroupWriteValues() {
         List<String> values = new ArrayList<String>();
         values.add("val1");
         values.add("val2");
         values.add("val3");
-        String stringValues = NodeProperty.serializePropertyValueList(
-                VOS.PROPERTY_URI_GROUPWRITE, values);
-        String expected = "val1" + VOS.PROPERTY_DELIM_GROUPWRITE + "val2"
-                + VOS.PROPERTY_DELIM_GROUPWRITE + "val3";
+        String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_GROUPWRITE, values);
+        String expected = "val1" + VOS.PROPERTY_DELIM_GROUPWRITE + "val2" + VOS.PROPERTY_DELIM_GROUPWRITE + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
         List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, stringValues).extractPropertyValueList();
-        Assert.assertArrayEquals("bad extraction",
-                values.toArray(new String[0]), extracted.toArray(new String[0]));
+        Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
 
-        NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE,
-                values);
-        Assert.assertEquals("bad constructor", expected,
-                prop.getPropertyValue());
+        NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, values);
+        Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
 
-        try
-        {
+        try {
             values.clear();
-            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++)
-            {
+            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
                 values.add("val" + i);
             }
             new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, values);
             Assert.fail("Should have received illegal argument for too many property values.");
-        } catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             // expected
         }
 
-        try
-        {
+        try {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++)
-            {
+            for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
                 sb.append("val" + i);
-                if (i < NodeProperty.MAX_GROUPS)
+                if (i < NodeProperty.MAX_GROUPS) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPWRITE);
+                }
             }
             new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sb.toString());
             Assert.fail("Should have received illegal argument for too many property values.");
-        } catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             // expected
         }
     }
 
     @Test
-    public void testIsPublicValues()
-    {
+    public void testIsPublicValues() {
 
-        try
-        {
+        try {
             List<String> values = new ArrayList<String>();
             values.add("true");
             values.add("true");
             new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, values);
             Assert.fail("Should have received illegal argument for too many property values.");
-        } catch (IllegalArgumentException e)
-        {
+        } catch (IllegalArgumentException e) {
             // expected
         }
     }
 
     @Test
-    public void testMultipleDefaultPropertyValues()
-    {
+    public void testMultipleDefaultPropertyValues() {
         List<String> values = new ArrayList<String>();
         values.add("val1");
         values.add("val2");
         values.add("val3");
-        String stringValues = NodeProperty.serializePropertyValueList(
-                VOS.PROPERTY_URI_CONTRIBUTOR, values);
-        String expected = "val1" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val2"
-                + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val3";
+        String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_CONTRIBUTOR, values);
+        String expected =
+            "val1" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val2" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
-        List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, stringValues).extractPropertyValueList();
-        Assert.assertArrayEquals("bad extraction",
-                values.toArray(new String[0]), extracted.toArray(new String[0]));
+        List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR,
+                                                  stringValues).extractPropertyValueList();
+        Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
 
-        NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR,
-                values);
-        Assert.assertEquals("bad constructor", expected,
-                prop.getPropertyValue());
+        NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, values);
+        Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
     }
 
 }

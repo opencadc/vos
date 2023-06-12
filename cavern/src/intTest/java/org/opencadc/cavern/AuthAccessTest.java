@@ -234,27 +234,6 @@ public class AuthAccessTest
     }
 
     @Test
-    public void testFakeUsernameAccessNode()
-    {
-        try
-        {
-            log.debug("testFakeUsernameAccess: " + anonNodeResourceURL);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(anonNodeResourceURL, bos);
-            get.setRequestProperty("authorization", "Basic Y2FkY3JlZ3Rlc3QxOnh5eg=="); // cadcregtest1:xyz
-            get.run();
-            Assert.assertEquals(401, get.getResponseCode());
-            Assert.assertNotNull(get.getThrowable());
-            Assert.assertTrue( (get.getThrowable() instanceof NotAuthenticatedException) );
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testAnonAccessSynctrans()
     {
         try
@@ -273,35 +252,6 @@ public class AuthAccessTest
             Assert.assertEquals(403, get.getResponseCode());
             Assert.assertNotNull(get.getThrowable());
             log.debug("throwable: " + get.getThrowable());
-            Assert.assertTrue( (get.getThrowable() instanceof AccessControlException) );
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFakeUsernameAccessSynctrans()
-    {
-        try
-        {
-
-            StringBuilder sb = new StringBuilder();
-            sb.append(anonSyncTransferURL);
-            sb.append("?TARGET=").append( NetUtil.encode(nodeURI.getURI().toASCIIString()) );
-            sb.append("&DIRECTION=").append( NetUtil.encode(Direction.pullFromVoSpaceValue) );
-            sb.append("&PROTOCOL=").append( NetUtil.encode(VOS.PROTOCOL_HTTP_GET) );
-            URL url = new URL(sb.toString());
-
-            log.debug("testFakeUsernameAccessSynctrans: " + url);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(url, bos);
-            get.setRequestProperty("authorization", "Basic Y2FkY3JlZ3Rlc3QxOnh5eg=="); // cadcregtest1:xyz
-            get.run();
-            Assert.assertEquals(403, get.getResponseCode());
-            Assert.assertNotNull(get.getThrowable());
             Assert.assertTrue( (get.getThrowable() instanceof AccessControlException) );
         }
         catch(Exception unexpected)

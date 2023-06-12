@@ -110,8 +110,11 @@ public class MetadataIntTest {
     private static VOSURI linksBaseURI;
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
     }
 
     public MetadataIntTest() {
@@ -185,7 +188,7 @@ public class MetadataIntTest {
                     // test the md5 of the target node
                     RegistryClient rc = new RegistryClient();
                     URL syncTrans = rc.getServiceURL(
-                        URI.create("ivo://canfar.net/cavern"), Standards.VOSPACE_SYNC_21, AuthMethod.CERT);
+                        URI.create("ivo://cadc.nrc.ca/arc"), Standards.VOSPACE_SYNC_21, AuthMethod.CERT);
                     StringBuilder params = new StringBuilder();
                     params.append("TARGET=").append(URLEncoder.encode(uri.toString(), "UTF-8"));
                     params.append("&");

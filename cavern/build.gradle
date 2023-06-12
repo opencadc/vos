@@ -1,14 +1,16 @@
 plugins {
     id 'maven'
     id 'maven-publish'
-    id 'com.jfrog.bintray' version '1.8.4'
     id 'war'
     id 'application'
 }
 
 repositories {
-    jcenter()
     mavenLocal()
+    mavenCentral()
+    maven {
+        url "https://maven.restlet.talend.com"
+    }
 }
 
 apply from: 'intTest.gradle'
@@ -24,6 +26,17 @@ war {
         include 'CavernPub.key'
         include 'CavernPriv.key'
     }
+    // Include the delegation private key for scoped token
+    // requests
+    from(System.getenv('A') + '/etc/') {
+        into 'WEB-INF/classes/'
+        include 'RsaSignaturePub.key'
+    }
+
+    // Include the swagger-ui so that /vospace provides the VOSpace API documentation
+    from(System.getenv('RPS') + '/resources/') {
+        include 'swagger-ui/'
+    }
 }
 
 sourceSets {
@@ -36,38 +49,39 @@ sourceSets {
 mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
-    compile 'log4j:log4j:[1.2.0,)'
     providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'
     compile 'org.jdom:jdom2:[2.0,)'
     compile 'org.json:json:20160212'
     compile 'xerces:xercesImpl:[2.0,)'
     compile 'commons-net:commons-net:[2.0,)'
 
-    compile 'org.opencadc:cadc-util:[1.1.4,2.0)'
+    compile 'org.opencadc:cadc-util:[1.9.0,)'
     compile 'org.opencadc:cadc-log:[1.0,)'
+    compile 'org.opencadc:cadc-permissions:[0.3.3,)'
     compile 'org.opencadc:cadc-registry:[1.5.9,)'
-    compile 'org.opencadc:cadc-vosi:[1.0,)'
-    compile 'org.opencadc:cadc-rest:[1.0,)'
-    compile 'org.opencadc:cadc-uws:[1.0,)'
-    compile 'org.opencadc:cadc-uws-server:[1.2.5,)'
+    compile 'org.opencadc:cadc-vosi:[1.4.3,)'
+    compile 'org.opencadc:cadc-rest:[1.3.14,)'
+    compile 'org.opencadc:cadc-uws:[1.0.3,)'
+    compile 'org.opencadc:cadc-uws-server:[1.2.9,)'
     compile 'org.opencadc:cadc-cdp:[1.0,)'
     compile 'org.opencadc:cadc-gms:[1.0.0,)'
-    compile 'org.opencadc:cadc-vos:[1.1.10,)'
-    compile 'org.opencadc:cadc-vos-server:[1.1,)'
-    //compile 'org.opencadc:cadc-wcs:1.+'
+    compile 'org.opencadc:cadc-vos:[1.2.3,)'
+    compile 'org.opencadc:cadc-vos-server:[1.3,)'
     compile 'org.opencadc:cadc-dali:[1.0,)'
     compile 'org.opencadc:caom2:[2.3.3,)'
     compile 'org.opencadc:caom2-compute:[2.3.2,)'
+    compile 'org.opencadc:cadc-pkg-server:[1.1.2,)'
 
     runtime 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
-    runtime 'org.opencadc:cadc-access-control:[1.1.1,2.0)'
-    runtime 'org.opencadc:cadc-access-control-identity:[1.0.3,2.0)'
+    runtime 'org.opencadc:cadc-access-control:[1.1.23,)'
+    runtime 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
 
     testCompile 'junit:junit:[4.0,)'
     testCompile 'xerces:xercesImpl:[2.0,)'
     testCompile 'org.skyscreamer:jsonassert:[1.0,)'
     testCompile 'org.opencadc:cadc-test-uws:[1.0,)'
+    testCompile 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
-    intTestCompile 'org.opencadc:cadc-test-vos:[1.0,)'
-    intTestCompile 'org.opencadc:cadc-test-vosi:[1.0.2,)'
+    intTestCompile 'org.opencadc:cadc-test-vos:[1.1.0,)'
+    intTestCompile 'org.opencadc:cadc-test-vosi:[1.0.11,)'
 }

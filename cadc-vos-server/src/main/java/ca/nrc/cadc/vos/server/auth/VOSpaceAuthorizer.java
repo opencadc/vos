@@ -70,6 +70,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -91,7 +92,7 @@ import ca.nrc.cadc.ac.UserNotFoundException;
 import ca.nrc.cadc.ac.client.GMSClient;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.auth.DelegationToken;
+import ca.nrc.cadc.auth.SignedToken;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.net.TransientException;
@@ -401,7 +402,7 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Given the groupURI, determine if the user identified by the subject
      * has membership.
-     * @param groupURI The group or list of groups
+     * @param groupProp The group or list of groups for a Node
      * @param subject The user's subject
      * @return True if the user is a member
      */
@@ -436,7 +437,7 @@ public class VOSpaceAuthorizer implements Authorizer
                         if (isMember)
                             return true;
                     }
-                    catch (IllegalArgumentException e)
+                    catch (URISyntaxException e)
                     {
                         LOG.warn("skipping invalid group URI: " + groupURI, e);
                     }
@@ -560,8 +561,11 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupRead != null && groupRead.getPropertyValue() != null)
             {
-                if (hasMembership(groupRead, subject))
-                    return true; // OK
+                if (applyMaskOnGroupRead(node)) {
+                    if (hasMembership(groupRead, subject)) {
+                        return true; // OK
+                    }
+                }
             }
 
             // the GROUPWRITE property means the user has read+write permission
@@ -576,8 +580,11 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (hasMembership(groupWrite, subject))
-                    return true; // OK
+                if (applyMaskOnGroupReadWrite(node)) {
+                    if (hasMembership(groupWrite, subject)) {
+                        return true; // OK
+                    }
+                }
             }
         }
 
@@ -614,11 +621,58 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
-                if (hasMembership(groupWrite, subject))
-                    return true; // OK
+                if (applyMaskOnGroupReadWrite(node)) {
+                    if (hasMembership(groupWrite, subject)) {
+                        return true; // OK
+                    }
+                }
             }
         }
         return false;
+    }
+    
+    /**
+     * Return false if mask blocks read
+     */
+    boolean applyMaskOnGroupRead(Node n) {
+        NodeProperty np = n.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        if (np == null || np.getPropertyValue() == null) {
+            return true;
+        }
+        String mask = np.getPropertyValue();
+        // format is rwx, each of which can also be -
+        if (mask.length() != 3) {
+            LOG.debug("invalid mask format: " + mask);
+            return true;
+        }
+        if (mask.charAt(0) == 'r') {
+            LOG.debug("mask allows read: " + mask);
+            return true;
+        }
+        LOG.debug("mask disallows read: " + mask);
+        return false;  
+    }
+    
+    /**
+     * Return false if mask blocks write
+     */
+    boolean applyMaskOnGroupReadWrite(Node n) {
+        NodeProperty np = n.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        if (np == null || np.getPropertyValue() == null) {
+            return true;
+        }
+        String mask = np.getPropertyValue();
+        // format is rwx, each of which can also be -
+        if (mask.length() != 3) {
+            LOG.debug("invalid mask format: " + mask);
+            return true;
+        }
+        if (mask.charAt(0) == 'r' && mask.charAt(1) == 'w') {
+            LOG.debug("mask allows write: " + mask);
+            return true;
+        }
+        LOG.debug("mask disallows write: " + mask);
+        return false;  
     }
 
     public void setDisregardLocks(boolean disregardLocks)
@@ -654,8 +708,8 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private void checkDelegation(Node node, Subject subject) throws AccessControlException
     {
-        Set<DelegationToken> tokens = subject.getPublicCredentials(DelegationToken.class);
-        for (DelegationToken token : tokens)
+        Set<SignedToken> tokens = subject.getPublicCredentials(SignedToken.class);
+        for (SignedToken token : tokens)
         {
             VOSURI scope = new VOSURI(token.getScope());
             VOSURI tmp = node.getUri();
