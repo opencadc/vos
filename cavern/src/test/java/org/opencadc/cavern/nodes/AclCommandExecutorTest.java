@@ -79,6 +79,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.log4j.Level;
@@ -139,11 +140,11 @@ public class AclCommandExecutorTest {
             // RO
             acl.setReadOnlyACL(group, false);
             
-            GroupPrincipal roActual = acl.getReadOnlyACL(false);
+            List<GroupPrincipal> roActual = acl.getReadOnlyACL(false);
             Assert.assertNotNull("read-only", roActual);
-            Assert.assertEquals("read-only", group, roActual);
-            
-            GroupPrincipal rwActual = acl.getReadWriteACL(false);
+            Assert.assertTrue("read-only", roActual.contains(group));
+
+            List<GroupPrincipal> rwActual = acl.getReadWriteACL(false);
             Assert.assertNull("null read-write", rwActual);
             
             acl.clearACL();
@@ -155,7 +156,7 @@ public class AclCommandExecutorTest {
             
             rwActual = acl.getReadWriteACL(false);
             Assert.assertNotNull("read-write", rwActual);
-            Assert.assertEquals("read-write", group, rwActual);
+            Assert.assertTrue("read-write", rwActual.contains(group));
             
             roActual = acl.getReadOnlyACL(false);
             Assert.assertNull("null read-only", roActual);
@@ -190,10 +191,10 @@ public class AclCommandExecutorTest {
             AclCommandExecutor acl = new AclCommandExecutor(target, users);
             GroupPrincipal group = users.lookupPrincipalByGroupName(GROUP);
             acl.setReadOnlyACL(group, false);
-            
-            GroupPrincipal actual = acl.getReadOnlyACL(false);
+
+            List<GroupPrincipal> actual = acl.getReadOnlyACL(false);
             Assert.assertNotNull("read-only", actual);
-            Assert.assertEquals("read-only", group, actual);
+            Assert.assertTrue("read-only", actual.contains(group));
             
             acl.clearACL();
             actual = acl.getReadOnlyACL(false);
@@ -203,7 +204,7 @@ public class AclCommandExecutorTest {
             
             actual = acl.getReadWriteACL(false);
             Assert.assertNotNull("read-write", actual);
-            Assert.assertEquals("read-write", group, actual);
+            Assert.assertTrue("read-write", actual.contains(group));
             
             acl.clearACL();
             actual = acl.getReadOnlyACL(false);

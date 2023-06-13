@@ -591,13 +591,11 @@ public abstract class NodeUtil {
             LocalAuthority loc = new LocalAuthority();
             URI resourceID = loc.getServiceURI(Standards.GMS_GROUPS_01.toASCIIString());
             AclCommandExecutor acl = new AclCommandExecutor(p, p.getFileSystem().getUserPrincipalLookupService());
-            GroupPrincipal rog = acl.getReadOnlyACL(attrs.isDirectory());
-            if (rog != null) {
+            for (final GroupPrincipal rog : acl.getReadOnlyACL(attrs.isDirectory())) {
                 GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
             }
-            GroupPrincipal rwg = acl.getReadWriteACL(attrs.isDirectory());
-            if (rwg != null) {
+            for (final GroupPrincipal rwg : acl.getReadWriteACL(attrs.isDirectory())) {
                 GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rwg.getName()));
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, guri.getURI().toASCIIString()));
             }
@@ -817,6 +815,10 @@ public abstract class NodeUtil {
     public static GroupPrincipal getDefaultGroup(UserPrincipalLookupService users,
             UserPrincipal user) throws IOException {
         // TODO: this assumes default group name == owner name and should be fixed
+        // TODO: 2023.05.17
+        // TODO: +1
+        // TODO: On macOS, the default group is not the username, so this will fail.
+        // TODO: jenkinsd
         return users.lookupPrincipalByGroupName(user.getName());
     }
 }

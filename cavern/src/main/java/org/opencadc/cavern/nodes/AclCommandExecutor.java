@@ -73,6 +73,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -150,7 +152,7 @@ public class AclCommandExecutor {
         }
     }
     
-    public GroupPrincipal getReadOnlyACL(boolean isDir) throws IOException {
+    public List<GroupPrincipal> getReadOnlyACL(boolean isDir) throws IOException {
         String perm = FILE_RO.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RO;
@@ -158,7 +160,7 @@ public class AclCommandExecutor {
         return getACL(perm);
     }
     
-    public GroupPrincipal getReadWriteACL(boolean isDir) throws IOException {
+    public List<GroupPrincipal> getReadWriteACL(boolean isDir) throws IOException {
         String perm = FILE_RW.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RW;
@@ -190,7 +192,8 @@ public class AclCommandExecutor {
         return null;
     }
     
-    private GroupPrincipal getACL(String perm) throws IOException {
+    private List<GroupPrincipal> getACL(String perm) throws IOException {
+        List<GroupPrincipal> aclList = new ArrayList<>();
         String[] cmd = new String[] {
             GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
         };
@@ -208,12 +211,12 @@ public class AclCommandExecutor {
                     && tokens[1].length() > 0
                     && tokens[2].startsWith(perm)) {
                 log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
-                return users.lookupPrincipalByGroupName(tokens[1]);
+                aclList.add(users.lookupPrincipalByGroupName(tokens[1]));
             }                   
             log.debug("getACL(" + perm + "): skip " + s);
         }
         log.debug("getACL(" + perm + "): found: null");
-        return null;
+        return aclList;
     }
     
     private String toAbsolutePath(Path p) {
