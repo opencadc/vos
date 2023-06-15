@@ -69,16 +69,8 @@
 
 package org.opencadc.vospace.client;
 
-import static org.junit.Assert.assertEquals;
-
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.util.Log4jInit;
-
-import org.opencadc.vospace.Protocol;
-import org.opencadc.vospace.Transfer;
-import org.opencadc.vospace.VOS;
-import org.opencadc.vospace.Direction;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -88,7 +80,12 @@ import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Level;
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service

@@ -67,125 +67,30 @@
 
 package org.opencadc.vospace;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import java.net.URI;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class NodePropertyTest {
 
-    //@Test
-    //public void testMultipleGroupReadValues() {
-    //    List<String> values = new ArrayList<String>();
-    //    values.add("val1");
-    //    values.add("val2");
-    //    values.add("val3");
-    //    String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_GROUPREAD, values);
-    //    String expected = "val1" + VOS.PROPERTY_DELIM_GROUPREAD + "val2" + VOS.PROPERTY_DELIM_GROUPREAD + "val3";
-    //    Assert.assertEquals("bad serialization", expected, stringValues);
-    //    List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, stringValues).extractPropertyValueList();
-    //    Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
-    //
-    //    NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, values);
-    //    Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
-    //
-    //    try {
-    //        values.clear();
-    //        for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
-    //            values.add("val" + i);
-    //        }
-    //        new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, values);
-    //        Assert.fail("Should have received illegal argument for too many property values.");
-    //    } catch (IllegalArgumentException e) {
-    //        // expected
-    //    }
-    //
-    //    try {
-    //        StringBuilder sb = new StringBuilder();
-    //        for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
-    //            sb.append("val" + i);
-    //            if (i < NodeProperty.MAX_GROUPS) {
-    //                sb.append(VOS.PROPERTY_DELIM_GROUPREAD);
-    //            }
-    //        }
-    //        new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString());
-    //        Assert.fail("Should have received illegal argument for too many property values.");
-    //    } catch (IllegalArgumentException e) {
-    //        // expected
-    //    }
-    //}
-
-    //@Test
-    //public void testMultipleGroupWriteValues() {
-    //    List<String> values = new ArrayList<String>();
-    //    values.add("val1");
-    //    values.add("val2");
-    //    values.add("val3");
-    //    String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_GROUPWRITE, values);
-    //    String expected = "val1" + VOS.PROPERTY_DELIM_GROUPWRITE + "val2" + VOS.PROPERTY_DELIM_GROUPWRITE + "val3";
-    //    Assert.assertEquals("bad serialization", expected, stringValues);
-    //    List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, stringValues).extractPropertyValueList();
-    //    Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
-    //
-    //    NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, values);
-    //    Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
-    //
-    //    try {
-    //        values.clear();
-    //        for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
-    //            values.add("val" + i);
-    //        }
-    //        new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, values);
-    //        Assert.fail("Should have received illegal argument for too many property values.");
-    //    } catch (IllegalArgumentException e) {
-    //        // expected
-    //    }
-    //
-    //    try {
-    //        StringBuilder sb = new StringBuilder();
-    //        for (int i = 0; i <= NodeProperty.MAX_GROUPS; i++) {
-    //            sb.append("val" + i);
-    //            if (i < NodeProperty.MAX_GROUPS) {
-    //                sb.append(VOS.PROPERTY_DELIM_GROUPWRITE);
-    //            }
-    //        }
-    //        new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sb.toString());
-    //        Assert.fail("Should have received illegal argument for too many property values.");
-    //    } catch (IllegalArgumentException e) {
-    //        // expected
-    //    }
-    //}
-
-    //@Test
-    //public void testIsPublicValues() {
-    //    try {
-    //        List<String> values = new ArrayList<String>();
-    //        values.add("true");
-    //        values.add("true");
-    //        new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, values);
-    //        Assert.fail("Should have received illegal argument for too many property values.");
-    //    } catch (IllegalArgumentException e) {
-    //        // expected
-    //    }
-    //}
-
-    //@Test
-    //public void testMultipleDefaultPropertyValues() {
-    //    List<String> values = new ArrayList<String>();
-    //    values.add("val1");
-    //    values.add("val2");
-    //    values.add("val3");
-    //    String stringValues = NodeProperty.serializePropertyValueList(VOS.PROPERTY_URI_CONTRIBUTOR, values);
-    //    String expected =
-    //        "val1" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val2" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val3";
-    //    Assert.assertEquals("bad serialization", expected, stringValues);
-    //    List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR,
-    //                                              stringValues).extractPropertyValueList();
-    //    Assert.assertArrayEquals("bad extraction", values.toArray(new String[0]), extracted.toArray(new String[0]));
-    //
-    //    NodeProperty prop = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, values);
-    //    Assert.assertEquals("bad constructor", expected, prop.getPropertyValue());
-    //}
-
+    @Test
+    public void testComparable() throws Exception {
+        NodeProperty title1 = new NodeProperty(VOS.PROPERTY_URI_TITLE, "abc");
+        NodeProperty title2 = new NodeProperty(URI.create("ivo://ivoa.net/vospace/core#title"), "def");
+        NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+        
+        // equals, hashCode, and comparable have to agree
+        Assert.assertTrue(title1.equals(title1));
+        Assert.assertTrue(title1.equals(title2));
+        Assert.assertTrue(title2.equals(title1));
+        Assert.assertEquals(title1.hashCode(), title2.hashCode());
+        
+        Assert.assertEquals(0, title1.compareTo(title2));
+        Assert.assertEquals(0, title2.compareTo(title1));
+        
+        Assert.assertFalse(title1.equals(np));
+        Assert.assertFalse(np.equals(title1));
+        Assert.assertTrue(np.compareTo(title1) < 0);
+        Assert.assertTrue(title1.compareTo(np) > 0);
+    }
 }

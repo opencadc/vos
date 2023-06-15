@@ -116,16 +116,21 @@ public abstract class Node extends Entity implements Comparable<Node> {
      * reconstructed from the persisted ownerID.
      */
     public transient Subject owner;
+
+    /**
+     * Client side support for reading owner from serialized node.
+     */
+    public transient String ownerDisplay;
     
     public Object ownerID;
     
     public Boolean isPublic;
     public Boolean isLocked;
     
-    public final Set<URI> readOnlyGroup = new TreeSet<>();
-    public final Set<URI> readWriteGroup = new TreeSet<>();
+    private final Set<URI> readOnlyGroup = new TreeSet<>();
+    private final Set<URI> readWriteGroup = new TreeSet<>();
     
-    public final Set<NodeProperty> properties = new TreeSet<>();
+    private final Set<NodeProperty> properties = new TreeSet<>();
 
     // To be used by controlling applications as they wish.
     //public transient Object appData; // do not include in metaChecksum
@@ -206,6 +211,20 @@ public abstract class Node extends Entity implements Comparable<Node> {
         this.name = name;
     }
 
+    public Set<URI> getReadOnlyGroup() {
+        return readOnlyGroup;
+    }
+
+    public Set<URI> getReadWriteGroup() {
+        return readWriteGroup;
+    }
+
+    public Set<NodeProperty> getProperties() {
+        return properties;
+    }
+    
+    
+
     /**
      * Get a node property by its key.
      * 
@@ -214,7 +233,7 @@ public abstract class Node extends Entity implements Comparable<Node> {
      */
     public NodeProperty getProperty(URI uri) {
         for (NodeProperty nodeProperty : this.properties) {
-            if (nodeProperty.getKey() == uri) {
+            if (nodeProperty.getKey().equals(uri)) {
                 return nodeProperty;
             }
         }

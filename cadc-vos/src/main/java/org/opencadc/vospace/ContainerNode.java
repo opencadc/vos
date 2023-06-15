@@ -86,7 +86,7 @@ public class ContainerNode extends Node {
     public boolean inheritPermissions = false;
 
     // The list of child nodes.
-    public final transient List<Node> nodes = new ArrayList<>();
+    private final transient List<Node> nodes = new ArrayList<>();
 
     /**
      * ContainerNode constructor.
@@ -110,5 +110,14 @@ public class ContainerNode extends Node {
     public ContainerNode(UUID id, String name, boolean inheritPermissions) {
         super(id, name);
         this.inheritPermissions = inheritPermissions;
+    }
+    
+    /**
+     * Get child nodes.
+     * 
+     * @return list of child nodes, possibly partial
+     */
+    public List<Node> getNodes() {
+        return nodes;
     }
 }

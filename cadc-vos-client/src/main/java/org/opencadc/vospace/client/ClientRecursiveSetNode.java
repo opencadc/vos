@@ -76,7 +76,6 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.xml.XmlUtil;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -87,11 +86,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.XmlProcessor;
+import org.opencadc.vospace.io.XmlProcessor;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
