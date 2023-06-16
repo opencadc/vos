@@ -95,7 +95,6 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -116,7 +115,7 @@ import org.opencadc.vospace.server.web.NodeID;
  *
  * @author majorb
  */
-public class VOSpaceAuthorizer implements Authorizer
+public class VOSpaceAuthorizer
 {
     protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
 
@@ -131,7 +130,6 @@ public class VOSpaceAuthorizer implements Authorizer
     public static final String READ_WRITE = "ReadWrite";
     private boolean readable = true;
     private boolean writable  = true;
-    private boolean allowPartialPaths = false;
     private boolean resolveMetadata = true;
     private boolean disregardLocks = false;
 
@@ -139,22 +137,19 @@ public class VOSpaceAuthorizer implements Authorizer
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
-    public VOSpaceAuthorizer()
-    {
-        this(false);
-    }
-
-    public VOSpaceAuthorizer(boolean allowPartialPaths)
-    {
-        this(allowPartialPaths, true);
-    }
-
-    public VOSpaceAuthorizer(boolean allowPartialPaths, boolean resolveMetadata)
+    public VOSpaceAuthorizer(boolean resolveMetadata)
     {
         initState();
-        this.allowPartialPaths = allowPartialPaths;
         this.resolveMetadata = resolveMetadata;
     }
+
+//    Object getReadPermission(URI var1) throws AccessControlException, FileNotFoundException, TransientException {
+//
+//    }
+//
+//    Object getWritePermission(URI var1) throws AccessControlException, FileNotFoundException, TransientException {
+//
+//    }
 
     // this method will only downgrade the state to !readable and !writable
     // and will never restore them to true - that is intentional
@@ -173,19 +168,7 @@ public class VOSpaceAuthorizer implements Authorizer
         }
     }
 
-    /**
-     * Obtain the Read Permission for the given URI.
-     *
-     * @param uri       The URI to check.
-     * @return          The persistent version of the target node.
-     * @throws AccessControlException If the user does not have read permission
-     * @throws FileNotFoundException If the node could not be found
-     * @throws TransientException If transient network problem
-     */
-    @Override
-    public Object getReadPermission(URI uri)
-        throws AccessControlException, FileNotFoundException, TransientException
-    {
+    public void checkServiceStatus(boolean isWritable) {
         initState();
         if (!readable)
         {
@@ -193,209 +176,9 @@ public class VOSpaceAuthorizer implements Authorizer
                 throw new IllegalStateException(OFFLINE_MSG);
             throw new IllegalStateException(READ_ONLY_MSG);
         }
-        try
-        {
-
-            VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
-            profiler.checkpoint("nodePersistence.get");
-            return getReadPermission(node);
-        }
-        catch(NodeNotFoundException ex)
-        {
-            throw new FileNotFoundException("not found: " + uri);
-        }
     }
 
-    /**
-     * Obtain the Read Permission for the given Node.
-     *
-     * @param node      The Node to check.
-     * @return          The persistent version of the target node.
-     * @throws AccessControlException If the user does not have read permission
-     */
-    public Object getReadPermission(Node node)
-            throws AccessControlException
-    {
-        initState();
-        if (!readable)
-        {
-            if (!writable)
-                throw new IllegalStateException(OFFLINE_MSG);
-            throw new IllegalStateException(READ_ONLY_MSG);
-        }
 
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        checkDelegation(node, subject);
-
-        LinkedList<Node> nodes = Utils.getNodeList(node);
-
-        // check for root ownership
-        Node rootNode = nodes.getLast();
-        if (isOwner(rootNode, subject))
-        {
-            LOG.debug("Read permission granted to root user.");
-            return node;
-        }
-
-        Iterator<Node> iter = nodes.descendingIterator(); // root at end
-        while (iter.hasNext())
-        {
-            Node n = iter.next();
-            if (!hasSingleNodeReadPermission(n, subject))
-                throw new AccessControlException("Read permission denied on " + n.getPath().toString());
-        }
-        return node;
-    }
-
-    /**
-     * Obtain the Write Permission for the given URI.
-     *
-     * @param uri       The URI to check.
-     * @return          The persistent version of the target node.
-     * @throws AccessControlException If the user does not have write permission
-     * @throws FileNotFoundException If the node could not be found
-     * @throws NodeLockedException    If the node is locked
-     * @throws TransientException If transient network problem
-     */
-    @Override
-    public Object getWritePermission(URI uri)
-        throws AccessControlException, FileNotFoundException,
-            TransientException, NodeLockedException
-    {
-        initState();
-        if (!writable)
-        {
-            if (readable)
-                throw new IllegalStateException(READ_ONLY_MSG);
-            throw new IllegalStateException(OFFLINE_MSG);
-        }
-
-        try
-        {
-            VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
-            profiler.checkpoint("nodePersistence.get");
-            return getWritePermission(node);
-        }
-        catch(NodeNotFoundException ex)
-        {
-            throw new FileNotFoundException("not found: " + uri);
-        }
-    }
-
-    /**
-     * Obtain the Write Permission for the given Node.
-     *
-     * @param node      The Node to check.
-     * @return          The persistent version of the target node.
-     * @throws AccessControlException If the user does not have write permission
-     * @throws NodeLockedException    If the node is locked
-     */
-    public Object getWritePermission(Node node)
-        throws AccessControlException, NodeLockedException
-    {
-        initState();
-        if (!writable)
-        {
-            if (readable)
-                throw new IllegalStateException(READ_ONLY_MSG);
-            throw new IllegalStateException(OFFLINE_MSG);
-        }
-
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        checkDelegation(node, subject);
-
-        // check if the node is locked
-        if (!disregardLocks && node.isLocked)
-            throw new NodeLockedException(node.getPath().toString());
-
-        // check for root ownership
-        LinkedList<Node> nodes = Utils.getNodeList(node);
-        Node rootNode = nodes.getLast();
-        if (isOwner(rootNode, subject))
-        {
-            LOG.debug("Write permission granted to root user.");
-            return node;
-        }
-
-        Iterator<Node> iter = nodes.descendingIterator(); // root at end
-        while (iter.hasNext())
-        {
-            Node n = iter.next();
-            if (n == node) // target needs write
-                if (!hasSingleNodeWritePermission(n, subject))
-                    throw new AccessControlException("Write permission denied on " + n.getPath().toString());
-            else // part of path needs read
-                if (!hasSingleNodeReadPermission(n, subject))
-                    throw new AccessControlException("Read permission denied on " + n.getPath().toString());
-        }
-        return node;
-    }
-
-    /**
-     * Recursively checks if a node can be deleted by the current subject.
-     * The caller must have write permission on the parent container and all
-     * non-empty containers. The argument and all child nodes must not
-     * be locked (unless locks are being ignored).
-     *
-     * @param node node to be checked
-     * @throws AccessControlException If user does not have write permission
-     * @throws NodeLockedException If node is currently locked
-     * @throws TransientException If transient network problems
-     */
-    public void getDeletePermission(Node node)
-        throws AccessControlException, NodeLockedException, TransientException
-    {
-        initState();
-        if (!writable)
-        {
-            if (readable)
-                throw new IllegalStateException(READ_ONLY_MSG);
-            throw new IllegalStateException(OFFLINE_MSG);
-        }
-
-        // check parent
-        ContainerNode parent = node.parent;
-        getWritePermission(parent); // checks lock and rw permission
-
-        // check if the node is locked
-        if (!disregardLocks && node.isLocked)
-            throw new NodeLockedException(node.getPath().toString());
-
-        if (node instanceof ContainerNode)
-        {
-            ContainerNode container = (ContainerNode) node;
-            getWritePermission(container); // checks lock and rw permission
-
-            Integer batchSize = 1000; // TODO: any value in not hard-coding this?
-            VOSURI startURI = null;
-            nodePersistence.getChildren(container, startURI, batchSize, resolveMetadata);
-            while ( !container.nodes.isEmpty() )
-            {
-                for (Node child : container.nodes)
-                {
-                    getDeletePermission(child); // recursive
-                    startURI = LocalServiceURI.getURI(child);
-                }
-                // clear the children for garbage collection
-                container.nodes.clear();
-
-                // get next batch
-                nodePersistence.getChildren(container, startURI, batchSize);
-                if ( !container.nodes.isEmpty() )
-                {
-                    Node n = container.nodes.get(0);
-                    if (LocalServiceURI.getURI(n).equals(startURI) )
-                        container.nodes.remove(0); // avoid recheck and infinite loop
-                }
-            }
-        }
-    }
 
     /**
      * Given the groupURI, determine if the user identified by the subject
@@ -525,7 +308,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    private boolean hasSingleNodeReadPermission(Node node, Subject subject)
+    public boolean hasSingleNodeReadPermission(Node node, Subject subject)
     {
         LOG.debug("checkSingleNodeReadPermission: " + node.getPath());
         if (node.isPublic)
@@ -545,10 +328,10 @@ public class VOSpaceAuthorizer implements Authorizer
             {
                 LOG.debug(String.format(
                         "Checking group read permission on node \"%s\" (groupRead=\"%s\")",
-                        node.getName(), node.readOnlyGroup));
+                        node.getName(), node.getReadOnlyGroup()));
             }
             if (applyMaskOnGroupRead(node)) {
-                if (hasMembership(node.readOnlyGroup, subject)) {
+                if (hasMembership(node.getReadOnlyGroup(), subject)) {
                     return true; // OK
                 }
             }
@@ -559,10 +342,10 @@ public class VOSpaceAuthorizer implements Authorizer
             {
                 LOG.debug(String.format(
                         "Checking group write permission on node \"%s\" (groupWrite=\"%s\")",
-                        node.getName(), node.readWriteGroup));
+                        node.getName(), node.getReadWriteGroup()));
             }
             if (applyMaskOnGroupReadWrite(node)) {
-                return hasMembership(node.readWriteGroup, subject); // OK
+                return hasMembership(node.getReadWriteGroup(), subject); // OK
             }
         }
 
@@ -577,7 +360,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    private boolean hasSingleNodeWritePermission(Node node, Subject subject)
+    public boolean hasSingleNodeWritePermission(Node node, Subject subject)
     {
         if (LocalServiceURI.getURI(node).isRoot())
             return false;
@@ -593,10 +376,10 @@ public class VOSpaceAuthorizer implements Authorizer
             {
                 LOG.debug(String.format(
                         "Checking group write permission on node \"%s\" (groupWrite=\"%s\")",
-                        node.getName(), node.readWriteGroup));
+                        node.getName(), node.getReadWriteGroup()));
             }
             if (applyMaskOnGroupReadWrite(node)) {
-                return hasMembership(node.readWriteGroup, subject); // OK
+                return hasMembership(node.getReadWriteGroup(), subject); // OK
             }
         }
         return false;
@@ -700,3 +483,227 @@ public class VOSpaceAuthorizer implements Authorizer
     }
 
 }
+//
+//    /**
+//     * Obtain the Read Permission for the given URI.
+//     *
+//     * @param uri       The URI to check.
+//     * @return          The persistent version of the target node.
+//     * @throws AccessControlException If the user does not have read permission
+//     * @throws FileNotFoundException If the node could not be found
+//     * @throws TransientException If transient network problem
+//     */
+//    @Override
+//    public Object getReadPermission(URI uri)
+//            throws AccessControlException, FileNotFoundException, TransientException
+//    {
+//        initState();
+//        if (!readable)
+//        {
+//            if (!writable)
+//                throw new IllegalStateException(OFFLINE_MSG);
+//            throw new IllegalStateException(READ_ONLY_MSG);
+//        }
+//        try
+//        {
+//
+//            VOSURI vos = new VOSURI(uri);
+//            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
+//            profiler.checkpoint("nodePersistence.get");
+//            return getReadPermission(node);
+//        }
+//        catch(NodeNotFoundException ex)
+//        {
+//            throw new FileNotFoundException("not found: " + uri);
+//        }
+//    }
+//
+//    /**
+//     * Obtain the Read Permission for the given Node.
+//     *
+//     * @param node      The Node to check.
+//     * @return          The persistent version of the target node.
+//     * @throws AccessControlException If the user does not have read permission
+//     */
+//    public Object getReadPermission(Node node)
+//            throws AccessControlException
+//    {
+//        initState();
+//        if (!readable)
+//        {
+//            if (!writable)
+//                throw new IllegalStateException(OFFLINE_MSG);
+//            throw new IllegalStateException(READ_ONLY_MSG);
+//        }
+//
+//        AccessControlContext acContext = AccessController.getContext();
+//        Subject subject = Subject.getSubject(acContext);
+//
+//        checkDelegation(node, subject);
+//
+//        LinkedList<Node> nodes = Utils.getNodeList(node);
+//
+//        // check for root ownership
+//        Node rootNode = nodes.getLast();
+//        if (isOwner(rootNode, subject))
+//        {
+//            LOG.debug("Read permission granted to root user.");
+//            return node;
+//        }
+//
+//        Iterator<Node> iter = nodes.descendingIterator(); // root at end
+//        while (iter.hasNext())
+//        {
+//            Node n = iter.next();
+//            if (!hasSingleNodeReadPermission(n, subject))
+//                throw new AccessControlException("Read permission denied on " + n.getPath().toString());
+//        }
+//        return node;
+//    }
+//
+//    /**
+//     * Obtain the Write Permission for the given URI.
+//     *
+//     * @param uri       The URI to check.
+//     * @return          The persistent version of the target node.
+//     * @throws AccessControlException If the user does not have write permission
+//     * @throws FileNotFoundException If the node could not be found
+//     * @throws NodeLockedException    If the node is locked
+//     * @throws TransientException If transient network problem
+//     */
+//    @Override
+//    public Object getWritePermission(URI uri)
+//            throws AccessControlException, FileNotFoundException,
+//            TransientException, NodeLockedException
+//    {
+//        initState();
+//        if (!writable)
+//        {
+//            if (readable)
+//                throw new IllegalStateException(READ_ONLY_MSG);
+//            throw new IllegalStateException(OFFLINE_MSG);
+//        }
+//
+//        try
+//        {
+//            VOSURI vos = new VOSURI(uri);
+//            Node node = nodePersistence.get(vos, allowPartialPaths, resolveMetadata);
+//            profiler.checkpoint("nodePersistence.get");
+//            return getWritePermission(node);
+//        }
+//        catch(NodeNotFoundException ex)
+//        {
+//            throw new FileNotFoundException("not found: " + uri);
+//        }
+//    }
+//
+////    /**
+////     * Obtain the Write Permission for the given Node.
+////     *
+////     * @param node      The Node to check.
+////     * @return          The persistent version of the target node.
+////     * @throws AccessControlException If the user does not have write permission
+////     * @throws NodeLockedException    If the node is locked
+////     */
+////    public Object delgetWritePermission(Node node)
+////        throws AccessControlException, NodeLockedException
+////    {
+////        initState();
+////        if (!writable)
+////        {
+////            if (readable)
+////                throw new IllegalStateException(READ_ONLY_MSG);
+////            throw new IllegalStateException(OFFLINE_MSG);
+////        }
+////
+////        AccessControlContext acContext = AccessController.getContext();
+////        Subject subject = Subject.getSubject(acContext);
+////
+////        checkDelegation(node, subject);
+////
+////        // check if the node is locked
+////        if (!disregardLocks && node.isLocked)
+////            throw new NodeLockedException(node.getPath().toString());
+////
+////        // check for root ownership
+////        LinkedList<Node> nodes = Utils.getNodeList(node);
+////        Node rootNode = nodes.getLast();
+////        if (isOwner(rootNode, subject))
+////        {
+////            LOG.debug("Write permission granted to root user.");
+////            return node;
+////        }
+////
+////        Iterator<Node> iter = nodes.descendingIterator(); // root at end
+////        while (iter.hasNext())
+////        {
+////            Node n = iter.next();
+////            if (n == node) // target needs write
+////                if (!hasSingleNodeWritePermission(n, subject))
+////                    throw new AccessControlException("Write permission denied on " + n.getPath().toString());
+////            else // part of path needs read
+////                if (!hasSingleNodeReadPermission(n, subject))
+////                    throw new AccessControlException("Read permission denied on " + n.getPath().toString());
+////        }
+////        return node;
+////    }
+//
+//    /**
+//     * Recursively checks if a node can be deleted by the current subject.
+//     * The caller must have write permission on the parent container and all
+//     * non-empty containers. The argument and all child nodes must not
+//     * be locked (unless locks are being ignored).
+//     *
+//     * @param node node to be checked
+//     * @throws AccessControlException If user does not have write permission
+//     * @throws NodeLockedException If node is currently locked
+//     * @throws TransientException If transient network problems
+//     */
+//    public void getDeletePermission(Node node)
+//            throws AccessControlException, NodeLockedException, TransientException
+//    {
+//        initState();
+//        if (!writable)
+//        {
+//            if (readable)
+//                throw new IllegalStateException(READ_ONLY_MSG);
+//            throw new IllegalStateException(OFFLINE_MSG);
+//        }
+//
+//        // check parent
+//        ContainerNode parent = node.parent;
+//        getWritePermission(parent); // checks lock and rw permission
+//
+//        // check if the node is locked
+//        if (!disregardLocks && node.isLocked)
+//            throw new NodeLockedException(node.getPath().toString());
+//
+//        if (node instanceof ContainerNode)
+//        {
+//            ContainerNode container = (ContainerNode) node;
+//            getWritePermission(container); // checks lock and rw permission
+//
+//            Integer batchSize = 1000; // TODO: any value in not hard-coding this?
+//            VOSURI startURI = null;
+//            nodePersistence.getChildren(container, startURI, batchSize, resolveMetadata);
+//            while ( !container.nodes.isEmpty() )
+//            {
+//                for (Node child : container.nodes)
+//                {
+//                    getDeletePermission(child); // recursive
+//                    startURI = LocalServiceURI.getURI(child);
+//                }
+//                // clear the children for garbage collection
+//                container.nodes.clear();
+//
+//                // get next batch
+//                nodePersistence.getChildren(container, startURI, batchSize);
+//                if ( !container.nodes.isEmpty() )
+//                {
+//                    Node n = container.nodes.get(0);
+//                    if (LocalServiceURI.getURI(n).equals(startURI) )
+//                        container.nodes.remove(0); // avoid recheck and infinite loop
+//                }
+//            }
+//        }
+//    }

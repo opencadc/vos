@@ -85,6 +85,7 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
+import org.opencadc.vospace.server.PathResolver;
 
 /**
  * Class to perform the creation of a Node.
@@ -117,10 +118,10 @@ public class CreateNodeAction extends NodeAction
         try
         {
             VOSURI parentURI = nodeURI.getParentURI();
-            Node node = nodePersistence.get(parentURI);
-            voSpaceAuthorizer.getWritePermission(node);
+            PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+            Node parentNode = pathResolver.getNode(parentURI, true);
 
-            return node;
+            return parentNode;
         }
         catch (NodeNotFoundException ex)
         {
@@ -137,8 +138,9 @@ public class CreateNodeAction extends NodeAction
         {
             ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
 
-            nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
-            for (Node n : parent.nodes)
+            //TODO - what is this for?
+            nodePersistence.get(parent, clientNode.getName()); // slightly better than getChildren
+            for (Node n : parent.getNodes())
             {
                 if (n.getName().equals(clientNode.getName()))
                     throw new ResourceAlreadyExistsException(nodeURI.getURI().toASCIIString());

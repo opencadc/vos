@@ -75,6 +75,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.PathResolver;
 
 /**
  * Class to perform the deletion of a Node.
@@ -103,11 +104,10 @@ public class DeleteNodeAction extends NodeAction
             if (nodeURI.isRoot() || parentURI.isRoot())
                 throw new AccessControlException("permission denied");
 
-            Node target = nodePersistence.get(nodeURI);
+            PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+            Node target = pathResolver.getNode(nodeURI, true);
 
-            log.debug("Checking delete privilege on: " + target.getPath());
-            voSpaceAuthorizer.getDeletePermission(target);
-
+            log.debug("Deleting node: " + target.getPath());
             return target;
         }
         catch (NodeNotFoundException ex)

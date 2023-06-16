@@ -67,6 +67,7 @@
 
 package org.opencadc.vospace.server.web.actions;
 
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
@@ -86,8 +87,13 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.AccessControlContext;
 import java.security.AccessControlException;
+import java.security.AccessController;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.server.AbstractView;
@@ -95,6 +101,7 @@ import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.PersistenceOptions;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.VOSpacePluginFactory;
 import org.opencadc.vospace.server.Views;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
@@ -133,11 +140,10 @@ public class GetNodeAction extends NodeAction
         throws AccessControlException, FileNotFoundException, LinkingException, TransientException
     {
         // resolve any container links
-        PathResolver pathResolver = new PathResolver(nodePersistence, resolveMetadata);
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         try
         {
-            return pathResolver.resolveWithReadPermissionCheck(nodeURI,
-                    partialPathVOSpaceAuthorizer, false);
+            return pathResolver.getNode(nodeURI, false);
         }
         catch (NodeNotFoundException e)
         {
@@ -169,12 +175,12 @@ public class GetNodeAction extends NodeAction
             NodePersistence np = pluginFactory.createNodePersistence();
             VOSpaceAuthorizer authorizer = new VOSpaceAuthorizer(true);
             authorizer.setNodePersistence(np);
-            PathResolver resolver = new PathResolver(np, false);
+            PathResolver resolver = new PathResolver(nodePersistence, authorizer);
 
             Node node;
             try {
-                node = resolver.resolveWithReadPermissionCheck(vosURI, authorizer, true);
-            } catch (NodeNotFoundException | LinkingException e) {
+                node = resolver.getNode(vosURI, true);
+            } catch (NodeNotFoundException e) {
                 throw new ResourceNotFoundException("Not Found");
             }
 
@@ -248,7 +254,7 @@ public class GetNodeAction extends NodeAction
             start = System.currentTimeMillis();
             // request for a subset of children
             if (sortParamURI == null && sortAsc == null) {
-                nodePersistence.getChildren(cn, startURIObject, pageLimit, resolveMetadata);
+                ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node.parent, null, null);
             } else if (nodePersistence instanceof PersistenceOptions) {
                 // non-standard sorting options
                 ((PersistenceOptions) nodePersistence).getChildren(
@@ -258,7 +264,7 @@ public class GetNodeAction extends NodeAction
             }
             log.debug(String.format(
                 "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                    resolveMetadata, cn.nodes.size(), startURI, pageLimit));
+                    resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
             
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
@@ -281,8 +287,11 @@ public class GetNodeAction extends NodeAction
 
             if (VOS.Detail.max.getValue().equals(detailLevel))
             {
+                // to get here the node must have been readable so tag it as such
                 doTagReadable(serverNode);
-                doTagWritable(serverNode);
+                if (isWritable(serverNode)) {
+                    doTagWritable(serverNode);
+                }
             }
         }
 
@@ -311,7 +320,7 @@ public class GetNodeAction extends NodeAction
             // clear the properties from server node if the detail
             // level is set to 'min'
             if (VOS.Detail.min.getValue().equals(detailLevel))
-                serverNode.properties.clear();
+                serverNode.getProperties().clear();
 
             // if the request has gone through a link, change the
             // node paths back to be the 'unresolved path'
@@ -383,7 +392,7 @@ public class GetNodeAction extends NodeAction
             {
                 ContainerNode containerNode = (ContainerNode) node;
                 VOSURI childURI;
-                for (Node child : containerNode.nodes)
+                for (Node child : containerNode.getNodes())
                 {
                     childURI = new VOSURI(vosURI.toString() + "/" + child.getName());
                     ObjectUtil.setField(child, childURI, "uri");
@@ -399,17 +408,38 @@ public class GetNodeAction extends NodeAction
 
     private void doTagChildrenAccessRights(ContainerNode cn)
     {
-        for (final Node n : cn.nodes)
+        for (final Node n : cn.getNodes())
         {
-            doTagReadable(n);
-            doTagWritable(n);
+            // to get to this point, the parent node must have been readable.
+            // Need to check only the child node
+            AccessControlContext acContext = AccessController.getContext();
+            Subject subject = Subject.getSubject(acContext);
+            if (voSpaceAuthorizer.hasSingleNodeReadPermission(n, subject)) {
+                doTagReadable(n);
+            }
+            if (isWritable(n)) {
+                doTagWritable(n);
+            }
         }
+    }
+
+    private boolean isWritable(Node node) {
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+
+        Iterator<Node> nodes = Utils.getNodeList(node).descendingIterator();
+        while (nodes.hasNext()) {
+            if (!voSpaceAuthorizer.hasSingleNodeWritePermission(nodes.next(), subject)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
      * Tag the given node with a 'readable' property to indicate that it is
      * viewable (readable) by the requester.
-     * @param n     The Node to check.
+     * @param n     The Node to tag.
      */
     private void doTagReadable(final Node n)
     {
@@ -418,26 +448,13 @@ public class GetNodeAction extends NodeAction
                                  Boolean.TRUE.toString());
         canReadProperty.readOnly = true;
 
-        try
-        {
-            voSpaceAuthorizer.getReadPermission(n);
-            n.properties.add(canReadProperty);
-        }
-        catch (AccessControlException e)
-        {
-            // no read access, continue
-        }
-        catch (Exception e)
-        {
-            // error checking access, log a warning
-            log.warn("Failed to check read permission", e);
-        }
+        n.getProperties().add(canReadProperty);
     }
 
     /**
      * Tag the given node with a 'writable' property to indicate that it is
      * updatable (writable) by the requester.
-     * @param n     The Node to check.
+     * @param n     The Node to tag.
      */
     private void doTagWritable(final Node n)
     {
@@ -446,20 +463,7 @@ public class GetNodeAction extends NodeAction
                                  Boolean.TRUE.toString());
         canWriteProperty.readOnly = true;
 
-        try
-        {
-            voSpaceAuthorizer.getWritePermission(n);
-            n.properties.add(canWriteProperty);
-        }
-        catch (AccessControlException e)
-        {
-            // no write access, continue
-        }
-        catch (Exception e)
-        {
-            // error checking access, log a warning
-            log.warn("Failed to check write permission", e);
-        }
+        n.getProperties().add(canWriteProperty);
     }
 
     private void fillAcceptsAndProvides(Node node)

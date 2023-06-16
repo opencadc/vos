@@ -70,6 +70,10 @@ package org.opencadc.vospace.server.web.actions;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.MultiValuedProperties;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
@@ -81,7 +85,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.AccessControlContext;
 import java.security.AccessControlException;
+import java.security.AccessController;
+import java.util.Arrays;
+import java.util.Iterator;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
@@ -322,4 +331,35 @@ public abstract class NodeAction extends RestAction {
         end = System.currentTimeMillis();
         log.debug("performNodeAction() elapsed time: " + (end - start) + "ms");
     }
+//
+//    protected Node getNode(VOSURI nodeURI, boolean writable) throws NodeNotFoundException {
+//        Node node = nodePersistence.getRootNode();
+//        AccessControlContext acContext = AccessController.getContext();
+//        Subject subject = Subject.getSubject(acContext);
+//
+//        voSpaceAuthorizer.checkServiceStatus(writable);
+//
+//        Iterator<String> pathIter = Arrays.stream(nodeURI.getPath().split("/")).iterator();
+//        while (pathIter.hasNext()){
+//            node = nodePersistence.get((ContainerNode) node, pathIter.next());
+//            if (writable) {
+//                voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
+//            } else {
+//                voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+//            }
+//            if (node instanceof ContainerNode) {
+//               continue;
+//            }
+//            if (node instanceof DataNode) {
+//                if (pathIter.hasNext()) {
+//                    throw new IllegalArgumentException("Illegal path"); //TODO - different exception
+//                }
+//            }
+//            if (node instanceof LinkNode) {
+//                node = resolve.
+//            }
+//        }
+//        return node;
+//    }
+
 }

@@ -88,6 +88,7 @@ import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
+import org.opencadc.vospace.server.PathResolver;
 
 /**
  * Class to perform the creation of a Node.
@@ -118,8 +119,8 @@ public class UpdateNodeAction extends NodeAction
     {
         try
         {
-            Node node = nodePersistence.get(nodeURI);
-            voSpaceAuthorizer.getWritePermission(node);
+            PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+            Node node = pathResolver.getNode(nodeURI,  true);
 
             return node;
         }
@@ -137,7 +138,7 @@ public class UpdateNodeAction extends NodeAction
         //TODO This should not be required. In fact the update should take the clientNode
         // and check if they are different
         List<NodeProperty> props = new ArrayList<>();
-        props.addAll(clientNode.properties);
+        props.addAll(clientNode.getProperties());
         Node storedNode = nodePersistence.updateProperties(serverNode, props);
 
         // return the node in xml format
