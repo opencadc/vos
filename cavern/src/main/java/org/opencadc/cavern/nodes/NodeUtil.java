@@ -310,7 +310,7 @@ public abstract class NodeUtil {
                     GroupURI guri = null;
 
                     try {
-                        guri = new GroupURI(sro);
+                        guri = new GroupURI(URI.create(sro));
                         URI groupGMS = guri.getServiceID();
                         if (!groupGMS.equals(localGMS)) {
                             // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)

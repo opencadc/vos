@@ -80,16 +80,18 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.File;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
 
@@ -114,6 +116,10 @@ public class DefaultACLPermissionsTest {
     private static VOSURI roBaseURI;
     private static VOSURI rwBaseURI;
     private static GroupURI testGroup;
+
+    // Second group to be added for multiples.
+    private static GroupURI testGroupReadAlt;
+    private static GroupURI testGroupWriteAlt;
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
@@ -163,7 +169,92 @@ public class DefaultACLPermissionsTest {
         } else {
             throw new IllegalStateException("expected system property " + testGroupProp + " = <test group URI>, found: " + uri);
         }
-        
+
+        String testGroupReadAltProp = DefaultACLPermissionsTest.class.getName() + ".testGroupReadAlt";
+        String testGroupReadAltURI = System.getProperty(testGroupReadAltProp);
+        log.debug(testGroupReadAltProp + " = " + testGroupReadAltURI);
+        if (StringUtil.hasText(testGroupReadAltURI)) {
+            testGroupReadAlt = new GroupURI(new URI(testGroupReadAltURI));
+        } else {
+            throw new IllegalStateException("expected system property " + testGroupReadAltProp + " = <test group URI>, found: " + testGroupReadAltURI);
+        }
+
+        String testGroupWriteAltProp = DefaultACLPermissionsTest.class.getName() + ".testGroupWriteAlt";
+        String testGroupWriteAltURI = System.getProperty(testGroupWriteAltProp);
+        log.debug(testGroupWriteAltProp + " = " + testGroupWriteAltURI);
+        if (StringUtil.hasText(testGroupWriteAltURI)) {
+            testGroupWriteAlt = new GroupURI(new URI(testGroupWriteAltURI));
+        } else {
+            throw new IllegalStateException("expected system property " + testGroupWriteAltProp + " = <test group URI>, found: " + testGroupWriteAltURI);
+        }
+    }
+
+    @Test
+    public void testCreateChildContainerNodeMultiReadGroups() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(roBaseURI.getServiceURI());
+        String vosURIPath = roBaseURI.toString() + "/ro-containernode-multiread-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosURIPath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        ContainerNode expected = new ContainerNode(turi);
+        expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD,
+                                                      testGroupReadAlt.getURI().toASCIIString()));
+
+        Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+
+        Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+        Assert.assertNotNull("created", actual);
+        final List<NodeProperty> nodePropertyList = actual.getProperties();
+        final List<NodeProperty> readGroupPropertyList =
+                nodePropertyList.stream()
+                                .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
+                                .collect(Collectors.toList());
+        final List<GroupURI> readGroupURIList = new ArrayList<>(readGroupPropertyList.size());
+        for (final NodeProperty nodeProperty: readGroupPropertyList) {
+            readGroupURIList.add(new GroupURI(URI.create(nodeProperty.getPropertyValue())));
+        }
+
+        Assert.assertTrue("Should contain " + testGroup.getURI(),
+                          readGroupURIList.contains(new GroupURI(testGroup.getURI())));
+        Assert.assertTrue("Should contain " + testGroupReadAlt.getURI(),
+                          readGroupURIList.contains(new GroupURI(testGroupReadAlt.getURI())));
+        NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        Assert.assertNotNull(mask);
+        Assert.assertEquals("r-x", mask.getPropertyValue());
+    }
+
+    @Test
+    public void testCreateChildContainerNodeMultiWriteGroups() throws Exception {
+        VOSpaceClient vos = new VOSpaceClient(rwBaseURI.getServiceURI());
+        String vosURIPath = rwBaseURI.toString() + "/rw-containernode-multiwrite-" + System.currentTimeMillis();
+        VOSURI turi = new VOSURI(vosURIPath);
+        Subject s = SSLUtil.createSubject(SSL_CERT);
+
+        ContainerNode expected = new ContainerNode(turi);
+        expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE,
+                                                      testGroupWriteAlt.getURI().toASCIIString()));
+
+        Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+
+        Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+        Assert.assertNotNull("created", actual);
+        final List<NodeProperty> nodePropertyList = actual.getProperties();
+        final List<NodeProperty> writeGroupPropertyList =
+                nodePropertyList.stream()
+                                .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
+                                .collect(Collectors.toList());
+        final List<GroupURI> writeGroupURIList = new ArrayList<>(writeGroupPropertyList.size());
+        for (final NodeProperty nodeProperty: writeGroupPropertyList) {
+            writeGroupURIList.add(new GroupURI(URI.create(nodeProperty.getPropertyValue())));
+        }
+
+        Assert.assertTrue("Should contain " + testGroup.getURI(),
+                          writeGroupURIList.contains(new GroupURI(testGroup.getURI())));
+        Assert.assertTrue("Should contain " + testGroupWriteAlt.getURI(),
+                          writeGroupURIList.contains(new GroupURI(testGroupWriteAlt.getURI())));
+        NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        Assert.assertNotNull(mask);
+        Assert.assertEquals("rwx", mask.getPropertyValue());
     }
     
     @Test
