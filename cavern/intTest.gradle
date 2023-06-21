@@ -1,5 +1,6 @@
 configurations {
     intTestCompile.extendsFrom testCompile
+    intTestImplementation.extendsFrom testImplementation
     intTestRuntime.extendsFrom testRuntime
 }
 
@@ -22,6 +23,10 @@ tasks.withType(Test) {
     // Assign all Java system properties from
     // the command line to the tests
     systemProperties System.properties
+}
+
+tasks.withType(Copy) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 task intTest(type: Test) {
