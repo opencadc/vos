@@ -443,6 +443,7 @@ public class NodeUtilTest {
         VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
         DataNode tn = new DataNode(uri);
 
+        // Get the current list of Groups from the system.  This will only work on *NIX systems.
         final Process process = new ProcessBuilder("id", "-G", "-n").start();
         final StringBuilder output = new StringBuilder();
         try (final BufferedReader bufferedReader =
@@ -458,20 +459,25 @@ public class NodeUtilTest {
             throw new IllegalStateException("User is not a member of enough groups.");
         }
 
-        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groups[0]));
-        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groups[1]));
+        final String[] groupURIs = new String[groups.length];
+        groupURIs[0] = "ivo://cadc.nrc.ca/gms?" + groups[0];
+        groupURIs[1] = "ivo://cadc.nrc.ca/gms?" + groups[1];
+
+        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupURIs[0]));
+        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupURIs[1]));
 
         NodeUtil.setOwner(tn, up);
-        Path tdir = doCreate(root, tn, up);
+        doCreate(root, tn, up);
 
-        final Node actualDataNode = NodeUtil.get(tdir, tn.getUri());
+        // Re-get the Node
+        final Node actualDataNode = NodeUtil.get(root, tn.getUri());
         final List<String> readGroupNames =
                 actualDataNode.getProperties().stream()
                               .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
                               .map(NodeProperty::getPropertyValue)
                               .collect(Collectors.toList());
-        Assert.assertTrue("Should contain " + groups[0], readGroupNames.contains(groups[0]));
-        Assert.assertTrue("Should contain " + groups[1], readGroupNames.contains(groups[1]));
+        Assert.assertTrue("Should contain " + groupURIs[0], readGroupNames.contains(groupURIs[0]));
+        Assert.assertTrue("Should contain " + groupURIs[1], readGroupNames.contains(groupURIs[1]));
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
