@@ -75,7 +75,10 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -84,7 +87,10 @@ import java.nio.file.Path;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -408,11 +414,64 @@ public class NodeUtilTest {
             Path tdir = doCreate(root, tn, up);
             Assert.fail("expected RuntimeException: got " + tdir);
         } catch (RuntimeException expected) {
-            log.info("caught expected exception: " + expected);
+            // Other RuntimeExceptions can occur, so check carefully.
+            if (expected.getMessage().contains("external group not supported")) {
+                log.info("caught expected exception: " + expected);
+            } else {
+                throw expected;
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Test
+    public void testSetMultiReadGroups() throws Exception {
+        // top-level test dir
+        String name = "testSetMultiReadGroups-" + UUID.randomUUID();
+        VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
+        Path root = FileSystems.getDefault().getPath(ROOT);
+        UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+        UserPrincipal up = users.lookupPrincipalByName(OWNER);
+        ContainerNode n = new ContainerNode(testDir);
+        NodeUtil.setOwner(n, up);
+        Path dir = doCreate(root, n, up);
+        Assert.assertTrue("dir", Files.isDirectory(dir));
+
+        // actual child test
+        VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+        DataNode tn = new DataNode(uri);
+
+        final Process process = new ProcessBuilder("id", "-G", "-n").start();
+        final StringBuilder output = new StringBuilder();
+        try (final BufferedReader bufferedReader =
+                     new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                output.append(line);
+            }
+        }
+
+        final String[] groups = output.toString().split("\\s");
+        if (groups.length < 2) {
+            throw new IllegalStateException("User is not a member of enough groups.");
+        }
+
+        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groups[0]));
+        tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groups[1]));
+
+        NodeUtil.setOwner(tn, up);
+        Path tdir = doCreate(root, tn, up);
+
+        final Node actualDataNode = NodeUtil.get(tdir, tn.getUri());
+        final List<String> readGroupNames =
+                actualDataNode.getProperties().stream()
+                              .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
+                              .map(NodeProperty::getPropertyValue)
+                              .collect(Collectors.toList());
+        Assert.assertTrue("Should contain " + groups[0], readGroupNames.contains(groups[0]));
+        Assert.assertTrue("Should contain " + groups[1], readGroupNames.contains(groups[1]));
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
