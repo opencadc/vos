@@ -302,12 +302,13 @@ public abstract class NodeUtil {
             boolean isDir = (node instanceof ContainerNode);
             UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
             AclCommandExecutor acl = new AclCommandExecutor(path, users);
-            
+
+            final List<GroupPrincipal> readGroupPrincipals = new ArrayList<>();
+            final List<GroupPrincipal> writeGroupPrincipals = new ArrayList<>();
+
             final List<NodeProperty> groList =
                     nodePropertyList.stream().filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
                                     .collect(Collectors.toList());
-            // Clear it each time.
-            acl.clearACL();
             for (final NodeProperty gro : groList) {
                 String sro = gro.getPropertyValue();
                 GroupURI guri = null;
@@ -320,9 +321,7 @@ public abstract class NodeUtil {
                         throw new IllegalArgumentException("external group not supported: " + guri);
                     }
 
-                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
-                    log.debug("setting group-read property to: " + guri);
-                    acl.setReadOnlyACL(gp, isDir);
+                    readGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
                 } catch (UserPrincipalNotFoundException ex) {
                     throw new RuntimeException("failed to find existing group: " + guri, ex);
                 }
@@ -343,12 +342,22 @@ public abstract class NodeUtil {
                         throw new IllegalArgumentException("external group not supported: " + guri);
                     }
 
-                    GroupPrincipal gp = users.lookupPrincipalByGroupName(guri.getName());
-                    log.debug("setting group-write property to: " + guri);
-                    acl.setReadWriteACL(gp, isDir);
+                    writeGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
                 } catch (UserPrincipalNotFoundException ex) {
                     throw new RuntimeException("failed to find existing group: " + guri, ex);
                 }
+            }
+
+            // Clear it each time.  Create lists of GroupPrincipal objects to ensure that new ones are created properly
+            // before clearing the ACLs.
+            acl.clearACL();
+            for (final GroupPrincipal readGroupPrincipal : readGroupPrincipals) {
+                log.debug("setting group-read property to: " + readGroupPrincipal.getName());
+                acl.setReadOnlyACL(readGroupPrincipal, isDir);
+            }
+            for (final GroupPrincipal writeGroupPrincipal : writeGroupPrincipals) {
+                log.debug("setting group-write property to: " + writeGroupPrincipal.getName());
+                acl.setReadWriteACL(writeGroupPrincipal, isDir);
             }
         }
     }
