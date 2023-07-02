@@ -68,6 +68,7 @@
 package org.opencadc.cavern.nodes;
 
 
+import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -79,6 +80,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -214,5 +216,79 @@ public class AclCommandExecutorTest {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Test
+    public void testSetFileACL() throws Exception {
+        String name = "testSetFileACL-" + UUID.randomUUID();
+
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name);
+
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+
+        Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
+
+        // Use LinkedHashSet to have a predictable order.
+        final Set<GroupPrincipal> readGroupPrincipals = new LinkedHashSet<>();
+        readGroupPrincipals.add(() -> "GROUPA");
+        readGroupPrincipals.add(() -> "GROUPB");
+        final Set<GroupPrincipal> writeGroupPrincipals = new LinkedHashSet<>();
+        writeGroupPrincipals.add(() -> "GROUPW");
+        UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
+        final boolean[] commandChecked = new boolean[] {false};
+
+        final String[] expectedCommand = new String[] {
+            "setfacl", "--set=user::rwx,group::rw-,other::---,mask::rw-,group:GROUPA:r--,group:GROUPB:r--,group:GROUPW:rw-",
+            target.toString()
+        };
+
+        AclCommandExecutor acl = new AclCommandExecutor(target, users) {
+            @Override
+            void executeCommand(final String[] command) throws IOException {
+                Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
+                commandChecked[0] = true;
+            }
+        };
+
+        acl.setACL(readGroupPrincipals, writeGroupPrincipals, false);
+        Assert.assertTrue("Command not checked", commandChecked[0]);
+    }
+
+    @Test
+    public void testSetFileACLNoRead() throws Exception {
+        String name = "testSetFileACLNoRead-" + UUID.randomUUID();
+
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name);
+
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+
+        Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
+
+        final Set<GroupPrincipal> readGroupPrincipals = new LinkedHashSet<>();
+        final Set<GroupPrincipal> writeGroupPrincipals = new LinkedHashSet<>();
+        writeGroupPrincipals.add(() -> "GROUPW2");
+        UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
+        final boolean[] commandChecked = new boolean[] {false};
+
+        final String[] expectedCommand = new String[] {
+                "setfacl", "--set=user::rwx,group::rw-,other::---,mask::rw-,group:GROUPW2:rw-", target.toString()
+        };
+
+        AclCommandExecutor acl = new AclCommandExecutor(target, users) {
+            @Override
+            void executeCommand(final String[] command) {
+                Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
+                commandChecked[0] = true;
+            }
+        };
+
+        acl.setACL(readGroupPrincipals, writeGroupPrincipals, false);
+        Assert.assertTrue("Command not checked", commandChecked[0]);
     }
 }

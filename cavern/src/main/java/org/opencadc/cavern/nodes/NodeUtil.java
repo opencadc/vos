@@ -221,7 +221,7 @@ public abstract class NodeUtil {
         try {
             setPosixOwnerGroup(ret, owner, group);
             setNodeProperties(ret, node);
-        } catch (IOException | URISyntaxException ex) {
+        } catch (IOException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
             throw new UnsupportedOperationException("failed to create " + node.getClass().getSimpleName()
@@ -242,6 +242,7 @@ public abstract class NodeUtil {
             }
         }
         if (group != null) {
+            log.debug("Setting owner group to " + group.getName());
             try {
                 pv.setGroup(group);
             } catch (IOException ex) {
@@ -249,8 +250,15 @@ public abstract class NodeUtil {
             }
         }
     }
-    
-    public static void setNodeProperties(Path path, Node node) throws IOException, URISyntaxException {
+
+    /**
+     * Set the node properties.  This method will use Sets to uniquely identify the ACLs (Read and Read/Write) in
+     * order to merge the provided properties and preserve the existing ones that aren't specified.
+     * @param path              The path of the storage item.
+     * @param node              The VOSpace Node input.
+     * @throws IOException          If any I/O errors occur.
+     */
+    public static void setNodeProperties(Path path, Node node) throws IOException {
         log.debug("setNodeProperties: " + node);
         List<NodeProperty> nodePropertyList = node.getProperties();
         if (!nodePropertyList.isEmpty() && !(node instanceof LinkNode)) {
@@ -303,9 +311,7 @@ public abstract class NodeUtil {
             UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
             AclCommandExecutor acl = new AclCommandExecutor(path, users);
 
-            final List<GroupPrincipal> readGroupPrincipals = new ArrayList<>();
-            final List<GroupPrincipal> writeGroupPrincipals = new ArrayList<>();
-
+            final Set<GroupPrincipal> readGroupPrincipals = new HashSet<>(acl.getReadOnlyACL(isDir));
             final List<NodeProperty> groList =
                     nodePropertyList.stream().filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
                                     .collect(Collectors.toList());
@@ -327,6 +333,7 @@ public abstract class NodeUtil {
                 }
             }
 
+            final Set<GroupPrincipal> writeGroupPrincipals = new HashSet<>(acl.getReadWriteACL(isDir));
             final List<NodeProperty> grwList =
                     nodePropertyList.stream().filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
                                     .collect(Collectors.toList());
@@ -348,16 +355,12 @@ public abstract class NodeUtil {
                 }
             }
 
-            // Clear it each time.  Create lists of GroupPrincipal objects to ensure that new ones are created properly
-            // before clearing the ACLs.
-            acl.clearACL();
-            for (final GroupPrincipal readGroupPrincipal : readGroupPrincipals) {
-                log.debug("setting group-read property to: " + readGroupPrincipal.getName());
-                acl.setReadOnlyACL(readGroupPrincipal, isDir);
-            }
-            for (final GroupPrincipal writeGroupPrincipal : writeGroupPrincipals) {
-                log.debug("setting group-write property to: " + writeGroupPrincipal.getName());
-                acl.setReadWriteACL(writeGroupPrincipal, isDir);
+            log.debug("Existing read groups: " + acl.getReadOnlyACL(isDir));
+            log.debug("Existing write groups: " + acl.getReadWriteACL(isDir));
+            if (!readGroupPrincipals.isEmpty() || !writeGroupPrincipals.isEmpty()) {
+                log.debug("Setting ACLs");
+                acl.setACL(readGroupPrincipals, writeGroupPrincipals, isDir);
+                log.debug("Setting ACLs: OK");
             }
         }
     }

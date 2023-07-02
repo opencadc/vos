@@ -219,6 +219,7 @@ public class RecursiveSetNodeRunnerTest
     private static class MyJobStatus {
         ExecutionPhase ep;
         ErrorSummary es;
+        URL jobURL;
     }
     private static class GetJobAction implements PrivilegedExceptionAction<MyJobStatus>
     {
@@ -233,6 +234,8 @@ public class RecursiveSetNodeRunnerTest
             MyJobStatus ret = new MyJobStatus();
             ret.ep = rec.getPhase();
             ret.es = rec.getServerError();
+            ret.jobURL = rec.getJobURL();
+
             return ret;
         }
     }
@@ -289,8 +292,8 @@ public class RecursiveSetNodeRunnerTest
         try
         {
             Node data2 = Subject.doAs(s, new CreateAction(vos, data));
-            NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms#cadcauthtest1");
-            NodeProperty groupWrite = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "ivo://cadc.nrc.ca/gms#cadcauthtest2");
+            NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms?cadcauthtest1");
+            NodeProperty groupWrite = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "ivo://cadc.nrc.ca/gms?cadcauthtest2");
             data2.getProperties().add(groupRead);
             data2.getProperties().add(groupWrite);
 
@@ -304,7 +307,8 @@ public class RecursiveSetNodeRunnerTest
             
             MyJobStatus js = Subject.doAs(s, new GetJobAction(recSetNode));
             Assert.assertNotNull("job status", js);
-            Assert.assertTrue("expected COMPLETED phase", ExecutionPhase.COMPLETED.equals(js.ep));
+            Assert.assertTrue("expected COMPLETED phase but got " + js.ep.name() + "\nERROR: " + js.es
+                              + " (" + js.jobURL + ")", ExecutionPhase.COMPLETED.equals(js.ep));
             Assert.assertNull("expected null error message", js.es);
 
             GetNodeAction getNode = new GetNodeAction(vos, data2.getUri().getPath());
@@ -355,8 +359,8 @@ public class RecursiveSetNodeRunnerTest
             Subject.doAs(s, new CreateAction(vos, d5));
             Subject.doAs(s, new CreateAction(vos, d6));
 
-            NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms#cadcauthtest1");
-            NodeProperty groupWrite = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "ivo://cadc.nrc.ca/gms#cadcauthtest2");
+            NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms?cadcauthtest1");
+            NodeProperty groupWrite = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "ivo://cadc.nrc.ca/gms?cadcauthtest2");
             startContainer.getProperties().add(groupRead);
             startContainer.getProperties().add(groupWrite);
 
@@ -370,7 +374,8 @@ public class RecursiveSetNodeRunnerTest
             
             MyJobStatus js = Subject.doAs(s, new GetJobAction(recSetNode));
             Assert.assertNotNull("job status", js);
-            Assert.assertTrue("expected COMPLETED phase", ExecutionPhase.COMPLETED.equals(js.ep));
+            Assert.assertTrue("expected COMPLETED phase but got " + js.ep.name() + "\nERROR: " + js.es
+                              + " (" + js.jobURL + ")", ExecutionPhase.COMPLETED.equals(js.ep));
             Assert.assertNull("expected null error message", js.es);
 
             Node[] nodeList = new Node[] {c1, c11, c12, c121, d1, d2, d3, d4, d5, d6};
@@ -427,7 +432,7 @@ public class RecursiveSetNodeRunnerTest
                 Subject.doAs(s, new CreateAction(vos, c));
             }
 
-            final NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms#testAbort");
+            final NodeProperty groupRead = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "ivo://cadc.nrc.ca/gms?testAbort");
             startContainer.getProperties().add(groupRead);
 
             Subject.doAs(s, new PrivilegedExceptionAction<Object>()

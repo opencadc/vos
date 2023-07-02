@@ -67,6 +67,7 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
@@ -195,6 +196,7 @@ public class DefaultACLPermissionsTest {
         String vosURIPath = roBaseURI.toString() + "/ro-containernode-multiread-" + System.currentTimeMillis();
         VOSURI turi = new VOSURI(vosURIPath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
+        s.getPrincipals().add(new PosixPrincipal(20006));
 
         ContainerNode expected = new ContainerNode(turi);
         expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD,
@@ -384,7 +386,9 @@ public class DefaultACLPermissionsTest {
             
             VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
             ContainerNode child = new ContainerNode(curi);
+            log.debug("Creating " + curi.getPath());
             Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
+            log.debug("Creating " + curi.getPath() + ":OK");
             
             actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, curi.getPath()));
             Assert.assertNotNull("created", actual);

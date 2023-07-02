@@ -459,6 +459,7 @@ public class NodeUtilTest {
             throw new IllegalStateException("User is not a member of enough groups.");
         }
 
+        // Take the first two Groups.
         final String[] groupURIs = new String[groups.length];
         groupURIs[0] = "ivo://cadc.nrc.ca/gms?" + groups[0];
         groupURIs[1] = "ivo://cadc.nrc.ca/gms?" + groups[1];

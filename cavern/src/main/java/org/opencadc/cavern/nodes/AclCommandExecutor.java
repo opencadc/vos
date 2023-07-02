@@ -74,8 +74,12 @@ import java.nio.file.Path;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 
 /**
@@ -138,6 +142,73 @@ public class AclCommandExecutor {
             perm = DIR_RW;
         }
         setACL(group, perm);
+    }
+
+    /**
+     * Set the read and read/wite Groups for the current path.  This will cleanly set whatever group principals are
+     * provided.
+     * @param readOnlyGroupPrincipals   The unique set of GroupPrincipals representing the ReadOnly groups.
+     * @param readWriteGroupPrincipals  The unique set of GroupPrincipals representing the ReadWrite groups.
+     * @param isDir     Whether the path is a directory or not.
+     * @throws IOException  If setting failed.
+     */
+    public void setACL(final Set<GroupPrincipal> readOnlyGroupPrincipals,
+                       final Set<GroupPrincipal> readWriteGroupPrincipals, final boolean isDir) throws IOException {
+        if (readOnlyGroupPrincipals == null || readWriteGroupPrincipals == null) {
+            throw new IllegalArgumentException("Null input to setACL().");
+        }
+
+        final String readOnlyPermission = isDir ? AclCommandExecutor.DIR_RO : AclCommandExecutor.FILE_RO;
+        final String readWritePermission = isDir ? AclCommandExecutor.DIR_RW : AclCommandExecutor.FILE_RW;
+
+        final String readGroupCommandInput = readOnlyGroupPrincipals.stream()
+                                                                    .map(p -> "group:" + p.getName() + ":"
+                                                                              + readOnlyPermission)
+                                                                    .collect(Collectors.joining(","));
+        final String writeGroupCommandInput = readWriteGroupPrincipals.stream()
+                                                                      .map(p -> "group:" + p.getName() + ":"
+                                                                                + readWritePermission)
+                                                                      .collect(Collectors.joining(","));
+
+        if (StringUtil.hasText(readGroupCommandInput) || StringUtil.hasText(writeGroupCommandInput)) {
+            final List<String> commandList = new ArrayList<>();
+            final String groupMask;
+            final String groupListString;
+            if (StringUtil.hasText(readGroupCommandInput) && StringUtil.hasText(writeGroupCommandInput)) {
+                groupMask = readWritePermission;
+                groupListString = String.join(",", readGroupCommandInput, writeGroupCommandInput);
+            } else if (StringUtil.hasText(readGroupCommandInput)) {
+                groupMask = readOnlyPermission;
+                groupListString = readGroupCommandInput;
+            } else {
+                groupMask = readWritePermission;
+                groupListString = writeGroupCommandInput;
+            }
+
+            log.debug("Base Masks: \nuser::rwx\ngroup::" + groupMask);
+            final String setACLInput = "--set=user::rwx" + ",group::" + groupMask + ",other::---,mask::" + groupMask
+                                       + "," + groupListString;
+
+            commandList.add(AclCommandExecutor.SETACL);
+            commandList.add(setACLInput);
+            commandList.add(toAbsolutePath(path));
+
+            final String[] commandArray = commandList.toArray(new String[0]);
+            log.debug("Executing " + Arrays.toString(commandArray));
+            executeCommand(commandArray);
+            log.debug("Executing " + Arrays.toString(commandArray) + ": OK");
+        } else {
+            log.debug("Nothing to do in setACL().");
+        }
+    }
+
+    void executeCommand(final String[] command) throws IOException {
+        final BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(command);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to execute " + Arrays.toString(command) + " on " + path
+                                  + ": " + grabber.getErrorOutput(true));
+        }
     }
     
     private void setACL(GroupPrincipal group, String perm) throws IOException {

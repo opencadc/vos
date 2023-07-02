@@ -86,7 +86,6 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipal;
@@ -106,13 +105,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     public static final String CONFIG_FILE = "Cavern.properties";
     
-    private PosixIdentityManager identityManager;
+    private final PosixIdentityManager identityManager;
 
-    private Path root;
+    private final Path root;
 
     public FileSystemNodePersistence() {
         PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
-        String rootConfig = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        String rootConfig = pr.getAllProperties().getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
         if (rootConfig == null) {
             throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
         }
@@ -282,7 +281,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     iter.remove();
                 }
             }
-        }  catch (IOException | URISyntaxException ex) {
+        }  catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
         return node;
