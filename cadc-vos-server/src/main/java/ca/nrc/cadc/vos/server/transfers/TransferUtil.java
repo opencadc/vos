@@ -247,7 +247,7 @@ public class TransferUtil
      * @throws MalformedURLException
      * @throws MalformedURLException
      */
-    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job, final LocalServiceURI localServiceURI)
+    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
         throws IOException, IllegalArgumentException, ResourceNotFoundException {
 
         // package view is redirected to /vault/pkg/<jobid>

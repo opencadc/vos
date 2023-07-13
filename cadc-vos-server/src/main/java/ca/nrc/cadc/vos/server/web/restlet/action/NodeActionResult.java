@@ -73,13 +73,12 @@ import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.ResponseStatus;
 import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
 
 public class NodeActionResult
 {
 
-    private ResponseStatus status = ResponseStatus.SUCCESS_OK;
+    private Status status = Status.SUCCESS_OK;
     private NodeFault nodeFault;
     private Representation representation;
     private URL redirectURL;
@@ -103,11 +102,11 @@ public class NodeActionResult
 
     public NodeActionResult(URL redirectURL)
     {
-        this.status = ResponseStatus.REDIRECTION_SEE_OTHER;
+        this.status = Status.REDIRECTION_SEE_OTHER;
         this.redirectURL = redirectURL;
     }
 
-    public ResponseStatus getStatus()
+    public Status getStatus()
     {
         return status;
     }
