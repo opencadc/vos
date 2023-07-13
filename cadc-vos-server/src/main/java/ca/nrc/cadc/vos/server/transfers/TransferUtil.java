@@ -263,7 +263,6 @@ public class TransferUtil
             sb.append("/").append(jobID).append("/run");
 
             RegistryClient regClient = new RegistryClient();
-            URI serviceURI = localServiceURI.getURI();
             AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
 
             // get capabilities list

@@ -67,6 +67,8 @@
 
 package ca.nrc.cadc.vos;
 
+import org.restlet.data.Status;
+import ca.nrc.cadc.vos.VOS;
 /**
  * Enumeration of type types of faults that can occur
  * with node processing.
