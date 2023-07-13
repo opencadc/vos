@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,67 +65,119 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.server.web.actions;
+package org.opencadc.vospace.server.actions;
 
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 
 /**
- * Class to perform the deletion of a Node.
+ * Class to perform the update of a Node.
  *
- * @author majorb
+ * @author adriand
  */
-public class DeleteNodeAction extends NodeAction
+public class UpdateNodeAction extends NodeAction
 {
-    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
+
+    protected static Logger log = Logger.getLogger(UpdateNodeAction.class);
+
+    private static final String INLINE_CONTENT_TAG = "inputstream";
+
+    // 12Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 12288L;
 
     @Override
     public Node getClientNode()
+        throws NodeParsingException, IOException
     {
-        // No client node in a DELETE
-        return null;
+        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
+        return getNode(in);
     }
 
     @Override
     public Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, TransientException
-    {
-        try
-        {
-            // no one can delete the root or something in the root
-            VOSURI parentURI = nodeURI.getParentURI();
-            if (nodeURI.isRoot() || parentURI.isRoot())
-                throw new AccessControlException("permission denied");
+            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node node = pathResolver.getNode(nodePath,  true);
 
-            PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-            Node target = pathResolver.getNode(nodeURI, true);
-
-            log.debug("Deleting node: " + target.getPath());
-            return target;
-        }
-        catch (NodeNotFoundException ex)
-        {
-            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
-        }
+        return node;
     }
 
     @Override
     public void performNodeAction(Node clientNode, Node serverNode)
-        throws TransientException
-    {
-        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+            throws Exception {
+
+        List<NodeProperty> props = new ArrayList<>();
+        props.addAll(clientNode.getProperties());
+        serverNode.getReadOnlyGroup().clear();
+        serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
+        serverNode.getReadWriteGroup().clear();
+        serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
+        if (clientNode.owner != null) {
+            serverNode.owner = clientNode.owner;
+        }
+        if (clientNode.ownerID != null) {
+            serverNode.ownerID = clientNode.ownerID;
+        }
+        if (clientNode.ownerDisplay != null) {
+            serverNode.ownerDisplay = clientNode.ownerDisplay;
+        }
+        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
+        Node storedNode = nodePersistence.put(serverNode);
+
+        final NodeWriter nodeWriter = getNodeWriter();
+        syncOutput.setHeader("Content-Type", getMediaType());
+        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
     }
 
+    private Node getNode(InputStream content) throws IOException, NodeParsingException {
+        ByteCountInputStream sizeLimitInputStream =
+                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
+
+        NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
+
+        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
+        // ensure the path in the XML URI matches the path in the URL
+        String uriPath = nrr.vosURI.getPath();
+        if (uriPath.startsWith("/")) {
+            uriPath = uriPath.substring(1); // drop leading "/"
+        }
+        if (!uriPath.equals(nodePath))
+        {
+            throw new NodeParsingException("Node path in URI XML ("
+                    + uriPath
+                    + ") not equal to node path in URL ("
+                    + nodePath
+                    + ")");
+        }
+
+        return nrr.node;
+    }
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {
-        return null;
+        return (name, contentType, inputStream) -> {
+            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            content.name = INLINE_CONTENT_TAG;
+            content.value = inputStream;
+            return content;
+        };
     }
 }

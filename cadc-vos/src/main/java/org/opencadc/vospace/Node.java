@@ -69,7 +69,6 @@ package org.opencadc.vospace;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -252,20 +251,6 @@ public abstract class Node extends Entity implements Comparable<Node> {
             return nodeProperty.getValue();
         }
         return null;
-    }
-
-    /**
-     *
-     * @return path of the node
-     */
-    public String getPath() {
-        StringBuilder sb = new StringBuilder();
-        Node pp = parent;
-        while (pp != null) {
-            sb.append("/" + pp.getName());
-        }
-        sb.append(name);
-        return sb.toString();
     }
 
 }

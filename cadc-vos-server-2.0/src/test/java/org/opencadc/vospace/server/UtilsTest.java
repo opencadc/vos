@@ -67,17 +67,18 @@
 
 package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.VOSURI;
 
 /**
  * Utility methods
@@ -85,85 +86,108 @@ import org.opencadc.vospace.VOSURI;
  *  @author adriand
  *
  */
-public class Utils
+public class UtilsTest
 {
-    final Logger log = Logger.getLogger(Utils.class);
+    private static final Logger log = Logger.getLogger(UtilsTest.class);
 
-    /**
-     * Returns the path of the parent with no leading or trailing backslashes
-     * @param nodePath the path of the node
-     * @return the path of the parent
-     */
-    public static String getParentPath(final String nodePath) {
-        if (isRoot(nodePath)) {
-            return null; // there is no parent of the root
-        }
-        String np = nodePath;
-        if (np.endsWith("/")) {
-            np = np.substring(0, np.length() - 1);
-        }
-        if (nodePath.startsWith("/")) {
-            np = np.substring(1, np.length());
-        }
-        int index = np.lastIndexOf("/");
-        if (index > 0) {
-            return np.substring(0, index);
-        } else {
-            return null;
-        }
+    static {
+        Log4jInit.setLevel("org.opencadc.raven", Level.DEBUG);
     }
 
-    public static boolean isRoot(String nodePath) {
-        if (nodePath == null || nodePath.length() == 0 || nodePath.equals("/")) {
-            return true;
-        }
-        return false;
+    @Test
+    public void testGetParentPath() throws Exception {
+        Assert.assertNull(Utils.getParentPath(null));
+        Assert.assertNull(Utils.getParentPath("abc"));
+        Assert.assertNull(Utils.getParentPath("/abc"));
+        Assert.assertNull(Utils.getParentPath("/abc/"));
+        Assert.assertNull(Utils.getParentPath("abc/"));
+        Assert.assertEquals("abc", Utils.getParentPath("abc/def"));
+        Assert.assertEquals("abc", Utils.getParentPath("/abc/def"));
+        Assert.assertEquals("abc", Utils.getParentPath("abc/def/"));
+        Assert.assertEquals("abc/def", Utils.getParentPath("abc/def/ghi"));
+        Assert.assertEquals("abc/def", Utils.getParentPath("/abc/def/ghi"));
     }
 
-    /**
-     * Get a linked list of nodes from leaf to root.
-     *
-     * @return list of nodes, with leaf first and root last
-     */
-    public static LinkedList<Node> getNodeList(Node leaf) {
-        LinkedList<Node> nodes = new LinkedList<Node>();
-        Node cur = leaf;
-        while (cur != null) {
-            nodes.add(cur);
-            cur = cur.parent;
-        }
-        return nodes;
+    @Test
+    public void testIsRoot() throws Exception {
+        Assert.assertTrue(Utils.isRoot(""));
+        Assert.assertTrue(Utils.isRoot("/"));
+        Assert.assertTrue(Utils.isRoot(null));
+        Assert.assertFalse(Utils.isRoot("abc"));
+        Assert.assertFalse(Utils.isRoot("/abc"));
+        Assert.assertFalse(Utils.isRoot("abc/"));
     }
 
+    @Test
+    public  void testGetNodeList() throws Exception {
+        Node testNode = new ContainerNode("foo", false);
+        Assert.assertEquals(1, Utils.getNodeList(testNode).size());
 
-    public static String getPath(Node node) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(node.getName());
-        Node tmp = node.parent;
-        while (tmp != null) {
-            sb.insert(0, tmp.getName() + "/");
-            tmp = tmp.parent;
-        }
-        return sb.toString();
+        testNode = new ContainerNode("ghi", false);
+        testNode.parent = new ContainerNode("def", false);
+        testNode.parent.parent = new ContainerNode("abc", false);
+
+        LinkedList<Node> nodeList = Utils.getNodeList(testNode);
+        Assert.assertEquals(3, nodeList.size());
+        Assert.assertEquals("ghi", nodeList.get(0).getName());
+        Assert.assertEquals("def", nodeList.get(1).getName());
+        Assert.assertEquals("abc", nodeList.get(2).getName());
     }
 
+    @Test
+    public void testGetPath() throws Exception {
+        Node testNode = new ContainerNode("ghi", false);
+        testNode.parent = new ContainerNode("def", false);
+        testNode.parent.parent = new ContainerNode("abc", false);
 
-    /**
-     * Takes a set of old properties and updates it with a new set of properties. Essentially
-     * this means updating values or removing and adding elements. It is not a straight replacement.
-     * @param oldProps set of old Node Propertis that are being update
-     * @param newProps set of new Node Properties to be used for the update
-     * @return
-     */
-    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
-        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext();) {
-            NodeProperty newProperty = newIter.next();
-            if (oldProps.contains(newProperty)) {
-                oldProps.remove(newProperty);
-            }
-            if (!newProperty.isMarkedForDeletion()) {
-                oldProps.add(newProperty);
-            }
-        }
+        Assert.assertEquals("abc/def/ghi", Utils.getPath(testNode));
+        Assert.assertEquals("abc/def", Utils.getPath(testNode.parent));
+        Assert.assertEquals("abc", Utils.getPath(testNode.parent.parent));
+    }
+
+    @Test
+    public void testUpdateNodeProperties() throws Exception {
+        NodeProperty np1 = new NodeProperty(URI.create("prop1"), "val1");
+
+        Set<NodeProperty> oldProps = new HashSet<>();
+        Set<NodeProperty> newProps = new HashSet<>();
+
+        // no new or old properties
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(0, oldProps.size());
+
+        // add property
+        newProps.add(np1);
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(1, oldProps.size());
+        Assert.assertTrue(oldProps.contains(np1));
+
+        // no changes
+        newProps.clear();
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(1, oldProps.size());
+        Assert.assertTrue(oldProps.contains(np1));
+
+        // delete property
+        NodeProperty np1_del = new NodeProperty(URI.create("prop1")); // mark for deletion
+        newProps.add(np1_del);
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(0, oldProps.size());
+
+        // delete non existing property (this is the sanitize scenario in CreateNode action
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(0, oldProps.size());
+
+        // add new element and change value of existing
+        oldProps.add(np1);
+        NodeProperty np2 = new NodeProperty(URI.create("prop2"), "val2");
+        newProps.clear();
+        newProps.add(np2);
+        NodeProperty np1_update = new NodeProperty(URI.create("prop1"), "val1_updated");
+        newProps.add(np1_update);
+        Utils.updateNodeProperties(oldProps, newProps);
+        Assert.assertEquals(2, oldProps.size());
+        Assert.assertTrue(oldProps.contains(np1_update));
+        Assert.assertTrue(oldProps.contains(np2));
     }
 }

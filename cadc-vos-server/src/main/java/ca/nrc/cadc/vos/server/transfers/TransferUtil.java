@@ -247,7 +247,7 @@ public class TransferUtil
      * @throws MalformedURLException
      * @throws MalformedURLException
      */
-    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
+    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job, final LocalServiceURI localServiceURI)
         throws IOException, IllegalArgumentException, ResourceNotFoundException {
 
         // package view is redirected to /vault/pkg/<jobid>
@@ -263,7 +263,6 @@ public class TransferUtil
             sb.append("/").append(jobID).append("/run");
 
             RegistryClient regClient = new RegistryClient();
-            LocalServiceURI localServiceURI = new LocalServiceURI();
             URI serviceURI = localServiceURI.getURI();
             AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
 

@@ -69,29 +69,28 @@
 
 package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.net.TransientException;
-import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.VOSURI;
-import java.io.FileNotFoundException;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
- * Utility class to follow and resolve the target of link nodes in a local vospace.
+ * Utility class to follow and resolve the target of link nodes in a local vospace including checking
+ * permissions
  * 
  * If the last node on the path is a link node, it will not be resolved.
  * 
@@ -102,7 +101,7 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 public class PathResolver
 {
     
-    protected static final Logger LOG = Logger.getLogger(PathResolver.class);
+    protected static final Logger log = Logger.getLogger(PathResolver.class);
     
     private NodePersistence nodePersistence;
     private VOSpaceAuthorizer voSpaceAuthorizer;
@@ -144,47 +143,67 @@ public class PathResolver
 
     /**
      * Resolves a node URI following the links and returns the end node
-     * @param nodeURI
+     * @param nodePath
      * @param writable
      * @return
-     * @throws NodeNotFoundException
+     * @throws ResourceNotFoundException
      */
-    public Node getNode(VOSURI nodeURI, boolean writable) throws NodeNotFoundException {
+    public Node getNode(String nodePath, boolean writable) throws ResourceNotFoundException, LinkingException {
         Node node = nodePersistence.getRootNode();
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
 
         voSpaceAuthorizer.checkServiceStatus(writable);
 
-        Iterator<String> pathIter = Arrays.stream(nodeURI.getPath().split("/")).iterator();
-        while (pathIter.hasNext()){
-            node = nodePersistence.get((ContainerNode) node, pathIter.next());
+        if (nodePath == null) {
             if (writable) {
                 voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
             } else {
                 voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
             }
-
-            while (node instanceof LinkNode) {
-                LOG.debug("Resolving link node " + node.getPath());
-                if (visitCount > visitLimit)
-                {
-                    throw new IllegalArgumentException("Exceeded link limit.");
+        } else {
+            Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
+            while (pathIter.hasNext()) {
+                String path = pathIter.next();
+                log.debug("Loading element " + path + "of path " + nodePath);
+                node = nodePersistence.get((ContainerNode) node, path);
+                if (node == null) {
+                    log.debug("not found " + nodePath + " - '" + path + "' element missing");
+                    throw new ResourceNotFoundException("not found " + nodePath);
                 }
-                visitCount++;
-                LOG.debug("visit number " + visitCount);
+                IdentityManager im = AuthenticationUtil.getIdentityManager();
+                node.owner = im.toSubject(node.ownerID);
+                node.ownerDisplay = im.toDisplayString(node.owner);
+                log.debug("owner: " + node.ownerDisplay + ", isPublic: " + node.isPublic + ", readGroups:" + node.getReadOnlyGroup().size() + ", readWriteGroups: " + node.getReadWriteGroup().size());
+                if (writable) {
+                    voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
+                } else {
+                    voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+                }
+                LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
 
-                LinkNode linkNode = (LinkNode) node;
-                PathResolver.validateTargetURI(linkNode);
-                // follow the link
-                node = getNode(new VOSURI(linkNode.getTarget()), writable);
-            }
-            if (node instanceof ContainerNode) {
-                continue;
-            }
-            if (node instanceof DataNode) {
-                if (pathIter.hasNext()) {
-                    throw new IllegalArgumentException("Illegal path"); //TODO - different exception
+                while (node instanceof LinkNode) {
+                    log.debug("Resolving link node " + Utils.getPath(node));
+                    if (visitCount > visitLimit) {
+                        throw new LinkingException("Exceeded link limit.");
+                    }
+                    visitCount++;
+                    log.debug("visit number " + visitCount);
+
+                    LinkNode linkNode = (LinkNode) node;
+                    VOSURI targetURI = validateTargetURI(linkNode);
+
+                    // follow the link
+                    // TODO need to check this is the same vault
+                    node = getNode(targetURI.getPath(), writable);
+                }
+                if (node instanceof ContainerNode) {
+                    continue;
+                }
+                if (node instanceof DataNode) {
+                    if (pathIter.hasNext()) {
+                        throw new IllegalArgumentException("Illegal path"); //TODO - different exception
+                    }
                 }
             }
         }
@@ -192,12 +211,12 @@ public class PathResolver
         //TODO - is this still required?
         // HACK: this causes a query string embedded in the VOSURI (eg within LinkNode)
         // to be tacked onto the DataNode and added to the resulting data URL... TBD.
-        if (nodeURI.getQuery() != null && node instanceof DataNode)
-        {
-            String fragment = null;
-            if (nodeURI.getFragment() != null) {
-                //TODO not sure how to pass the query and the fragment around with the node
-                throw new UnsupportedOperationException("TODO");
+//        if (nodeURI.getQuery() != null && node instanceof DataNode)
+//        {
+//            String fragment = null;
+//            if (nodeURI.getFragment() != null) {
+//                //TODO not sure how to pass the query and the fragment around with the node
+//                throw new UnsupportedOperationException("TODO");
                 //fragment = uri.getFragment();
 
 //            try
@@ -219,9 +238,9 @@ public class PathResolver
 //            {
 //                throw new LinkingException("Unable to append query part to " + node.getUri());
 //            }
-            }
-        }
-        LOG.debug("returning node: " + node.getPath());
+//            }
+//        }
+        log.debug("returning node: " + Utils.getPath(node));
         return node;
     }
 
@@ -234,47 +253,18 @@ public class PathResolver
      * @throws LinkingException If the target is non vospace, not local, or
      * an invalid URI.
      */
-    public static VOSURI validateTargetURI(LinkNode linkNode)
+    public VOSURI validateTargetURI(LinkNode linkNode)
     {
-        VOSURI nodeURI = LocalServiceURI.getURI(linkNode);
-        URI targetURI = linkNode.getTarget();
+        LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
+        VOSURI nodeURI = localServiceURI.getURI(linkNode);
+        VOSURI targetURI = new VOSURI(linkNode.getTarget());
 
-        LOG.debug("Validating target: " + targetURI.toASCIIString());
-        // check the scheme
-        if (nodeURI.getScheme() == null ||
-                targetURI.getScheme() == null ||
-                !nodeURI.getScheme().equals(targetURI.getScheme()))
-        {
-            throw new IllegalArgumentException("Unsupported link target: " + targetURI);
+        log.debug("Validating target: " + targetURI.toString());
+
+        if (targetURI.getServiceURI() != localServiceURI.getVOSBase().getServiceURI()) {
+            throw new IllegalArgumentException("External link " + targetURI.getServiceURI().toASCIIString());
         }
-        
-        try
-        {
-            VOSURI returnURI = new VOSURI(targetURI);
-            
-            String nodeAuth = nodeURI.getAuthority();
-            String targetAuth = returnURI.getAuthority();
-            
-            if (nodeAuth == null || targetAuth == null)
-            {
-                throw new LinkingException("Non-local VOSpace target: " + targetURI);
-            }
-            
-            nodeAuth = nodeAuth.replace('~', '!');
-            targetAuth = targetAuth.replace('~', '!');
-            
-            // authorities must match
-            if (!nodeAuth.equals(targetAuth))
-            {                
-                throw new LinkingException("Non-local VOSpace target: " + targetURI);
-            }
-            
-            return returnURI;
-        }
-        catch (Exception e)
-        {
-            throw new IllegalArgumentException("Invalid linking target URI: " + targetURI, e);
-        }
+        return targetURI;
     }
     
     /**
@@ -293,141 +283,3 @@ public class PathResolver
     }
 
 }
-
-//
-//
-//    /**
-//     * Resolve the path of the node identified by parameter uri.
-//     *
-//     * @param uri node URI
-//     * @return node instance
-//     * @throws NodeNotFoundException If node not found
-//     * @throws LinkingException If node link exception
-//     * @throws TransientException If a transient error occurs
-//     */
-//public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException, TransientException
-//{
-//    return resolveWithReadPermissionCheck(uri, null, false);
-//}
-//
-//    public Node resolveWithReadPermissionCheck(VOSURI uri,
-//                                               VOSpaceAuthorizer readAuthorizer,
-//                                               boolean resolveLeafNodes)
-//            throws NodeNotFoundException, LinkingException, TransientException
-//    {
-//        visitCount = 0;
-//        visitedPaths = new ArrayList<>();
-//        Node n = doResolve(uri, readAuthorizer);
-//        if (resolveLeafNodes)
-//            return resolveLeafNodeWithReadPermissionCheck(uri, n, readAuthorizer);
-//        return n;
-//    }
-//
-//    /**
-//     * Resolve the path/node identified by parameter uri.  Check read permission on
-//     * each link node resolution. This method expects that the argument node was
-//     * returned from resolveWithReadPermissionCheck with resolveLeafNodes == false.
-//     *
-//     * @param uri leaf node identifier to resolve
-//     * @param node node
-//     * @return resolved node
-//     * @throws NodeNotFoundException If node is not found
-//     * @throws LinkingException If linked URI is invalid
-//     * @throws TransientException If a transient error occurs
-//     */
-//    public Node resolveLeafNodeWithReadPermissionCheck(VOSURI uri, Node node,
-//                                                       VOSpaceAuthorizer readAuthorizer)
-//            throws NodeNotFoundException, LinkingException, TransientException
-//    {
-//
-//        // resolve the leaf linknodes
-//        while (node instanceof LinkNode)
-//        {
-//            LinkNode linkNode = (LinkNode) node;
-//            PathResolver.validateTargetURI(linkNode);
-//            // follow the link
-//            node = doResolve(new VOSURI(linkNode.getTarget()), readAuthorizer);
-//        }
-//
-//
-//        return node;
-//    }
-//
-//
-//    /**
-//     * Resolves a node URI following potential links
-//     * @param vosuri requested path
-//     * @param readAuthorizer authorizer to use
-//     * @return resolved node
-//     * @throws NodeNotFoundException If node not found
-//     * @throws LinkingException If a transient error occurs
-//     */
-//    private Node doResolve(VOSURI vosuri,  VOSpaceAuthorizer readAuthorizer)
-//            throws NodeNotFoundException, LinkingException, TransientException
-//    {
-//        if (visitCount > visitLimit)
-//        {
-//            throw new LinkingException("Exceeded link limit.");
-//        }
-//        visitCount++;
-//        LOG.debug("visit number " + visitCount);
-//
-//        Node node;
-//        if (readAuthorizer != null)
-//        {
-//            try
-//            {
-//                node = (Node) readAuthorizer.getReadPermission(vosuri.getURI());
-//            }
-//            catch(FileNotFoundException ex)
-//            {
-//                throw new NodeNotFoundException("not found: " + vosuri);
-//            }
-//        }
-//        else
-//        {
-//            node = nodePersistence.get(vosuri, true, resolveMetadata);
-//        }
-//        LOG.debug("found node: " + node.getPath());
-//
-//        // extract the paths
-//        String requestedPath = vosuri.getPath();
-//        String nodePath = node.getPath();
-//        LOG.debug("[requested][resulting] path: [" + requestedPath + "][" + nodePath + "]");
-//
-//        // check circular reference
-//        if (visitedPaths.contains(nodePath))
-//        {
-//            LOG.debug("Found circular link: " + nodePath);
-//            throw new LinkingException("Circular link reference: " + nodePath);
-//        }
-//        visitedPaths.add(nodePath);
-//        LOG.debug("Added " + nodePath + " to visited list.");
-//
-//        if (!requestedPath.equals(nodePath))
-//        {
-//            if (!(node instanceof LinkNode))
-//            {
-//                throw new NodeNotFoundException(vosuri.toString());
-//            }
-//            LinkNode linkNode = (LinkNode) node;
-//            String remainingPath = requestedPath.substring(nodePath.length());
-//            LOG.debug("remainingPath: " + remainingPath);
-//
-//            VOSURI linkURI = validateTargetURI(linkNode);
-//            LOG.debug("linkURI: " + linkURI.toString());
-//            try
-//            {
-//                VOSURI resolvedURI = new VOSURI(linkURI.toString() + remainingPath);
-//                LOG.debug("resolvedURI: " + resolvedURI.toString());
-//                return doResolve(resolvedURI, readAuthorizer);
-//            }
-//            catch (URISyntaxException e)
-//            {
-//                throw new LinkingException("Invalid link URI");
-//            }
-//        }
-//        LOG.debug("returning node: " + node.getPath());
-//        return node;
-//    }
-// */

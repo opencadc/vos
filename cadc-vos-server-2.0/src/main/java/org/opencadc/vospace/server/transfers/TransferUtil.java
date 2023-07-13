@@ -91,6 +91,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.VOS;
@@ -98,7 +100,6 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
 import org.opencadc.vospace.server.DataView;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.VOSpacePluginFactory;
 import org.opencadc.vospace.server.Views;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
@@ -108,14 +109,8 @@ public class TransferUtil
 {
     private static Logger log = Logger.getLogger(TransferUtil.class);
 
-    public static final URI VOSPACE_RESOURCE_ID;
-    static
-    {
-        LocalServiceURI serviceURI = new LocalServiceURI();
-        VOSPACE_RESOURCE_ID = serviceURI.getURI();
-    }
-
     public static final String ANONYMOUS_USER = "anonUser";
+    private String componentID;
 
     // name of the resolved path to the data node in the job results
     public static final String DATA_NODE = "dataNode";
@@ -151,12 +146,12 @@ public class TransferUtil
         return scheme;
     }
 
-    public static URL getSynctransParamURL(String scheme, VOSURI uri)
+    public static URL getSynctransParamURL(String scheme, VOSURI uri, LocalServiceURI localServiceURI)
     {
-        return getSynctransParamURL(scheme, uri, null, null);
+        return getSynctransParamURL(scheme, uri, null, null, localServiceURI);
     }
 
-    public static URL getSynctransParamURL(String scheme, VOSURI uri, AuthMethod forceAuthMethod, RegistryClient reg)
+    public static URL getSynctransParamURL(String scheme, VOSURI uri, AuthMethod forceAuthMethod, RegistryClient reg, LocalServiceURI localServiceURI)
     {
         if (reg == null)
             reg = new RegistryClient();
@@ -192,7 +187,7 @@ public class TransferUtil
             sb.append("&DIRECTION=").append(NetUtil.encode(Direction.pullFromVoSpaceValue));
             sb.append("&PROTOCOL=").append(NetUtil.encode(protocol.getUri().toString()));
 
-            URL serviceURL = reg.getServiceURL(VOSPACE_RESOURCE_ID, Standards.VOSPACE_SYNC_21, am);
+            URL serviceURL = reg.getServiceURL(localServiceURI.getURI(), Standards.VOSPACE_SYNC_21, am);
             URL url = new URL(serviceURL.toExternalForm() + sb.toString());
 
             log.debug("DataView URL: " + am + " : " + url);
@@ -208,11 +203,17 @@ public class TransferUtil
 
 
 
-    public static List<Protocol> getTransferEndpoints(final Transfer transfer, final Job job, List<Parameter> additionalParameters)
-            throws Exception
-    {
-        VOSpacePluginFactory storageFactory = new VOSpacePluginFactory();
-        TransferGenerator transferGenerator = storageFactory.createTransferGenerator();
+    public List<Protocol> getTransferEndpoints(final Transfer transfer, final Job job, List<Parameter> additionalParameters)
+            throws Exception {
+        //TODO - review
+        String jndiTransferGenerator = componentID + ".transferGenerator";
+        TransferGenerator transferGenerator = null;
+        try {
+            Context ctx = new InitialContext();
+            transferGenerator = (TransferGenerator) ctx.lookup(jndiTransferGenerator);
+        } catch (Exception oops) {
+            log.error("No TransferGenerator implementation found with JNDI key " + jndiTransferGenerator, oops);
+        }
 
         // CADC-10640: For now, only 1 target is supported for all vospace functions.
         // When zip & tar views are supported, there will be more than one, and this code
@@ -243,7 +244,7 @@ public class TransferUtil
      * @throws MalformedURLException
      * @throws MalformedURLException
      */
-    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job)
+    public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job, LocalServiceURI localServiceURI)
         throws IOException, IllegalArgumentException, ResourceNotFoundException {
 
         // package view is redirected to /vault/pkg/<jobid>
@@ -259,7 +260,6 @@ public class TransferUtil
             sb.append("/").append(jobID).append("/run");
 
             RegistryClient regClient = new RegistryClient();
-            LocalServiceURI localServiceURI = new LocalServiceURI();
             URI serviceURI = localServiceURI.getURI();
             AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
 

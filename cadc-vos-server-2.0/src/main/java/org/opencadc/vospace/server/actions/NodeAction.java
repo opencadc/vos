@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,37 +65,28 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.server.web.actions;
+package org.opencadc.vospace.server.actions;
 
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.RestAction;
-import ca.nrc.cadc.util.MultiValuedProperties;
-import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.AbstractView;
+import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.VOSpacePluginFactory;
 import org.opencadc.vospace.server.Views;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.AccessControlContext;
 import java.security.AccessControlException;
-import java.security.AccessController;
-import java.util.Arrays;
-import java.util.Iterator;
-import javax.security.auth.Subject;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOS;
-import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 
@@ -123,34 +114,15 @@ public abstract class NodeAction extends RestAction {
 
     // some subclasses may need to determine hostname, request path, etc
     protected VOSpaceAuthorizer voSpaceAuthorizer;
-    protected VOSpaceAuthorizer partialPathVOSpaceAuthorizer;
     protected NodePersistence nodePersistence;
-    protected VOSURI nodeURI;
+    protected String nodePath;
     protected String stylesheetReference;
     protected String detailLevel;
     protected boolean resolveMetadata = true;
-
-    // immutable state set in constructor
-    protected final MultiValuedProperties config;
-
-    // constructor for unit tests with no config/init
-    NodeAction(boolean init) {
-        super();
-        this.config = null;
-    }
+    protected LocalServiceURI localServiceURI;
 
     protected NodeAction() {
         super();
-        this.config = InitAction.getConfig();
-    }
-
-    /**
-     * Set the URI for this action.
-     * @param nodeURI URI of the node
-     */
-    public void setNodeURI(VOSURI nodeURI)
-    {
-        this.nodeURI = nodeURI;
     }
 
     /**
@@ -160,16 +132,6 @@ public abstract class NodeAction extends RestAction {
     public void setVOSpaceAuthorizer(VOSpaceAuthorizer voSpaceAuthorizer)
     {
         this.voSpaceAuthorizer = voSpaceAuthorizer;
-    }
-
-    /**
-     * Set the authorizer that allows partial paths.
-     * @param partialPathVOSpaceAuthorizer authorizer for partial paths
-     */
-    public void setPartialPathVOSpaceAuthorizer(
-            VOSpaceAuthorizer partialPathVOSpaceAuthorizer)
-    {
-        this.partialPathVOSpaceAuthorizer = partialPathVOSpaceAuthorizer;
     }
 
     /**
@@ -288,11 +250,11 @@ public abstract class NodeAction extends RestAction {
      *
      * @return the applicable persistent (server) Node
      * @throws AccessControlException if permission is denied
-     * @throws FileNotFoundException if the target node does not exist
+     * @throws ResourceNotFoundException if the target node does not exist
      * @throws LinkingException if a container link in the path could not be resolved
      */
     protected abstract Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, LinkingException, TransientException;
+        throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException;
 
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
@@ -307,9 +269,19 @@ public abstract class NodeAction extends RestAction {
         //String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
         //context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
 
-        VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-        NodePersistence np = pluginFactory.createNodePersistence();
-        setNodePersistence(np);
+        String jndiNodePersistence = componentID + ".nodePersistence";
+        try {
+            Context ctx = new InitialContext();
+            setNodePersistence((NodePersistence) ctx.lookup(jndiNodePersistence));
+            localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
+        } catch (Exception oops) {
+            log.error("No NodePersistence implementation found with JNDI key " + jndiNodePersistence, oops);
+        }
+
+        VOSpaceAuthorizer authorizer = new VOSpaceAuthorizer(true);
+        authorizer.setNodePersistence(nodePersistence);
+        setVOSpaceAuthorizer(authorizer);
+        nodePath = syncInput.getPath();
 
         // Create the client version of the node to be used for the operation
         Node clientNode = getClientNode();
@@ -331,35 +303,5 @@ public abstract class NodeAction extends RestAction {
         end = System.currentTimeMillis();
         log.debug("performNodeAction() elapsed time: " + (end - start) + "ms");
     }
-//
-//    protected Node getNode(VOSURI nodeURI, boolean writable) throws NodeNotFoundException {
-//        Node node = nodePersistence.getRootNode();
-//        AccessControlContext acContext = AccessController.getContext();
-//        Subject subject = Subject.getSubject(acContext);
-//
-//        voSpaceAuthorizer.checkServiceStatus(writable);
-//
-//        Iterator<String> pathIter = Arrays.stream(nodeURI.getPath().split("/")).iterator();
-//        while (pathIter.hasNext()){
-//            node = nodePersistence.get((ContainerNode) node, pathIter.next());
-//            if (writable) {
-//                voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
-//            } else {
-//                voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
-//            }
-//            if (node instanceof ContainerNode) {
-//               continue;
-//            }
-//            if (node instanceof DataNode) {
-//                if (pathIter.hasNext()) {
-//                    throw new IllegalArgumentException("Illegal path"); //TODO - different exception
-//                }
-//            }
-//            if (node instanceof LinkNode) {
-//                node = resolve.
-//            }
-//        }
-//        return node;
-//    }
 
 }

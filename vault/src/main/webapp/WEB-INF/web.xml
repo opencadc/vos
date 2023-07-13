@@ -45,19 +45,19 @@
         </init-param>
         <init-param>
             <param-name>get</param-name>
-            <param-value>org.opencadc.vospace.server.web.actions.GetNodeAction</param-value>
+            <param-value>GetNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>put</param-name>
-            <param-value>org.opencadc.vospace.server.web.actions.CreateNodeAction</param-value>
+            <param-value>CreateNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>post</param-name>
-            <param-value>org.opencadc.vospace.server.web.actions.UpdateNodeAction</param-value>
+            <param-value>UpdateNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>delete</param-name>
-            <param-value>org.opencadc.vospace.server.web.actions.DeleteNodeAction</param-value>
+            <param-value>DeleteNodeAction</param-value>
         </init-param>
         <load-on-startup>2</load-on-startup>
     </servlet>

@@ -79,19 +79,13 @@ import org.opencadc.vospace.VOS;
  * Enumeration of type types of faults that can occur
  * with node processing.
  *
- *  @author majorb
+ * @author majorb
+ * @author adriand
  *
  */
 public enum NodeFault
 {
     // IVOA Standard Faults - not an exhaustive list
-//    InternalFault
-//    (
-//        new Status(500,
-//                   VOS.IVOA_FAULT_INTERNAL_FAULT,
-//                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails",
-//                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
-//    ),
     PermissionDenied
     (
         new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)
@@ -126,6 +120,7 @@ public enum NodeFault
     (
         new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)
     ),
+//TODO not sure still needed.
 //    RequestEntityTooLarge
 //    (
 //        new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)
@@ -146,9 +141,6 @@ public enum NodeFault
     (
         new NotAuthenticatedException("NotAuthenticated")
     );
-//    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
-//    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
-//    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
     private Exception status;
     private String message;

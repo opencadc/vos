@@ -65,30 +65,36 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.server.web.actions;
+package org.opencadc.vospace.server.actions;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
-import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.AccessControlException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 
 /**
- * Class to perform the creation of a Node.
+ * Class to perform the creation of a Node action.
  *
  * @author majorb
  * @author adriand
@@ -113,21 +119,11 @@ public class CreateNodeAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, TransientException
-    {
-        try
-        {
-            VOSURI parentURI = nodeURI.getParentURI();
+            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
+            String parentPath = Utils.getParentPath(nodePath);
             PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-            Node parentNode = pathResolver.getNode(parentURI, true);
-
+            Node parentNode = pathResolver.getNode(parentPath, true);
             return parentNode;
-        }
-        catch (NodeNotFoundException ex)
-        {
-            // parent does not exist: FAIL
-            throw new FileNotFoundException("not found: " + nodeURI.getURI().toASCIIString());
-        }
     }
 
     @Override
@@ -136,26 +132,45 @@ public class CreateNodeAction extends NodeAction
 
         if (serverNode instanceof ContainerNode)
         {
-            ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
-
-            //TODO - what is this for?
-            nodePersistence.get(parent, clientNode.getName()); // slightly better than getChildren
-            for (Node n : parent.getNodes())
-            {
-                if (n.getName().equals(clientNode.getName()))
-                    throw new ResourceAlreadyExistsException(nodeURI.getURI().toASCIIString());
+            ContainerNode parent = (ContainerNode) serverNode;
+            nodePersistence.get(parent, clientNode.getName());
+            ResourceIterator<Node> children = nodePersistence.iterator(parent, null, null);
+            while (children.hasNext()) {
+                if (children.next().getName().equals(clientNode.getName()))
+                    throw new ResourceAlreadyExistsException("Already exists: " + nodePath);
             }
 
             clientNode.parent = parent;
+            clientNode.owner = AuthenticationUtil.getCurrentSubject();
+            IdentityManager im = AuthenticationUtil.getIdentityManager();
+            clientNode.ownerID = im.toOwner(clientNode.owner);
+            if (parent.inheritPermissions) {
+                clientNode.isPublic = parent.isPublic;
+                clientNode.getReadOnlyGroup().clear();
+                clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
+                clientNode.getReadWriteGroup().clear();
+                clientNode.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+             } else {
+                if (clientNode.isPublic == null) {
+                    clientNode.isPublic = false;
+                }
+            }
+            log.debug("Putting node " + clientNode.getName() + " owner " + clientNode.owner);
+            // sanitize properties
+            Set<NodeProperty> np = new HashSet<>();
+            Utils.updateNodeProperties(np, clientNode.getProperties());
+            clientNode.getProperties().clear();
+            clientNode.getProperties().addAll(np);
             Node storedNode = nodePersistence.put(clientNode);
 
             // return the node in xml format
             final NodeWriter nodeWriter = getNodeWriter();
             syncOutput.setHeader("Content-Type", getMediaType());
-            nodeWriter.write(LocalServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
+            nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
+        } else {
+            log.debug("parent is not a container: " + Utils.getPath(clientNode));
+            throw NodeFault.ContainerNotFound.getStatus();
         }
-        log.debug("parent is not a container: " + clientNode.getPath());
-        throw NodeFault.ContainerNotFound.getStatus();
     }
 
     private Node getNode(InputStream content) throws IOException, NodeParsingException {
@@ -163,16 +178,17 @@ public class CreateNodeAction extends NodeAction
                 new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
 
         NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
-
         log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
 
         // ensure the path in the XML URI matches the path in the URL
-        if (!nrr.vosURI.getPath().equals(nodeURI.getPath()))
+        String newPath = nrr.vosURI.getPath();
+        newPath = newPath.replaceAll("/$", "").replaceAll("^/", "");
+        if (!newPath.equals(nodePath))
         {
             throw new NodeParsingException("Node path in URI XML ("
                     + nrr.vosURI.getPath()
                     + ") not equal to node path in URL ("
-                    + nodeURI.getPath()
+                    + nodePath
                     + ")");
         }
 

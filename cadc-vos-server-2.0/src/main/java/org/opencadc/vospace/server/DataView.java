@@ -199,7 +199,8 @@ public class DataView extends AbstractView implements TransferView
             else
                 am = forceAuthMethod;
         }
-        return TransferUtil.getSynctransParamURL(scheme, LocalServiceURI.getURI(node), am, null);
+        LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
+        return TransferUtil.getSynctransParamURL(scheme, localServiceURI.getURI(node), am, null, localServiceURI);
     }
 
     /**

@@ -65,8 +65,10 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.server.web.actions;
+package org.opencadc.vospace.server.actions;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
@@ -74,14 +76,11 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.ObjectUtil;
 import ca.nrc.cadc.util.StringUtil;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkingException;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -91,25 +90,20 @@ import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.server.AbstractView;
-import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.PersistenceOptions;
 import org.opencadc.vospace.server.Utils;
-import org.opencadc.vospace.server.VOSpacePluginFactory;
 import org.opencadc.vospace.server.Views;
-import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Class to perform the retrieval of a Node.
  *
  * @author majorb
+ * @author adriand
  */
 public class GetNodeAction extends NodeAction
 {
@@ -137,18 +131,11 @@ public class GetNodeAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, LinkingException, TransientException
+        throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException
     {
         // resolve any container links
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        try
-        {
-            return pathResolver.getNode(nodeURI, false);
-        }
-        catch (NodeNotFoundException e)
-        {
-            throw new FileNotFoundException(e.getMessage());
-        }
+        return pathResolver.getNode(nodePath, false);
     }
 
     @Override
@@ -159,36 +146,9 @@ public class GetNodeAction extends NodeAction
 
         if (serverNode instanceof ContainerNode)
         {
-            String path = syncInput.getPath();
-            log.debug("path: " + path);
-            if (path == null) {
-                throw new ResourceNotFoundException("No path");
-            }
-
-            LocalServiceURI localServiceURI = new LocalServiceURI();
-            String vosURIPrefix = localServiceURI.getVOSBase().toString();
-            String nodeURI = vosURIPrefix + "/" + path;
-            VOSURI vosURI = new VOSURI(nodeURI);
-
-            //TODO - why separate connection?
-            VOSpacePluginFactory pluginFactory = new VOSpacePluginFactory();
-            NodePersistence np = pluginFactory.createNodePersistence();
-            VOSpaceAuthorizer authorizer = new VOSpaceAuthorizer(true);
-            authorizer.setNodePersistence(np);
-            PathResolver resolver = new PathResolver(nodePersistence, authorizer);
-
-            Node node;
-            try {
-                node = resolver.getNode(vosURI, true);
-            } catch (NodeNotFoundException e) {
-                throw new ResourceNotFoundException("Not Found");
-            }
+            ContainerNode node = (ContainerNode)serverNode;
 
             log.debug("node: " + node);
-            // only data nodes (link nodes resolved above)
-            if (!(node instanceof DataNode)) {
-                throw new IllegalArgumentException("Not a DataNode");
-            }
 
             // Paging parameters
             String startURI = syncInput.getParameter(QUERY_PARAM_URI);
@@ -220,8 +180,7 @@ public class GetNodeAction extends NodeAction
                 }
             }
 
-            ContainerNode cn = (ContainerNode) serverNode;
-            VOSURI startURIObject = null;
+            String startPath = null;
 
             // parse the pageLimit
             Integer pageLimit = null;
@@ -243,8 +202,8 @@ public class GetNodeAction extends NodeAction
             // validate startURI
             if (StringUtil.hasText(startURI))
             {
-                startURIObject = new VOSURI(startURI);
-                if (!vosURI.equals(startURIObject.getParentURI()))
+                startPath = new VOSURI(startURI).getPath();
+                if (!nodePath.equals(Utils.getParentPath(startPath)))
                 {
                     throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
@@ -254,17 +213,25 @@ public class GetNodeAction extends NodeAction
             start = System.currentTimeMillis();
             // request for a subset of children
             if (sortParamURI == null && sortAsc == null) {
-                ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node.parent, null, null);
-            } else if (nodePersistence instanceof PersistenceOptions) {
-                // non-standard sorting options
-                ((PersistenceOptions) nodePersistence).getChildren(
-                        cn, startURIObject, pageLimit, sortParamURI, sortAsc, resolveMetadata);
+                IdentityManager im = AuthenticationUtil.getIdentityManager();
+                ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node, pageLimit, startURI);
+                try {
+                    while (resourceIterator.hasNext()) {
+                        Node child = resourceIterator.next();
+                        child.owner = im.toSubject(node.ownerID);
+                        child.ownerDisplay = im.toDisplayString(node.owner);
+                        node.getNodes().add(child);
+                    }
+                } finally {
+                    resourceIterator.close();
+                }
+                resourceIterator.close();
             } else {
-                throw new IllegalArgumentException("Alternate sorting options not supported.");
+                throw new IllegalArgumentException("Alternate sorting options not supported (yet?).");
             }
             log.debug(String.format(
                 "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                    resolveMetadata, cn.getNodes().size(), startURI, pageLimit));
+                    resolveMetadata, node.getNodes().size(), startURI, pageLimit));
             
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
@@ -273,7 +240,7 @@ public class GetNodeAction extends NodeAction
             {
                 // add a property to child nodes if they are visible to
                 // this request
-                doTagChildrenAccessRights(cn);
+                doTagChildrenAccessRights(node);
             }
         }
 
@@ -322,16 +289,18 @@ public class GetNodeAction extends NodeAction
             if (VOS.Detail.min.getValue().equals(detailLevel))
                 serverNode.getProperties().clear();
 
-            // if the request has gone through a link, change the
+            //TODO if the request has gone through a link, change the
             // node paths back to be the 'unresolved path'
-            if (!nodeURI.getPath().equals(serverNode.getPath()))
-            {
-                log.debug("returning node paths back to one that include a link");
-                unresolveNodePaths(nodeURI, serverNode);
-            }
+//            if (!nodePath.equals(Utils.getPath(serverNode)))
+//            {
+//                log.debug("returning node paths back to one that include a link");
+//                //TODO - fix below
+//                unresolveNodePaths(new VOSURI(nodePath), serverNode);
+//            }
             fillAcceptsAndProvides(serverNode);
+            syncOutput.setCode(200);
             syncOutput.setHeader("Content-Type", getMediaType());
-            nodeWriter.write(LocalServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
+            nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
         }
         else
         {
@@ -479,6 +448,7 @@ public class GetNodeAction extends NodeAction
             return;
         }
 
+        //TODO
 //        for (AbstractView view : viewList)
 //        {
 //            if (view.canAccept(node))

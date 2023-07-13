@@ -70,6 +70,7 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.io.ResourceIterator;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
 import java.net.URI;
@@ -88,9 +89,15 @@ import org.opencadc.vospace.VOSURI;
  * nodes in the persistent layer.
  * 
  * @author majorb
+ * @author pdowler
  */
 public interface NodePersistence
 {
+    /**
+     * Returns the resource ID for the service in the form of a URI (ivo://{authority}/{name})
+     * @return service ID
+     */
+    URI getResourceID();
 
     /**
      * Get the container node that represents the root of all other nodes.
@@ -121,7 +128,7 @@ public interface NodePersistence
      * @return the child node or null if it does not exist
      * @throws TransientException
      */
-    Node get(ContainerNode parent, String name) throws TransientException, NodeNotFoundException;
+    Node get(ContainerNode parent, String name) throws TransientException;
 
     /**
      * Load additional node properties for the specified node. Note: this was here
@@ -181,7 +188,7 @@ public interface NodePersistence
      * @throws TransientException If a transient error occurs
      */
     Node updateProperties(Node node, List<NodeProperty> properties)
-        throws TransientException;
+        throws TransientException, NodeNotSupportedException;
 
     /**
      * Update the node metadata after a transfer (put) is complete.
@@ -226,135 +233,4 @@ public interface NodePersistence
      */
     void copy(Node src, ContainerNode destination)
         throws TransientException;
-    
 }
-
-
-/**
- * Find the node with the specified path. The returned node(s) will include
- * some properties (typically inherently single-valued properties like owner,
- * content-length, content-type, content-encoding, content-MD5) plus all
- * properties needed to make authorization checks (isPublic, group-read, and
- * group-write). Remaining properties and child nodes can be filled in as
- * needed with getProperties(Node) and getChildren(ContainerNode).
- *
- * @param vos a node identifier
- * @return the specified node
- * @throws NodeNotFoundException If node not found
- * @throws TransientException If transient network problems
- */
-//    Node get(VOSURI vos)
-//        throws NodeNotFoundException, TransientException;
-
-/**
- * Find the node with the specified path. The returned node(s) will include
- * some properties (typically inherently single-valued properties like owner,
- * content-length, content-type, content-encoding, content-MD5) plus all
- * properties needed to make authorization checks (isPublic, group-read, and
- * group-write). Remaining properties and child nodes can be filled in as
- * needed with getProperties(Node) and getChildren(ContainerNode). When partial
- * path is allowed (only allowed for a LinkNode) and the path of the identified
- * node cannot be resolved to a leaf node, and the last resolved node in the
- * partial path must be a LinkNode, and is returned.
- *
- * @param vos a node identifier
- * @param allowPartialPaths true if partial path is allowed, false otherwise
- * @return the specified node
- * @throws NodeNotFoundException If node not found
- * @throws TransientException If transient network problems
- */
-//Node get(VOSURI vos, boolean allowPartialPaths)
-//    throws NodeNotFoundException, TransientException;
-
-/**
- * Find the node with the specified path. The returned node(s) will include
- * some properties (typically inherently single-valued properties like owner,
- * content-length, content-type, content-encoding, content-MD5) plus all
- * properties needed to make authorization checks (isPublic, group-read, and
- * group-write). Remaining properties and child nodes can be filled in as
- * needed with getProperties(Node) and getChildren(ContainerNode). When partial
- * path is allowed (only allowed for a LinkNode) and the path of the identified
- * node cannot be resolved to a leaf node, and the last resolved node in the
- * partial path must be a LinkNode, and is returned.
- *
- * @param vos a node identifier
- * @param allowPartialPaths true if partial path is allowed, false otherwise
- * @param resolveMetadata If false, return raw system values for resolvable
- *                        metadata.
- * @return the specified node
- * @throws NodeNotFoundException If node not found
- * @throws TransientException If transient network problems
- */
-//Node get(VOSURI vos, boolean allowPartialPaths, boolean resolveMetadata)
-//    throws NodeNotFoundException, TransientException;
-
-//
-//    /**
-//     * Load all the children of a container.
-//     *
-//     * @param node the container node
-//     * @throws TransientException If transient network errors
-//     */
-//    void getChildren(ContainerNode node)
-//            throws TransientException;
-//
-//    /**
-//     * Load some of the children of a container. If <code>uri</code> is null, a
-//     * server-selected first node is used. If <code>limit</code> is null or
-//     * exceeds an arbitrary internal value, the internal value is used.
-//     *
-//     * @param parent parent container
-//     * @param start URI of the first child
-//     * @param limit children limit
-//     * @throws TransientException If transient network error
-//     */
-//    void getChildren(ContainerNode parent, VOSURI start, Integer limit)
-//            throws TransientException;
-//
-//    /**
-//     * Load all the children of a container based on the detail level.
-//     *
-//     * @param node container node
-//     * @param resolveMetadata false, do not look up the owner subject so as to reduce
-//     *     the time spent on the current service.
-//     * @throws TransientException If transient network error
-//     */
-//    void getChildren(ContainerNode node, boolean resolveMetadata)
-//            throws TransientException;
-//
-//    /**
-//     * Load some of the children of a container.
-//     *
-//     * @param parent parent container
-//     * @param start URI of first child. If null, server-selected first node is used.
-//     * @param limit children limit. If null or exceeds an arbitrary internal value,
-//     *       the internal value is used.
-//     * @param resolveMetadata is false, do not look up the owner subject so as to reduce
-//     *      the time spent on the current service.
-//     * @throws TransientException If transient network error
-//     */
-//    void getChildren(ContainerNode parent, VOSURI start, Integer limit, boolean resolveMetadata)
-//            throws TransientException;
-//
-//
-//    /**
-//     * Load a single child of a container.
-//     *
-//     * @param parent parent container node
-//     * @param name name of the child node to load
-//     * @throws TransientException If transient network error
-//     */
-//    void getChild(ContainerNode parent, String name)
-//            throws TransientException;
-//
-//    /**
-//     * Load a single child of a container.
-//     *
-//     * @param parent parent container node
-//     * @param name name of the child node to load
-//     * @param resolveMetadata If false, return raw system values for resolvable
-//     *                        metadata.
-//     * @throws TransientException If a transient error occurs
-//     */
-//    void getChild(ContainerNode parent, String name, boolean resolveMetadata)
-//            throws TransientException;

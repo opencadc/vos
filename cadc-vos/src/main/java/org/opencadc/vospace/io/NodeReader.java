@@ -95,6 +95,8 @@ import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -219,6 +221,9 @@ public class NodeReader implements XmlProcessor {
         } catch (JDOMException e) {
             throw new NodeParsingException("XML failed schema validation: " + e.getMessage(), e);
         }
+        XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
+        String xmlString = outputter.outputString(document);
+        log.debug("******* xml doc+ " + xmlString);
 
         // Root element and namespace of the Document
         Element root = document.getRootElement();
@@ -566,6 +571,7 @@ public class NodeReader implements XmlProcessor {
 
             // the property value
             String value = property.getText();
+            log.debug("******* value for " + propertyUri + " is " + value);
 
             // xsi:nil set to true indicates Property is to be deleted
             String xsiNil = property.getAttributeValue("nil", xsiNamespace);
