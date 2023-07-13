@@ -67,30 +67,24 @@
 
 package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.util.StringUtil;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.VOSURI;
 
 /**
  * Utility methods
  *
- *  @author adriand
- *
+ * @author adriand
  */
-public class Utils
-{
+public class Utils {
     final Logger log = Logger.getLogger(Utils.class);
 
     /**
      * Returns the path of the parent with no leading or trailing backslashes
+     *
      * @param nodePath the path of the node
      * @return the path of the parent
      */
@@ -151,12 +145,13 @@ public class Utils
     /**
      * Takes a set of old properties and updates it with a new set of properties. Essentially
      * this means updating values or removing and adding elements. It is not a straight replacement.
+     *
      * @param oldProps set of old Node Propertis that are being update
      * @param newProps set of new Node Properties to be used for the update
      * @return
      */
     public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
-        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext();) {
+        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
             NodeProperty newProperty = newIter.next();
             if (oldProps.contains(newProperty)) {
                 oldProps.remove(newProperty);

@@ -70,13 +70,6 @@ package org.opencadc.vospace.server.actions;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.RestAction;
-import org.opencadc.vospace.io.JsonNodeWriter;
-import org.opencadc.vospace.io.NodeParsingException;
-import org.opencadc.vospace.io.NodeWriter;
-import org.opencadc.vospace.server.AbstractView;
-import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.Views;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -87,6 +80,13 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.io.JsonNodeWriter;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.AbstractView;
+import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.Views;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 
@@ -127,49 +127,51 @@ public abstract class NodeAction extends RestAction {
 
     /**
      * Set the authorizer to be used by this action.
+     *
      * @param voSpaceAuthorizer VOSpace authorizer
      */
-    public void setVOSpaceAuthorizer(VOSpaceAuthorizer voSpaceAuthorizer)
-    {
+    public void setVOSpaceAuthorizer(VOSpaceAuthorizer voSpaceAuthorizer) {
         this.voSpaceAuthorizer = voSpaceAuthorizer;
     }
 
     /**
      * Set the persistence to be used by this action.
+     *
      * @param nodePersistence persistence to be used
      */
-    public void setNodePersistence(NodePersistence nodePersistence)
-    {
+    public void setNodePersistence(NodePersistence nodePersistence) {
         this.nodePersistence = nodePersistence;
     }
 
     /**
      * Set the stylesheet reference.
-     * @param stylesheetReference  The URI reference string to the stylesheet
-     *                             location.
+     *
+     * @param stylesheetReference The URI reference string to the stylesheet
+     *                            location.
      */
-    public void setStylesheetReference(String stylesheetReference)
-    {
+    public void setStylesheetReference(String stylesheetReference) {
         this.stylesheetReference = stylesheetReference;
     }
 
     /**
      * Set the detail level.
+     *
      * @param detailLevel The value.
      */
-    public void setDetailLevel(String detailLevel)
-    {
+    public void setDetailLevel(String detailLevel) {
         this.detailLevel = detailLevel;
     }
 
     /**
      * Set the value for resolve metadata.
+     *
      * @param resolveMetadata The value.
      */
-    public void setResolveMetadata(boolean resolveMetadata) { this.resolveMetadata = resolveMetadata; }
+    public void setResolveMetadata(boolean resolveMetadata) {
+        this.resolveMetadata = resolveMetadata;
+    }
 
-    protected String getMediaType()
-    {
+    protected String getMediaType() {
         String mediaType = DEFAULT_FORMAT;
         if (syncInput.getParameter("Accept") != null) {
             mediaType = syncInput.getParameter("Accept");
@@ -180,23 +182,21 @@ public abstract class NodeAction extends RestAction {
         return mediaType;
     }
 
-    protected NodeWriter getNodeWriter()
-    {
+    protected NodeWriter getNodeWriter() {
         String mt = getMediaType();
-        if (JSON_FORMAT.equals(mt))
+        if (JSON_FORMAT.equals(mt)) {
             return new JsonNodeWriter();
+        }
         return new NodeWriter();
     }
 
     /**
      * Return the view requested by the client, or null if none specified.
      *
-     * @return  Instance of an AbstractView.
-     *
+     * @return Instance of an AbstractView.
      * @throws Exception If the object could not be constructed.
      */
-    protected AbstractView getView() throws Exception
-    {
+    protected AbstractView getView() throws Exception {
         if (syncInput.getParameter(QUERY_PARAM_VIEW) == null) {
             return null;
         }
@@ -204,16 +204,14 @@ public abstract class NodeAction extends RestAction {
         URI viewReference = URI.create(syncInput.getParameter(QUERY_PARAM_VIEW));
 
         // the default view is the same as no view
-        if (viewReference.equals(VOS.VIEW_DEFAULT))
-        {
+        if (viewReference.equals(VOS.VIEW_DEFAULT)) {
             return null;
         }
 
         final Views views = new Views();
         AbstractView view = views.getView(viewReference);
 
-        if (view == null)
-        {
+        if (view == null) {
             throw new UnsupportedOperationException(
                     "No view configured matching reference: " + viewReference);
         }
@@ -237,29 +235,29 @@ public abstract class NodeAction extends RestAction {
      * by the client.
      *
      * @return the default implementation returns null
-     * @throws URISyntaxException if URI Syntax parsing problem
+     * @throws URISyntaxException   if URI Syntax parsing problem
      * @throws NodeParsingException if Node parsing problem
-     * @throws IOException if generic IO problem
+     * @throws IOException          if generic IO problem
      */
     protected abstract Node getClientNode()
-        throws URISyntaxException, NodeParsingException, IOException;
+            throws URISyntaxException, NodeParsingException, IOException;
 
     /**
      * Perform an authorization check for the given node and return (if applicable)
      * the persistent version of the Node.
      *
      * @return the applicable persistent (server) Node
-     * @throws AccessControlException if permission is denied
+     * @throws AccessControlException    if permission is denied
      * @throws ResourceNotFoundException if the target node does not exist
-     * @throws LinkingException if a container link in the path could not be resolved
+     * @throws LinkingException          if a container link in the path could not be resolved
      */
     protected abstract Node doAuthorizationCheck()
-        throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException;
+            throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException;
 
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
      *
-     * Calling abstract method getClientNode()
+     * <p>Calling abstract method getClientNode()
      * Calling abstract method doAuthorizationCheck()
      * Calling abstract method performNodeAction()
      */
@@ -285,10 +283,11 @@ public abstract class NodeAction extends RestAction {
 
         // Create the client version of the node to be used for the operation
         Node clientNode = getClientNode();
-        if (clientNode != null)
+        if (clientNode != null) {
             log.debug("client node: " + clientNode.getName());
-        else
+        } else {
             log.debug("no client node");
+        }
 
         // perform the authorization check
         long start = System.currentTimeMillis();

@@ -68,7 +68,6 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.NotAuthenticatedException;
-import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceLockedException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
@@ -81,108 +80,61 @@ import org.opencadc.vospace.VOS;
  *
  * @author majorb
  * @author adriand
- *
  */
-public enum NodeFault
-{
+public enum NodeFault {
     // IVOA Standard Faults - not an exhaustive list
-    PermissionDenied
-    (
-        new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)
-    ),
-    InvalidURI
-    (
-        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_URI)
-    ),
-    NodeNotFound
-    (
-        new ResourceNotFoundException(VOS.IVOA_FAULT_NODE_NOT_FOUND)
-    ),
-    DuplicateNode
-    (
-        new ResourceAlreadyExistsException(VOS.IVOA_FAULT_DUPLICATE_NODE)
-    ),
-    InvalidToken
-    (
-        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_TOKEN)
-    ),
-    InvalidArgument
-    (
-        new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG)
-    ),
-    TypeNotSupported
-    (
-        new IllegalArgumentException(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED)
-    ),
-
+    PermissionDenied(new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)),
+    InvalidURI(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_URI)),
+    NodeNotFound(new ResourceNotFoundException(VOS.IVOA_FAULT_NODE_NOT_FOUND)),
+    DuplicateNode(new ResourceAlreadyExistsException(VOS.IVOA_FAULT_DUPLICATE_NODE)),
+    InvalidToken(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_TOKEN)),
+    InvalidArgument(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG)),
+    TypeNotSupported(new IllegalArgumentException(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED)),
     // Other Faults
-    ContainerNotFound
-    (
-        new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)
-    ),
-//TODO not sure still needed.
-//    RequestEntityTooLarge
-//    (
-//        new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)
-//    ),
-    UnreadableLinkTarget
-    (
-        new ResourceNotFoundException(VOS.CADC_FAULT_UNREADABLE_LINK)
-    ),
-    ServiceBusy
-    (
-        new TransientException(VOS.CADC_FAULT_SERVICE_BUSY)
-    ),
-    NodeLocked
-    (
-        new ResourceLockedException(VOS.CADC_FAULT_NODE_LOCKED)
-    ),
-    NotAuthenticated
-    (
-        new NotAuthenticatedException("NotAuthenticated")
-    );
+    ContainerNotFound(new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)),
+    //TODO not sure still needed.
+    //    RequestEntityTooLarge(new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)),
+    UnreadableLinkTarget(new ResourceNotFoundException(VOS.CADC_FAULT_UNREADABLE_LINK)),
+    ServiceBusy(new TransientException(VOS.CADC_FAULT_SERVICE_BUSY)),
+    NodeLocked(new ResourceLockedException(VOS.CADC_FAULT_NODE_LOCKED)),
+    NotAuthenticated(new NotAuthenticatedException("NotAuthenticated"));
 
     private Exception status;
     private String message;
     private boolean serviceFailure;
 
-    private NodeFault(Exception ex)
-    {
+    private NodeFault(Exception ex) {
         this.status = ex;
         this.serviceFailure = false;
     }
 
-    public Exception getStatus()
-    {
+    public Exception getStatus() {
         return status;
     }
 
-    public String toString()
-    {
+    public String toString() {
         return name();
     }
 
-    public String getMessage()
-    {
-        if (message != null) { return message; }
+    public String getMessage() {
+        if (message != null) {
+            return message;
+        }
         if (status != null) {
             return status.getMessage();
         }
         return null;
     }
 
-    public void setMessage(String message)
-    {
+    public void setMessage(String message) {
         this.message = message;
     }
 
-    public boolean isServiceFailure()
-    {
+    public boolean isServiceFailure() {
         return serviceFailure;
     }
 
-    public void setServiceFailure(boolean serviceFailure)
-    {
+    public void setServiceFailure(boolean serviceFailure) {
         this.serviceFailure = serviceFailure;
     }
 

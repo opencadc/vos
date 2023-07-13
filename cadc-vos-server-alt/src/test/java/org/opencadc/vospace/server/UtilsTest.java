@@ -86,8 +86,7 @@ import org.opencadc.vospace.NodeProperty;
  *  @author adriand
  *
  */
-public class UtilsTest
-{
+public class UtilsTest {
     private static final Logger log = Logger.getLogger(UtilsTest.class);
 
     static {
@@ -169,8 +168,8 @@ public class UtilsTest
         Assert.assertTrue(oldProps.contains(np1));
 
         // delete property
-        NodeProperty np1_del = new NodeProperty(URI.create("prop1")); // mark for deletion
-        newProps.add(np1_del);
+        NodeProperty np1Del = new NodeProperty(URI.create("prop1")); // mark for deletion
+        newProps.add(np1Del);
         Utils.updateNodeProperties(oldProps, newProps);
         Assert.assertEquals(0, oldProps.size());
 
@@ -183,11 +182,11 @@ public class UtilsTest
         NodeProperty np2 = new NodeProperty(URI.create("prop2"), "val2");
         newProps.clear();
         newProps.add(np2);
-        NodeProperty np1_update = new NodeProperty(URI.create("prop1"), "val1_updated");
-        newProps.add(np1_update);
+        NodeProperty np1Update = new NodeProperty(URI.create("prop1"), "val1_updated");
+        newProps.add(np1Update);
         Utils.updateNodeProperties(oldProps, newProps);
         Assert.assertEquals(2, oldProps.size());
-        Assert.assertTrue(oldProps.contains(np1_update));
+        Assert.assertTrue(oldProps.contains(np1Update));
         Assert.assertTrue(oldProps.contains(np2));
     }
 }

@@ -64,6 +64,7 @@
  *
  ************************************************************************
  */
+
 package org.opencadc.vospace.server.auth;
 
 import ca.nrc.cadc.ac.Role;
@@ -95,16 +96,15 @@ import org.opencadc.vospace.server.Utils;
 /**
  * Authorization implementation for VO Space.
  *
- * Important:  This class cannot be re-used between HTTP Requests--A new
+ * <p>Important:  This class cannot be re-used between HTTP Requests--A new
  * instance must be created each time.
  *
- * The nodePersistence object must be set for every instance.
+ * <p>The nodePersistence object must be set for every instance.
  *
  * @author majorb
  * @author adriand
  */
-public class VOSpaceAuthorizer
-{
+public class VOSpaceAuthorizer {
     protected static final Logger log = Logger.getLogger(VOSpaceAuthorizer.class);
 
     public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
@@ -114,7 +114,7 @@ public class VOSpaceAuthorizer
     public static final String READ_ONLY_MSG = "System is in read-only mode for maintainence";
     //public static final String READ_WRITE = "ReadWrite";
     private boolean readable = true;
-    private boolean writable  = true;
+    private boolean writable = true;
     //private boolean resolveMetadata = true;
     private boolean disregardLocks = false;
 
@@ -122,25 +122,20 @@ public class VOSpaceAuthorizer
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
-    public VOSpaceAuthorizer(boolean resolveMetadata)
-    {
+    public VOSpaceAuthorizer(boolean resolveMetadata) {
         initState();
         //this.resolveMetadata = resolveMetadata;
     }
 
     // this method will only downgrade the state to !readable and !writable
     // and will never restore them to true - that is intentional
-    private void initState()
-    {
+    private void initState() {
         String key = VOSpaceAuthorizer.MODE_KEY;
         String val = System.getProperty(key);
-        if (OFFLINE.equals(val))
-        {
+        if (OFFLINE.equals(val)) {
             readable = false;
             writable = false;
-        }
-        else if (READ_ONLY.equals(val))
-        {
+        } else if (READ_ONLY.equals(val)) {
             writable = false;
         }
     }
@@ -150,8 +145,7 @@ public class VOSpaceAuthorizer
         if (toWrite && !writable) {
             throw new IllegalStateException(READ_ONLY_MSG);
         }
-        if (!readable)
-        {
+        if (!readable) {
             throw new IllegalStateException(OFFLINE_MSG);
         }
     }
@@ -159,30 +153,28 @@ public class VOSpaceAuthorizer
     /**
      * Given the groupURI, determine if the user identified by the subject
      * has membership.
-     * @param groups The list of groups for a Node
+     *
+     * @param groups  The list of groups for a Node
      * @param subject The user's subject
      * @return True if the user is a member
      */
-    private boolean hasMembership(Set<URI> groups, Subject subject)
-    {
-        if (subject.getPrincipals().isEmpty())
+    private boolean hasMembership(Set<URI> groups, Subject subject) {
+        if (subject.getPrincipals().isEmpty()) {
             return false;
+        }
 
-        if (groups == null || groups.isEmpty())
+        if (groups == null || groups.isEmpty()) {
             return false;
+        }
 
         Exception firstFail = null;
         RuntimeException wrapException = null;
-        try
-        {
+        try {
             // need credentials in the subject to call GMS
-            if (CredUtil.checkCredentials(subject))
-            {
+            if (CredUtil.checkCredentials(subject)) {
                 // make gms calls to see if the user has group membership
-                for (URI groupURI : groups)
-                {
-                    try
-                    {
+                for (URI groupURI : groups) {
+                    try {
                         log.debug("Checking GMS on groupURI: " + groupURI);
                         GroupURI guri = new GroupURI(groupURI);
                         URI serviceID = guri.getServiceID();
@@ -190,36 +182,31 @@ public class VOSpaceAuthorizer
                         GMSClient gmsClient = new GMSClient(serviceID);
                         boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
                         profiler.checkpoint("gmsClient.ismember");
-                        if (isMember)
+                        if (isMember) {
                             return true;
-                    } catch(UserNotFoundException ex)
-                    {
+                        }
+                    } catch (UserNotFoundException ex) {
                         log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null)
-                        {
+                        if (firstFail == null) {
                             firstFail = ex;
                             wrapException = new AccessControlException("failed to check membership with group service: " + ex);
                         }
-                    }
-                    catch(IOException ex)
-                    {
+                    } catch (IOException ex) {
                         log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null)
-                        {
+                        if (firstFail == null) {
                             firstFail = ex;
                             wrapException = new RuntimeException("failed to check membership with group service", ex);
                         }
                     }
                 }
             }
-        } 
-        catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) 
-        {
+        } catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) {
             wrapException = new RuntimeException("failed credentials check", ex);
         }
 
-        if (wrapException != null)
+        if (wrapException != null) {
             throw wrapException;
+        }
 
         return false;
     }
@@ -227,42 +214,38 @@ public class VOSpaceAuthorizer
     // HACK: need to create a privaledged subject for use with CredClient calls
     // but this needs to be configurable somehow...
     // for now: compatibility with current system config
-//    private Subject createOpsSubject()
-//    {
-//        File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
-//        return SSLUtil.createSubject(pemFile);
-//    }
+    //    private Subject createOpsSubject()
+    //    {
+    //        File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
+    //        return SSLUtil.createSubject(pemFile);
+    //    }
 
     /**
      * Check if the specified subject is the owner of the node.
      *
      * @param subject subject
-     * @param node node to check
+     * @param node    node to check
      * @return true of the current subject is the owner, otherwise false
      */
-    private boolean isOwner(Node node, Subject subject)
-    {
+    private boolean isOwner(Node node, Subject subject) {
         Subject owner = node.owner;
-        if (owner == null)
-        {
+        if (owner == null) {
             throw new IllegalStateException("BUG: no owner found for node: " + node);
         }
 
         Set<Principal> ownerPrincipals = owner.getPrincipals();
         Set<Principal> callerPrincipals = subject.getPrincipals();
 
-        for (Principal oPrin : ownerPrincipals)
-        {
-            for (Principal cPrin : callerPrincipals)
-            {
-                if (log.isDebugEnabled())
-                {
+        for (Principal ownerPrin : ownerPrincipals) {
+            for (Principal callerPrin : callerPrincipals) {
+                if (log.isDebugEnabled()) {
                     log.debug(String.format(
                             "Checking owner of node \"%s\" (owner=\"%s\") where user=\"%s\"",
-                            node.getName(), oPrin, cPrin));
+                            node.getName(), ownerPrin, callerPrin));
                 }
-                if (AuthenticationUtil.equals(oPrin, cPrin))
+                if (AuthenticationUtil.equals(ownerPrin, callerPrin)) {
                     return true; // caller===owner
+                }
             }
         }
         return false;
@@ -271,32 +254,29 @@ public class VOSpaceAuthorizer
     /**
      * Check the read permission on a single node.
      *
-     * For full node authorization, use getReadPermission(Node).
+     * <p>For full node authorization, use getReadPermission(Node).
      *
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    public boolean hasSingleNodeReadPermission(Node node, Subject subject)
-    {
+    public boolean hasSingleNodeReadPermission(Node node, Subject subject) {
         log.debug("checkSingleNodeReadPermission: " + Utils.getPath(node));
 
-        if ((node.isPublic != null) && node.isPublic)
+        if ((node.isPublic != null) && node.isPublic) {
             return true; // OK
+        }
 
         // return true if this is the owner of the node or if a member
         // of the groupRead or groupWrite property
-        if (subject != null)
-        {
-            if (isOwner(node, subject))
-            {
+        if (subject != null) {
+            if (isOwner(node, subject)) {
                 log.debug("Node owner granted read permission.");
                 return true; // OK
             }
 
             checkDelegation(node, subject);
 
-            if (log.isDebugEnabled())
-            {
+            if (log.isDebugEnabled()) {
                 log.debug(String.format(
                         "Checking group read permission on node \"%s\" (groupRead=\"%s\")",
                         node.getName(), node.getReadOnlyGroup()));
@@ -309,8 +289,7 @@ public class VOSpaceAuthorizer
 
             // the GROUPWRITE property means the user has read+write permission
             // so check that too
-            if (log.isDebugEnabled())
-            {
+            if (log.isDebugEnabled()) {
                 log.debug(String.format(
                         "Checking group write permission on node \"%s\" (groupWrite=\"%s\")",
                         node.getName(), node.getReadWriteGroup()));
@@ -326,25 +305,21 @@ public class VOSpaceAuthorizer
     /**
      * Check the write permission on a single node.
      *
-     * For full node authorization, use getWritePermission(Node).
+     * <p>For full node authorization, use getWritePermission(Node).
      *
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    public boolean hasSingleNodeWritePermission(Node node, Subject subject)
-    {
-        if (subject != null)
-        {
-            if (isOwner(node, subject))
-            {
+    public boolean hasSingleNodeWritePermission(Node node, Subject subject) {
+        if (subject != null) {
+            if (isOwner(node, subject)) {
                 log.debug("Node owner granted write permission.");
                 return true; // OK
             }
 
             checkDelegation(node, subject);
 
-            if (log.isDebugEnabled())
-            {
+            if (log.isDebugEnabled()) {
                 log.debug(String.format(
                         "Checking group write permission on node \"%s\" (groupWrite=\"%s\")",
                         node.getName(), node.getReadWriteGroup()));
@@ -355,7 +330,7 @@ public class VOSpaceAuthorizer
         }
         return false;
     }
-    
+
     /**
      * Return false if mask blocks read
      */
@@ -375,9 +350,9 @@ public class VOSpaceAuthorizer
             return true;
         }
         log.debug("mask disallows read: " + mask);
-        return false;  
+        return false;
     }
-    
+
     /**
      * Return false if mask blocks write
      */
@@ -397,58 +372,52 @@ public class VOSpaceAuthorizer
             return true;
         }
         log.debug("mask disallows write: " + mask);
-        return false;  
+        return false;
     }
 
-    public void setDisregardLocks(boolean disregardLocks)
-    {
+    public void setDisregardLocks(boolean disregardLocks) {
         this.disregardLocks = disregardLocks;
     }
 
     /**
      * Node NodePersistence Getter.
      *
-     * @return  NodePersistence instance.
+     * @return NodePersistence instance.
      */
-    public NodePersistence getNodePersistence()
-    {
+    public NodePersistence getNodePersistence() {
         return nodePersistence;
     }
 
     /**
      * Node NodePersistence Setter.
      *
-     * @param nodePersistence       NodePersistence instance.
+     * @param nodePersistence NodePersistence instance.
      */
-    public void setNodePersistence(final NodePersistence nodePersistence)
-    {
+    public void setNodePersistence(final NodePersistence nodePersistence) {
         this.nodePersistence = nodePersistence;
     }
 
-    /** check for delegation cookie and, if present, does an authorization
+    /**
+     * check for delegation cookie and, if present, does an authorization
      * against it.
-     * @param node - node authorization is performed against
+     *
+     * @param node    - node authorization is performed against
      * @param subject - user
      * @throws AccessControlException - unauthorized access
      */
-    private void checkDelegation(Node node, Subject subject) throws AccessControlException
-    {
+    private void checkDelegation(Node node, Subject subject) throws AccessControlException {
         Set<SignedToken> tokens = subject.getPublicCredentials(SignedToken.class);
-        for (SignedToken token : tokens)
-        {
+        for (SignedToken token : tokens) {
             VOSURI scope = new VOSURI(token.getScope());
             LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
             VOSURI tmp = lsURI.getURI(node);
-            while (tmp != null)
-            {
-                if (scope.equals(tmp))
-                {
+            while (tmp != null) {
+                if (scope.equals(tmp)) {
                     return;
                 }
                 tmp = tmp.getParentURI();
             }
-            String msg = "Scoped search (" + scope + ") on node (" +
-                    Utils.getPath(node) + ")- accessed denied";
+            String msg = "Scoped search (" + scope + ") on node (" + Utils.getPath(node) + ")- accessed denied";
             log.debug(msg);
             throw new AccessControlException(msg);
         }

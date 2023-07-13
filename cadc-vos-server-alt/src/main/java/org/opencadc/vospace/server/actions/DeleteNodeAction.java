@@ -83,13 +83,11 @@ import org.opencadc.vospace.server.Utils;
  * @author majorb
  * @author adriand
  */
-public class DeleteNodeAction extends NodeAction
-{
+public class DeleteNodeAction extends NodeAction {
     private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
     @Override
-    public Node getClientNode()
-    {
+    public Node getClientNode() {
         // No client node in a DELETE
         return null;
     }
@@ -97,8 +95,9 @@ public class DeleteNodeAction extends NodeAction
     @Override
     public Node doAuthorizationCheck()
             throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
-        if (Utils.isRoot(nodePath) || Utils.isRoot(Utils.getParentPath(nodePath)))
+        if (Utils.isRoot(nodePath) || Utils.isRoot(Utils.getParentPath(nodePath))) {
             throw new AccessControlException("permission denied");
+        }
 
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         Node target = pathResolver.getNode(nodePath, true);
@@ -107,8 +106,7 @@ public class DeleteNodeAction extends NodeAction
 
     @Override
     public void performNodeAction(Node clientNode, Node serverNode)
-        throws TransientException
-    {
+            throws TransientException {
         log.debug("Deleting node: " + Utils.getPath(serverNode));
         nodePersistence.delete(serverNode); // as per doAuthorizationCheck
     }

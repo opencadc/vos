@@ -87,8 +87,7 @@ public interface TransferGenerator {
 
     /**
      * Request a list of endpoints for the given transfer request information.
-     *
-     * This method returns a list of endpoints and thus supports the case where 
+     * This method returns a list of endpoints and thus supports the case where
      * the storage system has multiple copies of a file or multiple locations
      * in which a file can be stored or retrieved from. Implementations are also
      * responsible for filtering out unsupported  protocol/securityMethod combinations

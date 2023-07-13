@@ -1,71 +1,71 @@
 /*
-************************************************************************
-*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
-**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
-*
-*  (c) 2018.                            (c) 2018.
-*  Government of Canada                 Gouvernement du Canada
-*  National Research Council            Conseil national de recherches
-*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
-*  All rights reserved                  Tous droits réservés
-*
-*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
-*  expressed, implied, or               énoncée, implicite ou légale,
-*  statutory, of any kind with          de quelque nature que ce
-*  respect to the software,             soit, concernant le logiciel,
-*  including without limitation         y compris sans restriction
-*  any warranty of merchantability      toute garantie de valeur
-*  or fitness for a particular          marchande ou de pertinence
-*  purpose. NRC shall not be            pour un usage particulier.
-*  liable in any event for any          Le CNRC ne pourra en aucun cas
-*  damages, whether direct or           être tenu responsable de tout
-*  indirect, special or general,        dommage, direct ou indirect,
-*  consequential or incidental,         particulier ou général,
-*  arising from the use of the          accessoire ou fortuit, résultant
-*  software.  Neither the name          de l'utilisation du logiciel. Ni
-*  of the National Research             le nom du Conseil National de
-*  Council of Canada nor the            Recherches du Canada ni les noms
-*  names of its contributors may        de ses  participants ne peuvent
-*  be used to endorse or promote        être utilisés pour approuver ou
-*  products derived from this           promouvoir les produits dérivés
-*  software without specific prior      de ce logiciel sans autorisation
-*  written permission.                  préalable et particulière
-*                                       par écrit.
-*
-*  This file is part of the             Ce fichier fait partie du projet
-*  OpenCADC project.                    OpenCADC.
-*
-*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
-*  you can redistribute it and/or       vous pouvez le redistribuer ou le
-*  modify it under the terms of         modifier suivant les termes de
-*  the GNU Affero General Public        la “GNU Affero General Public
-*  License as published by the          License” telle que publiée
-*  Free Software Foundation,            par la Free Software Foundation
-*  either version 3 of the              : soit la version 3 de cette
-*  License, or (at your option)         licence, soit (à votre gré)
-*  any later version.                   toute version ultérieure.
-*
-*  OpenCADC is distributed in the       OpenCADC est distribué
-*  hope that it will be useful,         dans l’espoir qu’il vous
-*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
-*  without even the implied             GARANTIE : sans même la garantie
-*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
-*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
-*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
-*  General Public License for           Générale Publique GNU Affero
-*  more details.                        pour plus de détails.
-*
-*  You should have received             Vous devriez avoir reçu une
-*  a copy of the GNU Affero             copie de la Licence Générale
-*  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
-*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
-*                                       <http://www.gnu.org/licenses/>.
-*
-*  $Revision: 4 $
-*
-************************************************************************
-*/
+ ************************************************************************
+ *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+ **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+ *
+ *  (c) 2018.                            (c) 2018.
+ *  Government of Canada                 Gouvernement du Canada
+ *  National Research Council            Conseil national de recherches
+ *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+ *  All rights reserved                  Tous droits réservés
+ *
+ *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+ *  expressed, implied, or               énoncée, implicite ou légale,
+ *  statutory, of any kind with          de quelque nature que ce
+ *  respect to the software,             soit, concernant le logiciel,
+ *  including without limitation         y compris sans restriction
+ *  any warranty of merchantability      toute garantie de valeur
+ *  or fitness for a particular          marchande ou de pertinence
+ *  purpose. NRC shall not be            pour un usage particulier.
+ *  liable in any event for any          Le CNRC ne pourra en aucun cas
+ *  damages, whether direct or           être tenu responsable de tout
+ *  indirect, special or general,        dommage, direct ou indirect,
+ *  consequential or incidental,         particulier ou général,
+ *  arising from the use of the          accessoire ou fortuit, résultant
+ *  software.  Neither the name          de l'utilisation du logiciel. Ni
+ *  of the National Research             le nom du Conseil National de
+ *  Council of Canada nor the            Recherches du Canada ni les noms
+ *  names of its contributors may        de ses  participants ne peuvent
+ *  be used to endorse or promote        être utilisés pour approuver ou
+ *  products derived from this           promouvoir les produits dérivés
+ *  software without specific prior      de ce logiciel sans autorisation
+ *  written permission.                  préalable et particulière
+ *                                       par écrit.
+ *
+ *  This file is part of the             Ce fichier fait partie du projet
+ *  OpenCADC project.                    OpenCADC.
+ *
+ *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+ *  you can redistribute it and/or       vous pouvez le redistribuer ou le
+ *  modify it under the terms of         modifier suivant les termes de
+ *  the GNU Affero General Public        la “GNU Affero General Public
+ *  License as published by the          License” telle que publiée
+ *  Free Software Foundation,            par la Free Software Foundation
+ *  either version 3 of the              : soit la version 3 de cette
+ *  License, or (at your option)         licence, soit (à votre gré)
+ *  any later version.                   toute version ultérieure.
+ *
+ *  OpenCADC is distributed in the       OpenCADC est distribué
+ *  hope that it will be useful,         dans l’espoir qu’il vous
+ *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+ *  without even the implied             GARANTIE : sans même la garantie
+ *  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+ *  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+ *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+ *  General Public License for           Générale Publique GNU Affero
+ *  more details.                        pour plus de détails.
+ *
+ *  You should have received             Vous devriez avoir reçu une
+ *  a copy of the GNU Affero             copie de la Licence Générale
+ *  General Public License along         Publique GNU Affero avec
+ *  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+ *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+ *                                       <http://www.gnu.org/licenses/>.
+ *
+ *  $Revision: 4 $
+ *
+ ************************************************************************
+ */
 
 package org.opencadc.vospace.server.transfers;
 
@@ -105,8 +105,7 @@ import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
 
-public class TransferUtil
-{
+public class TransferUtil {
     private static Logger log = Logger.getLogger(TransferUtil.class);
 
     public static final String ANONYMOUS_USER = "anonUser";
@@ -117,67 +116,51 @@ public class TransferUtil
     public static final String LINK_NODE = "linkNode";
 
     /**
-     *
      * @param protocol
      * @return
      */
-    public static String getScheme(final String protocol)
-    {
+    public static String getScheme(final String protocol) {
         String scheme = null;
 
-        if (protocol.equals(VOS.PROTOCOL_HTTP_GET) ||
-                protocol.equals(VOS.PROTOCOL_HTTP_PUT))
-        {
+        if (protocol.equals(VOS.PROTOCOL_HTTP_GET) || protocol.equals(VOS.PROTOCOL_HTTP_PUT)) {
             scheme = "http";
-        }
-        else if (protocol.equals(VOS.PROTOCOL_HTTPS_GET) ||
-                protocol.equals(VOS.PROTOCOL_HTTPS_PUT))
-        {
+        } else if (protocol.equals(VOS.PROTOCOL_HTTPS_GET) || protocol.equals(VOS.PROTOCOL_HTTPS_PUT)) {
             scheme = "https";
-        }
-        else if (protocol.equals(VOS.PROTOCOL_SSHFS)) {
+        } else if (protocol.equals(VOS.PROTOCOL_SSHFS)) {
             scheme = "sshfs";
-        }
-        else
-        {
+        } else {
             log.debug("unknown protocol: " + protocol);
         }
 
         return scheme;
     }
 
-    public static URL getSynctransParamURL(String scheme, VOSURI uri, LocalServiceURI localServiceURI)
-    {
+    public static URL getSynctransParamURL(String scheme, VOSURI uri, LocalServiceURI localServiceURI) {
         return getSynctransParamURL(scheme, uri, null, null, localServiceURI);
     }
 
-    public static URL getSynctransParamURL(String scheme, VOSURI uri, AuthMethod forceAuthMethod, RegistryClient reg, LocalServiceURI localServiceURI)
-    {
-        if (reg == null)
+    public static URL getSynctransParamURL(String scheme, VOSURI uri, AuthMethod forceAuthMethod, RegistryClient reg, LocalServiceURI localServiceURI) {
+        if (reg == null) {
             reg = new RegistryClient();
-        try
-        {
+        }
+        try {
             AccessControlContext acContext = AccessController.getContext();
             Subject subject = Subject.getSubject(acContext);
             AuthMethod am = forceAuthMethod;
-            if (am == null)
+            if (am == null) {
                 am = AuthenticationUtil.getAuthMethod(subject); // default: perserve
-            if (am == null)
+            }
+            if (am == null) {
                 am = AuthMethod.ANON;
-
+            }
             log.debug("getSynctransParamURL: " + scheme + " " + am + " " + uri);
             StringBuilder sb = new StringBuilder();
             Protocol protocol = null;
-            if ("http".equalsIgnoreCase(scheme))
-            {
+            if ("http".equalsIgnoreCase(scheme)) {
                 protocol = new Protocol(VOS.PROTOCOL_HTTP_GET);
-            }
-            else if ("https".equalsIgnoreCase(scheme))
-            {
+            } else if ("https".equalsIgnoreCase(scheme)) {
                 protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            }
-            else
-            {
+            } else {
                 throw new IllegalArgumentException("Unknown protocol: " + scheme);
             }
 
@@ -192,15 +175,12 @@ public class TransferUtil
 
             log.debug("DataView URL: " + am + " : " + url);
             return url;
-        }
-        catch (MalformedURLException e)
-        {
+        } catch (MalformedURLException e) {
             String message = "BUG: misconfigured service URL";
             log.error(message, e);
             throw new IllegalStateException(message, e);
         }
     }
-
 
 
     public List<Protocol> getTransferEndpoints(final Transfer transfer, final Job job, List<Parameter> additionalParameters)
@@ -225,8 +205,7 @@ public class TransferUtil
         VOSURI target = new VOSURI(transfer.getTargets().get(0));
         View view = createView(transfer, additionalParameters);
 
-        if (transfer.getContentLength() != null)
-        {
+        if (transfer.getContentLength() != null) {
             additionalParameters.add(new Parameter(VOS.PROPERTY_URI_CONTENTLENGTH.toString(), transfer.getContentLength().toString()));
         }
 
@@ -238,6 +217,7 @@ public class TransferUtil
     /**
      * Generate a Protocol list with endpoints set to /vault/pkg/jobid. One entry for every protocol in
      * the transfer provided. Use the jobID from the job provided.
+     *
      * @param transfer
      * @param job
      * @return
@@ -245,7 +225,7 @@ public class TransferUtil
      * @throws MalformedURLException
      */
     public static List<Protocol> getPackageEndpoints(final Transfer transfer, final Job job, LocalServiceURI localServiceURI)
-        throws IOException, IllegalArgumentException, ResourceNotFoundException {
+            throws IOException, IllegalArgumentException, ResourceNotFoundException {
 
         // package view is redirected to /vault/pkg/<jobid>
         // making an endpoint for each protocol provided
@@ -283,16 +263,16 @@ public class TransferUtil
                 URL location = new URL(url.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 // go through each protocol and see which one the interface matches
-                for (Protocol p: protocolList) {
+                for (Protocol p : protocolList) {
                     if (getScheme(p.getUri().toString()).equals(url.getProtocol())) {
-                            log.debug("setting package endpoint " + loc + " for protocol: " + url.getProtocol());
-                            p.setEndpoint(loc);
-                            augmentedList.add(p);
-                        }
+                        log.debug("setting package endpoint " + loc + " for protocol: " + url.getProtocol());
+                        p.setEndpoint(loc);
+                        augmentedList.add(p);
                     }
-
                 }
+
             }
+        }
 
 
         // Sort the protocols
@@ -302,32 +282,26 @@ public class TransferUtil
     }
 
 
-    private static View createView(Transfer transfer, List<Parameter> additionalParameters) throws Exception
-    {
+    private static View createView(Transfer transfer, List<Parameter> additionalParameters) throws Exception {
         // create the appropriate view object
         View view = null;
-        if (transfer.getView() != null)
-        {
+        if (transfer.getView() != null) {
             Views views = new Views();
             view = views.getView(transfer.getView().getURI());
-            if (view != null)
+            if (view != null) {
                 view.setParameters(transfer.getView().getParameters());
-        }
-        else if (additionalParameters != null)
-        {
+            }
+        } else if (additionalParameters != null) {
             // check for a view parameter
-            for (Parameter param : additionalParameters)
-            {
-                if (param.getName().equalsIgnoreCase("view"))
-                {
+            for (Parameter param : additionalParameters) {
+                if (param.getName().equalsIgnoreCase("view")) {
                     Views views = new Views();
                     view = views.getView(param.getValue());
                 }
             }
         }
 
-        if (view == null)
-        {
+        if (view == null) {
             // default view is the data view
             view = new DataView();
         }
@@ -337,35 +311,35 @@ public class TransferUtil
 
     // check for supported combinations of protocol + securityMethod
     @Deprecated
-    public static boolean isSupported(Protocol p)
-    {
-        if (VOS.PROTOCOL_HTTP_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTP_PUT.equals(p.getUri()))
-        {
-            if (p.getSecurityMethod() == null) // anon only
+    public static boolean isSupported(Protocol p) {
+        if (VOS.PROTOCOL_HTTP_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTP_PUT.equals(p.getUri())) {
+            if (p.getSecurityMethod() == null) {  // anon only
                 return true;
-        }
-        else if (VOS.PROTOCOL_HTTPS_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTPS_PUT.equals(p.getUri()))
-        {
-            if (Standards.SECURITY_METHOD_CERT.equals(p.getSecurityMethod()))
+            }
+        } else if (VOS.PROTOCOL_HTTPS_GET.equals(p.getUri()) || VOS.PROTOCOL_HTTPS_PUT.equals(p.getUri())) {
+            if (Standards.SECURITY_METHOD_CERT.equals(p.getSecurityMethod())) {
                 return true;
+            }
         }
         return false;
     }
 
-    public static String getNamespace(final VOSURI vosURI)
-    {
+    public static String getNamespace(final VOSURI vosURI) {
         String path = vosURI.getPath();
         String fileName = vosURI.getName();
         String ns = path.substring(0, path.length() - fileName.length());
-        if (ns.startsWith("/") && ns.length() > 1)
+        if (ns.startsWith("/") && ns.length() > 1) {
             ns = ns.substring(1);
-        if (ns.endsWith("/") && ns.length() > 1)
+        }
+        if (ns.endsWith("/") && ns.length() > 1) {
             ns = ns.substring(0, ns.length() - 1);
+        }
         return ns;
     }
 
     /**
      * Check target list size in transfer provided.
+     *
      * @param transfer
      * @throws TransferException
      */
@@ -385,7 +359,7 @@ public class TransferUtil
         boolean isPackageRequest = false;
         if (transfer.getView() != null) {
             if (Standards.PKG_10.equals(transfer.getView().getURI())) {
-               isPackageRequest = true;
+                isPackageRequest = true;
             }
         }
         return isPackageRequest;
@@ -396,7 +370,7 @@ public class TransferUtil
         Parameter uwsParam = null;
 
         if (v != null) {
-            for (View.Parameter p: v.getParameters()) {
+            for (View.Parameter p : v.getParameters()) {
                 if (p.getUri().toString().equals(viewParamURI)) {
                     log.debug("found View param" + viewParamURI + ": " + p.getValue());
                     uwsParam = new Parameter(paramName, p.getValue());
@@ -410,18 +384,18 @@ public class TransferUtil
     // For sorting Protocols
 
     private static final List<URI> PROTOCOL_PREF = Arrays.asList(
-        VOS.PROTOCOL_HTTPS_GET,
-        VOS.PROTOCOL_HTTP_GET,
-        VOS.PROTOCOL_HTTPS_PUT,
-        VOS.PROTOCOL_HTTP_PUT,
-        VOS.PROTOCOL_SSHFS);
+            VOS.PROTOCOL_HTTPS_GET,
+            VOS.PROTOCOL_HTTP_GET,
+            VOS.PROTOCOL_HTTPS_PUT,
+            VOS.PROTOCOL_HTTP_PUT,
+            VOS.PROTOCOL_SSHFS);
 
     private static final List<URI> SECURITY_METHOD_PREF = Arrays.asList(
-        Standards.SECURITY_METHOD_ANON,
-        Standards.SECURITY_METHOD_CERT,
-        Standards.SECURITY_METHOD_COOKIE,
-        Standards.SECURITY_METHOD_TOKEN,
-        Standards.SECURITY_METHOD_HTTP_BASIC);
+            Standards.SECURITY_METHOD_ANON,
+            Standards.SECURITY_METHOD_CERT,
+            Standards.SECURITY_METHOD_COOKIE,
+            Standards.SECURITY_METHOD_TOKEN,
+            Standards.SECURITY_METHOD_HTTP_BASIC);
 
     public static class ProtocolComparator implements Comparator<Protocol> {
 

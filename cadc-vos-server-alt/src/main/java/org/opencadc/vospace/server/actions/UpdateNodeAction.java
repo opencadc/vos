@@ -93,8 +93,7 @@ import org.opencadc.vospace.server.Utils;
  *
  * @author adriand
  */
-public class UpdateNodeAction extends NodeAction
-{
+public class UpdateNodeAction extends NodeAction {
 
     protected static Logger log = Logger.getLogger(UpdateNodeAction.class);
 
@@ -105,8 +104,7 @@ public class UpdateNodeAction extends NodeAction
 
     @Override
     public Node getClientNode()
-        throws NodeParsingException, IOException
-    {
+            throws NodeParsingException, IOException {
         InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
         return getNode(in);
     }
@@ -115,7 +113,7 @@ public class UpdateNodeAction extends NodeAction
     public Node doAuthorizationCheck()
             throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        Node node = pathResolver.getNode(nodePath,  true);
+        Node node = pathResolver.getNode(nodePath, true);
 
         return node;
     }
@@ -159,8 +157,7 @@ public class UpdateNodeAction extends NodeAction
         if (uriPath.startsWith("/")) {
             uriPath = uriPath.substring(1); // drop leading "/"
         }
-        if (!uriPath.equals(nodePath))
-        {
+        if (!uriPath.equals(nodePath)) {
             throw new NodeParsingException("Node path in URI XML ("
                     + uriPath
                     + ") not equal to node path in URL ("
