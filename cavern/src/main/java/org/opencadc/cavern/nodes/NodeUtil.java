@@ -260,8 +260,7 @@ public abstract class NodeUtil {
      */
     public static void setNodeProperties(Path path, Node node) throws IOException {
         log.debug("setNodeProperties: " + node);
-        List<NodeProperty> nodePropertyList = node.getProperties();
-        if (!nodePropertyList.isEmpty() && !(node instanceof LinkNode)) {
+        if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
                     UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (NodeProperty prop : node.getProperties()) {
@@ -282,6 +281,94 @@ public abstract class NodeUtil {
                 }
             }
             
+            // group permissions
+            LocalAuthority loc = new LocalAuthority();
+            URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
+            boolean isDir = (node instanceof ContainerNode);
+            UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
+            AclCommandExecutor acl = new AclCommandExecutor(path, users);
+
+            final Set<GroupPrincipal> readGroupPrincipals = new HashSet<>(acl.getReadOnlyACL(isDir));
+            NodeProperty rop = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            if (rop != null) {
+                if (rop.isMarkedForDeletion()) {
+                    readGroupPrincipals.clear();
+                } else {
+                    // ugh: raw multi-valued node prop is space-separated
+                    String val = rop.getPropertyValue();
+                    if (val != null) {
+                        String[] vals = val.split(" ");
+                        if (vals.length > 0) {
+                            readGroupPrincipals.clear();
+                            for (String sro : vals) {
+                                try {
+                                    GroupURI guri = new GroupURI(URI.create(sro));
+                                    URI groupGMS = guri.getServiceID();
+                                    if (!groupGMS.equals(localGMS)) {
+                                        throw new IllegalArgumentException("external group not supported: " + guri);
+                                    }
+                                    readGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
+                                } catch (UserPrincipalNotFoundException ex) {
+                                    throw new IllegalArgumentException("group not found: " + sro, ex);
+                                }
+                            }
+                        } else {
+                            log.warn("oops: no groups in " + VOS.PROPERTY_URI_GROUPREAD + " value");
+                        }
+                    } else {
+                        log.warn("oops: no property value in " + VOS.PROPERTY_URI_GROUPREAD + " but !markForDeletion");
+                    }
+                }
+            }
+
+            final Set<GroupPrincipal> writeGroupPrincipals = new HashSet<>(acl.getReadWriteACL(isDir));
+            NodeProperty rwp = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            if (rwp != null) {
+                if (rwp.isMarkedForDeletion()) {
+                    writeGroupPrincipals.clear();
+                } else {
+                    // ugh: raw multi-valued node prop is space-separated
+                    String val = rwp.getPropertyValue();
+                    if (val != null) {
+                        String[] vals = val.split(" ");
+                        if (vals.length > 0) {
+                            writeGroupPrincipals.clear();
+                            for (String sro : vals) {
+                                try {
+                                    GroupURI guri = new GroupURI(URI.create(sro));
+                                    URI groupGMS = guri.getServiceID();
+                                    if (!groupGMS.equals(localGMS)) {
+                                        throw new IllegalArgumentException("external group not supported: " + guri);
+                                    }
+                                    writeGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
+                                } catch (UserPrincipalNotFoundException ex) {
+                                    throw new RuntimeException("failed to find existing group: " + sro, ex);
+                                }
+                            }
+                        } else {
+                            log.warn("oops: no groups in " + VOS.PROPERTY_URI_GROUPWRITE + " value");
+                        }
+                    } else {
+                        log.warn("oops: no property value in " + VOS.PROPERTY_URI_GROUPWRITE + " but !markForDeletion");
+                    }
+                }
+            }
+            
+            // this if probably makes it impossible to remove grants
+            //maybe: if (rop != null || rwp != null) {
+            if (!readGroupPrincipals.isEmpty() || !writeGroupPrincipals.isEmpty()) {
+                log.debug("set read groups: " + readGroupPrincipals);
+                log.debug("set write groups: " + writeGroupPrincipals);
+                acl.setACL(readGroupPrincipals, writeGroupPrincipals, isDir);
+                log.debug("Setting ACLs: OK");
+            }
+            
+            // public aka world-readable flag
+            // HACK: this is located after set group permisisons because the ACL code wipes out
+            // the current world-readable aka public
+            // INCOMPLETE: this does not correctly handle the case where the update did not
+            // mention "public" at all and ends up setting it to false (Node.isPublic doesn't
+            // handle null correctly for updates)
             PosixFileAttributeView pv = Files.getFileAttributeView(path,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             Set<PosixFilePermission> perms = pv.readAttributes().permissions(); // current perms
@@ -303,64 +390,6 @@ public abstract class NodeUtil {
                     }
                     pv.setPermissions(perms);
                 }
-            }
-            
-            LocalAuthority loc = new LocalAuthority();
-            URI localGMS = loc.getServiceURI(Standards.GMS_GROUPS_01.toASCIIString());
-            boolean isDir = (node instanceof ContainerNode);
-            UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
-            AclCommandExecutor acl = new AclCommandExecutor(path, users);
-
-            final Set<GroupPrincipal> readGroupPrincipals = new HashSet<>(acl.getReadOnlyACL(isDir));
-            final List<NodeProperty> groList =
-                    nodePropertyList.stream().filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
-                                    .collect(Collectors.toList());
-            for (final NodeProperty gro : groList) {
-                String sro = gro.getPropertyValue();
-                GroupURI guri = null;
-
-                try {
-                    guri = new GroupURI(URI.create(sro));
-                    URI groupGMS = guri.getServiceID();
-                    if (!groupGMS.equals(localGMS)) {
-                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                        throw new IllegalArgumentException("external group not supported: " + guri);
-                    }
-
-                    readGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
-                } catch (UserPrincipalNotFoundException ex) {
-                    throw new RuntimeException("failed to find existing group: " + guri, ex);
-                }
-            }
-
-            final Set<GroupPrincipal> writeGroupPrincipals = new HashSet<>(acl.getReadWriteACL(isDir));
-            final List<NodeProperty> grwList =
-                    nodePropertyList.stream().filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
-                                    .collect(Collectors.toList());
-            for (final NodeProperty grw : grwList) {
-                String srw = grw.getPropertyValue();
-                GroupURI guri = null;
-
-                try {
-                    guri = new GroupURI(URI.create(srw));
-                    URI groupGMS = guri.getServiceID();
-                    if (!groupGMS.equals(localGMS)) {
-                        // TODO: throw? warn? store as normal extended attr? (pathToNode would re-instantiate)
-                        throw new IllegalArgumentException("external group not supported: " + guri);
-                    }
-
-                    writeGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
-                } catch (UserPrincipalNotFoundException ex) {
-                    throw new RuntimeException("failed to find existing group: " + guri, ex);
-                }
-            }
-
-            log.debug("Existing read groups: " + acl.getReadOnlyACL(isDir));
-            log.debug("Existing write groups: " + acl.getReadWriteACL(isDir));
-            if (!readGroupPrincipals.isEmpty() || !writeGroupPrincipals.isEmpty()) {
-                log.debug("Setting ACLs");
-                acl.setACL(readGroupPrincipals, writeGroupPrincipals, isDir);
-                log.debug("Setting ACLs: OK");
             }
         }
     }
@@ -598,15 +627,27 @@ public abstract class NodeUtil {
                 ret.getProperties().add(new NodeProperty(propName, propValue));
             }
             LocalAuthority loc = new LocalAuthority();
-            URI resourceID = loc.getServiceURI(Standards.GMS_GROUPS_01.toASCIIString());
+            URI resourceID = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
             AclCommandExecutor acl = new AclCommandExecutor(p, p.getFileSystem().getUserPrincipalLookupService());
+            StringBuilder sb = new StringBuilder();
             for (final GroupPrincipal rog : acl.getReadOnlyACL(attrs.isDirectory())) {
                 GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
-                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, guri.getURI().toASCIIString()));
+                sb.append(guri.getURI().toASCIIString()).append(" ");
             }
+            sb.trimToSize();
+            String sval = sb.toString().trim();
+            if (sval.length() > 0) {
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sval));
+            }
+            sb.setLength(0);
             for (final GroupPrincipal rwg : acl.getReadWriteACL(attrs.isDirectory())) {
                 GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rwg.getName()));
-                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, guri.getURI().toASCIIString()));
+                sb.append(guri.getURI().toASCIIString()).append(" ");
+            }
+            sb.trimToSize();
+            sval = sb.toString().trim();
+            if (sval.length() > 0) {
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sval));
             }
             String mask = acl.getMask();
             if (mask != null) {
@@ -617,6 +658,7 @@ public abstract class NodeUtil {
         NodeProperty publicProp = new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(false));
         ret.getProperties().add(publicProp);
         for (PosixFilePermission pfp : attrs.permissions()) {
+            log.debug("posix perm: " + pfp);
             if (PosixFilePermission.OTHERS_READ.equals(pfp)) {
                 publicProp.setValue(Boolean.toString(true));
             }
