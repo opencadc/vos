@@ -120,7 +120,7 @@ public class AclCommandExecutorTest {
     }
     
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testFileACL() {
         try {
@@ -147,11 +147,13 @@ public class AclCommandExecutorTest {
             Assert.assertTrue("read-only", roActual.contains(group));
 
             List<GroupPrincipal> rwActual = acl.getReadWriteACL(false);
-            Assert.assertNull("null read-write", rwActual);
+            Assert.assertNotNull("null read-write", rwActual);
+            Assert.assertTrue(rwActual.isEmpty());
             
             acl.clearACL();
             roActual = acl.getReadOnlyACL(false);
-            Assert.assertNull("clear read-only", roActual);
+            Assert.assertNotNull("clear read-only", roActual);
+            Assert.assertTrue(roActual.isEmpty());
             
             // RW
             acl.setReadWriteACL(group, false);
@@ -161,11 +163,15 @@ public class AclCommandExecutorTest {
             Assert.assertTrue("read-write", rwActual.contains(group));
             
             roActual = acl.getReadOnlyACL(false);
-            Assert.assertNull("null read-only", roActual);
+            Assert.assertNotNull("null read-only", roActual);
+            Assert.assertTrue(roActual.isEmpty());
             
             acl.clearACL();
             rwActual = acl.getReadWriteACL(false);
-            Assert.assertNull("clear read-write", rwActual);
+            Assert.assertNotNull("clear read-write", rwActual);
+            Assert.assertTrue(rwActual.isEmpty());
+            
+            // 
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -174,7 +180,7 @@ public class AclCommandExecutorTest {
     }
     
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testDirectoryACL() {
         try {
@@ -200,7 +206,8 @@ public class AclCommandExecutorTest {
             
             acl.clearACL();
             actual = acl.getReadOnlyACL(false);
-            Assert.assertNull("clear read-only", actual);
+            Assert.assertNotNull("clear read-only", actual);
+            Assert.assertTrue(actual.isEmpty());
             
             acl.setReadWriteACL(group, false);
             
@@ -210,7 +217,8 @@ public class AclCommandExecutorTest {
             
             acl.clearACL();
             actual = acl.getReadOnlyACL(false);
-            Assert.assertNull("clear read-write", actual);
+            Assert.assertNotNull("clear read-write", actual);
+            Assert.assertTrue(actual.isEmpty());
             
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
