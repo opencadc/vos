@@ -327,7 +327,7 @@ public class TransferRunnerTest {
             Subject s = SSLUtil.createSubject(SSL_CERT);
 
             // Using '!' shouldn't stop the transfer from working
-            String notCommonFormURI = "vos://cadc.nrc.ca!arc/home/cadcregtest1/vospace-static-test/transfer";
+            String notCommonFormURI = "vos://cadc.nrc.ca~arc/projects/CADC/vospace-static-test/transfer";
 
             VOSURI testURI = new VOSURI(new URI(notCommonFormURI));
             VOSpaceClient vos = new VOSpaceClient(testURI.getServiceURI());

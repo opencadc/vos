@@ -82,6 +82,7 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -121,6 +122,7 @@ public class DefaultACLPermissionsTest {
     // Second group to be added for multiples.
     private static GroupURI testGroupReadAlt;
     private static GroupURI testGroupWriteAlt;
+
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
@@ -199,27 +201,25 @@ public class DefaultACLPermissionsTest {
         s.getPrincipals().add(new PosixPrincipal(20006));
 
         ContainerNode expected = new ContainerNode(turi);
+        final String[] readGroups = new String[] {
+                testGroup.getURI().toASCIIString(),
+                testGroupReadAlt.getURI().toASCIIString()
+        };
+
         expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD,
-                                                      testGroupReadAlt.getURI().toASCIIString()));
+                                                      String.join(" ", readGroups)));
 
         Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
 
         Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
         Assert.assertNotNull("created", actual);
-        final List<NodeProperty> nodePropertyList = actual.getProperties();
-        final List<NodeProperty> readGroupPropertyList =
-                nodePropertyList.stream()
-                                .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
-                                .collect(Collectors.toList());
-        final List<GroupURI> readGroupURIList = new ArrayList<>(readGroupPropertyList.size());
-        for (final NodeProperty nodeProperty: readGroupPropertyList) {
-            readGroupURIList.add(new GroupURI(URI.create(nodeProperty.getPropertyValue())));
-        }
-
+        final String readGroupNodePropertyValue = actual.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
+        final List<String> readGroupPropertyList =
+                Arrays.stream(readGroupNodePropertyValue.split(" ")).collect(Collectors.toList());
         Assert.assertTrue("Should contain " + testGroup.getURI(),
-                          readGroupURIList.contains(new GroupURI(testGroup.getURI())));
+                          readGroupPropertyList.contains(testGroup.getURI().toASCIIString()));
         Assert.assertTrue("Should contain " + testGroupReadAlt.getURI(),
-                          readGroupURIList.contains(new GroupURI(testGroupReadAlt.getURI())));
+                          readGroupPropertyList.contains(testGroupReadAlt.getURI().toASCIIString()));
         NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
         Assert.assertNotNull(mask);
         Assert.assertEquals("r-x", mask.getPropertyValue());
@@ -233,27 +233,26 @@ public class DefaultACLPermissionsTest {
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
         ContainerNode expected = new ContainerNode(turi);
+        final String[] writeGroups = new String[] {
+                testGroup.getURI().toASCIIString(),
+                testGroupWriteAlt.getURI().toASCIIString()
+        };
+
         expected.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE,
-                                                      testGroupWriteAlt.getURI().toASCIIString()));
+                                                      String.join(" ", writeGroups)));
 
         Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
 
         Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
         Assert.assertNotNull("created", actual);
-        final List<NodeProperty> nodePropertyList = actual.getProperties();
-        final List<NodeProperty> writeGroupPropertyList =
-                nodePropertyList.stream()
-                                .filter(p -> p.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
-                                .collect(Collectors.toList());
-        final List<GroupURI> writeGroupURIList = new ArrayList<>(writeGroupPropertyList.size());
-        for (final NodeProperty nodeProperty: writeGroupPropertyList) {
-            writeGroupURIList.add(new GroupURI(URI.create(nodeProperty.getPropertyValue())));
-        }
+        final String writeGroupNodePropertyValue = actual.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
+        final List<String> writeGroupPropertyList =
+                Arrays.stream(writeGroupNodePropertyValue.split(" ")).collect(Collectors.toList());
 
         Assert.assertTrue("Should contain " + testGroup.getURI(),
-                          writeGroupURIList.contains(new GroupURI(testGroup.getURI())));
+                          writeGroupPropertyList.contains(testGroup.getURI().toASCIIString()));
         Assert.assertTrue("Should contain " + testGroupWriteAlt.getURI(),
-                          writeGroupURIList.contains(new GroupURI(testGroupWriteAlt.getURI())));
+                          writeGroupPropertyList.contains(testGroupWriteAlt.getURI().toASCIIString()));
         NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
         Assert.assertNotNull(mask);
         Assert.assertEquals("rwx", mask.getPropertyValue());
@@ -345,23 +344,17 @@ public class DefaultACLPermissionsTest {
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
-        try {
-            DataNode expected = new DataNode(turi);
-            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
-            
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
-            Assert.assertNotNull("created", actual);
-            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
-            Assert.assertNotNull(np);
-            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());        
-            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
-            Assert.assertNotNull(mask);
-            Assert.assertEquals("rw-", mask.getPropertyValue());
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
+        DataNode expected = new DataNode(turi);
+        Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+
+        Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+        Assert.assertNotNull("created", actual);
+        NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+        Assert.assertNotNull(np);
+        Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+        NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        Assert.assertNotNull(mask);
+        Assert.assertEquals("rw-", mask.getPropertyValue());
     }
     
     @Test
@@ -371,38 +364,32 @@ public class DefaultACLPermissionsTest {
         VOSURI turi = new VOSURI(vosuripath);
         Subject s = SSLUtil.createSubject(SSL_CERT);
 
-        try {
-            ContainerNode expected = new ContainerNode(turi);
-            Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
-            
-            Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
-            Assert.assertNotNull("created", actual);
-            NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
-            Assert.assertNotNull(np);
-            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
-            NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
-            Assert.assertNotNull(mask);
-            Assert.assertEquals("r-x", mask.getPropertyValue());
-            
-            VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
-            ContainerNode child = new ContainerNode(curi);
-            log.debug("Creating " + curi.getPath());
-            Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
-            log.debug("Creating " + curi.getPath() + ":OK");
-            
-            actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, curi.getPath()));
-            Assert.assertNotNull("created", actual);
-            np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
-            Assert.assertNotNull(np);
-            Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
-            mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
-            Assert.assertNotNull(mask);
-            Assert.assertEquals("r-x", mask.getPropertyValue());
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
+        ContainerNode expected = new ContainerNode(turi);
+        Subject.doAs(s, new TestActions.CreateNodeAction(vos, expected));
+
+        Node actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, turi.getPath()));
+        Assert.assertNotNull("created", actual);
+        NodeProperty np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+        Assert.assertNotNull(np);
+        Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+        NodeProperty mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        Assert.assertNotNull(mask);
+        Assert.assertEquals("r-x", mask.getPropertyValue());
+
+        VOSURI curi = new VOSURI(turi.getURI().toString() + "/" + "container-child");
+        ContainerNode child = new ContainerNode(curi);
+        log.debug("Creating " + curi.getPath());
+        Subject.doAs(s, new TestActions.CreateNodeAction(vos, child));
+        log.debug("Creating " + curi.getPath() + ":OK");
+
+        actual = Subject.doAs(s, new TestActions.GetNodeAction(vos, curi.getPath()));
+        Assert.assertNotNull("created", actual);
+        np = actual.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+        Assert.assertNotNull(np);
+        Assert.assertEquals(testGroup.getURI().toASCIIString(), np.getPropertyValue());
+        mask = actual.findProperty(VOS.PROPERTY_URI_GROUPMASK);
+        Assert.assertNotNull(mask);
+        Assert.assertEquals("r-x", mask.getPropertyValue());
     }
 
     @Test

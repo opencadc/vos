@@ -121,7 +121,7 @@ public class RecursiveSetNodeRunnerTest
 {
     private static final Logger log = Logger.getLogger(RecursiveSetNodeRunnerTest.class);
 
-    private static String BASE_URI_STRING = "vos://cadc.nrc.ca~arc/home/cadcregtest1/vospace-int-test/recursiveprops";
+    private static String BASE_URI_STRING = "vos://cadc.nrc.ca~arc/projects/CADC/vospace-int-test/recursiveprops";
     private static File SSL_CERT;
 
     private static String baseURL;
@@ -267,7 +267,7 @@ public class RecursiveSetNodeRunnerTest
         VOSpaceClient vos = new VOSpaceClient(nodeURI.getServiceURI());
 
         Subject s = SSLUtil.createSubject(SSL_CERT);
-        DataNode dataNode = new DataNode(new VOSURI(new URI("vos://cadc.nrc.ca~arc/home/cadcauthtest1")));
+        DataNode dataNode = new DataNode(new VOSURI(new URI("vos://cadc.nrc.ca~arc/projects/CADC/test-no-read")));
 
         RecursiveNodePropsAction recPropsAction = new RecursiveNodePropsAction(vos, dataNode);
 
@@ -280,7 +280,8 @@ public class RecursiveSetNodeRunnerTest
         MyJobStatus js = Subject.doAs(s, new GetJobAction(recSetNode)); 
         Assert.assertNotNull("job status", js);
         Assert.assertTrue("expected ERROR phase", ExecutionPhase.ERROR.equals(js.ep));
-        Assert.assertTrue("expected Success count: 0 Failure count: 1", js.es.getSummaryMessage().equalsIgnoreCase("Success count: 0 Failure count: 1"));
+        Assert.assertTrue("expected Success count: 0 Failure count: 1 but was " + js.es.getSummaryMessage(),
+                          js.es.getSummaryMessage().equalsIgnoreCase("Success count: 0 Failure count: 1"));
     }
 
     @Test

@@ -99,8 +99,10 @@ public class AuthGetActionTest {
     protected static Subject cadcauthSubject;
     protected static Subject cadcregSubject;
     protected static String baseURI;
+    protected static String publicBaseURI;
     protected static String getFolderURI;
-    
+    protected static String getPublicFolderURI;
+
     public AuthGetActionTest() {}
     
     static
@@ -121,16 +123,19 @@ public class AuthGetActionTest {
         cadcregSubject = SSLUtil.createSubject(SSL_CERT_2);
 
         baseURI = "vos://cadc.nrc.ca~arc/home/cadcauthtest1/do-not-delete/vospaceFilesTest/";
+        publicBaseURI = "vos://cadc.nrc.ca~arc/projects/CADC/do-not-delete/vospaceFilesTest/";
         getFolderURI = baseURI + "getTest";
+        getPublicFolderURI = publicBaseURI + "getTest";
 
         log.debug("get test folder: " + getFolderURI );
+        log.debug("public get test folder: " + getPublicFolderURI);
         log.debug("test dir base URI: " + baseURI);
     }
 
     @Test
     public void testGetPublicFileOK() {
         try {
-            final String uri = getFolderURI + "/bowline.jpg";
+            final String uri = getPublicFolderURI + "/bowline.jpg";
             File f = getFile(new VOSURI(uri));
             log.debug("filename found: " + f.getName());
             Assert.assertEquals("filename incorrect", f.getName(), "bowline.jpg" );
@@ -144,7 +149,7 @@ public class AuthGetActionTest {
     @Test
     public void testGetPublicFileThroughLinkOK() {
         try {
-            String uri = getFolderURI + "/ChilkootPass_GoldenStairs2.jpg";
+            String uri = getPublicFolderURI + "/ChilkootPass_GoldenStairs2.jpg";
             File f = getFile(new VOSURI(uri));
             log.debug("filename found: " + f.getName());
             Assert.assertEquals("filename incorrect", f.getName(), "ChilkootPass_GoldenStairs2.jpg" );
@@ -210,8 +215,8 @@ public class AuthGetActionTest {
     @Test
     public void testGetContainerNodeNOK() {
         try {
-            HttpDownload d = getFileNOK(new VOSURI(baseURI), 400);
-            Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  IllegalArgumentException.class);
+            HttpDownload d = getFileNOK(new VOSURI(baseURI), 403);
+            Assert.assertEquals("wrong exception type: " + d.getThrowable(), d.getThrowable().getClass(),  AccessControlException.class);
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
             Assert.fail("Unexpected exception (" + t.getClass().getSimpleName() +
@@ -297,10 +302,9 @@ public class AuthGetActionTest {
         RegistryClient regClient = new RegistryClient();
         URL baseURL = regClient.getServiceURL(uri.getServiceURI(), Standards.VOSPACE_FILES_20, authMethod);
         log.debug("baseURL for getFile: " + baseURL.toExternalForm());
-        URL url = new URL(baseURL.toString() + uri.getPath());
+        URL url = new URL(baseURL + uri.getPath());
         log.debug("requested url for getFile: " + url.toExternalForm());
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
         File tmp = new File(System.getProperty("java.io.tmpdir"));
         HttpDownload download = new HttpDownload(url, tmp);
 
