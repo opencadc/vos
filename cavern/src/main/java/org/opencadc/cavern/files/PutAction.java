@@ -244,7 +244,7 @@ public abstract class PutAction extends FileAction {
         UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
         GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
         Path target = NodeUtil.nodeToPath(rootPath, node);
-        NodeUtil.setPosixOwnerGroup(rootPath, target, owner, group);
+        NodeUtil.setPosixOwnerGroup(target, owner, group);
     }
 
 }

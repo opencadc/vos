@@ -75,7 +75,10 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -84,7 +87,10 @@ import java.nio.file.Path;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -99,7 +105,7 @@ public class NodeUtilTest {
     private static final Logger log = Logger.getLogger(NodeUtilTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.reg.client", Level.INFO);
         Log4jInit.setLevel("ca.nrc.cadc.util", Level.INFO);
     }
@@ -121,8 +127,21 @@ public class NodeUtilTest {
             throw new RuntimeException("TEST SETUP: failed to create test dir: " + ROOT, ex);
         }
     }
+    
+    private boolean aclEnabled;
 
     public NodeUtilTest() {
+        try {
+            Path path = FileSystems.getDefault().getPath(ROOT);
+            UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
+            AclCommandExecutor acl = new AclCommandExecutor(path, users);
+            log.info("acl support: OK - group permission tests enabled");
+            aclEnabled = true;
+        } catch (UnsupportedOperationException ex) {
+            log.warn("set up failure: " + ex);
+            log.warn("acl support: FAIL - group permission tests disabled");
+            aclEnabled = false;
+        }
     }
 
     private Path doCreate(final Path root, final Node n, UserPrincipal up) throws Exception {
@@ -138,7 +157,7 @@ public class NodeUtilTest {
         return actual;
     }
 
-    //@Test
+    @Test
     public void testGetRoot() {
         try {
             VOSURI uri = new VOSURI(URI.create(baseURI));
@@ -168,7 +187,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCreateDir() {
         try {
@@ -191,9 +210,11 @@ public class NodeUtilTest {
             String propValue = "should I stay or should I go?";
             tn.getProperties().add(new NodeProperty(propURI, propValue));
             
-            // use one group-read property to test ACL round trip
             String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
-            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            if (aclEnabled) {
+                // use one group-read property to test ACL round trip
+                tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            }
             
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
@@ -205,7 +226,9 @@ public class NodeUtilTest {
             Assert.assertTrue("public", tn2.isPublic());
             Assert.assertNotNull("lastModified", tn2.getPropertyValue(VOS.PROPERTY_URI_DATE));
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
-            Assert.assertEquals("read-only " + VOS.PROPERTY_URI_GROUPREAD, roGroup, tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD));
+            if (aclEnabled) {
+                Assert.assertEquals("read-only " + VOS.PROPERTY_URI_GROUPREAD, roGroup, tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD));
+            }
             
             //NodeUtil.delete(root, testDir);
             //Assert.assertFalse("deleted", Files.exists(dir));
@@ -216,7 +239,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCreateFile() {
         try {
@@ -243,7 +266,9 @@ public class NodeUtilTest {
             
             // use one group-read property to test ACL round trip
             String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
-            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            if (aclEnabled) {
+                tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            }
             
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
@@ -259,8 +284,10 @@ public class NodeUtilTest {
             Assert.assertEquals("custom " + propURI, propValue, tn2.getPropertyValue(propURI));
             Assert.assertEquals("Content-MD5", origMD5, tn2.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5));
             String roActual = tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
-            Assert.assertNotNull("read-only", roActual);
-            Assert.assertEquals("read-only", roGroup, roActual);
+            if (aclEnabled) {
+                Assert.assertNotNull("read-only", roActual);
+                Assert.assertEquals("read-only", roGroup, roActual);
+            }
             String rwActual = tn2.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
             Assert.assertNull("read-write", rwActual);
 
@@ -273,7 +300,7 @@ public class NodeUtilTest {
     }
     
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testSetProperties() {
         try {
@@ -314,7 +341,9 @@ public class NodeUtilTest {
             tn.getProperties().add(new NodeProperty(propURI, propValue));
             // use one group-read property to test ACL round trip
             String roGroup = "ivo://cadc.nrc.ca/gms?" + GROUP;
-            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            if (aclEnabled) {
+                tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+            }
             
             // test property with no value
             String nullVal = null;
@@ -353,6 +382,7 @@ public class NodeUtilTest {
     
     @Test
     public void testNoSuchGroupFail() {
+        String roGroup = "ivo://cadc.nrc.ca/gms?NOGROUP";
         try {
             // top-level test dir
             String name = "testNoSuchGroupFail-" + UUID.randomUUID().toString();
@@ -369,13 +399,17 @@ public class NodeUtilTest {
             VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
             DataNode tn = new DataNode(uri);
             // use one group-read property to test ACL round trip
-            String roGroup = "ivo://cadc.nrc.ca/gms?NOGROUP";
-            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
             
-            NodeUtil.setOwner(tn, up);
-            Path tdir = doCreate(root, tn, up);
-            Assert.fail("expected RuntimeException: got " + tdir);
-        } catch (RuntimeException expected) {
+            if (aclEnabled) {
+                // property merge happens inside NodeUtil so acl suppoert needed to get to the exception
+                tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
+                NodeUtil.setOwner(tn, up);
+                Path tdir = doCreate(root, tn, up);
+                Assert.fail("expected IllegalArgumentException: got " + tdir);
+            }
+        } catch (IllegalArgumentException expected) {
+            // brittle error message check just to be sure test worked
+            Assert.assertTrue(expected.getMessage().equals("group not found: " + roGroup));
             log.info("caught expected exception: " + expected);
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -402,21 +436,85 @@ public class NodeUtilTest {
             DataNode tn = new DataNode(uri);
             // use one group-read property to test ACL round trip
             String roGroup = "ivo://extern.net/gms?" + GROUP;
+            // safe to set this even with aclEnabled false
             tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, roGroup));
             
             NodeUtil.setOwner(tn, up);
             Path tdir = doCreate(root, tn, up);
             Assert.fail("expected RuntimeException: got " + tdir);
         } catch (RuntimeException expected) {
-            log.info("caught expected exception: " + expected);
+            // Other RuntimeExceptions can occur, so check carefully.
+            if (expected.getMessage().contains("external group not supported")) {
+                log.info("caught expected exception: " + expected);
+            } else {
+                throw expected;
+            }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Test
+    public void testSetMultiReadGroups() throws Exception {
+        // top-level test dir
+        String name = "testSetMultiReadGroups-" + UUID.randomUUID();
+        VOSURI testDir = new VOSURI(URI.create(baseURI + "/" + name));
+        Path root = FileSystems.getDefault().getPath(ROOT);
+        UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
+        UserPrincipal up = users.lookupPrincipalByName(OWNER);
+        ContainerNode n = new ContainerNode(testDir);
+        NodeUtil.setOwner(n, up);
+        Path dir = doCreate(root, n, up);
+        Assert.assertTrue("dir", Files.isDirectory(dir));
+
+        // actual child test
+        VOSURI uri = new VOSURI(URI.create(testDir.getURI().toASCIIString() + "/file-" + name));
+        DataNode tn = new DataNode(uri);
+
+        // Get the current list of Groups from the system.  This will only work on *NIX systems.
+        final Process process = new ProcessBuilder("id", "-G", "-n").start();
+        final StringBuilder output = new StringBuilder();
+        try (final BufferedReader bufferedReader =
+                     new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                output.append(line);
+            }
+        }
+
+        final String[] groups = output.toString().split("\\s");
+        if (groups.length < 2) {
+            throw new IllegalStateException("User is not a member of enough groups.");
+        }
+
+        // Take the first two Groups.
+        final String[] groupURIs = new String[groups.length];
+        groupURIs[0] = "ivo://cadc.nrc.ca/gms?" + groups[0];
+        groupURIs[1] = "ivo://cadc.nrc.ca/gms?" + groups[1];
+        String gval = groupURIs[0] + " " + groupURIs[1]; // space-separated
+        if (aclEnabled) {
+            tn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, gval));
+        }
+
+        NodeUtil.setOwner(tn, up);
+        doCreate(root, tn, up);
+
+        // Re-get the Node
+        final Node actualDataNode = NodeUtil.get(root, tn.getUri());
+        for (NodeProperty np : actualDataNode.getProperties()) {
+            log.info("prop: " + np.getPropertyURI() + " = " + np.getPropertyValue());
+        }
+        if (aclEnabled) {
+            final NodeProperty readGroups = actualDataNode.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            Assert.assertNotNull(readGroups);
+            Assert.assertTrue("Should contain " + groupURIs[0], readGroups.getPropertyValue().contains(groupURIs[0]));
+            Assert.assertTrue("Should contain " + groupURIs[1], readGroups.getPropertyValue().contains(groupURIs[1]));
+        }
+    }
+
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCreateLink() {
         try {
@@ -475,7 +573,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCreatePath() {
 
@@ -530,7 +628,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testList() {
 
@@ -612,7 +710,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testMove() {
         try {
@@ -689,7 +787,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCopyFile() {
         try {
@@ -751,7 +849,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCopyDirectory() {
         try {
@@ -824,7 +922,7 @@ public class NodeUtilTest {
                 // assure the copy is there
                 VOSURI c = new VOSURI(URI.create(u.toString().replace(
                         testDir.getURI().toASCIIString(), 
-                        testDir2.getURI().toASCIIString() )));
+                        testDir2.getURI().toASCIIString())));
                 log.debug("Asserting: " + c);
                 Node copy = NodeUtil.get(root, c);
                 Assert.assertNotNull(copy);
@@ -844,7 +942,7 @@ public class NodeUtilTest {
     }
 
     // TODO: acl specific codes will be moved to a library, enable the test after
-    @Ignore
+    //@Ignore
     @Test
     public void testCopyDirectoryWithLinks() {
         try {

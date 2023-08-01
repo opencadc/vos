@@ -27,6 +27,7 @@
             ca.nrc.cadc.ac
             ca.nrc.cadc.rest
             ca.nrc.cadc.vos
+            ca.nrc.cadc.vosi
       </param-value>
     </init-param>
     <init-param>
