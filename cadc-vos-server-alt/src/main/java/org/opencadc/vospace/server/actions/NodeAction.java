@@ -83,10 +83,8 @@ import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
-import org.opencadc.vospace.server.AbstractView;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.Views;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 
@@ -190,12 +188,7 @@ public abstract class NodeAction extends RestAction {
         return new NodeWriter();
     }
 
-    /**
-     * Return the view requested by the client, or null if none specified.
-     *
-     * @return Instance of an AbstractView.
-     * @throws Exception If the object could not be constructed.
-     */
+    /*
     protected AbstractView getView() throws Exception {
         if (syncInput.getParameter(QUERY_PARAM_VIEW) == null) {
             return null;
@@ -220,6 +213,7 @@ public abstract class NodeAction extends RestAction {
 
         return view;
     }
+    */
 
     /**
      * Perform the action for which the subclass was designed.

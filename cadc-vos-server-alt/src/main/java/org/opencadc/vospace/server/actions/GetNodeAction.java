@@ -94,10 +94,8 @@ import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
-import org.opencadc.vospace.server.AbstractView;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
-import org.opencadc.vospace.server.Views;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -250,63 +248,22 @@ public class GetNodeAction extends NodeAction {
         end = System.currentTimeMillis();
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
 
-        AbstractView view;
-        String viewReference = syncInput.getParameter(QUERY_PARAM_VIEW);
-        try {
-            view = getView();
-        } catch (Exception ex) {
-            log.error("failed to load view: " + viewReference, ex);
-            // this should generate an InternalFault in NodeAction
-            throw new RuntimeException("view was configured but failed to load: " + viewReference);
+        
+        final NodeWriter nodeWriter = getNodeWriter();
+        //nodeWriter.setStylesheetURL(getStylesheetURL());
+
+        // clear the properties from server node if the detail
+        // level is set to 'min'
+        if (VOS.Detail.min.getValue().equals(detailLevel)) {
+            serverNode.getProperties().clear();
         }
 
-        if (view == null) {
-            // no view specified or found--return the xml representation
-            final NodeWriter nodeWriter = getNodeWriter();
-            nodeWriter.setStylesheetURL(getStylesheetURL());
-
-            // clear the properties from server node if the detail
-            // level is set to 'min'
-            if (VOS.Detail.min.getValue().equals(detailLevel)) {
-                serverNode.getProperties().clear();
-            }
-
-            //TODO if the request has gone through a link, change the
-            // node paths back to be the 'unresolved path'
-            //            if (!nodePath.equals(Utils.getPath(serverNode)))
-            //            {
-            //                log.debug("returning node paths back to one that include a link");
-            //                //TODO - fix below
-            //                unresolveNodePaths(new VOSURI(nodePath), serverNode);
-            //            }
-            fillAcceptsAndProvides(serverNode);
-            syncOutput.setCode(200);
-            syncOutput.setHeader("Content-Type", getMediaType());
-            nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
-        } else {
-            URL url = new URL(syncInput.getRequestURI());
-            view.setNode(serverNode, viewReference, url);
-            URL redirectURL = view.getRedirectURL();
-            if (redirectURL != null) {
-                syncOutput.setCode(HttpURLConnection.HTTP_SEE_OTHER);
-                syncOutput.setHeader("Location", redirectURL);
-            } else {
-                // return a representation for the view
-                String contentMD5 = view.getContentMD5();
-                if (contentMD5 != null && (contentMD5.length() == 32)) {
-                    //TODO is contentMD5 in hex format?
-                    syncOutput.setDigest(URI.create("md5:" + contentMD5));
-                }
-                view.write(syncOutput.getOutputStream());
-            }
-        }
+        syncOutput.setCode(200);
+        syncOutput.setHeader("Content-Type", getMediaType());
+        nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
     }
 
-    /**
-     * Look for the stylesheet URL in the request context.
-     *
-     * @return The String URL of the stylesheet for this action. Null if no reference is provided.
-     */
+    /*
     public String getStylesheetURL() {
         log.debug("Stylesheet Reference is: " + stylesheetReference);
         if (stylesheetReference != null) {
@@ -324,7 +281,9 @@ public class GetNodeAction extends NodeAction {
         }
         return null;
     }
-
+    */
+    
+    /*
     private void unresolveNodePaths(VOSURI vosURI, Node node) {
         try {
             // change the target node
@@ -344,7 +303,8 @@ public class GetNodeAction extends NodeAction {
             throw new RuntimeException(e);
         }
     }
-
+    */
+    
     private void doTagChildrenAccessRights(ContainerNode cn) {
         for (final Node n : cn.getNodes()) {
             // to get to this point, the parent node must have been readable.
@@ -402,29 +362,4 @@ public class GetNodeAction extends NodeAction {
 
         n.getProperties().add(canWriteProperty);
     }
-
-    private void fillAcceptsAndProvides(Node node) {
-        Views views = new Views();
-        List<AbstractView> viewList;
-        try {
-            viewList = views.getViews();
-        } catch (Exception e) {
-            log.error("Could not get view list: " + e.getMessage());
-            return;
-        }
-        //TODO
-        //        for (AbstractView view : viewList)
-        //        {
-        //            if (view.canAccept(node))
-        //            {
-        //                node.accepts.add(view.getURI());
-        //            }
-        //            if (view.canProvide(node))
-        //            {
-        //                node.provides.add(view.getURI());
-        //            }
-        //        }
-
-    }
-
 }
