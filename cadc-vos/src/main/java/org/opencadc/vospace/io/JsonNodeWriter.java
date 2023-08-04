@@ -82,10 +82,9 @@ import org.jdom2.output.Format;
  * @author pdowler
  */
 public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
 
     @Override
-    public void write(Element root, Writer writer)
+    protected void write(Element root, Writer writer)
         throws IOException {
         JsonOutputter outputter = new JsonOutputter();
         outputter.getListElementNames().add("nodes");

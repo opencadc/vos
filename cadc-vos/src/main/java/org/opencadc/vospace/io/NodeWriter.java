@@ -156,7 +156,7 @@ public class NodeWriter implements XmlProcessor {
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(Element root, Writer writer)
+    protected void write(Element root, Writer writer)
         throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
