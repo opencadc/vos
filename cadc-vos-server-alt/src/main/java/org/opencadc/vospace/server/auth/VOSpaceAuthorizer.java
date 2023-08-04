@@ -67,12 +67,10 @@
 
 package org.opencadc.vospace.server.auth;
 
-import ca.nrc.cadc.ac.Role;
-import ca.nrc.cadc.ac.UserNotFoundException;
-import ca.nrc.cadc.ac.client.GMSClient;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.SignedToken;
 import ca.nrc.cadc.cred.client.CredUtil;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.profiler.Profiler;
 import java.io.IOException;
 import java.net.URI;
@@ -84,6 +82,7 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.gms.GroupURI;
+import org.opencadc.gms.IvoaGroupClient;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
@@ -107,28 +106,29 @@ import org.opencadc.vospace.server.Utils;
 public class VOSpaceAuthorizer {
     protected static final Logger log = Logger.getLogger(VOSpaceAuthorizer.class);
 
-    public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
-    public static final String OFFLINE = "Offline";
-    public static final String OFFLINE_MSG = "System is offline for maintainence";
-    public static final String READ_ONLY = "ReadOnly";
-    public static final String READ_ONLY_MSG = "System is in read-only mode for maintainence";
+    //public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
+    //public static final String OFFLINE = "Offline";
+    //public static final String OFFLINE_MSG = "System is offline for maintainence";
+    //public static final String READ_ONLY = "ReadOnly";
+    //public static final String READ_ONLY_MSG = "System is in read-only mode for maintainence";
     //public static final String READ_WRITE = "ReadWrite";
-    private boolean readable = true;
-    private boolean writable = true;
-    //private boolean resolveMetadata = true;
-    private boolean disregardLocks = false;
+    
+    //private boolean readable = true;
+    //private boolean writable = true;
 
-    private NodePersistence nodePersistence;
+    private final NodePersistence nodePersistence;
+    private final IvoaGroupClient gmsClient = new IvoaGroupClient();
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
-    public VOSpaceAuthorizer(boolean resolveMetadata) {
-        initState();
-        //this.resolveMetadata = resolveMetadata;
+    public VOSpaceAuthorizer(NodePersistence nodePersistence) {
+        if (nodePersistence == null) {
+            throw new IllegalStateException("BUG: nodePersistence cannot be null");
+        }
+        this.nodePersistence = nodePersistence;
     }
 
-    // this method will only downgrade the state to !readable and !writable
-    // and will never restore them to true - that is intentional
+    /*
     private void initState() {
         String key = VOSpaceAuthorizer.MODE_KEY;
         String val = System.getProperty(key);
@@ -149,109 +149,9 @@ public class VOSpaceAuthorizer {
             throw new IllegalStateException(OFFLINE_MSG);
         }
     }
-
-    /**
-     * Given the groupURI, determine if the user identified by the subject
-     * has membership.
-     *
-     * @param groups  The list of groups for a Node
-     * @param subject The user's subject
-     * @return True if the user is a member
-     */
-    private boolean hasMembership(Set<URI> groups, Subject subject) {
-        if (subject.getPrincipals().isEmpty()) {
-            return false;
-        }
-
-        if (groups == null || groups.isEmpty()) {
-            return false;
-        }
-
-        Exception firstFail = null;
-        RuntimeException wrapException = null;
-        try {
-            // need credentials in the subject to call GMS
-            if (CredUtil.checkCredentials(subject)) {
-                // make gms calls to see if the user has group membership
-                for (URI groupURI : groups) {
-                    try {
-                        log.debug("Checking GMS on groupURI: " + groupURI);
-                        GroupURI guri = new GroupURI(groupURI);
-                        URI serviceID = guri.getServiceID();
-                        log.debug("Using GMS service ID: " + serviceID);
-                        GMSClient gmsClient = new GMSClient(serviceID);
-                        boolean isMember = gmsClient.isMember(guri.getName(), Role.MEMBER);
-                        profiler.checkpoint("gmsClient.ismember");
-                        if (isMember) {
-                            return true;
-                        }
-                    } catch (UserNotFoundException ex) {
-                        log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null) {
-                            firstFail = ex;
-                            wrapException = new AccessControlException("failed to check membership with group service: " + ex);
-                        }
-                    } catch (IOException ex) {
-                        log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null) {
-                            firstFail = ex;
-                            wrapException = new RuntimeException("failed to check membership with group service", ex);
-                        }
-                    }
-                }
-            }
-        } catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) {
-            wrapException = new RuntimeException("failed credentials check", ex);
-        }
-
-        if (wrapException != null) {
-            throw wrapException;
-        }
-
-        return false;
-    }
-
-    // HACK: need to create a privaledged subject for use with CredClient calls
-    // but this needs to be configurable somehow...
-    // for now: compatibility with current system config
-    //    private Subject createOpsSubject()
-    //    {
-    //        File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
-    //        return SSLUtil.createSubject(pemFile);
-    //    }
-
-    /**
-     * Check if the specified subject is the owner of the node.
-     *
-     * @param subject subject
-     * @param node    node to check
-     * @return true of the current subject is the owner, otherwise false
-     */
-    private boolean isOwner(Node node, Subject subject) {
-        Subject owner = node.owner;
-        if (owner == null) {
-            throw new IllegalStateException("BUG: no owner found for node: " + node);
-        }
-
-        Set<Principal> ownerPrincipals = owner.getPrincipals();
-        Set<Principal> callerPrincipals = subject.getPrincipals();
-
-        for (Principal ownerPrin : ownerPrincipals) {
-            for (Principal callerPrin : callerPrincipals) {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format(
-                            "Checking owner of node \"%s\" (owner=\"%s\") where user=\"%s\"",
-                            node.getName(), ownerPrin, callerPrin));
-                }
-                if (AuthenticationUtil.equals(ownerPrin, callerPrin)) {
-                    return true; // caller===owner
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
+    */
+    
+        /**
      * Check the read permission on a single node.
      *
      * <p>For full node authorization, use getReadPermission(Node).
@@ -330,6 +230,98 @@ public class VOSpaceAuthorizer {
         }
         return false;
     }
+    
+    /**
+     * Given the groupURI, determine if the user identified by the subject
+     * has membership.
+     *
+     * @param groups  The list of groups for a Node
+     * @param subject The user's subject
+     * @return True if the user is a member
+     */
+    private boolean hasMembership(Set<URI> groups, Subject subject) {
+        if (subject.getPrincipals().isEmpty()) {
+            return false;
+        }
+
+        if (groups == null || groups.isEmpty()) {
+            return false;
+        }
+
+        Exception firstFail = null;
+        RuntimeException wrapException = null;
+        try {
+            // need credentials in the subject to call GMS
+            if (CredUtil.checkCredentials(subject)) {
+                // make gms calls to see if the user has group membership
+                for (URI groupURI : groups) {
+                    try {
+                        log.debug("Checking GMS on groupURI: " + groupURI);
+                        GroupURI guri = new GroupURI(groupURI);
+                        boolean isMember = gmsClient.isMember(guri);
+                        profiler.checkpoint("gmsClient.ismember");
+                        if (isMember) {
+                            return true;
+                        }
+                    } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
+                        log.debug("failed to call canfar gms service", ex);
+                        if (firstFail == null) {
+                            firstFail = ex;
+                            wrapException = new RuntimeException("failed to check membership with group service", ex);
+                        }
+                    }
+                }
+            }
+        } catch (AccessControlException | CertificateExpiredException | CertificateNotYetValidException ex) {
+            wrapException = new RuntimeException("failed credentials check", ex);
+        }
+
+        if (wrapException != null) {
+            throw wrapException;
+        }
+
+        return false;
+    }
+
+    // HACK: need to create a privaledged subject for use with CredClient calls
+    // but this needs to be configurable somehow...
+    // for now: compatibility with current system config
+    //    private Subject createOpsSubject()
+    //    {
+    //        File pemFile = new File(System.getProperty("user.home") + "/.pub/proxy.pem");
+    //        return SSLUtil.createSubject(pemFile);
+    //    }
+
+    /**
+     * Check if the specified subject is the owner of the node.
+     *
+     * @param subject subject
+     * @param node    node to check
+     * @return true of the current subject is the owner, otherwise false
+     */
+    private boolean isOwner(Node node, Subject subject) {
+        Subject owner = node.owner;
+        if (owner == null) {
+            throw new IllegalStateException("BUG: no owner found for node: " + node);
+        }
+
+        Set<Principal> ownerPrincipals = owner.getPrincipals();
+        Set<Principal> callerPrincipals = subject.getPrincipals();
+
+        for (Principal ownerPrin : ownerPrincipals) {
+            for (Principal callerPrin : callerPrincipals) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format(
+                            "Checking owner of node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                            node.getName(), ownerPrin, callerPrin));
+                }
+                if (AuthenticationUtil.equals(ownerPrin, callerPrin)) {
+                    return true; // caller===owner
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * Return false if mask blocks read
@@ -373,28 +365,6 @@ public class VOSpaceAuthorizer {
         }
         log.debug("mask disallows write: " + mask);
         return false;
-    }
-
-    public void setDisregardLocks(boolean disregardLocks) {
-        this.disregardLocks = disregardLocks;
-    }
-
-    /**
-     * Node NodePersistence Getter.
-     *
-     * @return NodePersistence instance.
-     */
-    public NodePersistence getNodePersistence() {
-        return nodePersistence;
-    }
-
-    /**
-     * Node NodePersistence Setter.
-     *
-     * @param nodePersistence NodePersistence instance.
-     */
-    public void setNodePersistence(final NodePersistence nodePersistence) {
-        this.nodePersistence = nodePersistence;
     }
 
     /**

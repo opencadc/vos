@@ -123,52 +123,6 @@ public abstract class NodeAction extends RestAction {
         super();
     }
 
-    /**
-     * Set the authorizer to be used by this action.
-     *
-     * @param voSpaceAuthorizer VOSpace authorizer
-     */
-    public void setVOSpaceAuthorizer(VOSpaceAuthorizer voSpaceAuthorizer) {
-        this.voSpaceAuthorizer = voSpaceAuthorizer;
-    }
-
-    /**
-     * Set the persistence to be used by this action.
-     *
-     * @param nodePersistence persistence to be used
-     */
-    public void setNodePersistence(NodePersistence nodePersistence) {
-        this.nodePersistence = nodePersistence;
-    }
-
-    /**
-     * Set the stylesheet reference.
-     *
-     * @param stylesheetReference The URI reference string to the stylesheet
-     *                            location.
-     */
-    public void setStylesheetReference(String stylesheetReference) {
-        this.stylesheetReference = stylesheetReference;
-    }
-
-    /**
-     * Set the detail level.
-     *
-     * @param detailLevel The value.
-     */
-    public void setDetailLevel(String detailLevel) {
-        this.detailLevel = detailLevel;
-    }
-
-    /**
-     * Set the value for resolve metadata.
-     *
-     * @param resolveMetadata The value.
-     */
-    public void setResolveMetadata(boolean resolveMetadata) {
-        this.resolveMetadata = resolveMetadata;
-    }
-
     protected String getMediaType() {
         String mediaType = DEFAULT_FORMAT;
         if (syncInput.getParameter("Accept") != null) {
@@ -264,15 +218,13 @@ public abstract class NodeAction extends RestAction {
         String jndiNodePersistence = componentID + ".nodePersistence";
         try {
             Context ctx = new InitialContext();
-            setNodePersistence((NodePersistence) ctx.lookup(jndiNodePersistence));
+            this.nodePersistence = (NodePersistence) ctx.lookup(jndiNodePersistence);
             localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
         } catch (Exception oops) {
             log.error("No NodePersistence implementation found with JNDI key " + jndiNodePersistence, oops);
         }
 
-        VOSpaceAuthorizer authorizer = new VOSpaceAuthorizer(true);
-        authorizer.setNodePersistence(nodePersistence);
-        setVOSpaceAuthorizer(authorizer);
+        this.voSpaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);
         nodePath = syncInput.getPath();
 
         // Create the client version of the node to be used for the operation

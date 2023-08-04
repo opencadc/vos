@@ -146,8 +146,6 @@ public class PathResolver {
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
 
-        voSpaceAuthorizer.checkServiceStatus(writable);
-
         if (nodePath == null) {
             if (writable) {
                 voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
