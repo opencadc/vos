@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2017.                            (c) 2017.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,45 +62,61 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  $Revision: 5 $
+ *
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.VOSURI;
 
 /**
- *
- * @author pdowler
+ * Class used to retrieve the resourceID and base VOS URI of the running
+ * VOSpace instance.
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class LocalServiceURI {
+    private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
-    @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+    private URI resourceID;
+    private VOSURI vosURIBase;
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public LocalServiceURI(URI resourceID) {
+        if (resourceID == null) {
+            throw new IllegalArgumentException("resource ID required");
+        }
+        this.resourceID = resourceID;
+        if (vosURIBase == null) {
+            try {
+                log.debug("VOSpace resourceID: " + resourceID);
+                String name = resourceID.getPath().substring(1);  // remove slash
+                String vosuri = "vos://" + resourceID.getAuthority() + "~" + name;
+                vosURIBase = new VOSURI(vosuri);
+                log.debug("VOSpace URI base: " + vosURIBase);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException("Invalid VOSpace resource ID " + resourceID, e);
+            }
+        }
     }
 
+    public VOSURI getVOSBase() {
+        return vosURIBase;
+    }
+
+    public URI getURI() {
+        return resourceID;
+    }
+
+    public VOSURI getURI(Node node) {
+        String uri = getVOSBase() + Utils.getPath(node);
+        try {
+            return new VOSURI(uri);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("BUG: VOURI syntax: " + uri, e);
+        }
+    }
 }

@@ -65,42 +65,100 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Set;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
 
 /**
+ * Utility methods
  *
- * @author pdowler
+ * @author adriand
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class Utils {
+    final Logger log = Logger.getLogger(Utils.class);
 
-    @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    /**
+     * Returns the path of the parent with no leading or trailing backslashes
+     *
+     * @param nodePath the path of the node
+     * @return the path of the parent
+     */
+    public static String getParentPath(final String nodePath) {
+        if (isRoot(nodePath)) {
+            return null; // there is no parent of the root
+        }
+        String np = nodePath;
+        if (np.endsWith("/")) {
+            np = np.substring(0, np.length() - 1);
+        }
+        if (nodePath.startsWith("/")) {
+            np = np.substring(1, np.length());
+        }
+        int index = np.lastIndexOf("/");
+        if (index > 0) {
+            return np.substring(0, index);
+        } else {
+            return null;
+        }
     }
 
+    public static boolean isRoot(String nodePath) {
+        if (nodePath == null || nodePath.length() == 0 || nodePath.equals("/")) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get a linked list of nodes from leaf to root.
+     *
+     * @return list of nodes, with leaf first and root last
+     */
+    public static LinkedList<Node> getNodeList(Node leaf) {
+        LinkedList<Node> nodes = new LinkedList<Node>();
+        Node cur = leaf;
+        while (cur != null) {
+            nodes.add(cur);
+            cur = cur.parent;
+        }
+        return nodes;
+    }
+
+
+    public static String getPath(Node node) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(node.getName());
+        Node tmp = node.parent;
+        while (tmp != null) {
+            sb.insert(0, tmp.getName() + "/");
+            tmp = tmp.parent;
+        }
+        return sb.toString();
+    }
+
+
+    /**
+     * Takes a set of old properties and updates it with a new set of properties. Essentially
+     * this means updating values or removing and adding elements. It is not a straight replacement.
+     *
+     * @param oldProps set of old Node Propertis that are being update
+     * @param newProps set of new Node Properties to be used for the update
+     * @return
+     */
+    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
+        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
+            NodeProperty newProperty = newIter.next();
+            if (oldProps.contains(newProperty)) {
+                oldProps.remove(newProperty);
+            }
+            if (!newProperty.isMarkedForDeletion()) {
+                oldProps.add(newProperty);
+            }
+        }
+    }
 }

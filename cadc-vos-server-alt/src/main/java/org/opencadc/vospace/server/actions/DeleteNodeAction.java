@@ -65,42 +65,54 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import java.security.AccessControlException;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 
 /**
+ * Class to perform the deletion of a Node.
  *
- * @author pdowler
+ * @author majorb
+ * @author adriand
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class DeleteNodeAction extends NodeAction {
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
     @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public Node getClientNode() {
+        // No client node in a DELETE
+        return null;
     }
 
+    @Override
+    public Node doAuthorizationCheck()
+            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
+        if (Utils.isRoot(nodePath) || Utils.isRoot(Utils.getParentPath(nodePath))) {
+            throw new AccessControlException("permission denied");
+        }
+
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node target = pathResolver.getNode(nodePath, true);
+        return target;
+    }
+
+    @Override
+    public void performNodeAction(Node clientNode, Node serverNode)
+            throws TransientException {
+        log.debug("Deleting node: " + Utils.getPath(serverNode));
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
+    }
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return null;
+    }
 }

@@ -65,42 +65,116 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
 import java.io.IOException;
-import java.io.Writer;
-
+import java.io.InputStream;
+import java.security.AccessControlException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 
 /**
+ * Class to perform the update of a Node.
  *
- * @author pdowler
+ * @author adriand
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public class UpdateNodeAction extends NodeAction {
+
+    protected static Logger log = Logger.getLogger(UpdateNodeAction.class);
+
+    private static final String INLINE_CONTENT_TAG = "inputstream";
+
+    // 12Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 12288L;
 
     @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
-
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    public Node getClientNode()
+            throws NodeParsingException, IOException {
+        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
+        return getNode(in);
     }
 
+    @Override
+    public Node doAuthorizationCheck()
+            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node node = pathResolver.getNode(nodePath, true);
+
+        return node;
+    }
+
+    @Override
+    public void performNodeAction(Node clientNode, Node serverNode)
+            throws Exception {
+
+        List<NodeProperty> props = new ArrayList<>();
+        props.addAll(clientNode.getProperties());
+        serverNode.getReadOnlyGroup().clear();
+        serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
+        serverNode.getReadWriteGroup().clear();
+        serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
+        if (clientNode.owner != null) {
+            serverNode.owner = clientNode.owner;
+        }
+        if (clientNode.ownerID != null) {
+            serverNode.ownerID = clientNode.ownerID;
+        }
+        if (clientNode.ownerDisplay != null) {
+            serverNode.ownerDisplay = clientNode.ownerDisplay;
+        }
+        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
+        Node storedNode = nodePersistence.put(serverNode);
+
+        final NodeWriter nodeWriter = getNodeWriter();
+        syncOutput.setHeader("Content-Type", getMediaType());
+        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
+    }
+
+    private Node getNode(InputStream content) throws IOException, NodeParsingException {
+        ByteCountInputStream sizeLimitInputStream =
+                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
+
+        NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
+
+        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
+        // ensure the path in the XML URI matches the path in the URL
+        String uriPath = nrr.vosURI.getPath();
+        if (uriPath.startsWith("/")) {
+            uriPath = uriPath.substring(1); // drop leading "/"
+        }
+        if (!uriPath.equals(nodePath)) {
+            throw new NodeParsingException("Node path in URI XML ("
+                    + uriPath
+                    + ") not equal to node path in URL ("
+                    + nodePath
+                    + ")");
+        }
+
+        return nrr.node;
+    }
+
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return (name, contentType, inputStream) -> {
+            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            content.name = INLINE_CONTENT_TAG;
+            content.value = inputStream;
+            return content;
+        };
+    }
 }

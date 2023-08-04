@@ -65,42 +65,77 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.xml.JsonOutputter;
-
-import java.io.IOException;
-import java.io.Writer;
-
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
+import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceLockedException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
+import org.opencadc.vospace.VOS;
 
 /**
+ * Enumeration of type types of faults that can occur
+ * with node processing.
  *
- * @author pdowler
+ * @author majorb
+ * @author adriand
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public enum NodeFault {
+    // IVOA Standard Faults - not an exhaustive list
+    PermissionDenied(new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)),
+    InvalidURI(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_URI)),
+    NodeNotFound(new ResourceNotFoundException(VOS.IVOA_FAULT_NODE_NOT_FOUND)),
+    DuplicateNode(new ResourceAlreadyExistsException(VOS.IVOA_FAULT_DUPLICATE_NODE)),
+    InvalidToken(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_TOKEN)),
+    InvalidArgument(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG)),
+    TypeNotSupported(new IllegalArgumentException(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED)),
+    // Other Faults
+    ContainerNotFound(new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)),
+    //TODO not sure still needed.
+    //    RequestEntityTooLarge(new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)),
+    UnreadableLinkTarget(new ResourceNotFoundException(VOS.CADC_FAULT_UNREADABLE_LINK)),
+    ServiceBusy(new TransientException(VOS.CADC_FAULT_SERVICE_BUSY)),
+    NodeLocked(new ResourceLockedException(VOS.CADC_FAULT_NODE_LOCKED)),
+    NotAuthenticated(new NotAuthenticatedException("NotAuthenticated"));
 
-    @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+    private Exception status;
+    private String message;
+    private boolean serviceFailure;
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
+    private NodeFault(Exception ex) {
+        this.status = ex;
+        this.serviceFailure = false;
+    }
+
+    public Exception getStatus() {
+        return status;
+    }
+
+    public String toString() {
+        return name();
+    }
+
+    public String getMessage() {
+        if (message != null) {
+            return message;
+        }
+        if (status != null) {
+            return status.getMessage();
+        }
+        return null;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public boolean isServiceFailure() {
+        return serviceFailure;
+    }
+
+    public void setServiceFailure(boolean serviceFailure) {
+        this.serviceFailure = serviceFailure;
     }
 
 }

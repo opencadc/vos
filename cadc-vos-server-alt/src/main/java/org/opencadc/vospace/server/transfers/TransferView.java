@@ -62,45 +62,28 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  $Revision: 4 $
+ *
  ************************************************************************
  */
 
-package org.opencadc.vospace.io;
+package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.xml.JsonOutputter;
+import java.util.List;
+import java.util.Map;
+import org.opencadc.vospace.VOSURI;
 
-import java.io.IOException;
-import java.io.Writer;
-
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
 
 /**
+ * Interface defining CADC views that use parameters to specify view
+ * opeation.
  *
- * @author pdowler
+ * @author majorb
  */
-public class JsonNodeWriter extends NodeWriter {
-    private static final Logger log = Logger.getLogger(JsonNodeWriter.class);
+public interface TransferView {
 
-    @Override
-    public void write(Element root, Writer writer)
-        throws IOException {
-        JsonOutputter outputter = new JsonOutputter();
-        outputter.getListElementNames().add("nodes");
-        outputter.getListElementNames().add("properties");
-        outputter.getListElementNames().add("accepts");
-        outputter.getListElementNames().add("provides");
+    public Map<String, List<String>> getViewParams(VOSURI target, List<ca.nrc.cadc.uws.Parameter> additionalParameters);
 
-        // WebRT 72612
-        // Treat all property values as Strings.
-        // jenkinsd 2016.01.20
-        outputter.getStringElementNames().add("property");
-        
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
+    public List<ca.nrc.cadc.uws.Parameter> cleanseParameters(List<ca.nrc.cadc.uws.Parameter> additionalParameters);
 
 }

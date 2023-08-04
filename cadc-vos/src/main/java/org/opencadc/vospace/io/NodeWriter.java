@@ -67,6 +67,7 @@
 
 package org.opencadc.vospace.io;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -74,6 +75,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -154,7 +156,7 @@ public class NodeWriter implements XmlProcessor {
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    protected void write(Element root, Writer writer)
+    public void write(Element root, Writer writer)
         throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
@@ -265,9 +267,13 @@ public class NodeWriter implements XmlProcessor {
             nodeElement.addContent(getAcceptsElement(dn));
             nodeElement.addContent(getProvidesElement(dn));
         } else if (node instanceof LinkNode) {
+            LinkNode ln = (LinkNode) node;
 
             // Node variables serialized as node properties
             addNodeVariablesToProperties(node, properties);
+
+            // LinkNode variables serialized as node properties
+            addLinkNodeVariablesToProperties(ln, properties);
 
             // add node properties to node field properties
             properties.addAll(node.getProperties());
@@ -276,7 +282,6 @@ public class NodeWriter implements XmlProcessor {
             nodeElement.addContent(getPropertiesElement(properties));
 
             // add target element
-            LinkNode ln = (LinkNode) node;
             Element targetEl = new Element("target", vosNamespace);
             targetEl.setText(ln.getTarget().toString());
             nodeElement.addContent(targetEl);
@@ -332,6 +337,23 @@ public class NodeWriter implements XmlProcessor {
     protected void addContainerNodeVariablesToProperties(ContainerNode node, Set<NodeProperty> properties) {
         properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS,
                                         Boolean.toString(node.inheritPermissions)));
+        if (node.getLastModified() != null) {
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
+        }
+    }
+
+    /**
+     * Add LinkNode instance variables to the node properties.
+     *
+     * @param node a Node instance.
+     * @param properties a Set of NodeProperty.
+     */
+    protected void addLinkNodeVariablesToProperties(LinkNode node, Set<NodeProperty> properties) {
+        if (node.getLastModified() != null) {
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
+        }
     }
 
     /**
@@ -342,6 +364,8 @@ public class NodeWriter implements XmlProcessor {
      */
     protected void addDataNodeVariablesToProperties(DataNode node, Set<NodeProperty> properties) {
         // currently none since busy is an attribute handled elsewhere
+        // TODO for date for DataNode it's not clear which of the Node.lastModified, Artifact.lastModified,
+        //  Artifact.contentLastModified is appropriate here
     }
 
     /**
