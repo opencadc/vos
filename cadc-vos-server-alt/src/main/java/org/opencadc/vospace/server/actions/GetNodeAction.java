@@ -73,18 +73,14 @@ import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.util.ObjectUtil;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Iterator;
-import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
@@ -169,16 +165,14 @@ public class GetNodeAction extends NodeAction {
                 }
             }
 
-            String startPath = null;
             // Paging parameters
             String pageLimitString = syncInput.getParameter(QUERY_PARAM_LIMIT);
             String startURI = syncInput.getParameter(QUERY_PARAM_URI);
 
-            // parse the pageLimit
             Integer pageLimit = null;
             if (pageLimitString != null) {
                 try {
-                    pageLimit = new Integer(pageLimitString);
+                    pageLimit = Integer.parseInt(pageLimitString);
                     if (pageLimit < 0) {
                         throw new NumberFormatException();
                     }
@@ -187,12 +181,18 @@ public class GetNodeAction extends NodeAction {
                 }
             }
 
-            // validate startURI
+            String pageStart = null;
             if (StringUtil.hasText(startURI)) {
-                startPath = new VOSURI(startURI).getPath();
-                if (!nodePath.equals(Utils.getParentPath(startPath))) {
+                VOSURI vuri = new VOSURI(startURI);
+                String parentPath = Utils.getParentPath(vuri.getPath());
+
+                // ugh: have to handle root listing carefully because "strings"
+                if ((nodePath == null && parentPath == null) || nodePath.equals(parentPath)) {
+                    pageStart = vuri.getName();
+                } else {
                     throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
+                
             }
 
             // get the children as requested
@@ -200,18 +200,17 @@ public class GetNodeAction extends NodeAction {
             // request for a subset of children
             if (sortParamURI == null && sortAsc == null) {
                 IdentityManager im = AuthenticationUtil.getIdentityManager();
-                ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node, pageLimit, startURI);
-                try {
+                /*
+                try (ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node, pageLimit, pageStart)) {
                     while (resourceIterator.hasNext()) {
                         Node child = resourceIterator.next();
                         child.owner = im.toSubject(node.ownerID);
                         child.ownerDisplay = im.toDisplayString(node.owner);
                         node.getNodes().add(child);
                     }
-                } finally {
-                    resourceIterator.close();
                 }
-                resourceIterator.close();
+                */
+                node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
             } else {
                 throw new IllegalArgumentException("Alternate sorting options not supported (yet?).");
             }
