@@ -511,6 +511,7 @@ public class Main implements Runnable {
                     sb.append(pad("child nodes: ", 32));
                     sb.append(pad("size",12));
                     sb.append(pad("public",8));
+                    sb.append(pad("owner",12));
                     sb.append(pad("last modified",26));
                     sb.append("URI");
                     msg(sb.toString());
@@ -575,10 +576,12 @@ public class Main implements Runnable {
             if (child instanceof ContainerNode) {
                 name += "/";
             }
+            String pub = (child.isPublic == null ? "false" : "true");
             VOSURI childURI = NodeUtil.getChildURI(parent, child.getName());
             sb.append(pad(name,32));
             sb.append(pad(getContentLength(child,true),12));
-            sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
+            sb.append(pad(pub,8));
+            sb.append(pad(child.ownerDisplay,12));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26));
             sb.append(childURI);
             msg(sb.toString());

@@ -162,9 +162,6 @@ public class PathResolver {
                     log.debug("not found " + nodePath + " - '" + path + "' element missing");
                     throw new ResourceNotFoundException("not found " + nodePath);
                 }
-                IdentityManager im = AuthenticationUtil.getIdentityManager();
-                node.owner = im.toSubject(node.ownerID);
-                node.ownerDisplay = im.toDisplayString(node.owner);
                 if (writable) {
                     voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
                 } else {

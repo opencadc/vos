@@ -128,15 +128,10 @@ public class UpdateNodeAction extends NodeAction {
         serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
         serverNode.getReadWriteGroup().clear();
         serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
-        if (clientNode.owner != null) {
-            serverNode.owner = clientNode.owner;
-        }
-        if (clientNode.ownerID != null) {
-            serverNode.ownerID = clientNode.ownerID;
-        }
-        if (clientNode.ownerDisplay != null) {
-            serverNode.ownerDisplay = clientNode.ownerDisplay;
-        }
+        // TODO: chown -- must be admin (root owner) to do this
+        //if (clientNode.ownerID != null) {
+        //    serverNode.ownerID = clientNode.ownerID;
+        //}
         Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
         Node storedNode = nodePersistence.put(serverNode);
 

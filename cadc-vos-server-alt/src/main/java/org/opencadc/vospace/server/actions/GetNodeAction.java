@@ -199,17 +199,6 @@ public class GetNodeAction extends NodeAction {
             start = System.currentTimeMillis();
             // request for a subset of children
             if (sortParamURI == null && sortAsc == null) {
-                IdentityManager im = AuthenticationUtil.getIdentityManager();
-                /*
-                try (ResourceIterator<Node> resourceIterator = nodePersistence.iterator(node, pageLimit, pageStart)) {
-                    while (resourceIterator.hasNext()) {
-                        Node child = resourceIterator.next();
-                        child.owner = im.toSubject(node.ownerID);
-                        child.ownerDisplay = im.toDisplayString(node.owner);
-                        node.getNodes().add(child);
-                    }
-                }
-                */
                 node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
             } else {
                 throw new IllegalArgumentException("Alternate sorting options not supported (yet?).");
