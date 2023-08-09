@@ -126,22 +126,21 @@ public class CreateNodeAction extends NodeAction {
     @Override
     public void performNodeAction(Node clientNode, Node serverNode)
             throws Exception {
-
+        
+        // ambiguous: how do I know if the serverNode is the existing node or the parent?
+        
         if (serverNode instanceof ContainerNode) {
             ContainerNode parent = (ContainerNode) serverNode;
-            nodePersistence.get(parent, clientNode.getName());
-            ResourceIterator<Node> children = nodePersistence.iterator(parent, null, null);
-            while (children.hasNext()) {
-                if (children.next().getName().equals(clientNode.getName())) {
-                    throw new ResourceAlreadyExistsException("Already exists: " + nodePath);
-                }
+            Node cur = nodePersistence.get(parent, clientNode.getName());
+            if (cur != null) {
+                throw new ResourceAlreadyExistsException("already exists: " + nodePath);
             }
 
             clientNode.parent = parent;
             clientNode.owner = AuthenticationUtil.getCurrentSubject();
-            IdentityManager im = AuthenticationUtil.getIdentityManager();
-            clientNode.ownerID = im.toOwner(clientNode.owner);
+            
             if (parent.inheritPermissions) {
+                // TODO: inherit overrides explicit clientNode settings?
                 clientNode.isPublic = parent.isPublic;
                 clientNode.getReadOnlyGroup().clear();
                 clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());

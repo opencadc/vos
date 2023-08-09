@@ -67,6 +67,7 @@
 
 package org.opencadc.vospace;
 
+import ca.nrc.cadc.io.ResourceIterator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -86,7 +87,10 @@ public class ContainerNode extends Node {
     public boolean inheritPermissions = false;
 
     // The list of child nodes.
-    private final transient List<Node> nodes = new ArrayList<>();
+    private final transient List<Node> childNodes = new ArrayList<>();
+    
+    // server side child node iterator
+    public transient ResourceIterator<Node> childIterator;
 
     /**
      * ContainerNode constructor.
@@ -111,13 +115,8 @@ public class ContainerNode extends Node {
         super(id, name);
         this.inheritPermissions = inheritPermissions;
     }
-    
-    /**
-     * Get child nodes.
-     * 
-     * @return list of child nodes, possibly partial
-     */
+
     public List<Node> getNodes() {
-        return nodes;
+        return childNodes;
     }
 }

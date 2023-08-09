@@ -68,6 +68,7 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -77,6 +78,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -156,7 +158,7 @@ public class NodeWriter implements XmlProcessor {
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(Element root, Writer writer)
+    protected void write(Element root, Writer writer)
         throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
@@ -432,10 +434,28 @@ public class NodeWriter implements XmlProcessor {
      */
     protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
         Element nodes = new Element("nodes", vosNamespace);
-        for (Node childNode : node.getNodes()) {
-            VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
-            Element nodeElement = getNodeElement(childURI, childNode);
-            nodes.addContent(nodeElement);
+        if (node.childIterator != null) {
+            // server side output
+            // TODO: dynamic streaming rather than create all elements here
+            try (ResourceIterator<Node> iter = node.childIterator) {
+                while (iter.hasNext()) {
+                    Node childNode = iter.next();
+                    VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
+                    Element nodeElement = getNodeElement(childURI, childNode);
+                    nodes.addContent(nodeElement);
+                }
+            } catch (IOException ex) {
+                throw new RuntimeException("failure during child node listing", ex);
+            }
+        } else {
+            // client side serialization of a node that was read by NodeReader
+            Iterator<Node> iter = node.getNodes().iterator();
+            while (iter.hasNext()) {
+                Node childNode = iter.next();
+                VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
+                Element nodeElement = getNodeElement(childURI, childNode);
+                nodes.addContent(nodeElement);
+            }
         }
         return nodes;
     }
