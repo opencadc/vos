@@ -576,7 +576,7 @@ public class Main implements Runnable {
             if (child instanceof ContainerNode) {
                 name += "/";
             }
-            String pub = (child.isPublic == null ? "false" : "true");
+            String pub = (child.isPublic == null ? "false" : child.isPublic.toString());
             VOSURI childURI = NodeUtil.getChildURI(parent, child.getName());
             sb.append(pad(name,32));
             sb.append(pad(getContentLength(child,true),12));

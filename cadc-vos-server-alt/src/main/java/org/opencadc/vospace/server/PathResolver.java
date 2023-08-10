@@ -117,14 +117,13 @@ public class PathResolver {
     }
 
     /**
-     * Resolves a node URI following the links and returns the end node
+     * Resolves a node URI, follow links, and returns the end node.
      *
      * @param nodePath
-     * @param writable
-     * @return
-     * @throws ResourceNotFoundException
+     * @return the last node in the path or null if not found
+     * @throws org.opencadc.vospace.LinkingException
      */
-    public Node getNode(String nodePath) throws ResourceNotFoundException, LinkingException {
+    public Node getNode(String nodePath) throws LinkingException {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
         
             
@@ -160,7 +159,7 @@ public class PathResolver {
 
                         String linkPath = targetURI.getPath();
                         if (visitedPaths.contains(linkPath)) {
-                            throw new IllegalStateException("detected link node cycle: already followed link -> " + linkPath);
+                            throw new LinkingException("detected link node cycle: already followed link -> " + linkPath);
                         }
                         visitedPaths.add(linkPath);
                         
@@ -190,8 +189,6 @@ public class PathResolver {
      *
      * @param linkNode node to validate
      * @return A VOSURI of the target of the link node.
-     * @throws LinkingException If the target is non vospace, not local, or
-     *                          an invalid URI.
      */
     public VOSURI validateTargetURI(LinkNode linkNode) {
         LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
