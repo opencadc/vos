@@ -68,25 +68,18 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.io.ByteCountInputStream;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentHandler;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.AccessControlException;
 import java.util.HashSet;
 import java.util.Set;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
-import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
@@ -102,101 +95,68 @@ public class CreateNodeAction extends NodeAction {
 
     protected static Logger log = Logger.getLogger(CreateNodeAction.class);
 
-    private static final String INLINE_CONTENT_TAG = "inputstream";
-
-    // 12Kb XML Doc size limit
-    private static final long DOCUMENT_SIZE_MAX = 12288L;
-
     @Override
-    public Node getClientNode()
-            throws NodeParsingException, IOException {
-        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
-        return getNode(in);
-    }
-
-    @Override
-    public Node doAuthorizationCheck()
-            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
-        String parentPath = Utils.getParentPath(nodePath);
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        Node parentNode = pathResolver.getNode(parentPath, true);
-        return parentNode;
-    }
-
-    @Override
-    public void performNodeAction(Node clientNode, Node serverNode)
-            throws Exception {
+    public void doAction() throws Exception {
+        final Node clientNode = getInputNode();
+        final VOSURI clientNodeURI = getInputURI();
+        final VOSURI target = getTargetURI();
         
-        // ambiguous: how do I know if the serverNode is the existing node or the parent?
+        // validate doc vs path because some redundancy in API
+        if (!clientNodeURI.equals(target)) {
+            throw NodeFault.InvalidURI.getStatus();
+            //throw new IllegalArgumentException("invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
+        }
         
-        if (serverNode instanceof ContainerNode) {
-            ContainerNode parent = (ContainerNode) serverNode;
-            Node cur = nodePersistence.get(parent, clientNode.getName());
-            if (cur != null) {
-                throw new ResourceAlreadyExistsException("already exists: " + nodePath);
-            }
-
-            clientNode.parent = parent;
-            clientNode.owner = AuthenticationUtil.getCurrentSubject();
-            
-            if (parent.inheritPermissions) {
-                // TODO: inherit overrides explicit clientNode settings?
-                clientNode.isPublic = parent.isPublic;
-                clientNode.getReadOnlyGroup().clear();
-                clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
-                clientNode.getReadWriteGroup().clear();
-                clientNode.getReadWriteGroup().addAll(parent.getReadWriteGroup());
-            } else {
-                if (clientNode.isPublic == null) {
-                    clientNode.isPublic = false;
-                }
-            }
-            log.debug("Putting node " + clientNode.getName() + " owner " + clientNode.owner);
-            // sanitize properties
-            Set<NodeProperty> np = new HashSet<>();
-            Utils.updateNodeProperties(np, clientNode.getProperties());
-            clientNode.getProperties().clear();
-            clientNode.getProperties().addAll(np);
-            Node storedNode = nodePersistence.put(clientNode);
-
-            // return the node in xml format
-            final NodeWriter nodeWriter = getNodeWriter();
-            syncOutput.setHeader("Content-Type", getMediaType());
-            nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
-        } else {
-            log.debug("parent is not a container: " + Utils.getPath(clientNode));
+        // get parent container node
+        // TBD: resolveLinks=true?
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        Node serverNode = pathResolver.getNode(target.getParentURI().getPath());
+        if (serverNode == null || !(serverNode instanceof ContainerNode)) {
             throw NodeFault.ContainerNotFound.getStatus();
         }
-    }
 
-    private Node getNode(InputStream content) throws IOException, NodeParsingException {
-        ByteCountInputStream sizeLimitInputStream =
-                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
-
-        NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
-        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
-
-        // ensure the path in the XML URI matches the path in the URL
-        String newPath = nrr.vosURI.getPath();
-        newPath = newPath.replaceAll("/$", "").replaceAll("^/", "");
-        if (!newPath.equals(nodePath)) {
-            throw new NodeParsingException("Node path in URI XML ("
-                    + nrr.vosURI.getPath()
-                    + ") not equal to node path in URL ("
-                    + nodePath
-                    + ")");
+        ContainerNode parent = (ContainerNode) serverNode;
+        Node cur = nodePersistence.get(parent, target.getName());
+        if (cur != null) {
+            throw NodeFault.DuplicateNode.getStatus();
+            //throw new ResourceAlreadyExistsException("node already exists: " + target.getPath());
         }
 
-        return nrr.node;
-    }
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
+            throw NodeFault.PermissionDenied.getStatus();
+        }
 
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return (name, contentType, inputStream) -> {
-            InlineContentHandler.Content content = new InlineContentHandler.Content();
-            content.name = INLINE_CONTENT_TAG;
-            content.value = inputStream;
-            return content;
-        };
+        clientNode.parent = parent;
+        // TODO: chown: admin (root owner) can assign ownership to someone else
+        clientNode.owner = caller;
+
+        if (parent.inheritPermissions) {
+            // TODO: inherit overrides explicit clientNode settings?
+            clientNode.isPublic = parent.isPublic;
+            clientNode.getReadOnlyGroup().clear();
+            clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
+            clientNode.getReadWriteGroup().clear();
+            clientNode.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+        } else {
+            if (clientNode.isPublic == null) {
+                clientNode.isPublic = false;
+            }
+        }
+
+        // sanitize properties
+        Set<NodeProperty> np = new HashSet<>();
+        Utils.updateNodeProperties(np, clientNode.getProperties());
+        clientNode.getProperties().clear();
+        clientNode.getProperties().addAll(np);
+
+        log.debug("Putting node " + target.getName() + " in path " + target.getPath());
+        Node storedNode = nodePersistence.put(clientNode);
+
+        // output modified node
+        NodeWriter nodeWriter = getNodeWriter();
+        syncOutput.setHeader("Content-Type", getMediaType());
+        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
+        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
     }
 }

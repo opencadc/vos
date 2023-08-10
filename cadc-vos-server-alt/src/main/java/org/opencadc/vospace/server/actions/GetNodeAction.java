@@ -90,6 +90,7 @@ import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
 
@@ -100,9 +101,25 @@ import org.opencadc.vospace.server.Utils;
  * @author adriand
  */
 public class GetNodeAction extends NodeAction {
-
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
+    
+    // query form parameter names
+    public static final String QUERY_PARAM_DETAIL = "detail";
+    public static final String QUERY_PARAM_VIEW = "view";
+    public static final String QUERY_PARAM_URI = "uri";
+    public static final String QUERY_PARAM_LIMIT = "limit";
+    public static final String QUERY_PARAM_SORT_KEY = "sort";
+    public static final String QUERY_PARAM_ORDER_KEY = "order";
 
+    // computed props
+    private static final NodeProperty PROP_READABLE = new NodeProperty(VOS.PROPERTY_URI_READABLE, Boolean.TRUE.toString());
+    private static final NodeProperty PROP_WRITABLE = new NodeProperty(VOS.PROPERTY_URI_WRITABLE, Boolean.TRUE.toString());
+    
+    static {
+        PROP_READABLE.readOnly = true;
+        PROP_WRITABLE.readOnly = true;
+    }
+    
     /**
      * Basic empty constructor.
      */
@@ -110,62 +127,36 @@ public class GetNodeAction extends NodeAction {
     }
 
     @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return null;
-    }
-
-    @Override
-    protected Node getClientNode() {
-        // No client node in a GET
-        return null;
-    }
-
-    @Override
-    public Node doAuthorizationCheck()
-            throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException {
-        // resolve any container links
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        return pathResolver.getNode(nodePath, false);
-    }
-
-    @Override
-    public void performNodeAction(Node clientNode, Node serverNode)
-            throws URISyntaxException, TransientException, ResourceNotFoundException, IOException {
-        long start;
-        long end;
-
+    public void doAction() throws Exception {
+        VOSURI target = getTargetURI();
+        final String detailLevel = syncInput.getParameter(QUERY_PARAM_DETAIL);
+        
+        // get parent node
+        // TBD: resolveLinks=true?
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        Node serverNode = pathResolver.getNode(target.getPath());
+        if (serverNode == null) {
+            throw NodeFault.NodeNotFound.getStatus();
+        }
+        log.warn("found: " + target + " as " + serverNode);
+        
         if (serverNode instanceof ContainerNode) {
             ContainerNode node = (ContainerNode) serverNode;
 
             log.debug("node: " + node);
 
-            // Sorting parameters
+            // TBD: sorting parameters
             String sortParam = syncInput.getParameter(QUERY_PARAM_SORT_KEY);
-            URI sortParamURI = null;
-
-            // Validate sortCol passed in against values in cadc-vos/vos.java
             if (sortParam != null) {
-                sortParamURI = URI.create(sortParam);
-                if ((sortParamURI != VOS.PROPERTY_URI_DATE)
-                        && (sortParamURI != VOS.PROPERTY_URI_CONTENTLENGTH)) {
-                    throw new IllegalArgumentException("Sort by " + sortParam + " not supported.");
-                }
+                throw new UnsupportedOperationException("sort by " + sortParam);
             }
-
-            // Asc/Desc order parameter
+            
             String sortOrderParam = syncInput.getParameter(QUERY_PARAM_ORDER_KEY);
-            Boolean sortAsc = null;
             if (sortOrderParam != null) {
-                if (sortOrderParam.equalsIgnoreCase("asc")) {
-                    sortAsc = true;
-                } else if (sortOrderParam.equalsIgnoreCase("desc")) {
-                    sortAsc = false;
-                } else {
-                    throw new IllegalArgumentException("Sort order parameter should be asc | desc");
-                }
+                throw new UnsupportedOperationException("sort order " + sortOrderParam);
             }
 
-            // Paging parameters
+            // paging parameters
             String pageLimitString = syncInput.getParameter(QUERY_PARAM_LIMIT);
             String startURI = syncInput.getParameter(QUERY_PARAM_URI);
 
@@ -184,31 +175,21 @@ public class GetNodeAction extends NodeAction {
             String pageStart = null;
             if (StringUtil.hasText(startURI)) {
                 VOSURI vuri = new VOSURI(startURI);
-                String parentPath = Utils.getParentPath(vuri.getPath());
-
-                // ugh: have to handle root listing carefully because "strings"
-                if ((nodePath == null && parentPath == null) || nodePath.equals(parentPath)) {
-                    pageStart = vuri.getName();
-                } else {
+                String parentPath = vuri.getParent();
+                log.warn("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
+                if (!target.getPath().equals(parentPath)) {
                     throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
-                
+                pageStart = vuri.getName();
             }
 
-            // get the children as requested
-            start = System.currentTimeMillis();
-            // request for a subset of children
-            if (sortParamURI == null && sortAsc == null) {
-                node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
-            } else {
-                throw new IllegalArgumentException("Alternate sorting options not supported (yet?).");
-            }
-            log.debug(String.format(
-                    "Get children on resolveMetadata=[%b] returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                    resolveMetadata, node.getNodes().size(), startURI, pageLimit));
+            long start = System.currentTimeMillis();
+            log.debug(String.format("get children of %s: start=[%s] limit=[%s]", target.getPath(), startURI, pageLimit));
+            node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
 
-            end = System.currentTimeMillis();
-            log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
+            long end = System.currentTimeMillis();
+            long dt = (end - start);
+            log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
 
             if (VOS.Detail.max.getValue().equals(detailLevel)) {
                 // add a property to child nodes if they are visible to
@@ -217,97 +198,52 @@ public class GetNodeAction extends NodeAction {
             }
         }
 
-        start = System.currentTimeMillis();
-
         // get the properties if no detail level is specified (null) or if the
         // detail level is something other than 'min'.
         if (!VOS.Detail.min.getValue().equals(detailLevel)) {
             nodePersistence.getProperties(serverNode);
 
             if (VOS.Detail.max.getValue().equals(detailLevel)) {
+                Subject subject = AuthenticationUtil.getCurrentSubject();
                 // to get here the node must have been readable so tag it as such
-                doTagReadable(serverNode);
-                if (isWritable(serverNode)) {
-                    doTagWritable(serverNode);
+                serverNode.getProperties().add(PROP_READABLE);
+                if (voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, subject)) {
+                    serverNode.getProperties().add(PROP_WRITABLE);
                 }
             }
         }
 
-        end = System.currentTimeMillis();
-        log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
-
-        
         final NodeWriter nodeWriter = getNodeWriter();
         //nodeWriter.setStylesheetURL(getStylesheetURL());
 
         // clear the properties from server node if the detail
         // level is set to 'min'
         if (VOS.Detail.min.getValue().equals(detailLevel)) {
+            // TODO: what about props that are fields in Node?
             serverNode.getProperties().clear();
         }
 
         syncOutput.setCode(200);
         syncOutput.setHeader("Content-Type", getMediaType());
+        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
     }
-
-    /*
-    public String getStylesheetURL() {
-        log.debug("Stylesheet Reference is: " + stylesheetReference);
-        if (stylesheetReference != null) {
-            String scheme = URI.create(syncInput.getRequestURI()).getScheme();
-            String server = URI.create(syncInput.getRequestURI()).getAuthority();
-            StringBuilder url = new StringBuilder();
-            url.append(scheme);
-            url.append("://");
-            url.append(server);
-            if (!stylesheetReference.startsWith("/")) {
-                url.append("/");
-            }
-            url.append(stylesheetReference);
-            return url.toString();
-        }
-        return null;
-    }
-    */
-    
-    /*
-    private void unresolveNodePaths(VOSURI vosURI, Node node) {
-        try {
-            // change the target node
-            ObjectUtil.setField(node, vosURI, "uri");
-
-            // change any children
-            if (node instanceof ContainerNode) {
-                ContainerNode containerNode = (ContainerNode) node;
-                VOSURI childURI;
-                for (Node child : containerNode.getNodes()) {
-                    childURI = new VOSURI(vosURI.toString() + "/" + child.getName());
-                    ObjectUtil.setField(child, childURI, "uri");
-                }
-            }
-        } catch (Exception e) {
-            log.debug("failed to unresolve node paths", e);
-            throw new RuntimeException(e);
-        }
-    }
-    */
     
     private void doTagChildrenAccessRights(ContainerNode cn) {
         for (final Node n : cn.getNodes()) {
             // to get to this point, the parent node must have been readable.
             // Need to check only the child node
-            AccessControlContext acContext = AccessController.getContext();
-            Subject subject = Subject.getSubject(acContext);
+            Subject subject = AuthenticationUtil.getCurrentSubject();
             if (voSpaceAuthorizer.hasSingleNodeReadPermission(n, subject)) {
-                doTagReadable(n);
+                n.getProperties().add(PROP_READABLE);
             }
-            if (isWritable(n)) {
-                doTagWritable(n);
+            if (voSpaceAuthorizer.hasSingleNodeWritePermission(n, subject)) {
+                n.getProperties().add(PROP_WRITABLE);
             }
         }
     }
 
+    // why separate method and why checking the whole path here in GET?
     private boolean isWritable(Node node) {
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
@@ -319,35 +255,5 @@ public class GetNodeAction extends NodeAction {
             }
         }
         return true;
-    }
-
-    /**
-     * Tag the given node with a 'readable' property to indicate that it is
-     * viewable (readable) by the requester.
-     *
-     * @param n The Node to tag.
-     */
-    private void doTagReadable(final Node n) {
-        final NodeProperty canReadProperty =
-                new NodeProperty(VOS.PROPERTY_URI_READABLE,
-                        Boolean.TRUE.toString());
-        canReadProperty.readOnly = true;
-
-        n.getProperties().add(canReadProperty);
-    }
-
-    /**
-     * Tag the given node with a 'writable' property to indicate that it is
-     * updatable (writable) by the requester.
-     *
-     * @param n The Node to tag.
-     */
-    private void doTagWritable(final Node n) {
-        final NodeProperty canWriteProperty =
-                new NodeProperty(VOS.PROPERTY_URI_WRITABLE,
-                        Boolean.TRUE.toString());
-        canWriteProperty.readOnly = true;
-
-        n.getProperties().add(canWriteProperty);
     }
 }

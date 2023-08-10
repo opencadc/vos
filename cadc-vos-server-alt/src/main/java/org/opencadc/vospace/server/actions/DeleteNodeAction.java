@@ -67,15 +67,14 @@
 
 package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import java.security.AccessControlException;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
 
 /**
  * Class to perform the deletion of a Node.
@@ -87,32 +86,35 @@ public class DeleteNodeAction extends NodeAction {
     private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
 
     @Override
-    public Node getClientNode() {
-        // No client node in a DELETE
-        return null;
-    }
-
-    @Override
-    public Node doAuthorizationCheck()
-            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
-        if (Utils.isRoot(nodePath) || Utils.isRoot(Utils.getParentPath(nodePath))) {
-            throw new AccessControlException("permission denied");
+    public void doAction() throws Exception {
+        
+        VOSURI target = getTargetURI();
+        
+        // TBD: resolveLinks=true?
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        Node serverNode = pathResolver.getNode(target.getPath());
+        if (serverNode == null) {
+            throw NodeFault.NodeNotFound.getStatus();
         }
 
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        Node target = pathResolver.getNode(nodePath, true);
-        return target;
-    }
+        if (serverNode.parent == null) {
+            // target is root
+            throw NodeFault.PermissionDenied.getStatus();
+        }
+        
+        ContainerNode parent = serverNode.parent;
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
+            throw NodeFault.PermissionDenied.getStatus();
+        }
+        
+        if (serverNode instanceof ContainerNode) {
+            // TODO: check if caller can remove everything inside container as well?
+            
+            // TODO: check and refuse to delete non-empty container node? aka require async mode
+        }
 
-    @Override
-    public void performNodeAction(Node clientNode, Node serverNode)
-            throws TransientException {
-        log.debug("Deleting node: " + Utils.getPath(serverNode));
-        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
-    }
-
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return null;
+        log.debug("delete node: " + target.getPath());
+        nodePersistence.delete(serverNode);
     }
 }
