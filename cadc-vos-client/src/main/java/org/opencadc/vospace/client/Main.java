@@ -279,7 +279,7 @@ public class Main implements Runnable {
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
             if (n instanceof ContainerNode) {
-                up = new ContainerNode(target.getName(), ((ContainerNode) n).inheritPermissions);
+                up = new ContainerNode(target.getName());
                 up.getProperties().addAll(properties);
             } else if (n instanceof DataNode) {
                 up = new DataNode(target.getName());
@@ -428,7 +428,9 @@ public class Main implements Runnable {
             Node node;
             switch (this.nodeType) {
                 case CONTAINER_NODE:
-                    node = new ContainerNode(this.target.getName(), this.inheritPermissions);
+                    ContainerNode cn = new ContainerNode(this.target.getName());
+                    cn.inheritPermissions = inheritPermissions;
+                    node = cn;
                     break;
                 case LINK_NODE:
                     node = new LinkNode(this.target.getName(), this.link);
@@ -810,7 +812,7 @@ public class Main implements Runnable {
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
             Node up = null;
             if (n instanceof ContainerNode) {
-                up = new ContainerNode(target.getName(), this.inheritPermissions);
+                up = new ContainerNode(target.getName());
             } else if (n instanceof DataNode) {
                 up = new DataNode(target.getName());
             } else if (n instanceof LinkNode) {
