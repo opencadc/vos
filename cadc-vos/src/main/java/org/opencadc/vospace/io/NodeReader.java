@@ -329,12 +329,9 @@ public class NodeReader implements XmlProcessor {
         throws NodeParsingException {
         Set<NodeProperty> properties = getProperties(element, namespace);
         
-        // check node properties for inheritPermissions property
-        Boolean inheritPermissions = getBooleanProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, properties);
-        boolean inherit = inheritPermissions != null && inheritPermissions;
-
         // instantiate a ContainerNode class
-        ContainerNode node = new ContainerNode(vosURI.getName(), inherit);
+        ContainerNode node = new ContainerNode(vosURI.getName());
+        node.inheritPermissions = getBooleanProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, properties);
         
         setNodeVariables(element, namespace, node, properties);
         node.getProperties().addAll(properties);

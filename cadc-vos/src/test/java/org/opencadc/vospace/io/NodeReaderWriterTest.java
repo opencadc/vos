@@ -147,7 +147,8 @@ public class NodeReaderWriterTest {
 
         // ContainerNode
         containerURI = new VOSURI("vos://opencadc.org~vospace/dir");
-        containerNode = new ContainerNode(containerURI.getName(), false);
+        containerNode = new ContainerNode(containerURI.getName());
+        containerNode.inheritPermissions = false;
         DataNode dn1 = new DataNode("ngc4323");
         dn1.busy = true;
         containerNode.getNodes().add(dn1);
@@ -545,7 +546,8 @@ public class NodeReaderWriterTest {
 
         // root ContainerNode
         detailedURI = new VOSURI("vos://opencadc.org~vospace/testContainer");
-        detailedNode = new ContainerNode(detailedURI.getName(), true);
+        detailedNode = new ContainerNode(detailedURI.getName());
+        detailedNode.inheritPermissions = true;
 
         // child DataNode with some props
         VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
@@ -561,7 +563,8 @@ public class NodeReaderWriterTest {
 
         // add a ContainerNode with some props
         VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/testContainer/foo");
-        ContainerNode containerNode = new ContainerNode(containerURI.getName(), false);
+        ContainerNode containerNode = new ContainerNode(containerURI.getName());
+        containerNode.inheritPermissions = false;
         containerNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
         detailedNode.getNodes().add(containerNode);
 

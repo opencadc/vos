@@ -100,7 +100,7 @@ public class NodeEntityTest {
     @Test
     public void testContainerNode() {
         try {
-            ContainerNode n = new ContainerNode("foo", false);
+            ContainerNode n = new ContainerNode("foo");
             final URI mcs1 = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             
             NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
@@ -113,7 +113,7 @@ public class NodeEntityTest {
             Assert.assertEquals(mcs1, mcs);
             
             UUID rootID = new UUID(0L, 0L);
-            ContainerNode root = new ContainerNode(rootID, "root", false);
+            ContainerNode root = new ContainerNode(rootID, "root");
             n.parent = root;
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
@@ -129,6 +129,11 @@ public class NodeEntityTest {
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             n.ownerID = null;
+            
+            n.inheritPermissions = true;
+            mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            Assert.assertNotEquals(mcs1, mcs);
+            n.inheritPermissions = null;
             
             n.isLocked = true;
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
@@ -174,7 +179,7 @@ public class NodeEntityTest {
             n.getReadWriteGroup().clear();
             
             // child entities
-            n.getNodes().add(new ContainerNode("foo", false));
+            n.getNodes().add(new ContainerNode("foo"));
             n.getNodes().add(new DataNode("bar"));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
@@ -209,7 +214,7 @@ public class NodeEntityTest {
             Assert.assertEquals(mcs1, mcs);
             
             UUID rootID = new UUID(0L, 0L);
-            ContainerNode root = new ContainerNode(rootID, "root", false);
+            ContainerNode root = new ContainerNode(rootID, "root");
             n.parent = root;
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);

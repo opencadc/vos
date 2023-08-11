@@ -83,8 +83,8 @@ import org.apache.log4j.Logger;
 public class ContainerNode extends Node {
     private static Logger log = Logger.getLogger(ContainerNode.class);
 
-    // True if new child nodes inherit permissions from the parent node, false otherwise.
-    public boolean inheritPermissions = false;
+    // true meeans new child nodes inherit permissions from this container node
+    public Boolean inheritPermissions;
 
     // The list of child nodes.
     private final transient List<Node> childNodes = new ArrayList<>();
@@ -96,12 +96,9 @@ public class ContainerNode extends Node {
      * ContainerNode constructor.
      *
      * @param name The name of the node.
-     * @param inheritPermissions true if child nodes inherit permissions from parent,
-     *                           false otherwise.
      */
-    public ContainerNode(String name, boolean inheritPermissions) {
+    public ContainerNode(String name) {
         super(name);
-        this.inheritPermissions = inheritPermissions;
     }
 
     /**
@@ -109,11 +106,9 @@ public class ContainerNode extends Node {
      * 
      * @param id Entity.id
      * @param name Node.name
-     * @param inheritPermissions ContainerNode.inheritPermissions
      */
-    public ContainerNode(UUID id, String name, boolean inheritPermissions) {
+    public ContainerNode(UUID id, String name) {
         super(id, name);
-        this.inheritPermissions = inheritPermissions;
     }
 
     public List<Node> getNodes() {

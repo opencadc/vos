@@ -337,8 +337,9 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addContainerNodeVariablesToProperties(ContainerNode node, Set<NodeProperty> properties) {
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS,
-                                        Boolean.toString(node.inheritPermissions)));
+        if (node.inheritPermissions != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, node.inheritPermissions.toString()));
+        }
         if (node.getLastModified() != null) {
             DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
             properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));

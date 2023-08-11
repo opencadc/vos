@@ -405,4 +405,57 @@ public class VOSURITest {
         }
     }
 
+    @Test
+    public void testStaticToVOSURI() {
+        try {
+            URI resourceID = URI.create("ivo://example.net/vospace");
+            String path = null;
+            
+            VOSURI vuri = new VOSURI(resourceID, path);
+            log.info("uri for null path: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals("vos://example.net~vospace", vuri.getURI().toASCIIString());
+            final VOSURI base = vuri;
+            
+            path = "";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for empty path: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base, vuri);
+            
+            path = "/";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for /: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base, vuri);
+            
+            path = "x";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for x: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base.getURI().toASCIIString() + "/x", vuri.getURI().toASCIIString());
+            
+            path = "/x";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for /x: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base.getURI().toASCIIString() + "/x", vuri.getURI().toASCIIString());
+            
+            path = "/x/";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for /x/: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base.getURI().toASCIIString() + "/x", vuri.getURI().toASCIIString());
+            
+            path = "/x/y";
+            vuri = new VOSURI(resourceID, path);
+            log.info("uri for /x/y: " + vuri);
+            Assert.assertNotNull(vuri);
+            Assert.assertEquals(base.getURI().toASCIIString() + "/x/y", vuri.getURI().toASCIIString());
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 }
