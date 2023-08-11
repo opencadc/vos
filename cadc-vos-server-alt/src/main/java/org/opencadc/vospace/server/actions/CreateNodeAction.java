@@ -131,16 +131,33 @@ public class CreateNodeAction extends NodeAction {
         // TODO: chown: admin (root owner) can assign ownership to someone else
         clientNode.owner = caller;
 
-        if (parent.inheritPermissions) {
-            // TODO: inherit overrides explicit clientNode settings?
-            clientNode.isPublic = parent.isPublic;
-            clientNode.getReadOnlyGroup().clear();
-            clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
-            clientNode.getReadWriteGroup().clear();
-            clientNode.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+        if (parent.inheritPermissions != null && parent.inheritPermissions) {
+            // explicit clientNode settings override inherit
+            if (clientNode.isPublic == null) {
+                clientNode.isPublic = parent.isPublic;
+            }
+            if (clientNode.getReadOnlyGroup().isEmpty()) {
+                clientNode.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
+            }
+            if (clientNode.getReadWriteGroup().isEmpty()) {
+                clientNode.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+            }
+            if (clientNode instanceof ContainerNode) {
+                ContainerNode cn = (ContainerNode) clientNode;
+                if (cn.inheritPermissions == null) {
+                    cn.inheritPermissions = parent.inheritPermissions;
+                }
+            }
         } else {
+            // null is equivalent to false, but always set/persist this??
             if (clientNode.isPublic == null) {
                 clientNode.isPublic = false;
+            }
+            if (clientNode instanceof ContainerNode) {
+                ContainerNode cn = (ContainerNode) clientNode;
+                if (cn.inheritPermissions == null) {
+                    cn.inheritPermissions = false;
+                }
             }
         }
 

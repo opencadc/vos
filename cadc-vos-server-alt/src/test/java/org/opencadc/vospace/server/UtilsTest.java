@@ -119,12 +119,12 @@ public class UtilsTest {
 
     @Test
     public  void testGetNodeList() throws Exception {
-        Node testNode = new ContainerNode("foo", false);
+        Node testNode = new ContainerNode("foo");
         Assert.assertEquals(1, Utils.getNodeList(testNode).size());
 
-        testNode = new ContainerNode("ghi", false);
-        testNode.parent = new ContainerNode("def", false);
-        testNode.parent.parent = new ContainerNode("abc", false);
+        testNode = new ContainerNode("ghi");
+        testNode.parent = new ContainerNode("def");
+        testNode.parent.parent = new ContainerNode("abc");
 
         LinkedList<Node> nodeList = Utils.getNodeList(testNode);
         Assert.assertEquals(3, nodeList.size());
@@ -135,9 +135,9 @@ public class UtilsTest {
 
     @Test
     public void testGetPath() throws Exception {
-        Node testNode = new ContainerNode("ghi", false);
-        testNode.parent = new ContainerNode("def", false);
-        testNode.parent.parent = new ContainerNode("abc", false);
+        Node testNode = new ContainerNode("ghi");
+        testNode.parent = new ContainerNode("def");
+        testNode.parent.parent = new ContainerNode("abc");
 
         Assert.assertEquals("abc/def/ghi", Utils.getPath(testNode));
         Assert.assertEquals("abc/def", Utils.getPath(testNode.parent));

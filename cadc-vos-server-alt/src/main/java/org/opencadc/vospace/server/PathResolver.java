@@ -123,13 +123,14 @@ public class PathResolver {
      * @return the last node in the path or null if not found
      * @throws org.opencadc.vospace.LinkingException
      */
-    public Node getNode(String nodePath) throws LinkingException {
+    public Node getNode(String nodePath) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-        
             
-        log.warn("get: [" + nodePath + "]");
+        log.debug("get: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+        
+        Node ret = node;
         
         if (StringUtil.hasLength(nodePath)) {
             if (nodePath.charAt(0) == '/') {
@@ -138,12 +139,14 @@ public class PathResolver {
             Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
             while (pathIter.hasNext()) {
                 String name = pathIter.next();
-                log.warn("get node: '" + name + "' in path '" + nodePath + "'");
+                log.debug("get node: '" + name + "' in path '" + nodePath + "'");
                 Node child = nodePersistence.get((ContainerNode) node, name);
                 if (child == null) {
                     return null;
                 }
-                voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+                if (!voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+                    throw NodeFault.PermissionDenied.getStatus();
+                }
 
                 if (resolveLinks && pathIter.hasNext()) {
                     while (child instanceof LinkNode) {
@@ -167,20 +170,21 @@ public class PathResolver {
                         child = getNode(targetURI.getPath());
                     }
                 }
-                if (child instanceof LinkNode) {
-                    log.debug("return link node: " + Utils.getPath(node));
-                    return node;
+                if (pathIter.hasNext()) {
+                    if (child instanceof ContainerNode) {
+                        node = (ContainerNode) child;
+                    } else {
+                        return null;
+                        //throw new IllegalArgumentException("invalid path: found " + child.getClass().getSimpleName()
+                        //        + " named '" + name + "' before end of path " + nodePath);
+                    }
                 }
-                if (child instanceof DataNode && pathIter.hasNext()) {
-                    throw new IllegalArgumentException("invalid path: found DataNode " + name + " before end of path " + nodePath);
-                }
-                // must be a container
-                node = (ContainerNode) child;
+                ret = child;
             }
         }
         
-        log.warn("return node: " + Utils.getPath(node));
-        return node;
+        log.debug("return node: " + Utils.getPath(ret));
+        return ret;
     }
 
 

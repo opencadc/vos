@@ -124,6 +124,9 @@ public class UpdateNodeAction extends NodeAction {
         serverNode.getReadWriteGroup().clear();
         serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
         
+        // for boolean fields, we have to assume null means no update rather than "set to null"
+        // unless we can gain access to the raw NodeProperty.isMarkedForDeletion() flag
+        // but null and false are equivalent so it's confusing but not a missing feature
         if (clientNode.isPublic != null) {
             serverNode.isPublic = clientNode.isPublic;
         }
@@ -134,10 +137,9 @@ public class UpdateNodeAction extends NodeAction {
         if (serverNode instanceof ContainerNode) {
             ContainerNode scn = (ContainerNode) serverNode;
             ContainerNode ccn = (ContainerNode) clientNode;
-            // TODO: change ContainerNode.inheritPermissions to Boolean so null in an update means "no change"
-            //if (ccn.inheritPermissions != null) {
-            //    scn.inheritPermissions = ccn.inheritPermissions;
-            //}
+            if (ccn.inheritPermissions != null) {
+                scn.inheritPermissions = ccn.inheritPermissions;
+            }
         }
         
         // TODO: chown: admin (root owner) can assign ownership to someone else
@@ -145,8 +147,6 @@ public class UpdateNodeAction extends NodeAction {
         //    serverNode.owner = ???
         //}
 
-        // TODO: change target of link node??
-        
         Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
         Node storedNode = nodePersistence.put(serverNode);
         
