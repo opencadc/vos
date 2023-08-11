@@ -393,7 +393,7 @@ public class NodeReaderWriterTest {
 
             // validate the XML
             NodeReader reader = new NodeReader();
-            NodeReader.NodeReaderResult result= reader.read(new ByteArrayInputStream(bos.toByteArray()));
+            NodeReader.NodeReaderResult result = reader.read(new ByteArrayInputStream(bos.toByteArray()));
 
             Assert.assertTrue(result.node instanceof DataNode);
             Assert.assertEquals(dataURI, result.vosURI);
@@ -564,8 +564,6 @@ public class NodeReaderWriterTest {
     // sample node with lots of detail in it
     private ContainerNode createDetailedNode() throws URISyntaxException {
 
-        // root ContainerNode
-        ContainerNode detailedNode = new ContainerNode(detailedURI.getName(), true);
 
         // child DataNode with some props
         VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
@@ -577,6 +575,9 @@ public class NodeReaderWriterTest {
         dataNode1.getAccepts().add(URI.create("ivo://cadc.nrc.ca/vospace/view#view2"));
         dataNode1.getProvides().add(URI.create("ivo://cadc.nrc.ca/vospace/view#something"));
         dataNode1.getProvides().add(URI.create("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
+
+        // root ContainerNode
+        ContainerNode detailedNode = new ContainerNode(detailedURI.getName(), true);
         detailedNode.getNodes().add(dataNode1);
 
         // add a ContainerNode with some props
