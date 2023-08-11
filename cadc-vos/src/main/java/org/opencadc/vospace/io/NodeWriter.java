@@ -70,6 +70,8 @@ package org.opencadc.vospace.io;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.util.StringBuilderWriter;
+import ca.nrc.cadc.xml.ContentConverter;
+import ca.nrc.cadc.xml.IterableContent;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -428,36 +430,25 @@ public class NodeWriter implements XmlProcessor {
 
     /**
      * Build the nodes Element of a ContainerNode.
+     *
+     * <p>Note: it uses the Node.childIterator to get the child nodes.
      * 
      * @param node Node.
      * @return nodes Element.
      */
     protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
-        Element nodes = new Element("nodes", vosNamespace);
         if (node.childIterator != null) {
-            // server side output
-            // TODO: dynamic streaming rather than create all elements here
-            try (ResourceIterator<Node> iter = node.childIterator) {
-                while (iter.hasNext()) {
-                    Node childNode = iter.next();
-                    VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
-                    Element nodeElement = getNodeElement(childURI, childNode);
-                    nodes.addContent(nodeElement);
+            ContentConverter<Element, Node> cc = new ContentConverter<Element, Node>() {
+                public Element convert(Node node) {
+                    VOSURI childURI = NodeUtil.getChildURI(vosURI, node.getName());
+                    Element nodeElement = getNodeElement(childURI, node);
+                    return nodeElement;
                 }
-            } catch (IOException ex) {
-                throw new RuntimeException("failure during child node listing", ex);
-            }
+            };
+            return new IterableContent<Element, Node>("nodes", vosNamespace, node.childIterator, cc);
         } else {
-            // client side serialization of a node that was read by NodeReader
-            Iterator<Node> iter = node.getNodes().iterator();
-            while (iter.hasNext()) {
-                Node childNode = iter.next();
-                VOSURI childURI = NodeUtil.getChildURI(vosURI, childNode.getName());
-                Element nodeElement = getNodeElement(childURI, childNode);
-                nodes.addContent(nodeElement);
-            }
+            return new Element("nodes", vosNamespace);
         }
-        return nodes;
     }
 
 }

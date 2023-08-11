@@ -67,12 +67,14 @@
 
 package org.opencadc.vospace.io;
 
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeReader;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
+import ca.nrc.cadc.io.ResourceIteratorWrapper;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URI;
@@ -100,7 +102,8 @@ public class JsonNodeWriterTest {
             + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
             + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
             + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">-89323123449</vos:property>\n"
-            + "  </vos:properties>\n" + "  <vos:nodes>\n"
+            + "  </vos:properties>\n"
+            + "  <vos:nodes>\n"
             + "    <vos:node uri=\"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\" xsi:type=\"vos:ContainerNode\">\n"
             + "      <vos:properties>\n"
             + "        <vos:property uri=\"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\">false</vos:property>\n"
@@ -111,7 +114,9 @@ public class JsonNodeWriterTest {
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">30388581</vos:property>\n"
-            + "      </vos:properties>\n" + "      <vos:nodes />\n" + "    </vos:node>\n"
+            + "      </vos:properties>\n"
+            + "      <vos:nodes />\n" 
+            + "    </vos:node>\n"
             + "    <vos:node uri=\"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\" xsi:type=\"vos:ContainerNode\">\n"
             + "      <vos:properties>\n"
             + "        <vos:property uri=\"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\">true</vos:property>\n"
@@ -122,213 +127,219 @@ public class JsonNodeWriterTest {
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
             + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">3812708</vos:property>\n"
-            + "      </vos:properties>\n" + "      <vos:nodes />\n" + "    </vos:node>\n" + "  </vos:nodes>\n"
+            + "      </vos:properties>\n"
+            + "      <vos:nodes />\n"
+            + "    </vos:node>\n"
+            + "  </vos:nodes>\n"
             + "</vos:node>";
 
-        final String expectedJSONString = "{\n" +
-            "  \"vos:node\" : {\n" +
-            "    \"@xmlns:vos\" : \"http://www.ivoa.net/xml/VOSpace/v2.0\",\n" +
-            "    \"@xmlns:xsi\" : \"http://www.w3.org/2001/XMLSchema-instance\",\n" +
-            "    \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3\",\n" +
-            "    \"@xsi:type\" : \"vos:ContainerNode\",\n" +
-            "    \"vos:properties\" : {\n" +
-            "      \"$\" : [\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n" +
-            "            \"$\" : \"false\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://canfar.uvic.ca/OSSOS#O13AO_object_count\",\n" +
-            "            \"@readOnly\" : \"false\",\n" +
-            "            \"$\" : \"0\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#1-object_count-DRYRUN\",\n" +
-            "            \"@readOnly\" : \"true\",\n" +
-            "            \"$\" : \"20\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-            "            \"$\" : \"cn=cadctest_007,ou=cadc,o=hia,c=ca\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-            "            \"$\" : \"2016-01-20T15:14:57.443\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-            "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-            "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-            "            \"$\" : \"false\"\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"property\" : {\n" +
-            "            \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-            "            \"$\" : \"-89323123449\"\n" +
-            "          }\n" +
-            "        }\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"vos:nodes\" : {\n" +
-            "      \"$\" : [\n" +
-            "        {\n" +
-            "          \"node\" : {\n" +
-            "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n" +
-            "            \"@xsi:type\" : \"vos:ContainerNode\",\n" +
-            "            \"vos:properties\" : {\n" +
-            "              \"$\" : [\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n" +
-            "                    \"$\" : \"false\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
-            "                    \"$\" : \"true\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-            "                    \"$\" : \"cn=mtb55_5be,ou=cadc,o=hia,c=ca\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-            "                    \"$\" : \"2015-12-17T17:44:17.897\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-            "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-            "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-            "                    \"$\" : \"false\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-            "                    \"$\" : \"30388581\"\n" +
-            "                  }\n" +
-            "                }\n" +
-            "              ]\n" +
-            "            },\n" +
-            "            \"vos:nodes\" : {\n" +
-            "              \"$\" : [\n" +
-            "              ]\n" +
-            "            }\n" +
-            "          }\n" +
-            "        },\n" +
-            "        {\n" +
-            "          \"node\" : {\n" +
-            "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n" +
-            "            \"@xsi:type\" : \"vos:ContainerNode\",\n" +
-            "            \"vos:properties\" : {\n" +
-            "              \"$\" : [\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n" +
-            "                    \"$\" : \"true\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n" +
-            "                    \"$\" : \"true\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n" +
-            "                    \"$\" : \"cn=mtb55_5be,ou=cadc,o=hia,c=ca\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n" +
-            "                    \"$\" : \"2015-12-17T17:57:32.107\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n" +
-            "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n" +
-            "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n" +
-            "                    \"$\" : \"false\"\n" +
-            "                  }\n" +
-            "                },\n" +
-            "                {\n" +
-            "                  \"property\" : {\n" +
-            "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n" +
-            "                    \"$\" : \"3812708\"\n" +
-            "                  }\n" +
-            "                }\n" +
-            "              ]\n" +
-            "            },\n" +
-            "            \"vos:nodes\" : {\n" +
-            "              \"$\" : [\n" +
-            "              ]\n" +
-            "            }\n" +
-            "          }\n" +
-            "        }\n" +
-            "      ]\n" +
-            "    }\n" +
-            "  }\n" +
-            "}";
-
+        final String expectedJSONString = "{\n"
+            + "  \"vos:node\" : {\n"
+            +  "    \"@xmlns:vos\" : \"http://www.ivoa.net/xml/VOSpace/v2.0\",\n"
+            + "    \"@xmlns:xsi\" : \"http://www.w3.org/2001/XMLSchema-instance\",\n"
+            + "    \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3\",\n"
+            + "    \"@xsi:type\" : \"vos:ContainerNode\",\n"
+            + "    \"vos:properties\" : {\n"
+            + "      \"$\" : [\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n"
+            + "            \"$\" : \"false\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://canfar.uvic.ca/OSSOS#O13AO_object_count\",\n"
+            + "            \"@readOnly\" : \"false\",\n"
+            + "            \"$\" : \"0\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://canfar.uvic.ca/ossos#1-object_count-DRYRUN\",\n"
+            + "            \"@readOnly\" : \"true\",\n"
+            + "            \"$\" : \"20\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n"
+            + "            \"$\" : \"cn=cadctest_007,ou=cadc,o=hia,c=ca\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n"
+            + "            \"$\" : \"2016-01-20T15:14:57.443\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
+            + "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
+            + "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n"
+            + "            \"$\" : \"false\"\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"property\" : {\n"
+            + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n"
+            + "            \"$\" : \"-89323123449\"\n"
+            + "          }\n"
+            + "        }\n"
+            + "      ]\n"
+            + "    },\n"
+            + "    \"vos:nodes\" : {\n"
+            + "      \"$\" : [\n"
+            + "        {\n"
+            + "          \"node\" : {\n"
+            + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n"
+            + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+            + "            \"vos:properties\" : {\n"
+            + "              \"$\" : [\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n"
+            + "                    \"$\" : \"false\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n"
+            + "                    \"$\" : \"true\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n"
+            + "                    \"$\" : \"cn=mtb55_5be,ou=cadc,o=hia,c=ca\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n"
+            + "                    \"$\" : \"2015-12-17T17:44:17.897\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
+            + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
+            + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n"
+            + "                    \"$\" : \"false\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n"
+            + "                    \"$\" : \"30388581\"\n"
+            + "                  }\n"
+            + "                }\n"
+            + "              ]\n"
+            + "            },\n"
+            + "            \"vos:nodes\" : {\n"
+            + "              \"$\" : [\n"
+            + "              ]\n"
+            + "            }\n"
+            + "          }\n"
+            + "        },\n"
+            + "        {\n"
+            + "          \"node\" : {\n"
+            + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n"
+            + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+            + "            \"vos:properties\" : {\n"
+            + "              \"$\" : [\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#inheritPermissions\",\n"
+            + "                    \"$\" : \"true\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://cadc.nrc.ca/vospace/core#islocked\",\n"
+            + "                    \"$\" : \"true\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#creator\",\n"
+            + "                    \"$\" : \"cn=mtb55_5be,ou=cadc,o=hia,c=ca\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#date\",\n"
+            + "                    \"$\" : \"2015-12-17T17:57:32.107\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
+            + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
+            + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#ispublic\",\n"
+            + "                    \"$\" : \"false\"\n"
+            + "                  }\n"
+            + "                },\n"
+            + "                {\n"
+            + "                  \"property\" : {\n"
+            + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#length\",\n"
+            + "                    \"$\" : \"3812708\"\n"
+            + "                  }\n"
+            + "                }\n"
+            + "              ]\n"
+            + "            },\n"
+            + "            \"vos:nodes\" : {\n"
+            + "              \"$\" : [\n"
+            + "              ]\n"
+            + "            }\n"
+            + "          }\n"
+            + "        }\n"
+            + "      ]\n"
+            + "    }\n"
+            + "  }\n"
+            + "}";
+ 
         final VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/OSSOS/measure3"));
         final JsonNodeWriter testSubject = new JsonNodeWriter();
         final NodeReader nodeReader = new NodeReader(false);
         final NodeReader.NodeReaderResult result = nodeReader.read(testXMLString);
+        ContainerNode node = (ContainerNode)result.node;
+        node.childIterator = new ResourceIteratorWrapper(node.getNodes().iterator());
         final Writer writer = new StringWriter();
 
-        testSubject.write(vosURI, result.node, writer);
+        testSubject.write(vosURI, node, writer);
+        System.out.println(writer.toString());
 
         final JSONObject expectedJSON = new JSONObject(expectedJSONString);
         final JSONObject resultJSON = new JSONObject(writer.toString());
