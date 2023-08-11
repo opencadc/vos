@@ -78,6 +78,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
+import java.net.URI;
 import java.net.URL;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
@@ -95,13 +96,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
-    static {
-        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.vos", Level.INFO);
-    }
-
-    public FilesTest() {
-        super();
+    protected FilesTest(URI resourceID, String testCertFilename) {
+        super(resourceID, testCertFilename);
     }
 
     @Test

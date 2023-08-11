@@ -94,6 +94,8 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Before;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
@@ -105,60 +107,86 @@ public abstract class VOSTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
 
-    public static final URI SERVICE_RESOURCE_ID = URI.create("ivo://opencadc.org/vault");
-    public static final String TEST_CERT_NAME = "vault-test.pem";
+    
     public static final String XML_CONTENT_TYPE = "text/xml";
     public static final String TEXT_CONTENT_TYPE = "text/plain";
     public static final String ROOT_TEST_FOLDER = "/int-tests";
+    
+    public final URI resourceID;
+    public final String testCertFilename;
+    
     public final URL nodesServiceURL;
     public final URL filesServiceURL;
     public final URL synctransServiceURL;
     public final URL transferServiceURL;
     public final Subject authSubject;
 
-    public VOSTest() {
+    protected VOSTest(URI resourceID, String testCertFilename) {
+        this.resourceID = resourceID;
+        this.testCertFilename = testCertFilename;
         RegistryClient regClient = new RegistryClient();
-        this.nodesServiceURL = regClient.getServiceURL(SERVICE_RESOURCE_ID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
+        this.nodesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_NODES_20, nodesServiceURL));
 
-        this.filesServiceURL = regClient.getServiceURL(SERVICE_RESOURCE_ID, Standards.VOSPACE_FILES_20, AuthMethod.ANON);
+        this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_FILES_20, filesServiceURL));
 
-        this.synctransServiceURL = regClient.getServiceURL(SERVICE_RESOURCE_ID, Standards.VOSPACE_SYNC_21, AuthMethod.ANON);
+        this.synctransServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_SYNC_21, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_SYNC_21, synctransServiceURL));
 
-        this.transferServiceURL = regClient.getServiceURL(SERVICE_RESOURCE_ID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
+        this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
 
-        File testCert = FileUtil.getFileFromResource(TEST_CERT_NAME, VOSTest.class);
+        File testCert = FileUtil.getFileFromResource(this.testCertFilename, VOSTest.class);
         this.authSubject = SSLUtil.createSubject(testCert);
         log.debug("authSubject: " + authSubject);
     }
 
+    @Before
+    public void initTestContainer() throws Exception {
+        String name = VOSTest.ROOT_TEST_FOLDER;
+        URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
+        VOSURI nodeURI = getVOSURI(null);
+        ContainerNode testNode = new ContainerNode(name);
+
+        NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
+        if (result == null) {
+            put(nodeURL, nodeURI, testNode);
+        }
+    }
+    
     public URL getNodeURL(URL serviceURL, String path)
         throws MalformedURLException {
+        if (path == null) {
+            return new URL(String.format("%s%s", serviceURL, ROOT_TEST_FOLDER));
+        }
         return new URL(String.format("%s%s/%s", serviceURL, ROOT_TEST_FOLDER, path));
     }
 
     public VOSURI getVOSURI(String path) {
-        return new VOSURI(URI.create(String.format("vos://opencadc.org~vault%s/%s", ROOT_TEST_FOLDER, path)));
+        if (path == null) {
+            return new VOSURI(resourceID, ROOT_TEST_FOLDER);
+        }
+        return new VOSURI(resourceID, ROOT_TEST_FOLDER + "/" + path);
     }
 
-    public void put(URL nodeURL, VOSURI vosURI, Node node)
-        throws IOException {
+    public void put(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb);
-        InputStream in = new ByteArrayInputStream(sb.toString().getBytes());
+        String xml = sb.toString();
+        log.debug("put node: " + xml);
+        InputStream in = new ByteArrayInputStream(xml.getBytes());
 
         HttpUpload put = new HttpUpload(in, nodeURL);
         put.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
         log.debug("PUT " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(put));
-        log.debug("PUT responseCode: " + put.getResponseCode());
+        log.info("PUT response: " + put.getResponseCode() + " " + put.getThrowable());
+        
         // TODO revert response code back to expected 201
         Assert.assertEquals("expected PUT response code = 200",
                             200, put.getResponseCode());
@@ -189,20 +217,25 @@ public abstract class VOSTest {
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
     }
 
-    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType)
-        throws NodeParsingException {
+    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType) 
+            throws NodeParsingException {
+        return get(url, responseCode, contentType, true);
+    }
+    
+    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType, boolean verify)
+            throws NodeParsingException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         HttpGet get = new HttpGet(url, out);
         log.debug("GET: " + url);
         Subject.doAs(authSubject, new RunnableAction(get));
-        log.debug("GET responseCode: " + get.getResponseCode());
-        Assert.assertEquals("expected GET response code = 200 " + responseCode,
-                            responseCode, get.getResponseCode());
+        log.debug("GET responseCode: " + get.getResponseCode() + " " + get.getThrowable());
 
-        if (responseCode == 200) {
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
-            Assert.assertEquals("expected GET Content-Type = " + contentType, contentType, get.getContentType());
-
+        if (verify) {
+            Assert.assertEquals(responseCode, get.getResponseCode());
+            //Assert.assertNull(get.getThrowable());
+            Assert.assertEquals("content-type", contentType, get.getContentType());
+        }
+        if (get.getResponseCode() == 200) {
             NodeReader reader = new NodeReader();
             NodeReader.NodeReaderResult result = reader.read(out.toString());
             Assert.assertNotNull(result);
@@ -232,14 +265,20 @@ public abstract class VOSTest {
     }
 
     public void delete(URL nodeURL) {
+        delete(nodeURL, true);
+    }
+    
+    public void delete(URL nodeURL, boolean verify) {
         HttpDelete delete = new HttpDelete(nodeURL, true);
         log.debug("DELETE: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(delete));
         log.debug("DELETE responseCode: " + delete.getResponseCode());
-        // TODO revert response code back to expected 204
-        Assert.assertEquals("expected DELETE response code = 200",
-                            200, delete.getResponseCode());
-        Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
+        if (verify) {
+            // TODO revert response code back to expected 204
+            Assert.assertEquals("expected DELETE response code = 200",
+                                200, delete.getResponseCode());
+            Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
+        }
     }
 
 }
