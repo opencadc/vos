@@ -72,7 +72,6 @@ import ca.nrc.cadc.xml.JsonOutputter;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.output.Format;
