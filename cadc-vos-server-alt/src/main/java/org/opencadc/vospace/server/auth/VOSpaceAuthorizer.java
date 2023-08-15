@@ -78,6 +78,7 @@ import java.security.AccessControlException;
 import java.security.Principal;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -118,6 +119,7 @@ public class VOSpaceAuthorizer {
 
     private final NodePersistence nodePersistence;
     private final IvoaGroupClient gmsClient = new IvoaGroupClient();
+    private final Set<GroupURI> callerGroups = new HashSet<>();  //cache of caller groups used to minimize service calls
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
@@ -259,9 +261,14 @@ public class VOSpaceAuthorizer {
                     try {
                         log.debug("Checking GMS on groupURI: " + groupURI);
                         GroupURI guri = new GroupURI(groupURI);
+                        if (callerGroups.contains(guri)) {
+                            log.debug("Found matching cached group " + guri.toString());
+                            return true;
+                        }
                         boolean isMember = gmsClient.isMember(guri);
                         profiler.checkpoint("gmsClient.ismember");
                         if (isMember) {
+                            callerGroups.add(guri);
                             return true;
                         }
                     } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
