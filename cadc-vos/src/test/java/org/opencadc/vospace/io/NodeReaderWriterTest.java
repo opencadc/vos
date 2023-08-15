@@ -487,15 +487,14 @@ public class NodeReaderWriterTest {
             NodeReader reader = new NodeReader(false);
             reader.read(xml);
         } catch (Exception t) {
-            t.printStackTrace();
             log.error("unexpected exception", t);
-            Assert.fail(t.getMessage());
+            Assert.fail("unexpected exception: " + t);
         }
     }
 
     // basic container node
     private ContainerNode createContainerNode() {
-        ContainerNode containerNode = new ContainerNode(containerURI.getName(), false);
+        ContainerNode containerNode = new ContainerNode(containerURI.getName());
         DataNode dn1 = new DataNode("ngc4323");
         dn1.busy = true;
         containerNode.getNodes().add(dn1);
@@ -563,15 +562,6 @@ public class NodeReaderWriterTest {
 
     // sample node with lots of detail in it
     private ContainerNode createDetailedNode() throws URISyntaxException {
-
-<<<<<<< HEAD
-        // root ContainerNode
-        detailedURI = new VOSURI("vos://opencadc.org~vospace/testContainer");
-        detailedNode = new ContainerNode(detailedURI.getName());
-        detailedNode.inheritPermissions = true;
-=======
->>>>>>> 754935ef2f71fc77ba223572f7bc68f843682a37
-
         // child DataNode with some props
         VOSURI dataURI1 = new VOSURI("vos://opencadc.org~vospace/testContainer/ngc4323");
         DataNode dataNode1 = new DataNode(dataURI1.getName());
@@ -584,7 +574,7 @@ public class NodeReaderWriterTest {
         dataNode1.getProvides().add(URI.create("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
 
         // root ContainerNode
-        ContainerNode detailedNode = new ContainerNode(detailedURI.getName(), true);
+        ContainerNode detailedNode = new ContainerNode(detailedURI.getName());
         detailedNode.getNodes().add(dataNode1);
 
         // add a ContainerNode with some props
