@@ -72,6 +72,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.LocalServiceURI;
@@ -135,11 +136,12 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
             // File system probe
             PropertiesReader pr = new PropertiesReader("Cavern.properties");
-            String rootPath = pr.getFirstPropertyValue("PROBE_ROOT");
+            MultiValuedProperties conf = pr.getAllProperties();
+            String rootPath = conf.getFirstPropertyValue("PROBE_ROOT");
             log.debug("rootPath: " + rootPath);
-            String owner = pr.getFirstPropertyValue("PROBE_OWNER");
+            String owner = conf.getFirstPropertyValue("PROBE_OWNER");
             log.debug("owner: " + owner);
-            String linkTargetOwner = pr.getFirstPropertyValue("PROBE_LINKOWER");
+            String linkTargetOwner = conf.getFirstPropertyValue("PROBE_LINKOWER");
             log.debug("linkTargetOwner: " + linkTargetOwner);
             File root = new File(rootPath);
 

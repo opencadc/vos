@@ -67,24 +67,14 @@
 
 package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.io.ByteCountInputStream;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.AccessControlException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.io.NodeParsingException;
-import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
 
@@ -97,79 +87,73 @@ public class UpdateNodeAction extends NodeAction {
 
     protected static Logger log = Logger.getLogger(UpdateNodeAction.class);
 
-    private static final String INLINE_CONTENT_TAG = "inputstream";
-
-    // 12Kb XML Doc size limit
-    private static final long DOCUMENT_SIZE_MAX = 12288L;
-
     @Override
-    public Node getClientNode()
-            throws NodeParsingException, IOException {
-        InputStream in = (InputStream) syncInput.getContent(INLINE_CONTENT_TAG);
-        return getNode(in);
-    }
+    public void doAction() throws Exception {
+        final Node clientNode = getInputNode();
+        final VOSURI clientNodeTarget = getInputURI();
+        final VOSURI target = getTargetURI();
+        
+        // validate doc vs path because some redundancy in API
+        if (!clientNodeTarget.equals(target)) {
+            throw new IllegalArgumentException("invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
+        }
 
-    @Override
-    public Node doAuthorizationCheck()
-            throws AccessControlException, ResourceNotFoundException, TransientException, LinkingException {
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        Node node = pathResolver.getNode(nodePath, true);
+        // get parent container node
+        // TBD: resolveLinks=true?
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        Node serverNode = pathResolver.getNode(target.getPath());
+        if (serverNode == null) {
+            throw NodeFault.NodeNotFound.getStatus();
+        }
 
-        return node;
-    }
-
-    @Override
-    public void performNodeAction(Node clientNode, Node serverNode)
-            throws Exception {
-
-        List<NodeProperty> props = new ArrayList<>();
-        props.addAll(clientNode.getProperties());
+        if (!clientNode.getClass().equals(serverNode.getClass())) {
+            // TODO: suitable NodeFault?
+            throw new IllegalArgumentException("invalid input: cannot change type of node " + target.getPath()
+                    + " from " + serverNode.getClass().getSimpleName() + " to " + clientNode.getClass().getSimpleName());
+        }
+        
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
+            throw NodeFault.PermissionDenied.getStatus();
+        }
+        
+        // merge change request
+        // TODO: add something to Node to differentiate if a Set<URI> property was missing or explicitly nil="true"
         serverNode.getReadOnlyGroup().clear();
         serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
         serverNode.getReadWriteGroup().clear();
         serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
-        // TODO: chown -- must be admin (root owner) to do this
+        
+        // for boolean fields, we have to assume null means no update rather than "set to null"
+        // unless we can gain access to the raw NodeProperty.isMarkedForDeletion() flag
+        // but null and false are equivalent so it's confusing but not a missing feature
+        if (clientNode.isPublic != null) {
+            serverNode.isPublic = clientNode.isPublic;
+        }
+        if (clientNode.isLocked != null) {
+            serverNode.isLocked = clientNode.isLocked;
+        }
+        
+        if (serverNode instanceof ContainerNode) {
+            ContainerNode scn = (ContainerNode) serverNode;
+            ContainerNode ccn = (ContainerNode) clientNode;
+            if (ccn.inheritPermissions != null) {
+                scn.inheritPermissions = ccn.inheritPermissions;
+            }
+        }
+        
+        // TODO: chown: admin (root owner) can assign ownership to someone else
         //if (clientNode.ownerID != null) {
-        //    serverNode.ownerID = clientNode.ownerID;
+        //    serverNode.owner = ???
         //}
+
         Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
         Node storedNode = nodePersistence.put(serverNode);
-
-        final NodeWriter nodeWriter = getNodeWriter();
+        
+        // output modified node
+        NodeWriter nodeWriter = getNodeWriter();
         syncOutput.setHeader("Content-Type", getMediaType());
+        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
-    }
-
-    private Node getNode(InputStream content) throws IOException, NodeParsingException {
-        ByteCountInputStream sizeLimitInputStream =
-                new ByteCountInputStream(content, DOCUMENT_SIZE_MAX);
-
-        NodeReader.NodeReaderResult nrr = new NodeReader().read(sizeLimitInputStream);
-
-        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
-        // ensure the path in the XML URI matches the path in the URL
-        String uriPath = nrr.vosURI.getPath();
-        if (uriPath.startsWith("/")) {
-            uriPath = uriPath.substring(1); // drop leading "/"
-        }
-        if (!uriPath.equals(nodePath)) {
-            throw new NodeParsingException("Node path in URI XML ("
-                    + uriPath
-                    + ") not equal to node path in URL ("
-                    + nodePath
-                    + ")");
-        }
-
-        return nrr.node;
-    }
-
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
-        return (name, contentType, inputStream) -> {
-            InlineContentHandler.Content content = new InlineContentHandler.Content();
-            content.name = INLINE_CONTENT_TAG;
-            content.value = inputStream;
-            return content;
-        };
     }
 }

@@ -70,10 +70,9 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
+import ca.nrc.cadc.util.StringUtil;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -89,7 +88,7 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Utility class to follow and resolve the target of link nodes in a local vospace including checking
- * permissions
+ * read permission along the path.
  *
  * <p>If the last node on the path is a link node, it will not be resolved.
  *
@@ -102,133 +101,90 @@ public class PathResolver {
     // enforce a maximum visit limit to prevent stack overflows on
     // the recursive method
     private static final int VISIT_LIMIT_MAX = 40;
-    private NodePersistence nodePersistence;
-    private VOSpaceAuthorizer voSpaceAuthorizer;
-    private List<String> visitedPaths;
-    private boolean resolveMetadata;
+    private final NodePersistence nodePersistence;
+    private final VOSpaceAuthorizer voSpaceAuthorizer;
+    private final boolean resolveLinks;
+    
+    private List<String> visitedPaths = new ArrayList<>();
     private int visitLimit = 20;
     private int visitCount = 0;
 
 
-    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer) {
+    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLinks) {
         this.nodePersistence = nodePersistence;
         this.voSpaceAuthorizer = voSpaceAuthorizer;
+        this.resolveLinks = resolveLinks;
     }
 
     /**
-     * Constructor.
-     *
-     * @param nodePersistence node persistence to use
-     */
-    public PathResolver(NodePersistence nodePersistence) {
-        this(nodePersistence, true);
-    }
-
-    public PathResolver(NodePersistence nodePersistence, boolean resolveMetadata) {
-        if (nodePersistence == null) {
-            throw new IllegalArgumentException("null node persistence.");
-        }
-        this.nodePersistence = nodePersistence;
-        this.resolveMetadata = resolveMetadata;
-    }
-
-
-    /**
-     * Resolves a node URI following the links and returns the end node
+     * Resolves a node URI, follow links, and returns the end node.
      *
      * @param nodePath
-     * @param writable
-     * @return
-     * @throws ResourceNotFoundException
+     * @return the last node in the path or null if not found
+     * @throws org.opencadc.vospace.LinkingException
      */
-    public Node getNode(String nodePath, boolean writable) throws ResourceNotFoundException, LinkingException {
-        Node node = nodePersistence.getRootNode();
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        if (nodePath == null) {
-            if (writable) {
-                voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
-            } else {
-                voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+    public Node getNode(String nodePath) throws Exception {
+        final Subject subject = AuthenticationUtil.getCurrentSubject();
+            
+        log.debug("get: [" + nodePath + "]");
+        ContainerNode node = nodePersistence.getRootNode();
+        voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+        
+        Node ret = node;
+        
+        if (StringUtil.hasLength(nodePath)) {
+            if (nodePath.charAt(0) == '/') {
+                nodePath = nodePath.substring(1);
             }
-        } else {
             Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
             while (pathIter.hasNext()) {
-                String path = pathIter.next();
-                log.debug("Loading element " + path + "of path " + nodePath);
-                node = nodePersistence.get((ContainerNode) node, path);
-                if (node == null) {
-                    log.debug("not found " + nodePath + " - '" + path + "' element missing");
-                    throw new ResourceNotFoundException("not found " + nodePath);
+                String name = pathIter.next();
+                log.debug("get node: '" + name + "' in path '" + nodePath + "'");
+                Node child = nodePersistence.get((ContainerNode) node, name);
+                if (child == null) {
+                    return null;
                 }
-                if (writable) {
-                    voSpaceAuthorizer.hasSingleNodeWritePermission(node, subject);
-                } else {
-                    voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
+                if (!voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+                    throw NodeFault.PermissionDenied.getStatus();
                 }
-                LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
 
-                while (node instanceof LinkNode) {
-                    log.debug("Resolving link node " + Utils.getPath(node));
-                    if (visitCount > visitLimit) {
-                        throw new LinkingException("Exceeded link limit.");
-                    }
-                    visitCount++;
-                    log.debug("visit number " + visitCount);
+                if (resolveLinks && pathIter.hasNext()) {
+                    while (child instanceof LinkNode) {
+                        log.debug("Resolving link node " + Utils.getPath(node));
+                        if (visitCount > visitLimit) {
+                            throw new LinkingException("Exceeded link limit.");
+                        }
+                        visitCount++;
+                        log.debug("visit number " + visitCount);
 
-                    LinkNode linkNode = (LinkNode) node;
-                    VOSURI targetURI = validateTargetURI(linkNode);
+                        LinkNode linkNode = (LinkNode) child;
+                        VOSURI targetURI = validateTargetURI(linkNode);
 
-                    // follow the link
-                    // TODO need to check this is the same vault
-                    node = getNode(targetURI.getPath(), writable);
-                }
-                if (node instanceof ContainerNode) {
-                    continue;
-                }
-                if (node instanceof DataNode) {
-                    if (pathIter.hasNext()) {
-                        throw new IllegalArgumentException("Illegal path"); //TODO - different exception
+                        String linkPath = targetURI.getPath();
+                        if (visitedPaths.contains(linkPath)) {
+                            throw new LinkingException("detected link node cycle: already followed link -> " + linkPath);
+                        }
+                        visitedPaths.add(linkPath);
+                        
+                        // recursive follow
+                        child = getNode(targetURI.getPath());
                     }
                 }
+                if (pathIter.hasNext()) {
+                    if (child instanceof ContainerNode) {
+                        node = (ContainerNode) child;
+                    } else {
+                        return null;
+                        //throw new IllegalArgumentException("invalid path: found " + child.getClass().getSimpleName()
+                        //        + " named '" + name + "' before end of path " + nodePath);
+                    }
+                }
+                ret = child;
             }
         }
-
-        //TODO - is this still required?
-        // HACK: this causes a query string embedded in the VOSURI (eg within LinkNode)
-        // to be tacked onto the DataNode and added to the resulting data URL... TBD.
-        //        if (nodeURI.getQuery() != null && node instanceof DataNode)
-        //        {
-        //            String fragment = null;
-        //            if (nodeURI.getFragment() != null) {
-        //                //TODO not sure how to pass the query and the fragment around with the node
-        //                throw new UnsupportedOperationException("TODO");
-        //                fragment = uri.getFragment();
-
-        //            try
-        //            {
-        //                VOSURI nodeURI = LocalServiceURI.getURI(node);
-        //                URI queryUri = new URI(nodeURI.getScheme(),
-        //                                       nodeURI.getAuthority(),
-        //                                       nodeURI.getPath(),
-        //                                       uri.getQuery(),
-        //                                       fragment);
-        //                Node dataNode = new DataNode(new VOSURI(queryUri), node.properties);
-        //                dataNode.accepts.addAll(node.accepts);
-        //                dataNode.provides.addAll(node.provides);
-        //                dataNode.parent = node.parent;
-        //                dataNode.setName(node.getName());
-        //                return dataNode;
-        //            }
-        //            catch (URISyntaxException e)
-        //            {
-        //                throw new LinkingException("Unable to append query part to " + node.getUri());
-        //            }
-        //            }
-        //        }
-        log.debug("returning node: " + Utils.getPath(node));
-        return node;
+        
+        log.debug("return node: " + Utils.getPath(ret));
+        return ret;
     }
 
 
@@ -237,8 +193,6 @@ public class PathResolver {
      *
      * @param linkNode node to validate
      * @return A VOSURI of the target of the link node.
-     * @throws LinkingException If the target is non vospace, not local, or
-     *                          an invalid URI.
      */
     public VOSURI validateTargetURI(LinkNode linkNode) {
         LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());

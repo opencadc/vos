@@ -74,7 +74,6 @@ import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
@@ -82,12 +81,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -106,13 +105,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
-    static {
-        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.vos", Level.INFO);
-    }
-
-    public TransferTest() {
-        super();
+    protected TransferTest(URI resourceID, String testCertFilename) {
+        super(resourceID, testCertFilename);
     }
 
     @Test
@@ -260,7 +254,7 @@ public class TransferTest extends VOSTest {
             String sourceName = "move-source-node";
             URL sourceNodeURL = getNodeURL(nodesServiceURL, sourceName);
             VOSURI sourceNodeURI = getVOSURI(sourceName);
-            ContainerNode sourceNode = new ContainerNode(sourceName, false);
+            ContainerNode sourceNode = new ContainerNode(sourceName);
             log.debug("source URL: " + sourceNodeURL);
 
             put(sourceNodeURL, sourceNodeURI, sourceNode);
@@ -270,7 +264,7 @@ public class TransferTest extends VOSTest {
             String childContainerPath = sourceName + "/" + childContainerName;
             URL childContainerNodeURL = getNodeURL(nodesServiceURL, childContainerPath);
             VOSURI childContainerNodeURI = getVOSURI(childContainerPath);
-            ContainerNode childContainerNode = new ContainerNode(childContainerName, true);
+            ContainerNode childContainerNode = new ContainerNode(childContainerName);
             log.debug("source-container-child URL: " + childContainerNodeURL);
 
             put(childContainerNodeURL, childContainerNodeURI, childContainerNode);
@@ -289,7 +283,7 @@ public class TransferTest extends VOSTest {
             String destinationName = "move-destination-node";
             URL destinationNodeURL = getNodeURL(nodesServiceURL, destinationName);
             VOSURI destinationNodeURI = getVOSURI(destinationName);
-            ContainerNode destinationNode = new ContainerNode(destinationName, false);
+            ContainerNode destinationNode = new ContainerNode(destinationName);
             log.debug("destination URL: " + destinationNodeURL);
 
             put(destinationNodeURL, destinationNodeURI, destinationNode);

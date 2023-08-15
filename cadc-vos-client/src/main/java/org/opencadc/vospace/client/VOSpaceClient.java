@@ -201,7 +201,7 @@ public class VOSpaceClient {
             } catch (NodeNotFoundException ex) {
                 // if parent does not exist, just create it!!
                 log.info("creating parent: " + parentURI);
-                ContainerNode cn = new ContainerNode(parentURI.getName(), false);
+                ContainerNode cn = new ContainerNode(parentURI.getName());
                 parent = (ContainerNode) createNode(parentURI, cn, false);
             }
 

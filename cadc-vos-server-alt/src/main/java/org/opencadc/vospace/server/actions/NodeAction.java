@@ -69,6 +69,7 @@ package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import java.io.IOException;
 import java.net.URI;
@@ -79,14 +80,15 @@ import javax.naming.InitialContext;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
-
 
 /**
  * Abstract class encapsulating the behaviour of an action on a Node.  Clients
@@ -100,29 +102,78 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 public abstract class NodeAction extends RestAction {
     protected static Logger log = Logger.getLogger(NodeAction.class);
 
-    // query form parameter names
-    public static final String QUERY_PARAM_VIEW = "view";
-    public static final String QUERY_PARAM_URI = "uri";
-    public static final String QUERY_PARAM_LIMIT = "limit";
-    public static final String QUERY_PARAM_SORT_KEY = "sort";
-    public static final String QUERY_PARAM_ORDER_KEY = "order";
-
     private static final String DEFAULT_FORMAT = "text/xml";
     private static final String JSON_FORMAT = "application/json";
+    
+    private static final String INLINE_CONTENT_TAG = "client-node";
 
     // some subclasses may need to determine hostname, request path, etc
     protected VOSpaceAuthorizer voSpaceAuthorizer;
     protected NodePersistence nodePersistence;
-    protected String nodePath;
-    protected String stylesheetReference;
-    protected String detailLevel;
-    protected boolean resolveMetadata = true;
     protected LocalServiceURI localServiceURI;
 
     protected NodeAction() {
         super();
     }
 
+    @Override
+    public void initAction() throws Exception {
+        String jndiNodePersistence = componentID + ".nodePersistence";
+        try {
+            Context ctx = new InitialContext();
+            this.nodePersistence = ((NodePersistence) ctx.lookup(jndiNodePersistence));
+            this.voSpaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);        
+            localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
+        } catch (Exception oops) {
+            throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
+        }
+    }
+    
+    @Override
+    protected final InlineContentHandler getInlineContentHandler() {
+        return new InlineNodeHandler(INLINE_CONTENT_TAG);
+    }
+    
+    // the absolute URI constructed from the request path
+    protected final VOSURI getTargetURI() {
+        URI resourceID = nodePersistence.getResourceID();
+        LocalServiceURI loc = new LocalServiceURI(resourceID);
+
+        String nodePath = syncInput.getPath();        
+        if (nodePath == null) {
+            nodePath = nodePersistence.getRootNode().getName();
+        } else {
+            nodePath = "/" + nodePath;
+        }
+
+        String suri = loc.getVOSBase().getURI().toASCIIString() + nodePath;
+        try {
+            return new VOSURI(suri);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("BUG: VOSURI syntax: " + suri, e);
+        }
+    }
+    
+    // get the Node from the input document
+    protected final Node getInputNode() {
+        Object o = syncInput.getContent(INLINE_CONTENT_TAG);
+        if (o != null) {
+            NodeReader.NodeReaderResult r = (NodeReader.NodeReaderResult) o;
+            return r.node;
+        }
+        return null;
+    }
+    
+    // get the VOSURI from the input node document
+    protected final VOSURI getInputURI() {
+        Object o = syncInput.getContent(INLINE_CONTENT_TAG);
+        if (o != null) {
+            NodeReader.NodeReaderResult r = (NodeReader.NodeReaderResult) o;
+            return r.vosURI;
+        }
+        return null;
+    }
+    
     protected String getMediaType() {
         String mediaType = DEFAULT_FORMAT;
         if (syncInput.getParameter("Accept") != null) {
@@ -168,85 +219,4 @@ public abstract class NodeAction extends RestAction {
         return view;
     }
     */
-
-    /**
-     * Perform the action for which the subclass was designed.
-     *
-     * @param clientNode the node supplied by the client (may be null)
-     * @param serverNode the persistent node returned from doAuthorizationCheck
-     */
-    protected abstract void performNodeAction(Node clientNode, Node serverNode)
-            throws Exception;
-
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     *
-     * @return the default implementation returns null
-     * @throws URISyntaxException   if URI Syntax parsing problem
-     * @throws NodeParsingException if Node parsing problem
-     * @throws IOException          if generic IO problem
-     */
-    protected abstract Node getClientNode()
-            throws URISyntaxException, NodeParsingException, IOException;
-
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     *
-     * @return the applicable persistent (server) Node
-     * @throws AccessControlException    if permission is denied
-     * @throws ResourceNotFoundException if the target node does not exist
-     * @throws LinkingException          if a container link in the path could not be resolved
-     */
-    protected abstract Node doAuthorizationCheck()
-            throws AccessControlException, ResourceNotFoundException, LinkingException, TransientException;
-
-    /**
-     * Entry point in performing the steps of a Node Action.  This includes:
-     *
-     * <p>Calling abstract method getClientNode()
-     * Calling abstract method doAuthorizationCheck()
-     * Calling abstract method performNodeAction()
-     */
-    @Override
-    public void doAction() throws Exception {
-        //TODO
-        //String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        //context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-
-        String jndiNodePersistence = componentID + ".nodePersistence";
-        try {
-            Context ctx = new InitialContext();
-            this.nodePersistence = (NodePersistence) ctx.lookup(jndiNodePersistence);
-            localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
-        } catch (Exception oops) {
-            log.error("No NodePersistence implementation found with JNDI key " + jndiNodePersistence, oops);
-        }
-
-        this.voSpaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);
-        nodePath = syncInput.getPath();
-
-        // Create the client version of the node to be used for the operation
-        Node clientNode = getClientNode();
-        if (clientNode != null) {
-            log.debug("client node: " + clientNode.getName());
-        } else {
-            log.debug("no client node");
-        }
-
-        // perform the authorization check
-        long start = System.currentTimeMillis();
-        Node serverNode = doAuthorizationCheck();
-        long end = System.currentTimeMillis();
-        log.debug("doAuthorizationCheck() elapsed time: " + (end - start) + "ms");
-        log.debug("doAuthorizationCheck() returned server node: " + serverNode.getName());
-
-        // perform the node action
-        start = System.currentTimeMillis();
-        performNodeAction(clientNode, serverNode);
-        end = System.currentTimeMillis();
-        log.debug("performNodeAction() elapsed time: " + (end - start) + "ms");
-    }
-
 }

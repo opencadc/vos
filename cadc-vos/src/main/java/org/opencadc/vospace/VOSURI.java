@@ -69,6 +69,7 @@ package org.opencadc.vospace;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.apache.log4j.Logger;
 
 /**
  * Wrapper for a VOSpace URI around an URI.
@@ -76,10 +77,45 @@ import java.net.URISyntaxException;
  * @author jburke
  */
 public class VOSURI {
+    private static final Logger log = Logger.getLogger(VOSURI.class);
+    
     public static final String SCHEME = "vos";
 
-    private URI vosURI;
-
+    private final URI vosURI;
+    
+    /**
+     * Create a VOSURI from a VOSpace resourceID and path. The node path
+     * may be absolute (start with a /) or relative (to the root). Values of null, 
+     * empty string, and just a single / are all treated as root.
+     * 
+     * @param resourceID resource identifier for the VOSpace service
+     * @param path node path in the VOSpace service
+     */
+    public VOSURI(URI resourceID, String path) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(SCHEME).append("://");
+        sb.append(resourceID.getAuthority());
+        String srvpath = resourceID.getPath();
+        srvpath = srvpath.replaceAll("/", "~");
+        sb.append(srvpath);
+        if (path != null && path.length() > 0) {
+            if (path.charAt(0) != '/') {
+                // add initial / to relative path
+                sb.append('/');
+            }
+            // strip trailing / from  path
+            if (path.endsWith("/")) {
+                path = path.substring(0, path.length() - 1);
+            }
+            sb.append(path);
+        }
+        try {
+            this.vosURI = new URI(sb.toString());
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("cannot convert " + resourceID + " + " + path + " to valid VOSURI");
+        }
+    }
+    
     /**
      * Attempts to create a URI using the specified uri. The scheme for the uri
      * is expected to be vos, else a URISyntaxException will be thrown.
@@ -95,7 +131,8 @@ public class VOSURI {
         }
 
         try {
-            vosURI = new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery(), uri.getFragment());
+            // TODO: should a VOSURI really include the query string and/or fragment??
+            this.vosURI = new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery(), uri.getFragment());
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("URI malformed: " + uri.toString());
         }
@@ -276,7 +313,7 @@ public class VOSURI {
     public URI getServiceURI() {
         String authority = getAuthority();
         authority = authority.replace('!', '/');
-        authority = authority.replace('~', '/');
+        authority = authority.replace('~', '/'); // replaceAll??
         String str = "ivo://" + authority;
         try {
             return new URI(str);
@@ -305,5 +342,4 @@ public class VOSURI {
             throw new IllegalArgumentException("URI malformed: " + vosURI.toString());
         }
     }
-
 }
