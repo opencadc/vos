@@ -144,13 +144,14 @@ public class NodeWriter implements XmlProcessor {
      * @param vosURI absolute URI of the node
      * @param node the node
      * @param out destination
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @throws IOException if the writer fails to write.
      */
-    public void write(VOSURI vosURI, Node node, OutputStream out)
+    public void write(VOSURI vosURI, Node node, OutputStream out, VOS.Detail detail)
         throws IOException {
         OutputStreamWriter outWriter;
         outWriter = new OutputStreamWriter(out, StandardCharsets.UTF_8);
-        write(vosURI, node, outWriter);
+        write(vosURI, node, outWriter, detail);
     }
 
     /**
@@ -158,9 +159,10 @@ public class NodeWriter implements XmlProcessor {
      *
      * @param root Root Element to write.
      * @param writer Writer to write to.
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @throws IOException if the writer fails to write.
      */
-    protected void write(Element root, Writer writer)
+    protected void write(Element root, Writer writer, VOS.Detail detail)
         throws IOException {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
@@ -181,11 +183,12 @@ public class NodeWriter implements XmlProcessor {
      * @param vosURI The VOSURI of the node.
      * @param node The node to write.
      * @param builder A StringBuilder.
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @throws IOException if there is an error writing the node.
      */
-    public void write(VOSURI vosURI, Node node, StringBuilder builder)
+    public void write(VOSURI vosURI, Node node, StringBuilder builder, VOS.Detail detail)
         throws IOException {
-        write(vosURI, node, new StringBuilderWriter(builder));
+        write(vosURI, node, new StringBuilderWriter(builder), detail);
     }
 
     /**
@@ -194,13 +197,14 @@ public class NodeWriter implements XmlProcessor {
      * @param vosURI absolute URI of the node
      * @param node the node
      * @param writer destination
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @throws IOException if the writer fails to write.
      */
-    public void write(VOSURI vosURI, Node node, Writer writer)
+    public void write(VOSURI vosURI, Node node, Writer writer, VOS.Detail detail)
         throws IOException {
         long start = System.currentTimeMillis();
-        Element root = getRootElement(vosURI, node);
-        write(root, writer);
+        Element root = getRootElement(vosURI, node, detail);
+        write(root, writer, detail);
         long end = System.currentTimeMillis();
         log.debug("Write elapsed time: " + (end - start) + "ms");
     }
@@ -208,12 +212,14 @@ public class NodeWriter implements XmlProcessor {
     /**
      *  Build the root Element of a Node.
      *
+     * @param vosURI absolute URI of the node
      * @param node Node.
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @return root Element.
      */
-    protected Element getRootElement(VOSURI vosURI, Node node) {
+    protected Element getRootElement(VOSURI vosURI, Node node, VOS.Detail detail) {
         // Create the root element (node).
-        Element root = getNodeElement(vosURI, node);
+        Element root = getNodeElement(vosURI, node, detail);
         //root.addNamespaceDeclaration(vosNamespace);
         root.addNamespaceDeclaration(xsiNamespace);
         return root;
@@ -222,50 +228,55 @@ public class NodeWriter implements XmlProcessor {
     /**
      * Builds a single node element.
      *
-     * @param node The node
+     * @param vosURI absolute URI of the node
+     * @param node Node.
+     * detail detail level: min - no properties, max/properties - include properties.
      * @return
      */
-    protected Element getNodeElement(VOSURI vosURI, Node node) {
+    protected Element getNodeElement(VOSURI vosURI, Node node, VOS.Detail detail) {
         Element nodeElement = new Element("node", vosNamespace);
         nodeElement.setAttribute("uri", vosURI.toString());
         nodeElement.setAttribute("type", vosNamespace.getPrefix() + ":"
             + node.getClass().getSimpleName(), xsiNamespace);
-
 
         Set<NodeProperty> properties = new TreeSet<>();
 
         if (node instanceof ContainerNode) {
             ContainerNode cn = (ContainerNode) node;
 
-            // Node variables serialized as node properties
-            addNodeVariablesToProperties(node, properties);
+            if (!VOS.Detail.min.equals(detail)) {
+                // Node variables serialized as node properties
+                addNodeVariablesToProperties(node, properties);
 
-            // ContainerNode variables serialized as node properties
-            addContainerNodeVariablesToProperties(cn, properties);
+                // ContainerNode variables serialized as node properties
+                addContainerNodeVariablesToProperties(cn, properties);
 
-            // add node properties to node field properties
-            properties.addAll(node.getProperties());
+                // add node properties to node field properties
+                properties.addAll(node.getProperties());
 
-            // add all properties to the document
-            nodeElement.addContent(getPropertiesElement(properties));
+                // add all properties to the document
+                nodeElement.addContent(getPropertiesElement(properties));
+            }
 
             // add child node to the document
-            nodeElement.addContent(getNodesElement(vosURI, cn));
+            nodeElement.addContent(getNodesElement(vosURI, cn, detail));
         } else if (node instanceof DataNode) {
             DataNode dn = (DataNode) node;
-            nodeElement.setAttribute("busy", Boolean.toString(dn.busy));
 
-            // Node variables serialized as node properties
-            addNodeVariablesToProperties(node, properties);
+            if (!VOS.Detail.min.equals(detail)) {
+                nodeElement.setAttribute("busy", Boolean.toString(dn.busy));
+                // Node variables serialized as node properties
+                addNodeVariablesToProperties(node, properties);
 
-            // DataNode variables serialized as node properties
-            addDataNodeVariablesToProperties(dn, properties);
+                // DataNode variables serialized as node properties
+                addDataNodeVariablesToProperties(dn, properties);
 
-            // add node properties to node field properties
-            properties.addAll(node.getProperties());
+                // add node properties to node field properties
+                properties.addAll(node.getProperties());
 
-            // add all properties to the document
-            nodeElement.addContent(getPropertiesElement(properties));
+                // add all properties to the document
+                nodeElement.addContent(getPropertiesElement(properties));
+            }
 
             // add views to the DataNode in the document
             nodeElement.addContent(getAcceptsElement(dn));
@@ -273,17 +284,19 @@ public class NodeWriter implements XmlProcessor {
         } else if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
 
-            // Node variables serialized as node properties
-            addNodeVariablesToProperties(node, properties);
+            if (!VOS.Detail.min.equals(detail)) {
+                // Node variables serialized as node properties
+                addNodeVariablesToProperties(node, properties);
 
-            // LinkNode variables serialized as node properties
-            addLinkNodeVariablesToProperties(ln, properties);
+                // LinkNode variables serialized as node properties
+                addLinkNodeVariablesToProperties(ln, properties);
 
-            // add node properties to node field properties
-            properties.addAll(node.getProperties());
+                // add node properties to node field properties
+                properties.addAll(node.getProperties());
 
-            // add all properties to the document
-            nodeElement.addContent(getPropertiesElement(properties));
+                // add all properties to the document
+                nodeElement.addContent(getPropertiesElement(properties));
+            }
 
             // add target element
             Element targetEl = new Element("target", vosNamespace);
@@ -434,16 +447,17 @@ public class NodeWriter implements XmlProcessor {
      *
      * <p>Note: it uses the Node.childIterator to get the child nodes.
      * 
+     * @param vosURI absolute URI of the node
      * @param node Node.
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @return nodes Element.
      */
-    protected Element getNodesElement(VOSURI vosURI, ContainerNode node) {
+    protected Element getNodesElement(VOSURI vosURI, ContainerNode node, VOS.Detail detail) {
         if (node.childIterator != null) {
             ContentConverter<Element, Node> cc = new ContentConverter<Element, Node>() {
                 public Element convert(Node node) {
                     VOSURI childURI = NodeUtil.getChildURI(vosURI, node.getName());
-                    Element nodeElement = getNodeElement(childURI, node);
-                    return nodeElement;
+                    return getNodeElement(childURI, node, detail);
                 }
             };
             return new IterableContent<Element, Node>("nodes", vosNamespace, node.childIterator, cc);

@@ -543,7 +543,7 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
             Assert.assertTrue(parentNode.getProperties().isEmpty());
-            Assert.assertTrue(parentNode.getNodes().isEmpty());
+            Assert.assertFalse(parentNode.getNodes().isEmpty());
 
             // get the node
             result = get(nodeURL, 200, XML_CONTENT_TYPE);

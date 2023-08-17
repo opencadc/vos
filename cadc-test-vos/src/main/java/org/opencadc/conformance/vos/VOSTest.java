@@ -97,6 +97,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
@@ -176,7 +177,7 @@ public abstract class VOSTest {
     public void put(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
-        writer.write(vosURI, node, sb);
+        writer.write(vosURI, node, sb, VOS.Detail.max);
         String xml = sb.toString();
         log.debug("put node: " + xml);
         InputStream in = new ByteArrayInputStream(xml.getBytes());
@@ -251,7 +252,7 @@ public abstract class VOSTest {
         throws IOException {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
-        writer.write(vosURI, node, sb);
+        writer.write(vosURI, node, sb, VOS.Detail.max);
 
         FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
 

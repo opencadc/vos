@@ -241,7 +241,7 @@ public class NodeReaderWriterTest {
             ContainerNode containerNode = createContainerNode();
 
             containerNode.childIterator = new ResourceIteratorWrapper<Node>(containerNode.getNodes().iterator());
-            instance.write(containerURI, containerNode, sb);
+            instance.write(containerURI, containerNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -264,7 +264,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, sb);
+            instance.write(dataURI, minDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -290,7 +290,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode maxDataNode = createMaxDataNode();
-            instance.write(dataURI, maxDataNode, sb);
+            instance.write(dataURI, maxDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -303,6 +303,19 @@ public class NodeReaderWriterTest {
             Assert.assertTrue(n2 instanceof DataNode);
             Assert.assertEquals(dataURI, result.vosURI);
             compareNodes(maxDataNode, n2);
+
+            // detail=min
+            sb = new StringBuilder();
+            instance.write(dataURI, maxDataNode, sb, VOS.Detail.min);
+            reader = new NodeReader();
+            result = reader.read(sb.toString());
+            Node minDetailNode = result.node;
+            log.info(sb.toString());
+            Assert.assertTrue(minDetailNode instanceof DataNode);
+            DataNode expectedMinNode = new DataNode(maxDataNode.getName());
+            expectedMinNode.getAccepts().addAll(maxDataNode.getAccepts());
+            expectedMinNode.getProvides().addAll(maxDataNode.getProvides());
+            compareNodes(expectedMinNode, minDetailNode);
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());
@@ -316,7 +329,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             UnstructuredDataNode unstructuredDataNode = createUnstructuredDataNode();
-            instance.write(unstructuredURI, unstructuredDataNode, sb);
+            instance.write(unstructuredURI, unstructuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -339,7 +352,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             StructuredDataNode structuredDataNode = createStructuredDataNode();
-            instance.write(structuredURI, structuredDataNode, sb);
+            instance.write(structuredURI, structuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -362,7 +375,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             LinkNode linkNode = createLinkNode();
-            instance.write(linkURI, linkNode, sb);
+            instance.write(linkURI, linkNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -388,7 +401,7 @@ public class NodeReaderWriterTest {
             NodeWriter instance = new NodeWriter();
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, bos);
+            instance.write(dataURI, minDataNode, bos, VOS.Detail.max);
             bos.close();
 
             // validate the XML
@@ -414,7 +427,7 @@ public class NodeReaderWriterTest {
             NodeWriter instance = new NodeWriter();
             StringWriter sw = new StringWriter();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, sw);
+            instance.write(dataURI, minDataNode, sw, VOS.Detail.max);
             sw.close();
 
             log.debug(sw.toString());
@@ -443,10 +456,10 @@ public class NodeReaderWriterTest {
             // write it
             NodeWriter instance = new NodeWriter();
             StringWriter sw = new StringWriter();
-            instance.write(detailedURI, detailedNode, sw);
+            instance.write(detailedURI, detailedNode, sw, VOS.Detail.max);
             sw.close();
 
-            log.info(sw.toString());
+            log.info("Container node: " + sw.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -455,6 +468,28 @@ public class NodeReaderWriterTest {
             Assert.assertTrue(result.node instanceof ContainerNode);
             Assert.assertEquals(detailedURI, result.vosURI);
             compareNodes(detailedNode, result.node);
+
+            // detail=min
+            detailedNode.childIterator = new ResourceIteratorWrapper<Node>(detailedNode.getNodes().iterator());
+            sw = new StringWriter();
+            instance.write(detailedURI, detailedNode, sw, VOS.Detail.min);
+            sw.close();
+            log.info("Min detail container node: " + sw.toString());
+
+            // validate the XML
+            reader = new NodeReader();
+            NodeReader.NodeReaderResult minResult = reader.read(sw.toString());
+
+            Assert.assertTrue(minResult.node instanceof ContainerNode);
+            ContainerNode expectedNode = new ContainerNode(detailedNode.getName());
+            expectedNode.getNodes().addAll(detailedNode.getNodes());
+            for (Node child:expectedNode.getNodes()) {
+                child.getProperties().clear();
+                if (child instanceof DataNode) {
+                    ((DataNode)child).busy = false;
+                }
+            }
+            compareNodes(expectedNode, minResult.node);
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());

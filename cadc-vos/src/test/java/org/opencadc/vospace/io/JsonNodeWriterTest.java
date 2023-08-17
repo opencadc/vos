@@ -76,6 +76,7 @@ import java.net.URI;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
@@ -328,20 +329,66 @@ public class JsonNodeWriterTest {
                 + "  }\n"
                 + "}";
 
+        final String expectedMinDetailJSONString = "{\n"
+                + "  \"vos:node\" : {\n"
+                + "    \"@xmlns:vos\" : \"http://www.ivoa.net/xml/VOSpace/v2.0\",\n"
+                + "    \"@xmlns:xsi\" : \"http://www.w3.org/2001/XMLSchema-instance\",\n"
+                + "    \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3\",\n"
+                + "    \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "    \"vos:nodes\" : {\n"
+                + "      \"$\" : [\n"
+                + "        {\n"
+                + "          \"node\" : {\n"
+                + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n"
+                + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "            \"vos:nodes\" : {\n"
+                + "              \"$\" : [\n"
+                + "              ]\n"
+                + "            }\n"
+                + "          }\n"
+                + "        },\n"
+                + "        {\n"
+                + "          \"node\" : {\n"
+                + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n"
+                + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "            \"vos:nodes\" : {\n"
+                + "              \"$\" : [\n"
+                + "              ]\n"
+                + "            }\n"
+                + "          }\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  }\n"
+                + "}";
+
         final VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/OSSOS/measure3"));
         final JsonNodeWriter testSubject = new JsonNodeWriter();
         final NodeReader nodeReader = new NodeReader(false);
         final NodeReader.NodeReaderResult result = nodeReader.read(testXMLString);
         ContainerNode node = (ContainerNode) result.node;
         node.childIterator = new ResourceIteratorWrapper(node.getNodes().iterator());
-        final Writer writer = new StringWriter();
+        Writer writer = new StringWriter();
 
-        testSubject.write(vosURI, node, writer);
+        testSubject.write(vosURI, node, writer, VOS.Detail.max);
         System.out.println(writer.toString());
 
         final JSONObject expectedJSON = new JSONObject(expectedJSONString);
         final JSONObject resultJSON = new JSONObject(writer.toString());
 
         assertEquals(expectedJSON, resultJSON, false);
+
+        // detail=min
+        node.childIterator = new ResourceIteratorWrapper(node.getNodes().iterator());
+        writer = new StringWriter();
+
+        testSubject.write(vosURI, node, writer, VOS.Detail.min);
+        System.out.println(writer.toString());
+
+        final JSONObject expectedMinDetail = new JSONObject(expectedMinDetailJSONString);
+        final JSONObject resultMinDetailJSON = new JSONObject(writer.toString());
+
+        assertEquals(expectedMinDetail, resultMinDetailJSON, false);
+
     }
 }
