@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'maven'
+    id 'maven-publish'
+    id 'checkstyle'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url "https://maven.restlet.talend.com"
+    }
+}
+
+apply from: '../opencadc.gradle'
+
+sourceCompatibility = 1.8
+
+group = 'org.opencadc'
+
+version = '1.0.0'
+
+description = 'OpenCADC VOSpace utility file system library'
+def git_url = 'https://github.com/opencadc/vos'
+
+dependencies {
+    compile 'javax.servlet:javax.servlet-api:[3.1.0,)'
+
+    implementation 'org.opencadc:cadc-util:[1.9.0,)'
+    implementation 'org.opencadc:cadc-log:[1.0,)'
+
+    testImplementation 'junit:junit:[4.0,)'
+    testImplementation 'org.skyscreamer:jsonassert:[1.0,)'
+}
