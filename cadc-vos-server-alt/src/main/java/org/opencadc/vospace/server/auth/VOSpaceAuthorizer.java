@@ -153,7 +153,7 @@ public class VOSpaceAuthorizer {
     }
     */
     
-        /**
+    /**
      * Check the read permission on a single node.
      *
      * <p>For full node authorization, use getReadPermission(Node).
@@ -257,26 +257,31 @@ public class VOSpaceAuthorizer {
             // need credentials in the subject to call GMS
             if (CredUtil.checkCredentials(subject)) {
                 // make gms calls to see if the user has group membership
-                for (URI groupURI : groups) {
-                    try {
-                        log.debug("Checking GMS on groupURI: " + groupURI);
-                        GroupURI guri = new GroupURI(groupURI);
-                        if (callerGroups.contains(guri)) {
-                            log.debug("Found matching cached group " + guri.toString());
-                            return true;
-                        }
-                        boolean isMember = gmsClient.isMember(guri);
-                        profiler.checkpoint("gmsClient.ismember");
-                        if (isMember) {
-                            callerGroups.add(guri);
-                            return true;
-                        }
-                    } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
-                        log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null) {
-                            firstFail = ex;
-                            wrapException = new RuntimeException("failed to check membership with group service", ex);
-                        }
+                // TODO can the recreation of groups be avoided?
+                Set<GroupURI> gmsGroups = new HashSet<>();
+                for (URI gr : groups) {
+                    gmsGroups.add(new GroupURI(gr));
+                }
+                Set<GroupURI> diff = new HashSet<>(gmsGroups);
+                diff.removeAll(callerGroups);
+                if (diff.size() < groups.size()) {
+                    // a subset is already verified as part of the caller groups
+                    log.debug("Found groups in cache");
+                    return true;
+                }
+                try {
+                    Set<GroupURI> newCallerGroups = gmsClient.getMemberships(gmsGroups);
+
+                    if (!newCallerGroups.isEmpty()) {
+                        log.debug("Found groups on the GMS service");
+                        callerGroups.addAll(newCallerGroups);
+                        return true;
+                    }
+                } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
+                    log.debug("failed to call canfar gms service", ex);
+                    if (firstFail == null) {
+                        firstFail = ex;
+                        wrapException = new RuntimeException("failed to check membership with group service", ex);
                     }
                 }
             }
@@ -287,6 +292,7 @@ public class VOSpaceAuthorizer {
         if (wrapException != null) {
             throw wrapException;
         }
+        log.debug("User not member of groups " + groups);
 
         return false;
     }

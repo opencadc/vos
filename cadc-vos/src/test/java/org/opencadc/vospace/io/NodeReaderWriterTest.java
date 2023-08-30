@@ -68,19 +68,13 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.io.ResourceIteratorWrapper;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -111,13 +105,11 @@ import org.opencadc.vospace.VOSURI;
  * @author jburke
  */
 public class NodeReaderWriterTest {
-    private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
+    private static final Logger log = Logger.getLogger(NodeReaderWriterTest.class);
 
     static {
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
-
-    DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     // TODO: make lists of nodes for a variety of test scenarios
     final VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/dir");
@@ -131,16 +123,16 @@ public class NodeReaderWriterTest {
     }
 
     @BeforeClass
-    public static void setUpClass() throws Exception {
+    public static void setUpClass() {
 
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception {
+    public static void tearDownClass() {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
     }
 
     @After
@@ -450,7 +442,6 @@ public class NodeReaderWriterTest {
         try {
             // ContainerNode
             ContainerNode detailedNode = createDetailedNode();
-            List<Node> nodes = new ArrayList<>();
             detailedNode.childIterator = new ResourceIteratorWrapper<Node>(detailedNode.getNodes().iterator());
 
             // write it

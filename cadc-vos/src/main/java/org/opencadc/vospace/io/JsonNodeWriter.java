@@ -86,7 +86,6 @@ public class JsonNodeWriter extends NodeWriter {
     @Override
     protected void write(Element root, Writer writer, VOS .Detail detail)
         throws IOException {
-        //TODO detail
         JsonOutputter outputter = new JsonOutputter();
         outputter.getListElementNames().add("nodes");
         outputter.getListElementNames().add("properties");

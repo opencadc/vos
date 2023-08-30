@@ -68,7 +68,6 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.xml.ContentConverter;
 import ca.nrc.cadc.xml.IterableContent;
@@ -80,7 +79,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -230,7 +228,7 @@ public class NodeWriter implements XmlProcessor {
      *
      * @param vosURI absolute URI of the node
      * @param node Node.
-     * detail detail level: min - no properties, max/properties - include properties.
+     * @param detail detail level: min - no properties, max/properties - include properties.
      * @return
      */
     protected Element getNodeElement(VOSURI vosURI, Node node, VOS.Detail detail) {

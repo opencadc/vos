@@ -67,8 +67,6 @@
 
 package org.opencadc.vospace.io;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
@@ -89,7 +87,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
