@@ -677,7 +677,8 @@ public class Main implements Runnable {
         if (checkProps || log.isDebugEnabled()) {
             VOSURI destinationURI = new VOSURI(destination);
             log.debug("clientTransfer getTarget: " + node);
-            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node));
+            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node,
+                      VOS.Detail.max));
             if (checkProps) {
                 log.debug("checking properties after put: " + node.getName());
                 boolean updateProps = false;
