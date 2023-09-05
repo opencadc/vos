@@ -8,9 +8,6 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url "https://maven.restlet.talend.com"
-    }
 }
 
 apply from: '../opencadc.gradle'
@@ -26,7 +23,6 @@ def git_url = 'https://github.com/opencadc/vos'
 
 dependencies {
     implementation 'org.opencadc:cadc-util:[1.9.0,)'
-    implementation 'org.opencadc:cadc-log:[1.0,)'
 
     testImplementation 'junit:junit:[4.0,)'
 }
