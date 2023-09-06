@@ -268,17 +268,19 @@ public abstract class VOSTest {
         delete(nodeURL, true);
     }
     
+    // verify==false ignores 404 only
     public void delete(URL nodeURL, boolean verify) {
         HttpDelete delete = new HttpDelete(nodeURL, true);
-        log.debug("DELETE: " + nodeURL);
+        log.info("DELETE: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(delete));
-        log.debug("DELETE responseCode: " + delete.getResponseCode());
-        if (verify) {
-            // TODO revert response code back to expected 204
-            Assert.assertEquals("expected DELETE response code = 200",
-                                200, delete.getResponseCode());
-            Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
+        log.info("DELETE response: " + delete.getResponseCode() + " " + delete.getThrowable());
+        if (!verify && delete.getResponseCode() == 404) {
+            return;
         }
+        // TODO revert response code back to expected 204
+        Assert.assertEquals("expected DELETE response code = 200",
+                            200, delete.getResponseCode());
+        Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
     }
 
 }
