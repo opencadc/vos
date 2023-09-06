@@ -242,7 +242,7 @@ public class VOSpaceAuthorizer {
      * @param subject The user's subject
      * @return True if the user is a member
      */
-    private boolean hasMembership(Set<URI> groups, Subject subject) {
+    private boolean hasMembership(Set<GroupURI> groups, Subject subject) {
         if (subject.getPrincipals().isEmpty()) {
             return false;
         }
@@ -257,12 +257,8 @@ public class VOSpaceAuthorizer {
             // need credentials in the subject to call GMS
             if (CredUtil.checkCredentials(subject)) {
                 // make gms calls to see if the user has group membership
-                // TODO can the recreation of groups be avoided?
-                Set<GroupURI> gmsGroups = new HashSet<>();
-                for (URI gr : groups) {
-                    gmsGroups.add(new GroupURI(gr));
-                }
-                Set<GroupURI> diff = new HashSet<>(gmsGroups);
+                Set<GroupURI> nodeGroups = new HashSet<>(groups);
+                Set<GroupURI> diff = new HashSet<>(nodeGroups);
                 diff.removeAll(callerGroups);
                 if (diff.size() < groups.size()) {
                     // a subset is already verified as part of the caller groups
@@ -270,7 +266,7 @@ public class VOSpaceAuthorizer {
                     return true;
                 }
                 try {
-                    Set<GroupURI> newCallerGroups = gmsClient.getMemberships(gmsGroups);
+                    Set<GroupURI> newCallerGroups = gmsClient.getMemberships(nodeGroups);
 
                     if (!newCallerGroups.isEmpty()) {
                         log.debug("Found groups on the GMS service");

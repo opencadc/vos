@@ -68,6 +68,7 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.xml.ContentConverter;
 import ca.nrc.cadc.xml.IterableContent;
@@ -79,6 +80,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -90,6 +92,7 @@ import org.jdom2.Namespace;
 import org.jdom2.ProcessingInstruction;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -323,21 +326,21 @@ public class NodeWriter implements XmlProcessor {
         }
         if (!node.getReadOnlyGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (URI group : node.getReadOnlyGroup()) {
+            for (GroupURI group : node.getReadOnlyGroup()) {
                 if (sb.length() > 0) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPREAD);
                 }
-                sb.append(group.toASCIIString());
+                sb.append(group.getURI().toASCIIString());
             }
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString()));
         }
         if (!node.getReadWriteGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (URI group : node.getReadWriteGroup()) {
+            for (GroupURI group : node.getReadWriteGroup()) {
                 if (sb.length() > 0) {
                     sb.append(VOS.PROPERTY_DELIM_GROUPWRITE);
                 }
-                sb.append(group.toASCIIString());
+                sb.append(group.getURI().toASCIIString());
             }
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sb.toString()));
         }

@@ -73,6 +73,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.persist.Entity;
 
 /**
@@ -124,8 +125,8 @@ public abstract class Node extends Entity implements Comparable<Node> {
     public Boolean isPublic;
     public Boolean isLocked;
     
-    private final Set<URI> readOnlyGroup = new TreeSet<>();
-    private final Set<URI> readWriteGroup = new TreeSet<>();
+    private final Set<GroupURI> readOnlyGroup = new TreeSet<>();
+    private final Set<GroupURI> readWriteGroup = new TreeSet<>();
     
     private final Set<NodeProperty> properties = new TreeSet<>();
 
@@ -208,16 +209,28 @@ public abstract class Node extends Entity implements Comparable<Node> {
         this.name = name;
     }
 
-    public Set<URI> getReadOnlyGroup() {
+    public Set<GroupURI> getReadOnlyGroup() {
         return readOnlyGroup;
     }
 
-    public Set<URI> getReadWriteGroup() {
+    public Set<GroupURI> getReadWriteGroup() {
         return readWriteGroup;
     }
 
     public Set<NodeProperty> getProperties() {
         return properties;
+    }
+
+    @Override
+    protected boolean isDataModelClass(Class c) {
+        if (super.isDataModelClass(c)) {
+            return true;
+        }
+        // GroupURI is part of a different data model but accepted in this context
+        if (c.getName().equals("org.opencadc.gms.GroupURI")) {
+            return true;
+        }
+        return false;
     }
     
     

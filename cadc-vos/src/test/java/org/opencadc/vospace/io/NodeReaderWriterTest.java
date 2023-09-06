@@ -87,6 +87,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -145,10 +146,10 @@ public class NodeReaderWriterTest {
         node.owner = subject;
         node.isPublic = true;
         node.isLocked = false;
-        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1"));
-        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2"));
-        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1"));
-        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2"));
+        node.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1")));
+        node.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2")));
+        node.getReadWriteGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1")));
+        node.getReadWriteGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2")));
     }
 
     private void addNodeProperties(Node node) {
@@ -607,14 +608,14 @@ public class NodeReaderWriterTest {
         VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/testContainer/foo");
         ContainerNode containerNode = new ContainerNode(containerURI.getName());
         containerNode.inheritPermissions = false;
-        containerNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        containerNode.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/gms/groups?bar")));
         detailedNode.getNodes().add(containerNode);
 
         // add a LinkNode with some props
         VOSURI linkURI = new VOSURI("vos://opencadc.org~vospace/testContainer/aLink");
         URI target = URI.create("vos://opencadc.org~vospace/testContainer/baz");
         LinkNode linkNode = new LinkNode(linkURI.getName(), target);
-        linkNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        linkNode.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/gms/groups?bar")));
         detailedNode.getNodes().add(linkNode);
 
         // add another DataNode below
