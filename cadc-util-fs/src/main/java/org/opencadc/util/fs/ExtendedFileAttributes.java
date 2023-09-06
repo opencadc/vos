@@ -79,10 +79,7 @@ import java.nio.file.attribute.UserDefinedFileAttributeView;
 import org.apache.log4j.Logger;
 
 /**
- * An implementation of the StorageAdapter interface on a file system.
- * This implementation creates an opaque file system structure where
- * storageBucket(s) form a directory tree of hex characters and files are 
- * stored at the bottom level  with random (UUID) file names.
+ * A class to handle the extended attributes of a file system.
  * 
  * @author pdowler
  *
@@ -90,7 +87,18 @@ import org.apache.log4j.Logger;
 public class ExtendedFileAttributes {
     private static final Logger log = Logger.getLogger(ExtendedFileAttributes.class);
     
+    /**
+     * Set the attribute for the current path. If attributeValue is null, the attribute will be deleted. 
+     * @param path   The path where the attribute will be set. Must not be null.
+     * @param attributeKey  The name of the attribute to be set. Must not be null.
+     * @param attributeValue     The value of the attribute to be set. A null value means the attribute is to be deleted.
+     * @throws IOException  If setting failed.
+     */
     public static void setFileAttribute(Path path, String attributeKey, String attributeValue) throws IOException {
+        if (path == null || attributeKey == null) {
+            throw new IllegalArgumentException("path or attributeKey cannot be null");
+        }
+
         log.debug("setFileAttribute: " + path);
         UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
             UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
@@ -109,7 +117,17 @@ public class ExtendedFileAttributes {
         }
     }
     
+    /**
+     * Get the value of specified attribute for the current path. 
+     * @param path   The path where the attribute resides in. Must not be null.
+     * @param attributeKey  The name of the attribute to get. Must not be null.
+     * @throws IOException  If getting failed.
+     */
     static String getFileAttribute(Path path, String attributeName) throws IOException {
+        if (path == null || attributeName == null) {
+            throw new IllegalArgumentException("path or attributeName cannot be null");
+        }
+
         try {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
                 UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
