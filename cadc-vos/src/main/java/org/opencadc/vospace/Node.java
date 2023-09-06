@@ -223,14 +223,11 @@ public abstract class Node extends Entity implements Comparable<Node> {
 
     @Override
     protected boolean isDataModelClass(Class c) {
-        if (super.isDataModelClass(c)) {
+        // / imported data model components
+        if (GroupURI.class.equals(c)) {
             return true;
         }
-        // GroupURI is part of a different data model but accepted in this context
-        if (c.getName().equals("org.opencadc.gms.GroupURI")) {
-            return true;
-        }
-        return false;
+        return super.isDataModelClass(c);
     }
     
     
