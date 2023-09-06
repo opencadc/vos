@@ -75,6 +75,7 @@ import java.io.Writer;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.output.Format;
+import org.opencadc.vospace.VOS;
 
 /**
  *
@@ -83,7 +84,7 @@ import org.jdom2.output.Format;
 public class JsonNodeWriter extends NodeWriter {
 
     @Override
-    protected void write(Element root, Writer writer)
+    protected void write(Element root, Writer writer, VOS .Detail detail)
         throws IOException {
         JsonOutputter outputter = new JsonOutputter();
         outputter.getListElementNames().add("nodes");

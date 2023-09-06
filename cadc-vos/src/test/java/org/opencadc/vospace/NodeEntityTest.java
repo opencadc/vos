@@ -72,15 +72,13 @@ import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
 import java.net.URI;
 import java.security.MessageDigest;
-import java.security.Principal;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 
 /**
  *
@@ -105,7 +103,6 @@ public class NodeEntityTest {
             
             NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
             HttpPrincipal up = new HttpPrincipal("foo");
-            Set<Principal> pset = new TreeSet<>();
             n.owner = new Subject();
             n.owner.getPrincipals().add(up);
             n.owner.getPrincipals().add(np);
@@ -113,8 +110,7 @@ public class NodeEntityTest {
             Assert.assertEquals(mcs1, mcs);
             
             UUID rootID = new UUID(0L, 0L);
-            ContainerNode root = new ContainerNode(rootID, "root");
-            n.parent = root;
+            n.parent = new ContainerNode(rootID, "root");
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             n.parent = null;
@@ -150,29 +146,29 @@ public class NodeEntityTest {
             Assert.assertNotEquals(mcs1, mcs);
             n.getProperties().clear();
             
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rog1 = mcs;
             n.getReadOnlyGroup().clear();
             
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rog1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
             n.getReadOnlyGroup().clear();
             
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms/groups?g1")));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms/groups?g2")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rwg1 = mcs;
             n.getReadWriteGroup().clear();
             
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms/groups?g2")));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms/groups?g1")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rwg1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
@@ -198,7 +194,6 @@ public class NodeEntityTest {
             
             NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
             HttpPrincipal up = new HttpPrincipal("foo");
-            Set<Principal> pset = new TreeSet<>();
             n.owner = new Subject();
             n.owner.getPrincipals().add(up);
             n.owner.getPrincipals().add(np);
@@ -214,8 +209,7 @@ public class NodeEntityTest {
             Assert.assertEquals(mcs1, mcs);
             
             UUID rootID = new UUID(0L, 0L);
-            ContainerNode root = new ContainerNode(rootID, "root");
-            n.parent = root;
+            n.parent = new ContainerNode(rootID, "root");
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(mcs1, mcs);
             n.parent = null;
@@ -251,29 +245,29 @@ public class NodeEntityTest {
             Assert.assertNotEquals(mcs1, mcs);
             n.isPublic = false;
             
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rog1 = mcs;
             n.getReadOnlyGroup().clear();
             
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.getReadOnlyGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
+            n.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rog1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);
             n.getReadOnlyGroup().clear();
             
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertNotEquals(mcs1, mcs);
             final URI rwg1 = mcs;
             n.getReadWriteGroup().clear();
             
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g2"));
-            n.getReadWriteGroup().add(URI.create("ivo://opencadc.org/gms#g1"));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g2")));
+            n.getReadWriteGroup().add(new GroupURI(URI.create("ivo://opencadc.org/gms?g1")));
             mcs = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
             Assert.assertEquals(rwg1, mcs); // must be sorted
             Assert.assertNotEquals(mcs1, mcs);

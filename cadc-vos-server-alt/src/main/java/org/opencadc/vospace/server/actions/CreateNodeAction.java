@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
@@ -174,6 +175,6 @@ public class CreateNodeAction extends NodeAction {
         NodeWriter nodeWriter = getNodeWriter();
         syncOutput.setHeader("Content-Type", getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
-        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream());
+        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
     }
 }

@@ -144,7 +144,7 @@ public class PathResolver {
                 if (child == null) {
                     return null;
                 }
-                if (!voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+                if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
                     throw NodeFault.PermissionDenied.getStatus();
                 }
 

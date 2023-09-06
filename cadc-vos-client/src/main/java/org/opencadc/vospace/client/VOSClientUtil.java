@@ -124,12 +124,12 @@ public class VOSClientUtil {
      *
      * @author Sailor Zhang
      */
-    public static String xmlString(VOSURI vosURI, Node node) {
+    public static String xmlString(VOSURI vosURI, Node node, VOS.Detail detail) {
         String xml;
         StringBuilder sb = new StringBuilder();
         try {
             NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.write(vosURI, node, sb);
+            nodeWriter.write(vosURI, node, sb, detail);
             xml = sb.toString();
         } catch (IOException e) {
             xml = "Error getting XML string from node: " + e.getMessage();

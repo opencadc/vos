@@ -23,6 +23,7 @@ def git_url = 'https://github.com/opencadc/vos'
 
 dependencies {
     implementation 'org.opencadc:cadc-util:[1.6,2.0)'
+    implementation 'org.opencadc:cadc-gms:[1.0.5,)'
     implementation 'org.opencadc:cadc-vos:[2.0,)'
     implementation 'org.opencadc:cadc-uws:[1.0,2.0)'
     implementation 'org.opencadc:cadc-registry:[1.5.15,2.0)'

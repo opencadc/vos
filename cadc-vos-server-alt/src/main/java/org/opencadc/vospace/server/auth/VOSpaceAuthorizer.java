@@ -78,6 +78,7 @@ import java.security.AccessControlException;
 import java.security.Principal;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -118,6 +119,7 @@ public class VOSpaceAuthorizer {
 
     private final NodePersistence nodePersistence;
     private final IvoaGroupClient gmsClient = new IvoaGroupClient();
+    private final Set<GroupURI> callerGroups = new HashSet<>();  //cache of caller groups used to minimize service calls
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
@@ -151,7 +153,7 @@ public class VOSpaceAuthorizer {
     }
     */
     
-        /**
+    /**
      * Check the read permission on a single node.
      *
      * <p>For full node authorization, use getReadPermission(Node).
@@ -240,7 +242,7 @@ public class VOSpaceAuthorizer {
      * @param subject The user's subject
      * @return True if the user is a member
      */
-    private boolean hasMembership(Set<URI> groups, Subject subject) {
+    private boolean hasMembership(Set<GroupURI> groups, Subject subject) {
         if (subject.getPrincipals().isEmpty()) {
             return false;
         }
@@ -255,21 +257,27 @@ public class VOSpaceAuthorizer {
             // need credentials in the subject to call GMS
             if (CredUtil.checkCredentials(subject)) {
                 // make gms calls to see if the user has group membership
-                for (URI groupURI : groups) {
-                    try {
-                        log.debug("Checking GMS on groupURI: " + groupURI);
-                        GroupURI guri = new GroupURI(groupURI);
-                        boolean isMember = gmsClient.isMember(guri);
-                        profiler.checkpoint("gmsClient.ismember");
-                        if (isMember) {
-                            return true;
-                        }
-                    } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
-                        log.debug("failed to call canfar gms service", ex);
-                        if (firstFail == null) {
-                            firstFail = ex;
-                            wrapException = new RuntimeException("failed to check membership with group service", ex);
-                        }
+                Set<GroupURI> nodeGroups = new HashSet<>(groups);
+                Set<GroupURI> diff = new HashSet<>(nodeGroups);
+                diff.removeAll(callerGroups);
+                if (diff.size() < groups.size()) {
+                    // a subset is already verified as part of the caller groups
+                    log.debug("Found groups in cache");
+                    return true;
+                }
+                try {
+                    Set<GroupURI> newCallerGroups = gmsClient.getMemberships(nodeGroups);
+
+                    if (!newCallerGroups.isEmpty()) {
+                        log.debug("Found groups on the GMS service");
+                        callerGroups.addAll(newCallerGroups);
+                        return true;
+                    }
+                } catch (InterruptedException | IOException | ResourceNotFoundException ex) {
+                    log.debug("failed to call canfar gms service", ex);
+                    if (firstFail == null) {
+                        firstFail = ex;
+                        wrapException = new RuntimeException("failed to check membership with group service", ex);
                     }
                 }
             }
@@ -280,6 +288,7 @@ public class VOSpaceAuthorizer {
         if (wrapException != null) {
             throw wrapException;
         }
+        log.debug("User not member of groups " + groups);
 
         return false;
     }
