@@ -55,6 +55,7 @@ dependencies {
     implementation 'commons-net:commons-net:[2.0,)'
 
     implementation 'org.opencadc:cadc-util:[1.9.0,)'
+    implementation 'org.opencadc:cadc-util-fs:[1.0.0,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'
     implementation 'org.opencadc:cadc-registry:[1.5.9,)'

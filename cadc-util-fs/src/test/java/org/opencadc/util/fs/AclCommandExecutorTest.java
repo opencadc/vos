@@ -65,10 +65,9 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern.nodes;
+package org.opencadc.util.fs;
 
 
-import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -87,7 +86,6 @@ import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
