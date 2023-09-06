@@ -75,10 +75,12 @@ import ca.nrc.cadc.net.NetUtil;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.util.GregorianCalendar;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -263,8 +265,8 @@ public class NodesTest extends VOSTest {
             testNode.getProperties().add(descriptionProperty);
             testNode.getProperties().add(customProperty);
 
-            URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
-            URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
+            GroupURI readGroup = new GroupURI(URI.create("ivo://org.opencadc/node?ReadGroup"));
+            GroupURI writeGroup = new GroupURI(URI.create("ivo://org.opencadc/node?writeGroup"));
             testNode.getReadOnlyGroup().add(readGroup);
             testNode.getReadWriteGroup().add(writeGroup);
             testNode.isPublic = true;
@@ -300,10 +302,10 @@ public class NodesTest extends VOSTest {
             testNode.getProperties().add(titlePropertyDel);
             testNode.getProperties().add(descriptionProperty2);
 
-            URI updatedReadGroup = URI.create("ivo://org.opencadc/node?UpdatedReadGroup");
+            GroupURI updatedReadGroup = new GroupURI(URI.create("ivo://org.opencadc/node?UpdatedReadGroup"));
             testNode.getReadOnlyGroup().clear();
             testNode.getReadOnlyGroup().add(updatedReadGroup);
-            URI updatedWriteGroup = URI.create("ivo://org.opencadc/node?UpdatedWriteGroup");
+            GroupURI updatedWriteGroup = new GroupURI(URI.create("ivo://org.opencadc/node?UpdatedWriteGroup"));
             testNode.getReadWriteGroup().clear();
             testNode.getReadWriteGroup().add(updatedWriteGroup);
             testNode.isPublic = false;
@@ -515,8 +517,8 @@ public class NodesTest extends VOSTest {
             testNode.getProperties().add(titleProperty);
             testNode.getProperties().add(descriptionProperty);
 
-            URI readGroup = URI.create("ivo://org.opencadc/node?ReadGroup");
-            URI writeGroup = URI.create("ivo://org.opencadc/node?writeGroup");
+            GroupURI readGroup = new GroupURI(URI.create("ivo://org.opencadc/node?ReadGroup"));
+            GroupURI writeGroup = new GroupURI(URI.create("ivo://org.opencadc/node?writeGroup"));
             testNode.getReadOnlyGroup().add(readGroup);
             testNode.getReadWriteGroup().add(writeGroup);
 
