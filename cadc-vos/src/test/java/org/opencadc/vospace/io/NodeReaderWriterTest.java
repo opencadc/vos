@@ -68,19 +68,13 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.io.ResourceIteratorWrapper;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -93,6 +87,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -111,13 +106,11 @@ import org.opencadc.vospace.VOSURI;
  * @author jburke
  */
 public class NodeReaderWriterTest {
-    private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
+    private static final Logger log = Logger.getLogger(NodeReaderWriterTest.class);
 
     static {
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
-
-    DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     // TODO: make lists of nodes for a variety of test scenarios
     final VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/dir");
@@ -131,16 +124,16 @@ public class NodeReaderWriterTest {
     }
 
     @BeforeClass
-    public static void setUpClass() throws Exception {
+    public static void setUpClass() {
 
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception {
+    public static void tearDownClass() {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
     }
 
     @After
@@ -153,10 +146,10 @@ public class NodeReaderWriterTest {
         node.owner = subject;
         node.isPublic = true;
         node.isLocked = false;
-        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1"));
-        node.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2"));
-        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1"));
-        node.getReadWriteGroup().add(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2"));
+        node.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-1")));
+        node.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?ReadGroup-2")));
+        node.getReadWriteGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?writeGroup-1")));
+        node.getReadWriteGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/node?writeGroup-2")));
     }
 
     private void addNodeProperties(Node node) {
@@ -241,7 +234,7 @@ public class NodeReaderWriterTest {
             ContainerNode containerNode = createContainerNode();
 
             containerNode.childIterator = new ResourceIteratorWrapper<Node>(containerNode.getNodes().iterator());
-            instance.write(containerURI, containerNode, sb);
+            instance.write(containerURI, containerNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -264,7 +257,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, sb);
+            instance.write(dataURI, minDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -290,7 +283,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode maxDataNode = createMaxDataNode();
-            instance.write(dataURI, maxDataNode, sb);
+            instance.write(dataURI, maxDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -303,6 +296,19 @@ public class NodeReaderWriterTest {
             Assert.assertTrue(n2 instanceof DataNode);
             Assert.assertEquals(dataURI, result.vosURI);
             compareNodes(maxDataNode, n2);
+
+            // detail=min
+            sb = new StringBuilder();
+            instance.write(dataURI, maxDataNode, sb, VOS.Detail.min);
+            reader = new NodeReader();
+            result = reader.read(sb.toString());
+            Node minDetailNode = result.node;
+            log.info(sb.toString());
+            Assert.assertTrue(minDetailNode instanceof DataNode);
+            DataNode expectedMinNode = new DataNode(maxDataNode.getName());
+            expectedMinNode.getAccepts().addAll(maxDataNode.getAccepts());
+            expectedMinNode.getProvides().addAll(maxDataNode.getProvides());
+            compareNodes(expectedMinNode, minDetailNode);
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());
@@ -316,7 +322,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             UnstructuredDataNode unstructuredDataNode = createUnstructuredDataNode();
-            instance.write(unstructuredURI, unstructuredDataNode, sb);
+            instance.write(unstructuredURI, unstructuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -339,7 +345,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             StructuredDataNode structuredDataNode = createStructuredDataNode();
-            instance.write(structuredURI, structuredDataNode, sb);
+            instance.write(structuredURI, structuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -362,7 +368,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             LinkNode linkNode = createLinkNode();
-            instance.write(linkURI, linkNode, sb);
+            instance.write(linkURI, linkNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
             // validate the XML
@@ -388,7 +394,7 @@ public class NodeReaderWriterTest {
             NodeWriter instance = new NodeWriter();
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, bos);
+            instance.write(dataURI, minDataNode, bos, VOS.Detail.max);
             bos.close();
 
             // validate the XML
@@ -414,7 +420,7 @@ public class NodeReaderWriterTest {
             NodeWriter instance = new NodeWriter();
             StringWriter sw = new StringWriter();
             DataNode minDataNode = createMinDataNode();
-            instance.write(dataURI, minDataNode, sw);
+            instance.write(dataURI, minDataNode, sw, VOS.Detail.max);
             sw.close();
 
             log.debug(sw.toString());
@@ -437,16 +443,15 @@ public class NodeReaderWriterTest {
         try {
             // ContainerNode
             ContainerNode detailedNode = createDetailedNode();
-            List<Node> nodes = new ArrayList<>();
             detailedNode.childIterator = new ResourceIteratorWrapper<Node>(detailedNode.getNodes().iterator());
 
             // write it
             NodeWriter instance = new NodeWriter();
             StringWriter sw = new StringWriter();
-            instance.write(detailedURI, detailedNode, sw);
+            instance.write(detailedURI, detailedNode, sw, VOS.Detail.max);
             sw.close();
 
-            log.info(sw.toString());
+            log.info("Container node: " + sw.toString());
 
             // validate the XML
             NodeReader reader = new NodeReader();
@@ -455,6 +460,28 @@ public class NodeReaderWriterTest {
             Assert.assertTrue(result.node instanceof ContainerNode);
             Assert.assertEquals(detailedURI, result.vosURI);
             compareNodes(detailedNode, result.node);
+
+            // detail=min
+            detailedNode.childIterator = new ResourceIteratorWrapper<Node>(detailedNode.getNodes().iterator());
+            sw = new StringWriter();
+            instance.write(detailedURI, detailedNode, sw, VOS.Detail.min);
+            sw.close();
+            log.info("Min detail container node: " + sw.toString());
+
+            // validate the XML
+            reader = new NodeReader();
+            NodeReader.NodeReaderResult minResult = reader.read(sw.toString());
+
+            Assert.assertTrue(minResult.node instanceof ContainerNode);
+            ContainerNode expectedNode = new ContainerNode(detailedNode.getName());
+            expectedNode.getNodes().addAll(detailedNode.getNodes());
+            for (Node child:expectedNode.getNodes()) {
+                child.getProperties().clear();
+                if (child instanceof DataNode) {
+                    ((DataNode)child).busy = false;
+                }
+            }
+            compareNodes(expectedNode, minResult.node);
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());
@@ -581,14 +608,14 @@ public class NodeReaderWriterTest {
         VOSURI containerURI = new VOSURI("vos://opencadc.org~vospace/testContainer/foo");
         ContainerNode containerNode = new ContainerNode(containerURI.getName());
         containerNode.inheritPermissions = false;
-        containerNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        containerNode.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/gms/groups?bar")));
         detailedNode.getNodes().add(containerNode);
 
         // add a LinkNode with some props
         VOSURI linkURI = new VOSURI("vos://opencadc.org~vospace/testContainer/aLink");
         URI target = URI.create("vos://opencadc.org~vospace/testContainer/baz");
         LinkNode linkNode = new LinkNode(linkURI.getName(), target);
-        linkNode.getReadOnlyGroup().add(URI.create("ivo://cadc.nrc.ca/gms/groups#bar"));
+        linkNode.getReadOnlyGroup().add(new GroupURI(URI.create("ivo://cadc.nrc.ca/gms/groups?bar")));
         detailedNode.getNodes().add(linkNode);
 
         // add another DataNode below

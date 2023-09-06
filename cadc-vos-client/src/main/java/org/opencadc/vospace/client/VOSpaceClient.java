@@ -330,12 +330,12 @@ public class VOSpaceClient {
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             URL url = new URL(vospaceURL.toExternalForm() + vosURI.getPath());
-            log.debug("setNode: " + VOSClientUtil.xmlString(vosURI, node));
+            log.debug("setNode: " + VOSClientUtil.xmlString(vosURI, node, VOS.Detail.max));
             log.debug("setNode: " + url);
 
             NodeWriter nodeWriter = new NodeWriter();
             StringBuilder nodeXML = new StringBuilder();
-            nodeWriter.write(vosURI, node, nodeXML);
+            nodeWriter.write(vosURI, node, nodeXML, VOS.Detail.max);
 
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
@@ -370,7 +370,7 @@ public class VOSpaceClient {
             //String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
             Writer stringWriter = new StringWriter();
-            nodeWriter.write(vosURI, node, stringWriter);
+            nodeWriter.write(vosURI, node, stringWriter, VOS.Detail.max);
             //URL postUrl = new URL(asyncNodePropsUrl);
 
             FileContent nodeContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
@@ -659,7 +659,7 @@ public class VOSpaceClient {
 
         public void write(OutputStream out) throws IOException {
             NodeWriter writer = new NodeWriter();
-            writer.write(this.vosURI, this.node, out);
+            writer.write(this.vosURI, this.node, out, VOS.Detail.max);
         }
     }
 

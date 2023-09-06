@@ -76,6 +76,7 @@ import java.net.URI;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
@@ -96,8 +97,8 @@ public class JsonNodeWriterTest {
                 + "    <vos:property uri=\"ivo://canfar.uvic.ca/ossos#1-object_count-DRYRUN\" readOnly=\"true\">20</vos:property>\n"
                 + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#creator\">cn=cadctest_007,ou=cadc,o=hia,c=ca</vos:property>\n"
                 + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#date\">2016-01-20T15:14:57.443</vos:property>\n"
-                + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms#OSSOS</vos:property>\n"
-                + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
+                + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms?OSSOS</vos:property>\n"
+                + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker</vos:property>\n"
                 + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
                 + "    <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">-89323123449</vos:property>\n"
                 + "  </vos:properties>\n"
@@ -108,8 +109,8 @@ public class JsonNodeWriterTest {
                 + "        <vos:property uri=\"ivo://cadc.nrc.ca/vospace/core#islocked\">true</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#creator\">cn=mtb55_5be,ou=cadc,o=hia,c=ca</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#date\">2015-12-17T17:44:17.897</vos:property>\n"
-                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms#OSSOS ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
-                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
+                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms?OSSOS ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker</vos:property>\n"
+                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">30388581</vos:property>\n"
                 + "      </vos:properties>\n"
@@ -121,8 +122,8 @@ public class JsonNodeWriterTest {
                 + "        <vos:property uri=\"ivo://cadc.nrc.ca/vospace/core#islocked\">true</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#creator\">cn=mtb55_5be,ou=cadc,o=hia,c=ca</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#date\">2015-12-17T17:57:32.107</vos:property>\n"
-                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
-                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker</vos:property>\n"
+                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupread\">ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker</vos:property>\n"
+                + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#groupwrite\">ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#ispublic\">false</vos:property>\n"
                 + "        <vos:property uri=\"ivo://ivoa.net/vospace/core#length\">3812708</vos:property>\n"
                 + "      </vos:properties>\n"
@@ -174,13 +175,13 @@ public class JsonNodeWriterTest {
                 + "        {\n"
                 + "          \"property\" : {\n"
                 + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
-                + "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS\"\n"
+                + "            \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS\"\n"
                 + "          }\n"
                 + "        },\n"
                 + "        {\n"
                 + "          \"property\" : {\n"
                 + "            \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
-                + "            \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+                + "            \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker\"\n"
                 + "          }\n"
                 + "        },\n"
                 + "        {\n"
@@ -232,13 +233,13 @@ public class JsonNodeWriterTest {
                 + "                {\n"
                 + "                  \"property\" : {\n"
                 + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
-                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker\"\n"
                 + "                  }\n"
                 + "                },\n"
                 + "                {\n"
                 + "                  \"property\" : {\n"
                 + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
-                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker\"\n"
                 + "                  }\n"
                 + "                },\n"
                 + "                {\n"
@@ -294,13 +295,13 @@ public class JsonNodeWriterTest {
                 + "                {\n"
                 + "                  \"property\" : {\n"
                 + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupread\",\n"
-                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker\"\n"
                 + "                  }\n"
                 + "                },\n"
                 + "                {\n"
                 + "                  \"property\" : {\n"
                 + "                    \"@uri\" : \"ivo://ivoa.net/vospace/core#groupwrite\",\n"
-                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms#OSSOS-Admin ivo://cadc.nrc.ca/gms#OSSOS-Worker\"\n"
+                + "                    \"$\" : \"ivo://cadc.nrc.ca/gms?OSSOS-Admin ivo://cadc.nrc.ca/gms?OSSOS-Worker\"\n"
                 + "                  }\n"
                 + "                },\n"
                 + "                {\n"
@@ -328,20 +329,66 @@ public class JsonNodeWriterTest {
                 + "  }\n"
                 + "}";
 
+        final String expectedMinDetailJSONString = "{\n"
+                + "  \"vos:node\" : {\n"
+                + "    \"@xmlns:vos\" : \"http://www.ivoa.net/xml/VOSpace/v2.0\",\n"
+                + "    \"@xmlns:xsi\" : \"http://www.w3.org/2001/XMLSchema-instance\",\n"
+                + "    \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3\",\n"
+                + "    \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "    \"vos:nodes\" : {\n"
+                + "      \"$\" : [\n"
+                + "        {\n"
+                + "          \"node\" : {\n"
+                + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E\",\n"
+                + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "            \"vos:nodes\" : {\n"
+                + "              \"$\" : [\n"
+                + "              ]\n"
+                + "            }\n"
+                + "          }\n"
+                + "        },\n"
+                + "        {\n"
+                + "          \"node\" : {\n"
+                + "            \"@uri\" : \"vos://cadc.nrc.ca!vospace/OSSOS/measure3/2013A-E_April9\",\n"
+                + "            \"@xsi:type\" : \"vos:ContainerNode\",\n"
+                + "            \"vos:nodes\" : {\n"
+                + "              \"$\" : [\n"
+                + "              ]\n"
+                + "            }\n"
+                + "          }\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  }\n"
+                + "}";
+
         final VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/OSSOS/measure3"));
         final JsonNodeWriter testSubject = new JsonNodeWriter();
         final NodeReader nodeReader = new NodeReader(false);
         final NodeReader.NodeReaderResult result = nodeReader.read(testXMLString);
         ContainerNode node = (ContainerNode) result.node;
         node.childIterator = new ResourceIteratorWrapper(node.getNodes().iterator());
-        final Writer writer = new StringWriter();
+        Writer writer = new StringWriter();
 
-        testSubject.write(vosURI, node, writer);
+        testSubject.write(vosURI, node, writer, VOS.Detail.max);
         System.out.println(writer.toString());
 
         final JSONObject expectedJSON = new JSONObject(expectedJSONString);
         final JSONObject resultJSON = new JSONObject(writer.toString());
 
         assertEquals(expectedJSON, resultJSON, false);
+
+        // detail=min
+        node.childIterator = new ResourceIteratorWrapper(node.getNodes().iterator());
+        writer = new StringWriter();
+
+        testSubject.write(vosURI, node, writer, VOS.Detail.min);
+        System.out.println(writer.toString());
+
+        final JSONObject expectedMinDetail = new JSONObject(expectedMinDetailJSONString);
+        final JSONObject resultMinDetailJSON = new JSONObject(writer.toString());
+
+        assertEquals(expectedMinDetail, resultMinDetailJSON, false);
+
     }
 }

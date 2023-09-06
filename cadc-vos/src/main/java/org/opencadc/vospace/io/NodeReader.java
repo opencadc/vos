@@ -67,8 +67,6 @@
 
 package org.opencadc.vospace.io;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
@@ -89,12 +87,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -476,16 +474,16 @@ public class NodeReader implements XmlProcessor {
      * @param properties set of the node properties.
      * @return a set of group URI's.
      */
-    protected Set<URI> getGroupURIs(URI key, String delimiter, Set<NodeProperty> properties)
+    protected Set<GroupURI> getGroupURIs(URI key, String delimiter, Set<NodeProperty> properties)
         throws NodeParsingException {
-        Set<URI> groups = new TreeSet<>();
+        Set<GroupURI> groups = new TreeSet<>();
         NodeProperty nodeProperty = getNodeProperty(key, properties);
         if (nodeProperty != null && nodeProperty.getValue() != null) {
             String[] values = nodeProperty.getValue().split(delimiter);
             for (String value : values) {
-                URI groupURI;
+                GroupURI groupURI;
                 try {
-                    groupURI = new URI(value);
+                    groupURI = new GroupURI(new URI(value));
                 } catch (URISyntaxException e) {
                     throw new NodeParsingException(String.format("node property %s has invalid group URI %s",
                                                                  key.toASCIIString(), value));

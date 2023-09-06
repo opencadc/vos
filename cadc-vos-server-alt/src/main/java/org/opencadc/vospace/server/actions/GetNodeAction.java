@@ -216,17 +216,16 @@ public class GetNodeAction extends NodeAction {
         final NodeWriter nodeWriter = getNodeWriter();
         //nodeWriter.setStylesheetURL(getStylesheetURL());
 
-        // clear the properties from server node if the detail
-        // level is set to 'min'
+        VOS.Detail detail = VOS.Detail.max;
         if (VOS.Detail.min.getValue().equals(detailLevel)) {
             // TODO: what about props that are fields in Node?
-            serverNode.getProperties().clear();
+            detail = VOS.Detail.min;
         }
 
         syncOutput.setCode(200);
         syncOutput.setHeader("Content-Type", getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
-        nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream());
+        nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
     }
     
     private void doTagChildrenAccessRights(ContainerNode cn) {

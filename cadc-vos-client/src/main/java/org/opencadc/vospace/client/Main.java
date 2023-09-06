@@ -100,6 +100,7 @@ import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -491,12 +492,12 @@ public class Main implements Runnable {
             msg("is locked: " + n.isLocked);
             msg("is public: " + n.isPublic);
             msg("readable by:");
-            for (URI ro : n.getReadOnlyGroup()) {
-                msg("\t" + ro);
+            for (GroupURI ro : n.getReadOnlyGroup()) {
+                msg("\t" + ro.getURI());
             }
             msg("readable and writable by:");
-            for (URI rw : n.getReadWriteGroup()) {
-                msg("\t" + rw);
+            for (GroupURI rw : n.getReadWriteGroup()) {
+                msg("\t" + rw.getURI());
             }
 
             if (n instanceof ContainerNode) {
@@ -677,7 +678,8 @@ public class Main implements Runnable {
         if (checkProps || log.isDebugEnabled()) {
             VOSURI destinationURI = new VOSURI(destination);
             log.debug("clientTransfer getTarget: " + node);
-            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node));
+            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node,
+                      VOS.Detail.max));
             if (checkProps) {
                 log.debug("checking properties after put: " + node.getName());
                 boolean updateProps = false;
