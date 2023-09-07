@@ -102,6 +102,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -246,6 +247,9 @@ public class VOSpaceClient {
         } catch (NodeParsingException e) {
             log.debug("failed to create node", e);
             throw new IllegalStateException("failed to create node", e);
+        } catch (NodeNotSupportedException e) {
+            log.debug("failed to create node", e);
+            throw new IllegalStateException("failed to create node", e);
         } catch (NodeNotFoundException e) {
             log.debug("failed to create node", e);
             throw new IllegalStateException("Node not found", e);
@@ -311,6 +315,9 @@ public class VOSpaceClient {
         } catch (NodeParsingException e) {
             log.debug("failed to get node", e);
             throw new IllegalStateException("failed to get node", e);
+        } catch (NodeNotSupportedException e) {
+            log.debug("failed to get node", e);
+            throw new IllegalStateException("failed to create node", e);
         } catch (ResourceAlreadyExistsException e) {
             log.debug("failed to get node", e);
             throw new IllegalStateException("failed to get node", e);
@@ -355,6 +362,8 @@ public class VOSpaceClient {
             throw new IllegalStateException("failed to set node", e);
         } catch (NodeNotFoundException e) {
             throw new IllegalStateException("Node not found", e);
+        } catch (NodeNotSupportedException e) {
+            throw new IllegalStateException("Node not supported", e);
         } catch (ResourceAlreadyExistsException e) {
             log.debug("failed to set node", e);
             throw new IllegalStateException("failed to set node", e);
