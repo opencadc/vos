@@ -97,6 +97,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.NodeUtil;
 import org.opencadc.vospace.StructuredDataNode;
@@ -166,7 +167,7 @@ public class NodeReader implements XmlProcessor {
      * @throws NodeParsingException if there is an error parsing the XML.
      */
     public NodeReaderResult read(String xml)
-        throws NodeParsingException {
+        throws NodeParsingException, NodeNotSupportedException {
         NodeUtil.assertNotNull(NodeReader.class, "xml", "xml");
 
         try {
@@ -185,7 +186,7 @@ public class NodeReader implements XmlProcessor {
      * @throws NodeParsingException if there is an error parsing the XML.
      */
     public NodeReaderResult read(InputStream in)
-        throws IOException, NodeParsingException {
+        throws IOException, NodeParsingException, NodeNotSupportedException {
         NodeUtil.assertNotNull(NodeReader.class, "in", "in");
         if (in == null) {
             throw new IOException("The InputStream is closed");
@@ -207,7 +208,7 @@ public class NodeReader implements XmlProcessor {
      * @throws NodeParsingException if there is an error parsing the XML.
      */
     public NodeReaderResult read(Reader reader)
-        throws NodeParsingException, IOException {
+            throws NodeParsingException, IOException, NodeNotSupportedException {
         NodeUtil.assertNotNull(NodeReader.class, "reader", "reader");
 
         // Create a JDOM Document from the XML
@@ -268,7 +269,7 @@ public class NodeReader implements XmlProcessor {
             || type.equals(UnstructuredDataNode.class.getSimpleName())) {
             node = buildDataNode(root, namespace, vosURI, type);
         } else {
-            throw new NodeParsingException("unsupported node type: " + type);
+            throw new NodeNotSupportedException("unsupported node type: " + type);
         }
         //node.version = version;
 

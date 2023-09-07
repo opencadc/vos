@@ -177,8 +177,6 @@ public class PathResolver {
                         node = (ContainerNode) child;
                     } else {
                         return null;
-                        //throw new IllegalArgumentException("invalid path: found " + child.getClass().getSimpleName()
-                        //        + " named '" + name + "' before end of path " + nodePath);
                     }
                 }
                 ret = child;

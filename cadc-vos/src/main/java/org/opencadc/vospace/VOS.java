@@ -275,8 +275,10 @@ public class VOS {
     // 400 faults
     public static final String IVOA_FAULT_INVALID_URI = "InvalidURI";
     public static final String IVOA_FAULT_INVALID_ARG = "InvalidArgument";
+    public static final String IVOA_FAULT_INVALID_DATA = "InvalidData";
     public static final String IVOA_FAULT_INVALID_TOKEN = "InvalidToken";
     public static final String IVOA_FAULT_TYPE_NOT_SUPPORTED = "TypeNotSupported";
+    public static final String IVOA_FAULT_VIEW_NOT_SUPPORTED = "ViewNotSupported";
     // 401
     public static final String IVOA_FAULT_PERMISSION_DENIED = "PermissionDenied";
 

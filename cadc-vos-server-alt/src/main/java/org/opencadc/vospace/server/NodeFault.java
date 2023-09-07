@@ -93,6 +93,7 @@ public enum NodeFault {
     InvalidToken(VOS.IVOA_FAULT_INVALID_TOKEN),
     InvalidArgument(VOS.IVOA_FAULT_INVALID_ARG),
     TypeNotSupported(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED),
+    // CADC defined faults
     ContainerNotFound(VOS.CADC_FAULT_CONTAINER_NOT_FOUND),
     RequestEntityTooLarge(VOS.CADC_FAULT_REQUEST_TOO_LARGE),
     UnreadableLinkTarget(VOS.CADC_FAULT_UNREADABLE_LINK),
@@ -136,9 +137,6 @@ public enum NodeFault {
                 return new InlineContentException(exMsg);
             default:
                 return new RuntimeException("BUG: Unknown fault type - " + status);
-            //TODO not sure this is still needed
-            //
-
         }
     }
 

@@ -76,6 +76,7 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
@@ -106,11 +107,13 @@ public class InlineNodeHandler implements InlineContentHandler {
             ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
             NodeReader r = new NodeReader();
             NodeReader.NodeReaderResult result = r.read(bs);
-            
+
             InlineContentHandler.Content content = new InlineContentHandler.Content();
             content.name = tag;
             content.value = result;
             return content;
+        } catch (NodeNotSupportedException ex) {
+            throw (IllegalArgumentException)NodeFault.TypeNotSupported.getStatus(ex.getMessage());
         } catch (ByteLimitExceededException ex) {
             throw (InlineContentException)
                     NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
