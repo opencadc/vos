@@ -76,8 +76,10 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
  * Read xml from input stream and return a node.
@@ -98,7 +100,7 @@ public class InlineNodeHandler implements InlineContentHandler {
 
     @Override
     public Content accept(String name, String contentType, InputStream inputStream) 
-            throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
+            throws InlineContentException, IOException, TransientException {
         
         try {
             ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
@@ -110,9 +112,10 @@ public class InlineNodeHandler implements InlineContentHandler {
             content.value = result;
             return content;
         } catch (ByteLimitExceededException ex) {
-            throw new InlineContentException("invalid document too large (max: " + KB_LIMIT + "):" + ex.getMessage(), ex);
+            throw (InlineContentException)
+                    NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
         } catch (NodeParsingException ex) {
-            throw new InlineContentException("invalid input: " + ex.getMessage(), ex);
+            throw (IllegalArgumentException)NodeFault.InvalidArgument.getStatus("invalid input: " + ex.getMessage());
         }
         
     }

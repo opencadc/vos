@@ -96,7 +96,8 @@ public class UpdateNodeAction extends NodeAction {
         
         // validate doc vs path because some redundancy in API
         if (!clientNodeTarget.equals(target)) {
-            throw new IllegalArgumentException("invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
+            throw NodeFault.InvalidArgument.getStatus(
+                    "invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
         }
 
         // get parent container node
@@ -104,18 +105,18 @@ public class UpdateNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus();
+            throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget.toString());
         }
 
         if (!clientNode.getClass().equals(serverNode.getClass())) {
             // TODO: suitable NodeFault?
-            throw new IllegalArgumentException("invalid input: cannot change type of node " + target.getPath()
+            throw NodeFault.InvalidArgument.getStatus("invalid input: cannot change type of node " + target.getPath()
                     + " from " + serverNode.getClass().getSimpleName() + " to " + clientNode.getClass().getSimpleName());
         }
         
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
-            throw NodeFault.PermissionDenied.getStatus();
+            throw NodeFault.PermissionDenied.getStatus(clientNodeTarget.toString());
         }
         
         // merge change request

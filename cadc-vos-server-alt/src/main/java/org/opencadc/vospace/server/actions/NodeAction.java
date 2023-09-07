@@ -86,6 +86,7 @@ import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
@@ -174,18 +175,18 @@ public abstract class NodeAction extends RestAction {
         return null;
     }
     
-    protected String getMediaType() {
+    protected String getMediaType() throws Exception {
         String mediaType = DEFAULT_FORMAT;
         if (syncInput.getParameter("Accept") != null) {
             mediaType = syncInput.getParameter("Accept");
             if (!DEFAULT_FORMAT.equalsIgnoreCase(mediaType) && !JSON_FORMAT.equalsIgnoreCase(mediaType)) {
-                throw new IllegalArgumentException("Media type " + mediaType + " not supported");
+                throw NodeFault.InvalidArgument.getStatus("Media type " + mediaType + " not supported");
             }
         }
         return mediaType;
     }
 
-    protected NodeWriter getNodeWriter() {
+    protected NodeWriter getNodeWriter() throws Exception {
         String mt = getMediaType();
         if (JSON_FORMAT.equals(mt)) {
             return new JsonNodeWriter();

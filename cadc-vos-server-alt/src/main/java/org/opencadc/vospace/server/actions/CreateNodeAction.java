@@ -104,8 +104,7 @@ public class CreateNodeAction extends NodeAction {
         
         // validate doc vs path because some redundancy in API
         if (!clientNodeURI.equals(target)) {
-            throw NodeFault.InvalidURI.getStatus();
-            //throw new IllegalArgumentException("invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
+            throw NodeFault.InvalidURI.getStatus("invalid input: vos URI mismatch: doc=" + clientNodeURI + " and path=" + target);
         }
         
         // get parent container node
@@ -113,19 +112,18 @@ public class CreateNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getParentURI().getPath());
         if (serverNode == null || !(serverNode instanceof ContainerNode)) {
-            throw NodeFault.ContainerNotFound.getStatus();
+            throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
         }
 
         ContainerNode parent = (ContainerNode) serverNode;
         Node cur = nodePersistence.get(parent, target.getName());
         if (cur != null) {
-            throw NodeFault.DuplicateNode.getStatus();
-            //throw new ResourceAlreadyExistsException("node already exists: " + target.getPath());
+            throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
         }
 
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
-            throw NodeFault.PermissionDenied.getStatus();
+            throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
         }
 
         clientNode.parent = parent;

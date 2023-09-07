@@ -136,7 +136,7 @@ public class GetNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus();
+            throw NodeFault.NodeNotFound.getStatus(target.toString());
         }
         log.warn("found: " + target + " as " + serverNode);
         
@@ -168,7 +168,7 @@ public class GetNodeAction extends NodeAction {
                         throw new NumberFormatException();
                     }
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("value for limit must be a positive integer.");
+                    throw NodeFault.InvalidArgument.getStatus("value for limit must be a positive integer.");
                 }
             }
 
@@ -178,7 +178,9 @@ public class GetNodeAction extends NodeAction {
                 String parentPath = vuri.getParent();
                 log.warn("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
                 if (!target.getPath().equals(parentPath)) {
-                    throw new IllegalArgumentException("uri parameter not a child of target uri.");
+                    throw NodeFault.InvalidURI.getStatus(
+                            "uri parameter (" + vuri.toString() + ") not a child of target uri ("
+                                    + getTargetURI() + ").");
                 }
                 pageStart = vuri.getName();
             }

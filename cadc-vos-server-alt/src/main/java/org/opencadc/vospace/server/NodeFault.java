@@ -68,10 +68,13 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceLockedException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentException;
+import ca.nrc.cadc.util.StringUtil;
 import org.opencadc.vospace.VOS;
 
 /**
@@ -83,51 +86,64 @@ import org.opencadc.vospace.VOS;
  */
 public enum NodeFault {
     // IVOA Standard Faults - not an exhaustive list
-    PermissionDenied(new NotAuthenticatedException(VOS.IVOA_FAULT_PERMISSION_DENIED)),
-    InvalidURI(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_URI)),
-    NodeNotFound(new ResourceNotFoundException(VOS.IVOA_FAULT_NODE_NOT_FOUND)),
-    DuplicateNode(new ResourceAlreadyExistsException(VOS.IVOA_FAULT_DUPLICATE_NODE)),
-    InvalidToken(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_TOKEN)),
-    InvalidArgument(new IllegalArgumentException(VOS.IVOA_FAULT_INVALID_ARG)),
-    TypeNotSupported(new IllegalArgumentException(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED)),
-    // Other Faults
-    ContainerNotFound(new ResourceNotFoundException(VOS.CADC_FAULT_CONTAINER_NOT_FOUND)),
-    //TODO not sure still needed.
-    //    RequestEntityTooLarge(new ByteLimitExceededException(VOS.CADC_FAULT_REQUEST_TOO_LARGE)),
-    UnreadableLinkTarget(new ResourceNotFoundException(VOS.CADC_FAULT_UNREADABLE_LINK)),
-    ServiceBusy(new TransientException(VOS.CADC_FAULT_SERVICE_BUSY)),
-    NodeLocked(new ResourceLockedException(VOS.CADC_FAULT_NODE_LOCKED)),
-    NotAuthenticated(new NotAuthenticatedException("NotAuthenticated"));
+    PermissionDenied(VOS.IVOA_FAULT_PERMISSION_DENIED),
+    InvalidURI(VOS.IVOA_FAULT_INVALID_URI),
+    NodeNotFound(VOS.IVOA_FAULT_NODE_NOT_FOUND),
+    DuplicateNode(VOS.IVOA_FAULT_DUPLICATE_NODE),
+    InvalidToken(VOS.IVOA_FAULT_INVALID_TOKEN),
+    InvalidArgument(VOS.IVOA_FAULT_INVALID_ARG),
+    TypeNotSupported(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED),
+    ContainerNotFound(VOS.CADC_FAULT_CONTAINER_NOT_FOUND),
+    RequestEntityTooLarge(VOS.CADC_FAULT_REQUEST_TOO_LARGE),
+    UnreadableLinkTarget(VOS.CADC_FAULT_UNREADABLE_LINK),
+    ServiceBusy(VOS.CADC_FAULT_SERVICE_BUSY),
+    NodeLocked(VOS.CADC_FAULT_NODE_LOCKED),
+    NotAuthenticated(VOS.CADC_FAULT_NOT_AUTHENTICATED);
 
-    private Exception status;
-    private String message;
+    private String status;
     private boolean serviceFailure;
 
-    private NodeFault(Exception ex) {
-        this.status = ex;
+    private NodeFault(String fault) {
+        this.status = fault;
         this.serviceFailure = false;
     }
 
-    public Exception getStatus() {
-        return status;
+    public Exception getStatus(String msg) {
+        String exMsg = status;
+        if (StringUtil.hasText(msg)) {
+            exMsg += ": " + msg;
+        }
+        switch (status) {
+            case VOS.IVOA_FAULT_PERMISSION_DENIED:
+            case VOS.CADC_FAULT_NOT_AUTHENTICATED:
+                return new NotAuthenticatedException(exMsg);
+            case VOS.IVOA_FAULT_INVALID_URI:
+            case VOS.IVOA_FAULT_INVALID_ARG:
+            case VOS.IVOA_FAULT_INVALID_TOKEN:
+            case VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED:
+                return new IllegalArgumentException(exMsg);
+            case VOS.IVOA_FAULT_NODE_NOT_FOUND:
+            case VOS.CADC_FAULT_CONTAINER_NOT_FOUND:
+            case VOS.CADC_FAULT_UNREADABLE_LINK:
+                return new ResourceNotFoundException(exMsg);
+            case VOS.IVOA_FAULT_DUPLICATE_NODE:
+                return new ResourceAlreadyExistsException(exMsg);
+            case VOS.CADC_FAULT_SERVICE_BUSY:
+                return new TransientException(exMsg);
+            case VOS.CADC_FAULT_NODE_LOCKED:
+                return new ResourceLockedException(exMsg);
+            case VOS.CADC_FAULT_REQUEST_TOO_LARGE:
+                return new InlineContentException(exMsg);
+            default:
+                return new RuntimeException("BUG: Unknown fault type - " + status);
+            //TODO not sure this is still needed
+            //
+
+        }
     }
 
     public String toString() {
         return name();
-    }
-
-    public String getMessage() {
-        if (message != null) {
-            return message;
-        }
-        if (status != null) {
-            return status.getMessage();
-        }
-        return null;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
     }
 
     public boolean isServiceFailure() {
