@@ -75,7 +75,6 @@ import ca.nrc.cadc.net.NetUtil;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.URL;
-import java.util.GregorianCalendar;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -84,6 +83,7 @@ import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -341,6 +341,16 @@ public class NodesTest extends VOSTest {
 
     @Test
     public void testListBatches() {
+        String[] childNames = new String[] {
+            "list-batches-child-1",
+            "list-batches-child-2",
+            "list-batches-child-3",
+            "list-batches-child-4",
+            "list-batches-child-5",
+            "list-batches-child-6"
+        };
+        Node[] childNodes = new Node[childNames.length];
+        
         try {
             // create root container node
             String parentName = "testListBatches";
@@ -349,89 +359,71 @@ public class NodesTest extends VOSTest {
             ContainerNode parent = new ContainerNode(parentName);
             
             // cleanup
+            for (String n : childNames) {
+                String child1Path = parentName + "/" + n;
+                URL curl = getNodeURL(nodesServiceURL, child1Path);
+                delete(curl, false);
+            }
             delete(parentURL, false);
             
             log.info("put: " + parentURI + " -> " + parentURL);
             put(parentURL, parentURI, parent);
 
             // add 6 direct child nodes
-            String child1Name = "list-batches-child-1";
-            String child1Path = parentName + "/" + child1Name;
-            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
-            VOSURI child1URI = getVOSURI(child1Path);
-            ContainerNode child1 = new ContainerNode(child1Name);
-            put(child1URL, child1URI, child1);
-
-            String child2Name = "list-batches-child-2";
-            String child2Path = parentName + "/" + child2Name;
-            URL child2URL = getNodeURL(nodesServiceURL, child2Path);
-            VOSURI child2URI = getVOSURI(child2Path);
-            DataNode child2 = new DataNode(child2Name);
-            put(child2URL, child2URI, child2);
-
-            String child3Name = "list-batches-child-3";
-            String child3Path = parentName + "/" + child3Name;
-            URL child3URL = getNodeURL(nodesServiceURL, child3Path);
-            VOSURI child3URI = getVOSURI(child3Path);
-            LinkNode child3 = new LinkNode(child3Name, URI.create("target"));
-            put(child3URL, child3URI, child3);
-
-            String child4Name = "list-batches-child-4";
-            String child4Path = parentName + "/" + child4Name;
-            URL child4URL = getNodeURL(nodesServiceURL, child4Path);
-            VOSURI child4URI = getVOSURI(child4Path);
-            ContainerNode child4 = new ContainerNode(child4Name);
-            put(child4URL, child4URI, child4);
-
-            String child5Name = "list-batches-child-5";
-            String child5Path = parentName + "/" + child5Name;
-            URL child5URL = getNodeURL(nodesServiceURL, child5Path);
-            VOSURI child5URI = getVOSURI(child5Path);
-            DataNode child5 = new DataNode(child5Name);
-            put(child5URL, child5URI, child5);
-
-            String child6Name = "list-batches-child-6";
-            String child6Path = parentName + "/" + child6Name;
-            URL child6URL = getNodeURL(nodesServiceURL, child6Path);
-            VOSURI child6URI = getVOSURI(child6Path);
-            LinkNode child6 = new LinkNode(child6Name, URI.create("target"));
-            put(child6URL, child6URI, child6);
-
+            int i = 0;
+            for (String n : childNames) {
+                String childPath = parentName + "/" + n;
+                URL childURL = getNodeURL(nodesServiceURL, childPath);
+                VOSURI childURI = getVOSURI(childPath);
+                ContainerNode child = new ContainerNode(n);
+                childNodes[i++] = child;
+                put(childURL, childURI, child);
+            }
+            
             // Get nodes 1 - 3
+            VOSURI u1 = getVOSURI(parentName + "/" + childNames[0]);
             URL nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
-                                                NetUtil.encode(child1URI.getURI().toASCIIString()), 3));
+                                                NetUtil.encode(u1.getURI().toASCIIString()), 3));
             NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
             Assert.assertEquals(3, parentNode.getNodes().size());
-            Assert.assertTrue(parentNode.getNodes().contains(child1));
-            Assert.assertTrue(parentNode.getNodes().contains(child2));
-            Assert.assertTrue(parentNode.getNodes().contains(child3));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[0]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[1]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[2]));
 
             // Get nodes 3 - 5
+            VOSURI u3 = getVOSURI(parentName + "/" + childNames[2]);
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
-                                            NetUtil.encode(child3URI.getURI().toASCIIString()), 3));
+                                            NetUtil.encode(u3.getURI().toASCIIString()), 3));
             result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
             Assert.assertEquals(3, parentNode.getNodes().size());
-            Assert.assertTrue(parentNode.getNodes().contains(child3));
-            Assert.assertTrue(parentNode.getNodes().contains(child4));
-            Assert.assertTrue(parentNode.getNodes().contains(child5));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[2]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[3]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[4]));
 
             // Get nodes 5 - 6
+            VOSURI u5 = getVOSURI(parentName + "/" + childNames[4]);
             nodeURL = new URL(String.format("%s?uri=%s&limit=%d", parentURL,
-                                            NetUtil.encode(child5URI.getURI().toASCIIString()), 3));
+                                            NetUtil.encode(u5.getURI().toASCIIString()), 3));
             result = get(nodeURL, 200, XML_CONTENT_TYPE);
 
             Assert.assertTrue(result.node instanceof ContainerNode);
             parentNode = (ContainerNode) result.node;
             Assert.assertEquals(2, parentNode.getNodes().size());
-            Assert.assertTrue(parentNode.getNodes().contains(child5));
-            Assert.assertTrue(parentNode.getNodes().contains(child6));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[4]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[5]));
 
+            // delete children
+            for (String n : childNames) {
+                String child1Path = parentName + "/" + n;
+                URL curl = getNodeURL(nodesServiceURL, child1Path);
+                delete(curl);
+            }
             // delete the parent node
             delete(parentURL);
 
@@ -446,6 +438,15 @@ public class NodesTest extends VOSTest {
 
     @Test
     public void testLimit() {
+        String[] childNames = new String[] {
+            "limit-nodes-child-1",
+            "limit-nodes-child-2",
+            "limit-nodes-child-3",
+            "limit-nodes-child-4",
+            "limit-nodes-child-5",
+            "limit-nodes-child-6"
+        };
+        Node[] childNodes = new Node[childNames.length];
         try {
             // create root container node
             String parentName = "testLimit";
@@ -454,32 +455,27 @@ public class NodesTest extends VOSTest {
             ContainerNode parent = new ContainerNode(parentName);
             
             // cleanup
+            for (String n : childNames) {
+                String child1Path = parentName + "/" + n;
+                URL curl = getNodeURL(nodesServiceURL, child1Path);
+                delete(curl, false);
+            }
             delete(parentURL, false);
             
             log.info("put: " + parentURI + " -> " + parentURL);
             put(parentURL, parentURI, parent);
 
             // add 3 direct child nodes
-            String child1Name = "limit-nodes-child-1";
-            String child1Path = parentName + "/" + child1Name;
-            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
-            VOSURI child1URI = getVOSURI(child1Path);
-            ContainerNode child1 = new ContainerNode(child1Name);
-            put(child1URL, child1URI, child1);
-
-            String child2Name = "limit-nodes-child-2";
-            String child2Path = parentName + "/" + child2Name;
-            URL child2URL = getNodeURL(nodesServiceURL, child2Path);
-            VOSURI child2URI = getVOSURI(child2Path);
-            DataNode child2 = new DataNode(child2Name);
-            put(child2URL, child2URI, child2);
-
-            String child3Name = "limit-nodes-child-3";
-            String child3Path = parentName + "/" + child3Name;
-            URL child3URL = getNodeURL(nodesServiceURL, child3Path);
-            VOSURI child3URI = getVOSURI(child3Path);
-            LinkNode child3 = new LinkNode(child3Name, URI.create("target"));
-            put(child3URL, child3URI, child3);
+            int i = 0;
+            for (String n : childNames) {
+                String child1Name = n;
+                String child1Path = parentName + "/" + child1Name;
+                URL child1URL = getNodeURL(nodesServiceURL, child1Path);
+                VOSURI child1URI = getVOSURI(child1Path);
+                ContainerNode child1 = new ContainerNode(child1Name);
+                childNodes[i++] = child1;
+                put(child1URL, child1URI, child1);
+            }
 
             // get the node with a limit of 2 child nodes
             URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
@@ -488,9 +484,15 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(result.node instanceof ContainerNode);
             ContainerNode parentNode = (ContainerNode) result.node;
             Assert.assertEquals(2, parentNode.getNodes().size());
-            Assert.assertTrue(parentNode.getNodes().contains(child1));
-            Assert.assertTrue(parentNode.getNodes().contains(child2));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[0]));
+            Assert.assertTrue(parentNode.getNodes().contains(childNodes[1]));
 
+            // delete children
+            for (String n : childNames) {
+                String child1Path = parentName + "/" + n;
+                URL curl = getNodeURL(nodesServiceURL, child1Path);
+                delete(curl);
+            }
             // delete the parent node
             delete(parentURL);
 
@@ -525,17 +527,19 @@ public class NodesTest extends VOSTest {
             URL nodeURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI nodeURI = getVOSURI(parentName);
             
+            // add a Child node
+            String child1Name = "node-detail-child-node";
+            String child1Path = parentName + "/" + child1Name;
+            final URL child1URL = getNodeURL(nodesServiceURL, child1Path);
+            final VOSURI child1URI = getVOSURI(child1Path);
+            
             // cleanup
+            delete(child1URL, false);
             delete(nodeURL, false);
             
             log.info("put: " + nodeURI + " -> " + nodeURL);
             put(nodeURL, nodeURI, testNode);
-
-            // add a Child node
-            String child1Name = "node-detail-child-node";
-            String child1Path = parentName + "/" + child1Name;
-            URL child1URL = getNodeURL(nodesServiceURL, child1Path);
-            VOSURI child1URI = getVOSURI(child1Path);
+            
             ContainerNode child1 = new ContainerNode(child1Name);
             put(child1URL, child1URI, child1);
 
@@ -555,6 +559,7 @@ public class NodesTest extends VOSTest {
             Assert.assertFalse(parentNode.getNodes().isEmpty());
 
             // delete the node
+            delete(child1URL);
             delete(nodeURL);
 
             // GET the deleted node, which should fail

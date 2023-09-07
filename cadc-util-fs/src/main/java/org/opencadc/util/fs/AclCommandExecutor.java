@@ -65,7 +65,7 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern.nodes;
+package org.opencadc.util.fs;
 
 
 import ca.nrc.cadc.exec.BuilderOutputGrabber;

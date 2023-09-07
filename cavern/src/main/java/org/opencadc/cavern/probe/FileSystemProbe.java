@@ -85,7 +85,6 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.nodes.AclCommandExecutor;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
