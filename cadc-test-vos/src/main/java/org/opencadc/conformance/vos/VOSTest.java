@@ -97,6 +97,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
@@ -218,13 +219,13 @@ public abstract class VOSTest {
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
     }
 
-    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType) 
-            throws NodeParsingException {
+    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType)
+            throws NodeParsingException, NodeNotSupportedException {
         return get(url, responseCode, contentType, true);
     }
     
     public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType, boolean verify)
-            throws NodeParsingException {
+            throws NodeParsingException, NodeNotSupportedException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         HttpGet get = new HttpGet(url, out);
         log.debug("GET: " + url);
