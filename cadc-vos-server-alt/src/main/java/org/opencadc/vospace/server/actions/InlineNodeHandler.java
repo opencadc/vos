@@ -91,7 +91,7 @@ public class InlineNodeHandler implements InlineContentHandler {
     private static final Logger log = Logger.getLogger(InlineNodeHandler.class);
 
     private static final String KB_LIMIT = "32KiB";
-    private static final long INPUT_LIMIT = 32 * 1024L;
+    public static final long INPUT_LIMIT = 32 * 1024L;
     
     private final String tag;
     

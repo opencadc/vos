@@ -75,7 +75,9 @@ import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.util.StringUtil;
+import java.security.AccessControlException;
 import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.server.actions.InlineNodeHandler;
 
 /**
  * Enumeration of type types of faults that can occur
@@ -116,6 +118,7 @@ public enum NodeFault {
         }
         switch (status) {
             case VOS.IVOA_FAULT_PERMISSION_DENIED:
+                return new AccessControlException(exMsg);
             case VOS.CADC_FAULT_NOT_AUTHENTICATED:
                 return new NotAuthenticatedException(exMsg);
             case VOS.IVOA_FAULT_INVALID_URI:
@@ -134,7 +137,7 @@ public enum NodeFault {
             case VOS.CADC_FAULT_NODE_LOCKED:
                 return new ResourceLockedException(exMsg);
             case VOS.CADC_FAULT_REQUEST_TOO_LARGE:
-                return new InlineContentException(exMsg);
+                return new ByteLimitExceededException(exMsg, InlineNodeHandler.INPUT_LIMIT);
             default:
                 return new RuntimeException("BUG: Unknown fault type - " + status);
         }
