@@ -145,14 +145,15 @@ public class PathResolver {
                     return null;
                 }
                 if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
-                    throw NodeFault.PermissionDenied.getStatus();
+                    LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
+                    throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
 
                 if (resolveLinks && pathIter.hasNext()) {
                     while (child instanceof LinkNode) {
                         log.debug("Resolving link node " + Utils.getPath(node));
                         if (visitCount > visitLimit) {
-                            throw new LinkingException("Exceeded link limit.");
+                            throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
                         }
                         visitCount++;
                         log.debug("visit number " + visitCount);
@@ -162,7 +163,8 @@ public class PathResolver {
 
                         String linkPath = targetURI.getPath();
                         if (visitedPaths.contains(linkPath)) {
-                            throw new LinkingException("detected link node cycle: already followed link -> " + linkPath);
+                            throw NodeFault.UnreadableLinkTarget.getStatus(
+                                    "detected link node cycle: already followed link -> " + linkPath);
                         }
                         visitedPaths.add(linkPath);
                         
@@ -175,8 +177,6 @@ public class PathResolver {
                         node = (ContainerNode) child;
                     } else {
                         return null;
-                        //throw new IllegalArgumentException("invalid path: found " + child.getClass().getSimpleName()
-                        //        + " named '" + name + "' before end of path " + nodePath);
                     }
                 }
                 ret = child;
@@ -194,7 +194,7 @@ public class PathResolver {
      * @param linkNode node to validate
      * @return A VOSURI of the target of the link node.
      */
-    public VOSURI validateTargetURI(LinkNode linkNode) {
+    public VOSURI validateTargetURI(LinkNode linkNode) throws Exception {
         LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
         VOSURI nodeURI = localServiceURI.getURI(linkNode);
         VOSURI targetURI = new VOSURI(linkNode.getTarget());
@@ -202,7 +202,7 @@ public class PathResolver {
         log.debug("Validating target: " + targetURI.toString());
 
         if (targetURI.getServiceURI() != localServiceURI.getVOSBase().getServiceURI()) {
-            throw new IllegalArgumentException("External link " + targetURI.getServiceURI().toASCIIString());
+            throw NodeFault.InvalidArgument.getStatus("External link " + targetURI.getServiceURI().toASCIIString());
         }
         return targetURI;
     }

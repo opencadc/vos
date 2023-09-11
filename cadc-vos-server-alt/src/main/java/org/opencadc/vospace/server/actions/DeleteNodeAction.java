@@ -94,18 +94,18 @@ public class DeleteNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus();
+            throw NodeFault.NodeNotFound.getStatus(target.toString());
         }
 
         if (serverNode.parent == null) {
             // target is root
-            throw NodeFault.PermissionDenied.getStatus();
+            throw NodeFault.PermissionDenied.getStatus(target.toString());
         }
         
         ContainerNode parent = serverNode.parent;
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
-            throw NodeFault.PermissionDenied.getStatus();
+            throw NodeFault.PermissionDenied.getStatus(target.toString());
         }
         
         if (serverNode instanceof ContainerNode) {

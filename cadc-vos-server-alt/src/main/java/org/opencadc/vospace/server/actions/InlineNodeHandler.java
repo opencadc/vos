@@ -76,8 +76,11 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
  * Read xml from input stream and return a node.
@@ -88,7 +91,7 @@ public class InlineNodeHandler implements InlineContentHandler {
     private static final Logger log = Logger.getLogger(InlineNodeHandler.class);
 
     private static final String KB_LIMIT = "32KiB";
-    private static final long INPUT_LIMIT = 32 * 1024L;
+    public static final long INPUT_LIMIT = 32 * 1024L;
     
     private final String tag;
     
@@ -98,21 +101,24 @@ public class InlineNodeHandler implements InlineContentHandler {
 
     @Override
     public Content accept(String name, String contentType, InputStream inputStream) 
-            throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
+            throws InlineContentException, IOException, TransientException {
         
         try {
             ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
             NodeReader r = new NodeReader();
             NodeReader.NodeReaderResult result = r.read(bs);
-            
+
             InlineContentHandler.Content content = new InlineContentHandler.Content();
             content.name = tag;
             content.value = result;
             return content;
+        } catch (NodeNotSupportedException ex) {
+            throw (IllegalArgumentException)NodeFault.TypeNotSupported.getStatus(ex.getMessage());
         } catch (ByteLimitExceededException ex) {
-            throw new InlineContentException("invalid document too large (max: " + KB_LIMIT + "):" + ex.getMessage(), ex);
+            throw (InlineContentException)
+                    NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
         } catch (NodeParsingException ex) {
-            throw new InlineContentException("invalid input: " + ex.getMessage(), ex);
+            throw (IllegalArgumentException)NodeFault.InvalidArgument.getStatus("invalid input: " + ex.getMessage());
         }
         
     }

@@ -87,7 +87,7 @@ public class LocalServiceURI {
 
     public LocalServiceURI(URI resourceID) {
         if (resourceID == null) {
-            throw new IllegalArgumentException("resource ID required");
+            throw new RuntimeException("BUG: resource ID required");
         }
         this.resourceID = resourceID;
         if (vosURIBase == null) {
@@ -98,7 +98,7 @@ public class LocalServiceURI {
                 vosURIBase = new VOSURI(vosuri);
                 log.debug("VOSpace URI base: " + vosURIBase);
             } catch (URISyntaxException e) {
-                throw new RuntimeException("Invalid VOSpace resource ID " + resourceID, e);
+                throw new RuntimeException("BUG: Invalid VOSpace resource ID " + resourceID, e);
             }
         }
     }
@@ -116,7 +116,7 @@ public class LocalServiceURI {
         try {
             return new VOSURI(uri);
         } catch (URISyntaxException e) {
-            throw new RuntimeException("BUG: VOURI syntax: " + uri, e);
+            throw new RuntimeException("BUG: VOSURI syntax: " + uri, e);
         }
     }
 }
