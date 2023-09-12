@@ -61,7 +61,7 @@ org.opencadc.cavern.filesystem.probe.root = {directory path}
 org.opencadc.cavern.filesystem.probe.owner = {username}
 org.opencadc.cavern.filesystem.probe.linkOwner = {username}
 
-# optional base directory exposed for sshfs mounts
+# base directory exposed for sshfs mounts
 org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
 ```
 
@@ -75,7 +75,7 @@ The _filesystem.probe.owner_ is the user who owns the files and directories in t
 
 The _filesystem.probe.linkOwner_ is the user who owns the symbolic links in the _filesystem.probe.root_ directory.
 
-The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount.
+The _sshfs.serverBase_ is the host name, port, and path to the sshfs mount.
 
 ### cavern-availability.properties (optional)
 The `cavern-availability.properties` file specifies which users have the authority to change the availability state of 
