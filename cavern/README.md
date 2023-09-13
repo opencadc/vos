@@ -3,7 +3,7 @@
 The permissions, too, are governed by the file system permissions.  For the users and groups in the file system 
 to correspond to the users in the VOSpace REST API, a SSSD connection is made from the file system to LDAP.  
 An access control service (https://github.com/opencadc/ac.git) is used by `cavern` to determine Posix UIDs and GIDs.  
-It needs to be available and connected to the same LDAP instance as SSSD.
+The UIDs and GIDs come from an external source (TBD).
 
 Because the source of all data and metadata in `cavern` is the file system, users may interact with that file system 
 directly (through, for example, a volume mount) and `cavern` will reflect any changes that were made. 
@@ -12,10 +12,6 @@ directly (through, for example, a volume mount) and `cavern` will reflect any ch
 The `cavern` war file can be renamed at deployment time in order to support an alternate service name, including 
 introducing additional path elements. 
 See <a href="https://github.com/opencadc/docker-base/tree/master/cadc-tomcat">cadc-tomcat</a> (war-rename.conf).
-
-For the SSS connection to LDAP to operate, the directory `/var/lib/sss/pipes` must be mapped to
-the same `/var/lib/sss/pipes` directory seen by the SSS daemon, either through a volume mount or some other means.  
-See <a href="https://github.com/opencadc/ac/tree/master/cadc-sssd">cadc-sssd</a> for more information.
 
 ## configuration
 The following runtime configuration must be made available via the `/config` directory.
@@ -61,7 +57,7 @@ org.opencadc.cavern.filesystem.probe.root = {directory path}
 org.opencadc.cavern.filesystem.probe.owner = {username}
 org.opencadc.cavern.filesystem.probe.linkOwner = {username}
 
-# base directory exposed for sshfs mounts
+# (optional) base directory exposed for sshfs mounts
 org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
 ```
 
@@ -75,7 +71,8 @@ The _filesystem.probe.owner_ is the user who owns the files and directories in t
 
 The _filesystem.probe.linkOwner_ is the user who owns the symbolic links in the _filesystem.probe.root_ directory.
 
-The _sshfs.serverBase_ is the host name, port, and path to the sshfs mount.
+The _sshfs.serverBase_ (optional) is the host name, port, and path to the sshfs mount. 
+See <a href="https://github.com/opencadc/vos/tree/master/cavern-sshd">cavern-sshd</a> for cavern SSHD support.
 
 ### cavern-availability.properties (optional)
 The `cavern-availability.properties` file specifies which users have the authority to change the availability state of 
