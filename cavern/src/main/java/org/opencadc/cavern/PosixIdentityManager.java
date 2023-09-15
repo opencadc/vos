@@ -71,6 +71,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import java.io.IOException;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -78,14 +79,14 @@ import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 /**
- * An IdentityManager implementation that can map from POSIX file system object
- * owner to subject. This implementation should only be used for NodePersistence
- * operations as the toOwner/toSubject uses file system identities and that might
- * conflict with what's expected for JobPersistence usage.
+ * An IdentityManager implementation that picks the PosixPrincipal(uid) as
+ * the persistent object to "own" resources. This implementation should only 
+ * be used for NodePersistence operations as the toOwner/toSubject uses file 
+ * system identities and that might conflict with what's expected for 
+ * JobPersistence usage.
  *
  * @author pdowler
  */
@@ -93,13 +94,7 @@ public class PosixIdentityManager implements IdentityManager {
 
     private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
-    private UserPrincipalLookupService users;
-    
-    private PosixIdentityManager() {
-    }
-    
-    public PosixIdentityManager(UserPrincipalLookupService users) {
-        this.users = users;
+    public PosixIdentityManager() {
     }
 
     @Override
@@ -108,46 +103,42 @@ public class PosixIdentityManager implements IdentityManager {
             return null;
         }
         
-        if (o instanceof UserPrincipal) {
-            // convert posix UserPrincipal to external HttpPrincipal
-            UserPrincipal p = (UserPrincipal) o;
-            HttpPrincipal hp = new HttpPrincipal(p.getName());
+        // handle integer for symmetry with toOwner
+        if (o instanceof Integer) {
+            Integer i = (Integer) o;
+            o = new PosixPrincipal(i);
+        }
+        
+        if (o instanceof PosixPrincipal) {
+            PosixPrincipal p = (PosixPrincipal) o;
             Set<Principal> pset = new HashSet<Principal>();
-            pset.add(hp);
+            pset.add(p);
             Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
-            // TODO: augment subject?
-            return ret;
+            return augment(ret);
         }
         throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
     }
 
-    public UserPrincipal toUserPrincipal(Subject subject) throws IOException {
+    public PosixPrincipal toPosixPrincipal(Subject subject) {
         if (subject == null) {
             return null;
         }
         
-        Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
+        Set<PosixPrincipal> principals = subject.getPrincipals(PosixPrincipal.class);
         if (!principals.isEmpty()) {
-            HttpPrincipal hp = principals.iterator().next();
-            return users.lookupPrincipalByName(hp.getName());
+            PosixPrincipal p = principals.iterator().next();
+            return p;
         }
         return null;
     }
     
     @Override
     public Object toOwner(Subject subject) {
-        try {
-            UserPrincipal up = toUserPrincipal(subject);
-            if (up == null) {
+            PosixPrincipal p = toPosixPrincipal(subject);
+            if (p == null) {
                 return null;
             }
-            return up.getName();
-        } catch (IOException ex) {
-            // probably means someone configured this IM such that it's also 
-            // being used by UWS JobPersistence
-            log.warn("username did not map to local identity known to UserPrincipalLookupService", ex);
-            return null;
-        }
+            return (Integer) p.getUidNumber(); // autobox
     }
     
     @Override

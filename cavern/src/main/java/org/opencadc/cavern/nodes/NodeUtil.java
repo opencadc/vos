@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,11 +67,7 @@
 
 package org.opencadc.cavern.nodes;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import org.opencadc.gms.GroupURI;
-import org.opencadc.util.fs.AclCommandExecutor;
-
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
@@ -95,22 +91,13 @@ import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.AclEntry;
-import java.nio.file.attribute.AclEntry.Builder;
-import java.nio.file.attribute.AclEntryPermission;
-import java.nio.file.attribute.AclEntryType;
-import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
-import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -120,8 +107,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.gms.GroupURI;
+import org.opencadc.util.fs.AclCommandExecutor;
 
 /**
  * Utility methods for interacting with nodes.
@@ -176,15 +165,14 @@ public abstract class NodeUtil {
                 + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
 
-    public static Path create(Path root, Node node)
+    public static Path create(Path root, Node node, PosixMapperClient pmc)
             throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
 
-        UserPrincipalLookupService users = root.getFileSystem().getUserPrincipalLookupService();
-        UserPrincipal owner = getOwner(users, node);
+        PosixPrincipal owner = getOwner(node);
         assertNotNull("owner", owner);
-        GroupPrincipal group = getDefaultGroup(users, owner);
+        Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
 
         Path ret = null;
@@ -219,7 +207,7 @@ public abstract class NodeUtil {
 
         try {
             setPosixOwnerGroup(ret, owner, group);
-            setNodeProperties(ret, node);
+            setNodeProperties(ret, node, pmc);
         } catch (IOException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
@@ -230,23 +218,17 @@ public abstract class NodeUtil {
         return ret;
     }
     
-    public static void setPosixOwnerGroup(Path p, UserPrincipal owner, GroupPrincipal group) throws IOException {
+    public static void setPosixOwnerGroup(Path p, PosixPrincipal owner, Integer group) throws IOException {
+        if (owner == null || group == null) {
+            throw new RuntimeException("BUG: owner or default group cannot be null: " + owner + " + " + group);
+        }
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        if (owner != null) {
-            try {
-                pv.setOwner(owner);
-            } catch (IOException ex) {
-                throw new RuntimeException("failed to set owner: " + owner.getName() + " on " + p, ex);
-            }
-        }
-        if (group != null) {
-            log.debug("Setting owner group to " + group.getName());
-            try {
-                pv.setGroup(group);
-            } catch (IOException ex) {
-                throw new RuntimeException("failed to set group: " + group.getName() + " on " + p, ex);
-            }
+        try {
+            Files.setAttribute(p, "unix:uid", owner.getUidNumber(), LinkOption.NOFOLLOW_LINKS);
+            Files.setAttribute(p, "unix:gid", group, LinkOption.NOFOLLOW_LINKS);
+        } catch (IOException ex) {
+            throw new RuntimeException("failed to set owner/group: " + p, ex);
         }
     }
 
@@ -257,7 +239,7 @@ public abstract class NodeUtil {
      * @param node              The VOSpace Node input.
      * @throws IOException          If any I/O errors occur.
      */
-    public static void setNodeProperties(Path path, Node node) throws IOException {
+    public static void setNodeProperties(Path path, Node node, PosixMapperClient pmc) throws IOException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
@@ -284,10 +266,9 @@ public abstract class NodeUtil {
             LocalAuthority loc = new LocalAuthority();
             URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
             boolean isDir = (node instanceof ContainerNode);
-            UserPrincipalLookupService users = path.getFileSystem().getUserPrincipalLookupService();
-            AclCommandExecutor acl = new AclCommandExecutor(path, users);
+            AclCommandExecutor acl = new AclCommandExecutor(path);
 
-            final Set<GroupPrincipal> readGroupPrincipals = new HashSet<>(acl.getReadOnlyACL(isDir));
+            final Set<Integer> readGroupPrincipals = new HashSet<>(acl.getReadOnlyACL(isDir));
             NodeProperty rop = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
             if (rop != null) {
                 if (rop.isMarkedForDeletion()) {
@@ -306,8 +287,9 @@ public abstract class NodeUtil {
                                     if (!groupGMS.equals(localGMS)) {
                                         throw new IllegalArgumentException("external group not supported: " + guri);
                                     }
-                                    readGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
-                                } catch (UserPrincipalNotFoundException ex) {
+                                    Integer gid = pmc.getGID(guri);
+                                    readGroupPrincipals.add(gid);
+                                } catch (Exception ex) {
                                     throw new IllegalArgumentException("group not found: " + sro, ex);
                                 }
                             }
@@ -320,7 +302,7 @@ public abstract class NodeUtil {
                 }
             }
 
-            final Set<GroupPrincipal> writeGroupPrincipals = new HashSet<>(acl.getReadWriteACL(isDir));
+            final Set<Integer> writeGroupPrincipals = new HashSet<>(acl.getReadWriteACL(isDir));
             NodeProperty rwp = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
             if (rwp != null) {
                 if (rwp.isMarkedForDeletion()) {
@@ -339,9 +321,10 @@ public abstract class NodeUtil {
                                     if (!groupGMS.equals(localGMS)) {
                                         throw new IllegalArgumentException("external group not supported: " + guri);
                                     }
-                                    writeGroupPrincipals.add(users.lookupPrincipalByGroupName(guri.getName()));
-                                } catch (UserPrincipalNotFoundException ex) {
-                                    throw new RuntimeException("failed to find existing group: " + sro, ex);
+                                    Integer gid = pmc.getGID(guri);
+                                    writeGroupPrincipals.add(gid);
+                                } catch (Exception ex) {
+                                    throw new RuntimeException("group not found: " + sro, ex);
                                 }
                             }
                         } else {
@@ -393,63 +376,6 @@ public abstract class NodeUtil {
         }
     }
 
-    // NOTE: AclFileAttributeView not supported with linux OpenJDK so this code is maybe correct but useless
-    @Deprecated
-    private static void createACL(Path root, Path p, GroupPrincipal readOnly, GroupPrincipal readWrite) throws IOException {
-        final AclFileAttributeView av = Files.getFileAttributeView(p, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        if (av == null) {
-            throw new UnsupportedOperationException("AclFileAttributeView for " + p);
-        }
-        final PosixFileAttributes attrs = Files.readAttributes(p, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-
-        List<AclEntry> acls = av.getAcl();
-        acls.clear(); // setfacl -b
-
-        if (readOnly != null) {
-            Builder b = AclEntry.newBuilder().setType(AclEntryType.ALLOW);
-            b.setPrincipal(readOnly);
-            b.setPermissions(AclEntryPermission.READ_ATTRIBUTES);
-            //b.setPermissions(AclEntryPermission.READ_NAMED_ATTRS);
-            b.setPermissions(AclEntryPermission.READ_ACL);
-            if (attrs.isDirectory()) {
-                b.setPermissions(AclEntryPermission.LIST_DIRECTORY);
-            } else if (attrs.isRegularFile()) {
-                b.setPermissions(AclEntryPermission.READ_DATA);
-            } else if (attrs.isSymbolicLink()) {
-                // nothing more
-            }
-            AclEntry ro = b.build();
-            acls.add(ro);
-        }
-
-        if (readWrite != null) {
-            Builder b = AclEntry.newBuilder().setType(AclEntryType.ALLOW);
-            b.setPrincipal(readWrite);
-            b.setPermissions(AclEntryPermission.READ_ATTRIBUTES);
-            //b.setPermissions(AclEntryPermission.READ_NAMED_ATTRS);
-            b.setPermissions(AclEntryPermission.READ_ACL);
-            b.setPermissions(AclEntryPermission.WRITE_ATTRIBUTES);
-            //b.setPermissions(AclEntryPermission.WRITE_NAMED_ATTRS);
-            b.setPermissions(AclEntryPermission.WRITE_ACL);
-            if (attrs.isDirectory()) {
-                b.setPermissions(AclEntryPermission.LIST_DIRECTORY);
-                b.setPermissions(AclEntryPermission.ADD_FILE);
-                b.setPermissions(AclEntryPermission.ADD_SUBDIRECTORY);
-                b.setPermissions(AclEntryPermission.DELETE_CHILD);
-            } else if (attrs.isRegularFile()) {
-                b.setPermissions(AclEntryPermission.READ_DATA);
-                b.setPermissions(AclEntryPermission.APPEND_DATA);
-                b.setPermissions(AclEntryPermission.WRITE_DATA);
-            } else if (attrs.isSymbolicLink()) {
-                // nothing more
-            }
-            AclEntry rw = b.build();
-            acls.add(rw);
-        }
-
-        av.setAcl(acls);
-    }
-
     private static void setAttribute(UserDefinedFileAttributeView v, String name, String value) throws IOException {
         log.debug("setAttribute: " + name + " = " + value);
         if (value != null) {
@@ -472,11 +398,11 @@ public abstract class NodeUtil {
         throw new UnsupportedOperationException();
     }
 
-    public static Node get(Path root, VOSURI uri)  throws IOException {
-        return get(root, uri, false);
+    public static Node get(Path root, VOSURI uri, PosixMapperClient pmc)  throws IOException {
+        return get(root, uri, pmc, false);
     }
     
-    public static Node get(Path root, VOSURI uri, boolean allowPartialPath) throws IOException {
+    public static Node get(Path root, VOSURI uri, PosixMapperClient pmc, boolean allowPartialPath) throws IOException {
         LinkedList<String> nodeNames = new LinkedList<String>();
         nodeNames.add(uri.getName());
         VOSURI parent = uri.getParentURI();
@@ -503,7 +429,7 @@ public abstract class NodeUtil {
             sb.append("/").append(pathComp); // for next loop
             log.debug("[get-walk] " + sb.toString() + " " + allowPartialPath);
             try {
-                Node tmp = pathToNode(root, p, rootURI);
+                Node tmp = pathToNode(root, p, rootURI, pmc);
                 if (cn == null) {
                     if (tmp instanceof ContainerNode) {
                         cn = (ContainerNode) tmp; // top-level dir
@@ -534,20 +460,20 @@ public abstract class NodeUtil {
         return ret;
     }
 
-    public static void move(Path root, VOSURI source, VOSURI destDir, String destName, UserPrincipal owner) throws IOException {
+    public static void move(Path root, VOSURI source, VOSURI destDir, String destName, PosixPrincipal owner) throws IOException {
         Path sourcePath = nodeToPath(root, source);
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
         Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
 
-        // TODO: preserve old group during move?
-        GroupPrincipal group = getDefaultGroup(root.getFileSystem().getUserPrincipalLookupService(), owner);
+        // preserve old group during move?
+        Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
         setPosixOwnerGroup(destPath, owner, group);
     }
 
-    public static void copy(Path root, VOSURI source, VOSURI destDir, UserPrincipal owner) throws IOException {
-        GroupPrincipal group = getDefaultGroup(root.getFileSystem().getUserPrincipalLookupService(), owner);
+    public static void copy(Path root, VOSURI source, VOSURI destDir, PosixPrincipal owner) throws IOException {
+        Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
 
         Path sourcePath = nodeToPath(root, source);
@@ -563,14 +489,14 @@ public abstract class NodeUtil {
         }
     }
 
-    static Node pathToNode(Path root, Path p, VOSURI rootURI)
+    static Node pathToNode(Path root, Path p, VOSURI rootURI, PosixMapperClient pmc)
             throws IOException, NoSuchFileException {
         boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
-        return pathToNode(root, p, rootURI, getAttrs);
+        return pathToNode(root, p, rootURI, pmc, getAttrs);
     }
     
     // getAttrs == false needed in MountedContainerTest
-    static Node pathToNode(Path root, Path p, VOSURI rootURI, boolean getAttrs)
+    static Node pathToNode(Path root, Path p, VOSURI rootURI, PosixMapperClient pmc, boolean getAttrs)
             throws IOException, NoSuchFileException {
         Node ret = null;
         VOSURI nuri = pathToURI(root, p, rootURI);
@@ -580,7 +506,7 @@ public abstract class NodeUtil {
             ret = new ContainerNode(nuri);
         } else if (attrs.isRegularFile()) {
             ret = new DataNode(nuri);
-            // TODO: restore file-specific properties
+            // restore file-specific properties -- this is old and no longer know what it means
         } else if (attrs.isSymbolicLink()) {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
@@ -595,7 +521,12 @@ public abstract class NodeUtil {
                     "found unexpected file system object: " + p);
         }
 
-        setOwner(ret, attrs.owner());
+        // note: the above PosixFileAttributes attrs.owner() returns the numeric uid *iff* the system
+        // cannot resolve it to a name - correct use would depend on how the system was configured
+        // this does not depend on external system config:
+        Integer owner = (Integer) Files.getAttribute(p, "unix:uid", LinkOption.NOFOLLOW_LINKS);
+        setOwner(ret, new PosixPrincipal(owner));
+        
         DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         //Date created = new Date(attrs.creationTime().toMillis());
         //Date accessed = new Date(attrs.lastAccessTime().toMillis());
@@ -625,12 +556,10 @@ public abstract class NodeUtil {
                 String propValue = getAttribute(udv, propName);
                 ret.getProperties().add(new NodeProperty(propName, propValue));
             }
-            LocalAuthority loc = new LocalAuthority();
-            URI resourceID = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
-            AclCommandExecutor acl = new AclCommandExecutor(p, p.getFileSystem().getUserPrincipalLookupService());
+            AclCommandExecutor acl = new AclCommandExecutor(p);
             StringBuilder sb = new StringBuilder();
-            for (final GroupPrincipal rog : acl.getReadOnlyACL(attrs.isDirectory())) {
-                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rog.getName()));
+            for (final Integer gid : acl.getReadOnlyACL(attrs.isDirectory())) {
+                GroupURI guri = pmc.getURI(gid);
                 sb.append(guri.getURI().toASCIIString()).append(" ");
             }
             sb.trimToSize();
@@ -639,8 +568,8 @@ public abstract class NodeUtil {
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sval));
             }
             sb.setLength(0);
-            for (final GroupPrincipal rwg : acl.getReadWriteACL(attrs.isDirectory())) {
-                GroupURI guri = new GroupURI(URI.create(resourceID.toASCIIString() + "?" + rwg.getName()));
+            for (final Integer gid : acl.getReadWriteACL(attrs.isDirectory())) {
+                GroupURI guri = pmc.getURI(gid);
                 sb.append(guri.getURI().toASCIIString()).append(" ");
             }
             sb.trimToSize();
@@ -713,14 +642,14 @@ public abstract class NodeUtil {
 
     private static class CopyVisitor implements FileVisitor<Path> {
 
-        UserPrincipal owner;
-        GroupPrincipal group;
+        PosixPrincipal owner;
+        Integer group;
         Path root;
         Path destDir;
         Path sourceDir;
 
         // TODO: alt ctor without group to preserve group during copy?
-        CopyVisitor(Path root, Path source, Path dest, UserPrincipal owner, GroupPrincipal group) {
+        CopyVisitor(Path root, Path source, Path dest, PosixPrincipal owner, Integer group) {
             this.root = root;
             this.destDir = dest;
             this.owner = owner;
@@ -767,7 +696,7 @@ public abstract class NodeUtil {
         }
     }
 
-    public static Iterator<Node> list(Path root, ContainerNode node,
+    public static Iterator<Node> list(Path root, ContainerNode node, PosixMapperClient pmc,
             VOSURI start, Integer limit) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[list] " + node.getUri() + " -> " + np);
@@ -776,12 +705,13 @@ public abstract class NodeUtil {
             rootURI = rootURI.getParentURI();
         }
         log.debug("[list] root: " + rootURI + " -> " + root);
+        // TODO: rewrite this to not instantiate a list of children and just stream
         List<Node> nodes = new ArrayList<Node>();
         if (limit == null || limit > 0) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
                 for (Path file : stream) {
                     log.debug("[list] visit: " + file);
-                    Node n = pathToNode(root, file, rootURI);
+                    Node n = pathToNode(root, file, rootURI, pmc);
                     if (!nodes.isEmpty() || start == null
                             || start.getName().equals(n.getName())) {
                         nodes.add(n);
@@ -847,43 +777,32 @@ public abstract class NodeUtil {
         }
     }
 
-    // temporary: store bare UserPrincipal in node property list as string
-    public static void setOwner(Node node, UserPrincipal owner) {
-        node.getProperties().add(
-                new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner.getName()));
+    // internally just assign posix UID; NodePersistence layer will have to switch it before output
+    public static void setOwner(Node node, PosixPrincipal owner) {
+        // the cadc-vos-server-2.0 Node API will support this bit better
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner.getName()));
     }
 
-    public static UserPrincipal getOwner(UserPrincipalLookupService users,
-            Node node) throws IOException {
+    // internally expect posix UID
+    public static PosixPrincipal getOwner(Node node) throws IOException {
+        // the cadc-vos-server-2.0 Node API will support this bit better
         NodeProperty prop = node.findProperty(VOS.PROPERTY_URI_CREATOR);
         if (prop != null) {
-            return users.lookupPrincipalByName(prop.getPropertyValue());
+            return new PosixPrincipal(Integer.parseInt(prop.getPropertyValue()));
         }
         return null;
     }
 
-    public static GroupPrincipal getDefaultGroup(UserPrincipalLookupService users,
-            UserPrincipal user) throws IOException {
+    // temporarily assume default GID == UID
+    public static Integer getDefaultGroup(PosixPrincipal user) throws IOException {
         // TODO: this assumes default group name == owner name and should be fixed
         // TODO: 2023.05.17
         // TODO: +1
         // TODO: On macOS, the default group is not the username, so this will fail.
         // TODO: jenkinsd
-        try {
-            return users.lookupPrincipalByGroupName(user.getName());
-        } catch (UserPrincipalNotFoundException userPrincipalNotFoundException) {
-            log.debug("No Group matching " + user.getName());
-            // The group doesn't match the username.  Ask the id command.
-            final Process process = new ProcessBuilder("id", "-g", "-n").start();
-            final StringBuilder output = new StringBuilder();
-            try (final BufferedReader bufferedReader =
-                         new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                output.append(bufferedReader.readLine());
-            }
-
-            final String groupName = output.toString();
-            log.debug("Checking " + groupName);
-            return users.lookupPrincipalByGroupName(groupName);
-        }
+        
+        // TODO: use PosixMapperClient to get default group
+        
+        return user.getUidNumber();
     }
 }

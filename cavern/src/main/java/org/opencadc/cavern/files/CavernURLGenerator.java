@@ -69,6 +69,7 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
@@ -79,6 +80,7 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.Base64;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -125,6 +127,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
     private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
+    private final PosixIdentityManager identityManager = new PosixIdentityManager();
 
     public static final String KEY_SIGNATURE = "sig";
     public static final String KEY_META = "meta";
@@ -139,7 +142,8 @@ public class CavernURLGenerator implements TransferGenerator {
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
         PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        String sb = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
+        MultiValuedProperties mvp = pr.getAllProperties();
+        String sb = mvp.getFirstPropertyValue("SSHFS_SERVER_BASE");
         // make sure server bas ends with /
         if (sb != null && !sb.endsWith("/")) {
             sb = sb + "/";
@@ -149,9 +153,8 @@ public class CavernURLGenerator implements TransferGenerator {
 
     // for testing
     public CavernURLGenerator(String root) {
-        this.nodes = new FileSystemNodePersistence(root);
-        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
+        this.nodes = new FileSystemNodePersistence();
+        this.sshServerBase = null; // TODO: get from FileSystemNodePersistence
     }
 
     @Override
@@ -179,7 +182,8 @@ public class CavernURLGenerator implements TransferGenerator {
                 log.debug("addressing protocol: " + protocol);
                 Subject currentSubject = AuthenticationUtil.getCurrentSubject();
                 if (node instanceof ContainerNode) {
-                    UserPrincipal caller = nodes.getPosixUser(currentSubject);
+                    PosixPrincipal caller = identityManager.toPosixPrincipal(currentSubject);
+                    // TODO: handleMount expects the local posix username -- NOT UID
                     uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
                 } else if (node instanceof DataNode) {
                     uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
@@ -196,8 +200,6 @@ public class CavernURLGenerator implements TransferGenerator {
             return ret;
         } catch (NodeNotFoundException ex) {
             throw new FileNotFoundException(target.getPath());
-        } catch (IOException ex) {
-            throw new RuntimeException("OOPS: failed to resolve subject to posix user", ex);
         } catch (LinkingException ex) {
             throw new RuntimeException("OOPS: failed to resolve link?", ex);
         }
@@ -214,17 +216,6 @@ public class CavernURLGenerator implements TransferGenerator {
             Class<? extends Grant> grantClass = null;
 
             switch (protocol.getUri()) {
-                /**
-                 * HTTP not currently supported
-                case VOS.PROTOCOL_HTTP_GET:
-                    scheme = "http";
-                    dir = Direction.pullFromVoSpace;
-                    break;
-                case VOS.PROTOCOL_HTTP_PUT:
-                    scheme = "http";
-                    dir = Direction.pushToVoSpace;
-                    break;
-                */
                 case VOS.PROTOCOL_HTTPS_GET:
                     scheme = "https";
                     dir = Direction.pullFromVoSpace;
@@ -235,7 +226,9 @@ public class CavernURLGenerator implements TransferGenerator {
                     dir = Direction.pushToVoSpace;
                     grantClass = WriteGrant.class;
                     break;
-           }
+                default:
+                    throw new UnsupportedOperationException("unsupported protocol: " + protocol.getUri());
+            }
 
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
             if (baseURLs == null || baseURLs.isEmpty()) {
@@ -306,7 +299,7 @@ public class CavernURLGenerator implements TransferGenerator {
         }
     }
     
-    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, UserPrincipal caller) {
+    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, PosixPrincipal caller) {
         if (sshServerBase == null) {
             throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in " + FileSystemNodePersistence.CONFIG_FILE);
         }

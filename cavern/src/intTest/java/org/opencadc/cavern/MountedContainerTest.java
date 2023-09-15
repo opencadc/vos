@@ -69,6 +69,7 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
@@ -104,6 +105,7 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -257,6 +259,12 @@ public class MountedContainerTest {
     }
     
     private void doConsistencyCheck(VOSpaceClient vos, final Subject s, VOSURI containerURI, Path mntDir, boolean createWithREST) throws Exception {
+        
+        LocalAuthority loc = new LocalAuthority();
+        // TODO: move constant to cadc-registry
+        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        final PosixMapperClient posixMapper = new PosixMapperClient(posixMapperID);
+        
         // get numeric ID of test user
         /*
         User u = Subject.doAs(s, new PrivilegedExceptionAction<User>() {
@@ -360,7 +368,7 @@ public class MountedContainerTest {
 
                 // get from mntDir: strip path since we mounted containerURI directly on mntDir
                 VOSURI fsuri = new VOSURI("vos://" + node.getUri().getURI().getAuthority() + "/" + node.getName());
-                Node fsNode = NodeUtil.get(mntDir, fsuri);
+                Node fsNode = NodeUtil.get(mntDir, fsuri, posixMapper);
                 Assert.assertNotNull("filesystem node: " + node.getUri(), fsNode);
 
                 log.debug("found: " + restNode.getUri() + " aka " + fsNode.getUri().getPath());

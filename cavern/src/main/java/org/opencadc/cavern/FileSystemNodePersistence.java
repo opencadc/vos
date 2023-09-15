@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -68,7 +68,10 @@
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -88,11 +91,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -106,6 +109,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public static final String CONFIG_FILE = "Cavern.properties";
     
     private final PosixIdentityManager identityManager;
+    private final PosixMapperClient posixMapper;
 
     private final Path root;
 
@@ -116,17 +120,14 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
         }
         this.root = Paths.get(rootConfig);
-        this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
-    }
-    
-    // for testing
-    public FileSystemNodePersistence(String rootDir) {
-        this.root = Paths.get(rootDir);
-        this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
-    }
-
-    public UserPrincipal getPosixUser(Subject s) throws IOException {
-        return identityManager.toUserPrincipal(s);
+        
+        // must be hard coded to this and not set via java system properties
+        this.identityManager = new PosixIdentityManager();
+        
+        LocalAuthority loc = new LocalAuthority();
+        // TODO: move constant to cadc-registry
+        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
     
     @Override
@@ -142,13 +143,13 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public Node get(VOSURI uri, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
         try {
-            Node ret = NodeUtil.get(root, uri, allowPartialPath);
+            Node ret = NodeUtil.get(root, uri, posixMapper, allowPartialPath);
             if (ret == null) {
                 throw new NodeNotFoundException(uri.getPath());
             }
             Node cur = ret;
             while (cur != null) {
-                UserPrincipal owner = NodeUtil.getOwner(root.getFileSystem().getUserPrincipalLookupService(), cur);
+                PosixPrincipal owner = NodeUtil.getOwner(cur);
                 Subject so = identityManager.toSubject(owner);
                 cur.appData = new NodeID(-1L, so, null);
                 cur = cur.getParent();
@@ -178,10 +179,10 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
         try {
-            Iterator<Node> ni = NodeUtil.list(root, cn, start, limit);
+            Iterator<Node> ni = NodeUtil.list(root, cn, posixMapper, start, limit);
             while (ni.hasNext()) {
                 Node cur = ni.next();
-                UserPrincipal owner = NodeUtil.getOwner(root.getFileSystem().getUserPrincipalLookupService(), cur);
+                PosixPrincipal owner = NodeUtil.getOwner(cur);
                 Subject so = identityManager.toSubject(owner);
                 log.debug(cur.getUri() + " owner: " + so);
                 cur.appData = new NodeID(-1L, so, null);
@@ -215,7 +216,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void getProperties(Node node) throws TransientException {
-        //throw new UnsupportedOperationException("getProperties");
+        //no-op
     }
 
     @Override
@@ -241,10 +242,11 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
 
         try {
-            UserPrincipal owner = getPosixUser(AuthenticationUtil.getCurrentSubject());
+            Subject s = AuthenticationUtil.getCurrentSubject();
+            PosixPrincipal owner = identityManager.toPosixPrincipal(s);
             NodeUtil.setOwner(node, owner);
-            NodeUtil.create(root, node);
-            return NodeUtil.get(root, node.getUri());
+            NodeUtil.create(root, node, posixMapper);
+            return NodeUtil.get(root, node.getUri(), posixMapper);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
@@ -271,7 +273,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     } // else: ignore delete non-existent prop
                 }
             }
-            NodeUtil.setNodeProperties(np, node);
+            NodeUtil.setNodeProperties(np, node, posixMapper);
             
             // fix return node
             Iterator<NodeProperty> iter = node.getProperties().iterator();
@@ -314,27 +316,27 @@ public class FileSystemNodePersistence implements NodePersistence {
         // move rule check: check authorities
         checkSameAuthority(node, cn);
 
-        if (node instanceof ContainerNode)
-        {
+        if (node instanceof ContainerNode) {
             // move rule check: check that we are not moving root or a root container
-            if (node.getParent() == null || node.getParent().getUri().isRoot())
+            if (node.getParent() == null || node.getParent().getUri().isRoot()) {
                 throw new IllegalArgumentException("Cannot move a root container.");
-
+            }
+            
             // move rule check: check that 'src' is not in the path of 'dest' so that
             // circular paths are not created
             // This check is probably done by the file system, consider removing it.
             Node target = cn;
-            while (target != null && !target.getUri().isRoot())
-            {
-                if (target.getUri().getPath().equals(node.getUri().getPath()))
+            while (target != null && !target.getUri().isRoot()) {
+                if (target.getUri().getPath().equals(node.getUri().getPath())) {
                     throw new IllegalArgumentException("Cannot move to a contained sub-node.");
+                }
                 target = target.getParent();
             }
         }
 
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
-            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            PosixPrincipal owner = identityManager.toPosixPrincipal(s);
             // NOTE: this optional rename relies on a setName() call in InternalTransferAction (cadc-vos-server)
             // which makes the node URI inconsistent with the node name (temporarily)
             String destName = node.getName(); 
@@ -352,7 +354,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         try {
             Subject s = AuthenticationUtil.getCurrentSubject();
-            UserPrincipal owner = identityManager.toUserPrincipal(s);
+            PosixPrincipal owner = identityManager.toPosixPrincipal(s);
             NodeUtil.copy(root, node.getUri(), cn.getUri(), owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
