@@ -67,7 +67,6 @@
 
 package org.opencadc.util.fs;
 
-
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
@@ -250,18 +249,6 @@ public class AclCommandExecutor {
         if (grabber.getExitValue() != 0) {
             throw new IOException("failed to execute " + Arrays.toString(command) + " on " + path
                                   + ": " + grabber.getErrorOutput(true));
-        }
-    }
-    
-    private void setACL(GroupPrincipal group, String perm) throws IOException {
-        String[] cmd = new String[] {
-            SETACL, "-m", "group:" + group.getName() + ":" + perm, toAbsolutePath(path)
-        };
-        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
-        grabber.captureOutput(cmd);
-        if (grabber.getExitValue() != 0) {
-            throw new IOException("failed to set read-only ACL on " + path + ": "
-                + grabber.getErrorOutput(true));
         }
     }
     
