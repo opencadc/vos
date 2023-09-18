@@ -135,26 +135,26 @@ public class ServiceAvailability implements AvailabilityPlugin {
             }
 
             // File system probe
-            PropertiesReader pr = new PropertiesReader("Cavern.properties");
-            MultiValuedProperties conf = pr.getAllProperties();
-            String rootPath = conf.getFirstPropertyValue("PROBE_ROOT");
-            log.debug("rootPath: " + rootPath);
-            String owner = conf.getFirstPropertyValue("PROBE_OWNER");
-            log.debug("owner: " + owner);
-            String linkTargetOwner = conf.getFirstPropertyValue("PROBE_LINKOWER");
-            log.debug("linkTargetOwner: " + linkTargetOwner);
-            File root = new File(rootPath);
+            // PropertiesReader pr = new PropertiesReader("cavern.properties");
+            // MultiValuedProperties conf = pr.getAllProperties();
+            // String rootPath = conf.getFirstPropertyValue("PROBE_ROOT");
+            // log.debug("rootPath: " + rootPath);
+            // String owner = conf.getFirstPropertyValue("PROBE_OWNER");
+            // log.debug("owner: " + owner);
+            // String linkTargetOwner = conf.getFirstPropertyValue("PROBE_LINKOWER");
+            // log.debug("linkTargetOwner: " + linkTargetOwner);
+            // File root = new File(rootPath);
 
-            VOSURI baseURI = new LocalServiceURI().getVOSBase();
-            if (baseURI == null) {
-                return new Availability(false, "Missing resourceID in VOSpaceWS.properties");
-            }
+            // VOSURI baseURI = new LocalServiceURI().getVOSBase();
+            // if (baseURI == null) {
+            //     return new Availability(false, "Missing resourceID in VOSpaceWS.properties");
+            // }
             
-            FileSystemProbe fsp = new FileSystemProbe(root, baseURI.toString(), owner, linkTargetOwner, null);
-            Boolean success = fsp.call();
-            if (success == null || !success) {
-                return new Availability(false, "File system probe failed");
-            }
+            // FileSystemProbe fsp = new FileSystemProbe(root, baseURI.toString(), owner, linkTargetOwner, null);
+            // Boolean success = fsp.call();
+            // if (success == null || !success) {
+            //     return new Availability(false, "File system probe failed");
+            // }
 
             // ReadWrite: proceed with live checks
             // check filesystem status: readable, writable, space available?

@@ -201,6 +201,10 @@
       <param-name>ca.nrc.cadc.vosi.AvailabilityPlugin</param-name>
       <param-value>org.opencadc.cavern.ServiceAvailability</param-value>
     </init-param>
+    <init-param>
+      <param-name>availabilityProperties</param-name>
+      <param-value>cadc-vosi.properties</param-value>
+    </init-param>
     <load-on-startup>5</load-on-startup>
   </servlet>
 

@@ -112,7 +112,7 @@ public class CavernURLGeneratorTest
     private static final Logger log = Logger.getLogger(CavernURLGeneratorTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
 
     static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
@@ -170,25 +170,6 @@ public class CavernURLGeneratorTest
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
-    }
-
-    @Before
-    public void initKeys() throws Exception
-    {
-        String keysDir = "build/resources/test";
-        File pub = new File(keysDir + "/CavernPub.key");
-        File priv = new File(keysDir + "/CavernPriv.key");
-        RsaSignatureGenerator.genKeyPair(pub, priv, 1024);
-        privFile = new File(keysDir, RsaSignatureGenerator.PRIV_KEY_FILE_NAME);
-        pubFile = new File(keysDir, RsaSignatureGenerator.PUB_KEY_FILE_NAME);
-        log.debug("Created pub key: " + pubFile.getAbsolutePath());
-    }
-
-    @After
-    public void cleanupKeys() throws Exception
-    {
-        pubFile.delete();
-        privFile.delete();
     }
     
     // TODO: acl specific codes will be moved to a library, enable the test after

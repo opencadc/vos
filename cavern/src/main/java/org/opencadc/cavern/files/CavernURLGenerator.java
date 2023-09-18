@@ -78,7 +78,7 @@ import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.PropertiesReader;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
@@ -108,12 +108,11 @@ import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.MissingResourceException;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;
@@ -123,8 +122,6 @@ public class CavernURLGenerator implements TransferGenerator {
 
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
-    private static final String DEFAULT_CONFIG_DIR = System.getProperty("user.home") + "/config/";
-
     private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
     private final PosixIdentityManager identityManager = new PosixIdentityManager();
@@ -133,17 +130,14 @@ public class CavernURLGenerator implements TransferGenerator {
     public static final String KEY_META = "meta";
     private static final String KEY_META_NODE = "node";
     private static final String KEY_META_DIRECTION = "dir";
-    
-    private static final String PUB_KEY_FILENAME = "CavernPub.key";
-    private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
     private static final String ANON_USER = "anon";
+    private final MultiValuedProperties config;
 
 
     public CavernURLGenerator() {
         this.nodes = new FileSystemNodePersistence();
-        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        MultiValuedProperties mvp = pr.getAllProperties();
-        String sb = mvp.getFirstPropertyValue("SSHFS_SERVER_BASE");
+        this.config = this.nodes.getConfig();
+        String sb = config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
         // make sure server bas ends with /
         if (sb != null && !sb.endsWith("/")) {
             sb = sb + "/";
@@ -154,7 +148,8 @@ public class CavernURLGenerator implements TransferGenerator {
     // for testing
     public CavernURLGenerator(String root) {
         this.nodes = new FileSystemNodePersistence();
-        this.sshServerBase = null; // TODO: get from FileSystemNodePersistence
+        this.config = this.nodes.getConfig();
+        this.sshServerBase = this.config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
     }
 
     @Override
@@ -242,8 +237,8 @@ public class CavernURLGenerator implements TransferGenerator {
             }
 
             // Use TokenTool to generate a preauth token
-            File privateKeyFile = findFile(PRIV_KEY_FILENAME);
-            File pubKeyFile = findFile(PUB_KEY_FILENAME);
+            File privateKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PRIVATE_KEY));
+            File pubKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
 
             TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
 
@@ -301,7 +296,8 @@ public class CavernURLGenerator implements TransferGenerator {
     
     private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, PosixPrincipal caller) {
         if (sshServerBase == null) {
-            throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in " + FileSystemNodePersistence.CONFIG_FILE);
+            throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in "
+                    + CavernConfig.CAVERN_PROPERTIES);
         }
         List<URI> ret = new ArrayList<URI>();
         StringBuilder sb = new StringBuilder();
@@ -318,7 +314,8 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    public VOSURI validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
+    public VOSURI validateToken(String token, VOSURI targetVOSURI, Direction direction)
+            throws AccessControlException, IOException {
 
         log.debug("url encoded token: " + token);
         log.debug("direction: " + direction.toString());
@@ -334,7 +331,7 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("targetURI for validation: " + commonFormURI.toString());
         if (token != null) {
 
-            File publicKeyFile = findFile(PUB_KEY_FILENAME);
+            File publicKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
             TokenTool tk = new TokenTool(publicKeyFile);
 
             Class<? extends Grant> grantClass = null;
@@ -391,10 +388,15 @@ public class CavernURLGenerator implements TransferGenerator {
         return baseURLs;
     }
 
-    protected static final File findFile(String fname) throws MissingResourceException {
-        File ret = new File(DEFAULT_CONFIG_DIR, fname);
+    protected File findFile(String key) {
+        String value = this.config.getFirstPropertyValue(key);
+        if (value == null) {
+            throw new IllegalStateException("CONFIG: expected property not found - " + key);
+        }
+        File ret = new File(CavernConfig.DEFAULT_CONFIG_DIR, value);
         if (!ret.exists()) {
-            ret = FileUtil.getFileFromResource(fname, CavernURLGenerator.class);
+            throw new IllegalStateException(String.format("CONFIG: file %s not found for property %s",
+                    ret.getAbsolutePath(), key));
         }
         return ret;
     }

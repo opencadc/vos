@@ -19,12 +19,6 @@ sourceCompatibility = 1.8
 group = 'org.opencadc'
 
 war {
-    // Include the private key for preauthorized transfers
-    from(System.getenv('A') + '/etc/') {
-        into 'WEB-INF/classes/'
-        include 'CavernPub.key'
-        include 'CavernPriv.key'
-    }
     // Include the delegation private key for scoped token
     // requests
     from(System.getenv('A') + '/etc/') {
@@ -32,7 +26,7 @@ war {
         include 'RsaSignaturePub.key'
     }
 
-    // Include the swagger-ui so that /vospace provides the VOSpace API documentation
+    // Include the swagger-ui so that /cavern provides the VOSpace API documentation
     from(System.getenv('RPS') + '/resources/') {
         include 'swagger-ui/'
     }

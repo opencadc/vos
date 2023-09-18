@@ -70,7 +70,6 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
-import ca.nrc.cadc.util.PropertiesReader;
 
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -95,6 +94,7 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
@@ -121,16 +121,16 @@ public abstract class FileAction extends RestAction {
 
         // Set up tools needed for generating nodeURI and
         // validating permissions
-        PropertiesReader pr = new PropertiesReader("Cavern.properties");
-        this.root = pr.getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        this.fsPersistence = new FileSystemNodePersistence();
+        this.root = this.fsPersistence.getConfig().getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
         if (this.root == null) {
-            throw new IllegalStateException("VOS_FILESYSTEM_ROOT not configured.");
+            throw new IllegalStateException("CONFIG: required property not configured - "
+                    + CavernConfig.FILESYSTEM_BASE_DIR);
         }
 
         Path rootPath = Paths.get(this.root);
         this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
 
-        this.fsPersistence = new FileSystemNodePersistence();
         this.pathResolver = new PathResolver(this.fsPersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(this.fsPersistence);
