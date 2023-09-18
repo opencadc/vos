@@ -1,7 +1,6 @@
 # Mountable, filesystem-based VOSpace-2.1 service (cavern)
 `cavern` is a VOSpace 2.1 compliant service where both the data and metadata are based on an underlying file system.  
-The permissions, too, are governed by the file system permissions.  For the users and groups in the file system 
-to correspond to the users in the VOSpace REST API, a SSSD connection is made from the file system to LDAP.  
+The permissions, too, are governed by the file system permissions. 
 An access control service (https://github.com/opencadc/ac.git) is used by `cavern` to determine Posix UIDs and GIDs.  
 The UIDs and GIDs come from an external source (TBD).
 
