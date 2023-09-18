@@ -102,8 +102,8 @@ public class AclCommandExecutorTest {
 
     static final String ROOT = "build/tmp/cavern-tests";
 
-    static final String RESOLVABLE_RO_GROUP = "wheel";
-    static final String RESOLVABLE_RW_GROUP = "disk";
+    static final String RESOLVABLE_RO_GROUP = "users";
+    static final String RESOLVABLE_RW_GROUP = "adm";
 
     static {
         try {
