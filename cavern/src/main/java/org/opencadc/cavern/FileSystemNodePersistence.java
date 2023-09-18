@@ -70,6 +70,7 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -102,18 +103,18 @@ import org.opencadc.cavern.nodes.NodeUtil;
 public class FileSystemNodePersistence implements NodePersistence {
 
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
-
-    public static final String CONFIG_FILE = "Cavern.properties";
     
     private final PosixIdentityManager identityManager;
-
     private final Path root;
 
+    private final MultiValuedProperties config;
+
     public FileSystemNodePersistence() {
-        PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
-        String rootConfig = pr.getAllProperties().getFirstPropertyValue("VOS_FILESYSTEM_ROOT");
+        CavernConfig cavernConfig = new CavernConfig();
+        this.config = cavernConfig.getConfig();
+        String rootConfig = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
         if (rootConfig == null) {
-            throw new RuntimeException("CONFIG: Failed to find VOS_FILESYSTEM_ROOT");
+            throw new RuntimeException("CONFIG: Failed to find " + CavernConfig.FILESYSTEM_BASE_DIR);
         }
         this.root = Paths.get(rootConfig);
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
@@ -123,6 +124,12 @@ public class FileSystemNodePersistence implements NodePersistence {
     public FileSystemNodePersistence(String rootDir) {
         this.root = Paths.get(rootDir);
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
+        CavernConfig cavernConfig = new CavernConfig();
+        this.config = cavernConfig.getConfig();
+    }
+
+    public MultiValuedProperties getConfig() {
+        return this.config;
     }
 
     public UserPrincipal getPosixUser(Subject s) throws IOException {
