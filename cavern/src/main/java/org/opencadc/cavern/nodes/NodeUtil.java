@@ -67,8 +67,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
@@ -83,10 +81,7 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
-import java.nio.file.FileSystemException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -100,7 +95,6 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,10 +109,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixGroup;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.util.fs.AclCommandExecutor;
+import org.opencadc.util.fs.ExtendedFileAttributes;
 
 /**
  * Utility methods for interacting with nodes.
@@ -283,22 +279,13 @@ public class NodeUtil {
     public void setNodeProperties(Path path, Node node) throws IOException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
-            UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
-                    UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+            
             for (NodeProperty prop : node.getProperties()) {
                 if (!FILESYSTEM_PROPS.contains(prop.getPropertyURI())) {
                     if (prop.isMarkedForDeletion()) {
-                        try {
-                            udv.delete(prop.getPropertyURI());
-                        } catch (FileSystemException ex) {
-                            if (ex.getMessage().contains("No data available")) {
-                                log.debug("ignore: attempt to delete attribute that does not exist");
-                            } else {
-                                throw ex;
-                            }
-                        }
+                        ExtendedFileAttributes.setFileAttribute(path, prop.getPropertyURI(), null);
                     } else {
-                        setAttribute(udv, prop.getPropertyURI(), prop.getPropertyValue());
+                        ExtendedFileAttributes.setFileAttribute(path, prop.getPropertyURI(), prop.getPropertyValue());
                     }
                 }
             }
@@ -321,17 +308,16 @@ public class NodeUtil {
                         String[] vals = val.split(" ");
                         if (vals.length > 0) {
                             readGroupPrincipals.clear();
+                            List<GroupURI> guris = new ArrayList<>();
                             for (String sro : vals) {
-                                try {
-                                    GroupURI guri = new GroupURI(URI.create(sro));
-                                    URI groupGMS = guri.getServiceID();
-                                    if (!groupGMS.equals(localGMS)) {
-                                        throw new IllegalArgumentException("external group not supported: " + guri);
-                                    }
-                                    Integer gid = posixMapper.getGID(guri);
-                                    readGroupPrincipals.add(gid);
-                                } catch (Exception ex) {
-                                    throw new IllegalArgumentException("group not found: " + sro, ex);
+                                GroupURI guri = new GroupURI(URI.create(sro));
+                                guris.add(guri);
+                            }
+                            if (!guris.isEmpty()) {
+                                List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                // TODO: check if any input groups were not resolved/acceptable and do what??
+                                for (PosixGroup pg : pgs) {
+                                    readGroupPrincipals.add(pg.getGID());
                                 }
                             }
                         } else {
@@ -355,17 +341,16 @@ public class NodeUtil {
                         String[] vals = val.split(" ");
                         if (vals.length > 0) {
                             writeGroupPrincipals.clear();
+                            List<GroupURI> guris = new ArrayList<>();
                             for (String sro : vals) {
-                                try {
-                                    GroupURI guri = new GroupURI(URI.create(sro));
-                                    URI groupGMS = guri.getServiceID();
-                                    if (!groupGMS.equals(localGMS)) {
-                                        throw new IllegalArgumentException("external group not supported: " + guri);
-                                    }
-                                    Integer gid = posixMapper.getGID(guri);
-                                    writeGroupPrincipals.add(gid);
-                                } catch (Exception ex) {
-                                    throw new RuntimeException("group not found: " + sro, ex);
+                                GroupURI guri = new GroupURI(URI.create(sro));
+                                guris.add(guri);
+                            }
+                            if (!guris.isEmpty()) {
+                                List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                // TODO: check if any input groups were not resolved/acceptable and do what??
+                                for (PosixGroup pg : pgs) {
+                                    writeGroupPrincipals.add(pg.getGID());
                                 }
                             }
                         } else {
@@ -417,22 +402,6 @@ public class NodeUtil {
         }
     }
 
-    private static void setAttribute(UserDefinedFileAttributeView v, String name, String value) throws IOException {
-        log.debug("setAttribute: " + name + " = " + value);
-        if (value != null) {
-            value = value.trim();
-            ByteBuffer buf = ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8));
-            v.write(name, buf);
-        } // else: do nothing
-    }
-
-    private static String getAttribute(UserDefinedFileAttributeView v, String name) throws IOException {
-        int sz = v.size(name);
-        ByteBuffer buf = ByteBuffer.allocate(2 * sz);
-        v.read(name, buf);
-        return new String(buf.array(), StandardCharsets.UTF_8).trim();
-    }
-    
     public Path update(Path root, Node node) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[update] path: " + node.getUri() + " -> " + np);
@@ -589,22 +558,20 @@ public class NodeUtil {
         }
 
         if (getAttrs && !attrs.isSymbolicLink()) {
-            UserDefinedFileAttributeView udv = Files.getFileAttributeView(p,
-                    UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-            if (udv == null) {
-                throw new UnsupportedOperationException("file system does not support "
-                    + "user defined file attributes.");
+            
+            Map<String,String> uda = ExtendedFileAttributes.getAttributes(p);
+            for (Map.Entry<String,String> me : uda.entrySet()) {
+                ret.getProperties().add(new NodeProperty(me.getKey(), me.getValue()));
             }
             
-            for (String propName : udv.list()) {
-                String propValue = getAttribute(udv, propName);
-                ret.getProperties().add(new NodeProperty(propName, propValue));
-            }
             AclCommandExecutor acl = new AclCommandExecutor(p);
             StringBuilder sb = new StringBuilder();
-            for (final Integer gid : acl.getReadOnlyACL(attrs.isDirectory())) {
-                GroupURI guri = posixMapper.getURI(gid);
-                sb.append(guri.getURI().toASCIIString()).append(" ");
+            List<Integer> rogids = acl.getReadOnlyACL(attrs.isDirectory());
+            if (!rogids.isEmpty()) {
+                List<PosixGroup> pgs = posixMapper.getURI(rogids);
+                for (PosixGroup pg : pgs) {
+                    sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                }
             }
             sb.trimToSize();
             String sval = sb.toString().trim();
@@ -612,9 +579,13 @@ public class NodeUtil {
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sval));
             }
             sb.setLength(0);
-            for (final Integer gid : acl.getReadWriteACL(attrs.isDirectory())) {
-                GroupURI guri = posixMapper.getURI(gid);
-                sb.append(guri.getURI().toASCIIString()).append(" ");
+            
+            List<Integer> rwgids = acl.getReadWriteACL(attrs.isDirectory());
+            if (!rwgids.isEmpty()) {
+                List<PosixGroup> pgs = posixMapper.getURI(rwgids);
+                for (PosixGroup pg : pgs) {
+                    sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                }
             }
             sb.trimToSize();
             sval = sb.toString().trim();
