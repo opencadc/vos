@@ -123,7 +123,7 @@ public class ExtendedFileAttributes {
      * @param attributeKey  The name of the attribute to get. Must not be null.
      * @throws IOException  If getting failed.
      */
-    static String getFileAttribute(Path path, String attributeName) throws IOException {
+    public static String getFileAttribute(Path path, String attributeName) throws IOException {
         if (path == null || attributeName == null) {
             throw new IllegalArgumentException("path or attributeName cannot be null");
         }
