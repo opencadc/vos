@@ -67,6 +67,8 @@
 
 package org.opencadc.cavern.nodes;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.Standards;
@@ -78,6 +80,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -107,6 +110,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.gms.GroupURI;
@@ -170,7 +175,9 @@ public abstract class NodeUtil {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
 
-        PosixPrincipal owner = getOwner(node);
+        NodeID nid = (NodeID) node.appData;
+        PosixPrincipal owner = (PosixPrincipal) nid.ownerObject;
+        log.warn("posix owner: " + owner.getUidNumber() + ":" + owner.defaultGroup);
         assertNotNull("owner", owner);
         Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
@@ -206,7 +213,7 @@ public abstract class NodeUtil {
         }
 
         try {
-            setPosixOwnerGroup(ret, owner, group);
+            setPosixOwnerGroup(ret, owner.getUidNumber(), group);
             setNodeProperties(ret, node, pmc);
         } catch (IOException ex) {
             log.debug("CREATE FAIL", ex);
@@ -218,14 +225,14 @@ public abstract class NodeUtil {
         return ret;
     }
     
-    public static void setPosixOwnerGroup(Path p, PosixPrincipal owner, Integer group) throws IOException {
+    public static void setPosixOwnerGroup(Path p, Integer owner, Integer group) throws IOException {
         if (owner == null || group == null) {
             throw new RuntimeException("BUG: owner or default group cannot be null: " + owner + " + " + group);
         }
         PosixFileAttributeView pv = Files.getFileAttributeView(p,
                 PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         try {
-            Files.setAttribute(p, "unix:uid", owner.getUidNumber(), LinkOption.NOFOLLOW_LINKS);
+            Files.setAttribute(p, "unix:uid", owner, LinkOption.NOFOLLOW_LINKS);
             Files.setAttribute(p, "unix:gid", group, LinkOption.NOFOLLOW_LINKS);
         } catch (IOException ex) {
             throw new RuntimeException("failed to set owner/group: " + p, ex);
@@ -469,7 +476,7 @@ public abstract class NodeUtil {
         // preserve old group during move?
         Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
-        setPosixOwnerGroup(destPath, owner, group);
+        setPosixOwnerGroup(destPath, owner.getUidNumber(), group);
     }
 
     public static void copy(Path root, VOSURI source, VOSURI destDir, PosixPrincipal owner) throws IOException {
@@ -484,7 +491,7 @@ public abstract class NodeUtil {
             Files.walkFileTree(sourcePath, new CopyVisitor(root, sourcePath, destPath, owner, group));
         } else { // links and files
             Files.copy(sourcePath, destPath, StandardCopyOption.COPY_ATTRIBUTES);
-            setPosixOwnerGroup(destPath, owner, group);
+            setPosixOwnerGroup(destPath, owner.getUidNumber(), group);
             Files.setLastModifiedTime(destPath, FileTime.fromMillis(System.currentTimeMillis()));
         }
     }
@@ -525,7 +532,11 @@ public abstract class NodeUtil {
         // cannot resolve it to a name - correct use would depend on how the system was configured
         // this does not depend on external system config:
         Integer owner = (Integer) Files.getAttribute(p, "unix:uid", LinkOption.NOFOLLOW_LINKS);
-        setOwner(ret, new PosixPrincipal(owner));
+        PosixPrincipal op = new PosixPrincipal(owner);
+        Subject osub = new Subject(false, new TreeSet<>(), new TreeSet<>(), new TreeSet<>());
+        osub.getPrincipals().add(op);
+        // NodePersistence will reconstruct full subject - appData has to work with getOwner(Node) below
+        ret.appData = new NodeID(null, osub, op);
         
         DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         //Date created = new Date(attrs.creationTime().toMillis());
@@ -666,7 +677,7 @@ public abstract class NodeUtil {
             Path dir = destDir.resolve(sourceDir.relativize(t));
             log.debug("Creating: " + dir);
             Files.createDirectories(dir);
-            NodeUtil.setPosixOwnerGroup(dir, owner, group);
+            NodeUtil.setPosixOwnerGroup(dir, owner.getUidNumber(), group);
             Files.setLastModifiedTime(dir, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
@@ -678,7 +689,7 @@ public abstract class NodeUtil {
             Path file = destDir.resolve(sourceDir.relativize(t));
             log.debug("creating: " + file);
             Files.copy(t, file);
-            NodeUtil.setPosixOwnerGroup(file, owner, group);
+            NodeUtil.setPosixOwnerGroup(file, owner.getUidNumber(), group);
             Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()));
             return FileVisitResult.CONTINUE;
         }
@@ -776,33 +787,28 @@ public abstract class NodeUtil {
             throw new IllegalArgumentException(name + " cannot be null");
         }
     }
-
-    // internally just assign posix UID; NodePersistence layer will have to switch it before output
-    public static void setOwner(Node node, PosixPrincipal owner) {
-        // the cadc-vos-server-2.0 Node API will support this bit better
-        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner.getName()));
+    
+    public static void setOwner(Node node, NodeID ownerData) {
+        node.appData = ownerData;
     }
-
-    // internally expect posix UID
+    
     public static PosixPrincipal getOwner(Node node) throws IOException {
-        // the cadc-vos-server-2.0 Node API will support this bit better
-        NodeProperty prop = node.findProperty(VOS.PROPERTY_URI_CREATOR);
-        if (prop != null) {
-            return new PosixPrincipal(Integer.parseInt(prop.getPropertyValue()));
+        if (node.appData != null) {
+            NodeID nid = (NodeID) node.appData;
+            Set<PosixPrincipal> ps = nid.owner.getPrincipals(PosixPrincipal.class);
+            if (!ps.isEmpty()) {
+                return ps.iterator().next();
+            }
         }
         return null;
     }
 
     // temporarily assume default GID == UID
     public static Integer getDefaultGroup(PosixPrincipal user) throws IOException {
-        // TODO: this assumes default group name == owner name and should be fixed
-        // TODO: 2023.05.17
-        // TODO: +1
-        // TODO: On macOS, the default group is not the username, so this will fail.
-        // TODO: jenkinsd
-        
-        // TODO: use PosixMapperClient to get default group
-        
-        return user.getUidNumber();
+        // TODO: use PosixMapperClient directly to get default group??
+        if (user.defaultGroup != null) {
+            return user.defaultGroup;
+        }
+        throw new RuntimeException("CONFIG or BUG: posix principal default group is null");
     }
 }

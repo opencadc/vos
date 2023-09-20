@@ -1,6 +1,5 @@
 plugins {
     id 'war'
-    id 'application'
     id 'checkstyle'
 }
 
@@ -19,27 +18,11 @@ sourceCompatibility = 1.8
 group = 'org.opencadc'
 
 war {
-    // Include the delegation private key for scoped token
-    // requests
-    from(System.getenv('A') + '/etc/') {
-        into 'WEB-INF/classes/'
-        include 'RsaSignaturePub.key'
-    }
-
     // Include the swagger-ui so that /cavern provides the VOSpace API documentation
     from(System.getenv('RPS') + '/resources/') {
         include 'swagger-ui/'
     }
 }
-
-sourceSets {
-    test {
-        resources.srcDirs += 'src/test/resources'
-    }
-}
-
-
-mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
     providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'

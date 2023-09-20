@@ -78,14 +78,17 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
@@ -101,8 +104,9 @@ public class FileSystemProbe implements Callable<Boolean> {
     private final String vosBaseURI;
     private final PosixMapperClient posixMapper;
     
-    private final PosixPrincipal owner;
-    private final PosixPrincipal linkTargetOwner;
+    private final PosixPrincipal ownerPrincipal;
+    private final NodeID owner;
+    private final NodeID linkTargetOwner;
     private final Integer gid = 123456789;
     private final URI groupURI;
     
@@ -117,7 +121,11 @@ public class FileSystemProbe implements Callable<Boolean> {
         URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
         this.posixMapper = new PosixMapperClient(posixMapperID);
         
-        this.owner = new PosixPrincipal(8675309); // this is cadc-tomcat but could be any uid
+        this.ownerPrincipal = new PosixPrincipal(8675309); // this is cadc-tomcat but could be any uid
+        Subject osub = new Subject(false, new TreeSet<>(), new TreeSet<>(), new TreeSet<>());
+        osub.getPrincipals().add(ownerPrincipal);
+        this.owner = new NodeID(null, osub, ownerPrincipal);
+        
         this.linkTargetOwner = this.owner;
         
         URI gms = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
@@ -603,7 +611,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.copy(root, dn.getUri(), destDir.getUri(), owner);
+            NodeUtil.copy(root, dn.getUri(), destDir.getUri(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name3));
             Node copied = NodeUtil.get(root, expected, posixMapper);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -677,7 +685,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, dn.getUri(), destDir.getUri(), dn.getName(), owner);
+            NodeUtil.move(root, dn.getUri(), destDir.getUri(), dn.getName(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name3));
             Node moved = NodeUtil.get(root, expected, posixMapper);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -726,7 +734,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), owner);
+            NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2));
             Node moved = NodeUtil.get(root, expected, posixMapper);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -793,7 +801,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.copy(root, srcDir.getUri(), destDir.getUri(), owner);
+            NodeUtil.copy(root, srcDir.getUri(), destDir.getUri(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name1 + "/" + name3));
             Node copied = NodeUtil.get(root, expected, posixMapper);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -867,7 +875,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), srcDir.getName(), owner);
+            NodeUtil.move(root, srcDir.getUri(), destDir.getUri(), srcDir.getName(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name1 + "/" + name3));
             Node moved = NodeUtil.get(root, expected, posixMapper);
             if (moved == null || !(moved instanceof DataNode)) {
@@ -918,7 +926,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), owner);
+            NodeUtil.move(root, src.getUri(), dest.getUri().getParentURI(), dest.getName(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2));
             Node moved = NodeUtil.get(root, expected, posixMapper);
             if (moved == null || !(moved instanceof ContainerNode)) {
@@ -996,7 +1004,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.copy(root, ln.getUri(), destDir.getUri(), owner);
+            NodeUtil.copy(root, ln.getUri(), destDir.getUri(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected, posixMapper);
             if (copied == null || !(copied instanceof DataNode)) {
@@ -1081,7 +1089,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             }
 
             int num = 0;
-            NodeUtil.move(root, ln.getUri(), destDir.getUri(), ln.getName(), owner);
+            NodeUtil.move(root, ln.getUri(), destDir.getUri(), ln.getName(), ownerPrincipal);
             VOSURI expected = new VOSURI(URI.create(vosBaseURI + "/" + name2 + "/" + name4));
             Node copied = NodeUtil.get(root, expected, posixMapper);
             if (copied == null || !(copied instanceof LinkNode)) {

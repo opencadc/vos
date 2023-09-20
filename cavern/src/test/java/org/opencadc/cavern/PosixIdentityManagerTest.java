@@ -74,9 +74,13 @@ import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 
+import java.io.File;
 import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 import java.util.UUID;
 
@@ -99,7 +103,12 @@ public class PosixIdentityManagerTest {
         System.setProperty(IdentityManager.class.getName(), ACIdentityManager.class.getName());
     }
 
-    public PosixIdentityManagerTest() {
+    Subject opsSubject;
+    
+    public PosixIdentityManagerTest() throws Exception {
+        File cert = FileUtil.getFileFromResource("servops.pem", PosixIdentityManagerTest.class);
+        opsSubject = SSLUtil.createSubject(cert);
+        log.info("opsSubject: " + opsSubject);
     }
 
     @Test
@@ -123,13 +132,10 @@ public class PosixIdentityManagerTest {
     public void testRoundTrip() {
         try {
             // request subject contains: numeric, http, posix
-            PosixPrincipal orig = new PosixPrincipal(123456);
-            HttpPrincipal username = new HttpPrincipal("somebody");
-            NumericPrincipal np = new NumericPrincipal(UUID.randomUUID());
+            PosixPrincipal orig = new PosixPrincipal(20014);
             Subject s = AuthenticationUtil.getAnonSubject();
             s.getPrincipals().add(orig);
-            s.getPrincipals().add(username);
-            s.getPrincipals().add(np);
+            s.getPrincipals().add(new HttpPrincipal("somebody"));
             
             PosixIdentityManager im = new PosixIdentityManager();
             
@@ -140,13 +146,13 @@ public class PosixIdentityManagerTest {
             log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
             Assert.assertTrue(Integer.class.equals(o.getClass()));
             
-            Subject restored = im.toSubject(o);
+            Subject restored = Subject.doAs(opsSubject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
             log.info("restored: " + restored);
             
             // default IM to delegate to cannot augment
             Set<Principal> all = restored.getPrincipals();
             Assert.assertNotNull(all);
-            Assert.assertEquals(1, all.size());
+            Assert.assertEquals(4, all.size()); // 20014 is a real cadc uid
             
             Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
             Assert.assertNotNull(ps);

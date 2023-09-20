@@ -249,10 +249,10 @@ public abstract class PutAction extends FileAction {
     }
     
     private void restoreOwnNGroup(Path rootPath, Node node) throws IOException {
-        PosixPrincipal uid = NodeUtil.getOwner(node);
-        Integer gid = NodeUtil.getDefaultGroup(uid);
+        PosixPrincipal pp = NodeUtil.getOwner(node);
+        Integer gid = NodeUtil.getDefaultGroup(pp);
         Path target = NodeUtil.nodeToPath(rootPath, node);
-        NodeUtil.setPosixOwnerGroup(target, uid, gid);
+        NodeUtil.setPosixOwnerGroup(target, pp.getUidNumber(), gid);
     }
 
 }

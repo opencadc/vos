@@ -83,9 +83,9 @@ import org.apache.log4j.Logger;
 
 /**
  * An IdentityManager implementation that picks the PosixPrincipal(uid) as
- * the persistent object to "own" resources. This implementation should only 
- * be used for NodePersistence operations as the toOwner/toSubject uses file 
- * system identities and that might conflict with what's expected for 
+ * the persistent object to "own" resources. This implementation should only
+ * be used for NodePersistence operations as the toOwner/toSubject uses file
+ * system identities and that might conflict with what's expected for
  * JobPersistence usage.
  *
  * @author pdowler
@@ -102,13 +102,13 @@ public class PosixIdentityManager implements IdentityManager {
         if (o == null) {
             return null;
         }
-        
+
         // handle integer for symmetry with toOwner
         if (o instanceof Integer) {
             Integer i = (Integer) o;
             o = new PosixPrincipal(i);
         }
-        
+
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
             Set<Principal> pset = new HashSet<Principal>();
@@ -123,7 +123,7 @@ public class PosixIdentityManager implements IdentityManager {
         if (subject == null) {
             return null;
         }
-        
+
         Set<PosixPrincipal> principals = subject.getPrincipals(PosixPrincipal.class);
         if (!principals.isEmpty()) {
             PosixPrincipal p = principals.iterator().next();
@@ -131,23 +131,23 @@ public class PosixIdentityManager implements IdentityManager {
         }
         return null;
     }
-    
+
     @Override
     public Object toOwner(Subject subject) {
-            PosixPrincipal p = toPosixPrincipal(subject);
-            if (p == null) {
-                return null;
-            }
-            return (Integer) p.getUidNumber(); // autobox
+        PosixPrincipal p = toPosixPrincipal(subject);
+        if (p == null) {
+            return null;
+        }
+        return (Integer) p.getUidNumber(); // autobox
     }
-    
+
     @Override
     public String toDisplayString(Subject subject) {
         // delegate to configured IM
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         return im.toDisplayString(subject);
     }
-    
+
     @Override
     public Subject validate(Subject subject) throws NotAuthenticatedException {
         // delegate to configured IM
@@ -159,6 +159,8 @@ public class PosixIdentityManager implements IdentityManager {
     public Subject augment(Subject subject) {
         // delegate to configured IM
         IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
+        log.warn("augment: " + subject);
+        Subject ret = im.augment(subject);
+        return ret;
     }
 }
