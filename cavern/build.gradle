@@ -31,7 +31,7 @@ dependencies {
     implementation 'xerces:xercesImpl:[2.0,)'
     implementation 'commons-net:commons-net:[2.0,)'
 
-    implementation 'org.opencadc:cadc-util:[1.9.0,)'
+    implementation 'org.opencadc:cadc-util:[1.9.11,)'
     implementation 'org.opencadc:cadc-util-fs:[1.1.0,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'
@@ -49,6 +49,8 @@ dependencies {
 
     runtimeOnly 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
+    // temporary: make sure to get this specific minimal version of the impl
+    runtimeOnly 'org.opencadc:cadc-access-control:[1.1.27,)'
 
     testImplementation 'junit:junit:[4.0,)'
     testImplementation 'xerces:xercesImpl:[2.0,)'
