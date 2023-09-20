@@ -109,11 +109,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.util.fs.AclCommandExecutor;
 
@@ -122,7 +125,7 @@ import org.opencadc.util.fs.AclCommandExecutor;
  *
  * @author pdowler
  */
-public abstract class NodeUtil {
+public class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
     
@@ -142,7 +145,38 @@ public abstract class NodeUtil {
                     VOS.PROPERTY_URI_QUOTA)
     );
 
-    private NodeUtil() {
+    private final Path root;
+    private final PosixMapperClient posixMapper;
+    
+    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
+    private final PosixIdentityManager identityManager = new PosixIdentityManager();
+    
+    public NodeUtil(Path root, PosixMapperClient posixMapper) {
+        this.root = root;
+        this.posixMapper = posixMapper;
+    }
+    
+    public PosixPrincipal addToCache(Subject s) {
+        if (s == null || s.getPrincipals().isEmpty()) {
+            // anon request
+            return null;
+        }
+        
+        PosixPrincipal pp = identityManager.toPosixPrincipal(s);
+        if (pp == null) {
+            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
+        }
+        identityCache.put(pp, s); // possibly replace old entry
+        return pp;
+    }
+    
+    public Subject getFromCache(PosixPrincipal pp) {
+        Subject so = identityCache.get(pp);
+        if (so == null) {
+            so = identityManager.toSubject(pp);
+            addToCache(so);
+        }
+        return so;
     }
 
     public static Path nodeToPath(Path root, Node node) {
@@ -170,7 +204,7 @@ public abstract class NodeUtil {
                 + rootURI.getAuthority() + "/" + tp.toFile().getPath()));
     }
 
-    public static Path create(Path root, Node node, PosixMapperClient pmc)
+    public Path create(Node node)
             throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
@@ -214,7 +248,7 @@ public abstract class NodeUtil {
 
         try {
             setPosixOwnerGroup(ret, owner.getUidNumber(), group);
-            setNodeProperties(ret, node, pmc);
+            setNodeProperties(ret, node);
         } catch (IOException ex) {
             log.debug("CREATE FAIL", ex);
             Files.delete(ret);
@@ -246,7 +280,7 @@ public abstract class NodeUtil {
      * @param node              The VOSpace Node input.
      * @throws IOException          If any I/O errors occur.
      */
-    public static void setNodeProperties(Path path, Node node, PosixMapperClient pmc) throws IOException {
+    public void setNodeProperties(Path path, Node node) throws IOException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
@@ -294,7 +328,7 @@ public abstract class NodeUtil {
                                     if (!groupGMS.equals(localGMS)) {
                                         throw new IllegalArgumentException("external group not supported: " + guri);
                                     }
-                                    Integer gid = pmc.getGID(guri);
+                                    Integer gid = posixMapper.getGID(guri);
                                     readGroupPrincipals.add(gid);
                                 } catch (Exception ex) {
                                     throw new IllegalArgumentException("group not found: " + sro, ex);
@@ -328,7 +362,7 @@ public abstract class NodeUtil {
                                     if (!groupGMS.equals(localGMS)) {
                                         throw new IllegalArgumentException("external group not supported: " + guri);
                                     }
-                                    Integer gid = pmc.getGID(guri);
+                                    Integer gid = posixMapper.getGID(guri);
                                     writeGroupPrincipals.add(gid);
                                 } catch (Exception ex) {
                                     throw new RuntimeException("group not found: " + sro, ex);
@@ -398,18 +432,18 @@ public abstract class NodeUtil {
         v.read(name, buf);
         return new String(buf.array(), StandardCharsets.UTF_8).trim();
     }
-
-    public static Path update(Path root, Node node) throws IOException {
+    
+    public Path update(Path root, Node node) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[update] path: " + node.getUri() + " -> " + np);
         throw new UnsupportedOperationException();
     }
 
-    public static Node get(Path root, VOSURI uri, PosixMapperClient pmc)  throws IOException {
-        return get(root, uri, pmc, false);
+    public Node get(VOSURI uri)  throws IOException {
+        return get(uri, false);
     }
     
-    public static Node get(Path root, VOSURI uri, PosixMapperClient pmc, boolean allowPartialPath) throws IOException {
+    public Node get(VOSURI uri, boolean allowPartialPath) throws IOException {
         LinkedList<String> nodeNames = new LinkedList<String>();
         nodeNames.add(uri.getName());
         VOSURI parent = uri.getParentURI();
@@ -436,7 +470,7 @@ public abstract class NodeUtil {
             sb.append("/").append(pathComp); // for next loop
             log.debug("[get-walk] " + sb.toString() + " " + allowPartialPath);
             try {
-                Node tmp = pathToNode(root, p, rootURI, pmc);
+                Node tmp = pathToNode(p, rootURI);
                 if (cn == null) {
                     if (tmp instanceof ContainerNode) {
                         cn = (ContainerNode) tmp; // top-level dir
@@ -467,19 +501,18 @@ public abstract class NodeUtil {
         return ret;
     }
 
-    public static void move(Path root, VOSURI source, VOSURI destDir, String destName, PosixPrincipal owner) throws IOException {
+    public void move(VOSURI source, VOSURI destDir, String destName, PosixPrincipal owner) throws IOException {
         Path sourcePath = nodeToPath(root, source);
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
         Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
 
-        // preserve old group during move?
         Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
         setPosixOwnerGroup(destPath, owner.getUidNumber(), group);
     }
 
-    public static void copy(Path root, VOSURI source, VOSURI destDir, PosixPrincipal owner) throws IOException {
+    public void copy(VOSURI source, VOSURI destDir, PosixPrincipal owner) throws IOException {
         Integer group = getDefaultGroup(owner);
         assertNotNull("group", group);
 
@@ -496,14 +529,14 @@ public abstract class NodeUtil {
         }
     }
 
-    static Node pathToNode(Path root, Path p, VOSURI rootURI, PosixMapperClient pmc)
+    Node pathToNode(Path p, VOSURI rootURI)
             throws IOException, NoSuchFileException {
         boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
-        return pathToNode(root, p, rootURI, pmc, getAttrs);
+        return pathToNode(p, rootURI, getAttrs);
     }
     
     // getAttrs == false needed in MountedContainerTest
-    static Node pathToNode(Path root, Path p, VOSURI rootURI, PosixMapperClient pmc, boolean getAttrs)
+    Node pathToNode(Path p, VOSURI rootURI, boolean getAttrs)
             throws IOException, NoSuchFileException {
         Node ret = null;
         VOSURI nuri = pathToURI(root, p, rootURI);
@@ -570,7 +603,7 @@ public abstract class NodeUtil {
             AclCommandExecutor acl = new AclCommandExecutor(p);
             StringBuilder sb = new StringBuilder();
             for (final Integer gid : acl.getReadOnlyACL(attrs.isDirectory())) {
-                GroupURI guri = pmc.getURI(gid);
+                GroupURI guri = posixMapper.getURI(gid);
                 sb.append(guri.getURI().toASCIIString()).append(" ");
             }
             sb.trimToSize();
@@ -580,7 +613,7 @@ public abstract class NodeUtil {
             }
             sb.setLength(0);
             for (final Integer gid : acl.getReadWriteACL(attrs.isDirectory())) {
-                GroupURI guri = pmc.getURI(gid);
+                GroupURI guri = posixMapper.getURI(gid);
                 sb.append(guri.getURI().toASCIIString()).append(" ");
             }
             sb.trimToSize();
@@ -707,8 +740,7 @@ public abstract class NodeUtil {
         }
     }
 
-    public static Iterator<Node> list(Path root, ContainerNode node, PosixMapperClient pmc,
-            VOSURI start, Integer limit) throws IOException {
+    public Iterator<Node> list(ContainerNode node, VOSURI start, Integer limit) throws IOException {
         Path np = nodeToPath(root, node);
         log.debug("[list] " + node.getUri() + " -> " + np);
         VOSURI rootURI = node.getUri();
@@ -722,7 +754,7 @@ public abstract class NodeUtil {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
                 for (Path file : stream) {
                     log.debug("[list] visit: " + file);
-                    Node n = pathToNode(root, file, rootURI, pmc);
+                    Node n = pathToNode(file, rootURI);
                     if (!nodes.isEmpty() || start == null
                             || start.getName().equals(n.getName())) {
                         nodes.add(n);

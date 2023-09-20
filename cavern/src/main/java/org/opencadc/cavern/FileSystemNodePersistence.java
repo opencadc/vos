@@ -114,8 +114,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     private final MultiValuedProperties config;
     
-    // TODO: temporary hack -- in memory cache here would be used by all request threads so not safe
-    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
+    
 
     public FileSystemNodePersistence() {
         CavernConfig cavernConfig = new CavernConfig();
@@ -139,29 +138,6 @@ public class FileSystemNodePersistence implements NodePersistence {
         return this.config;
     }
 
-    private PosixPrincipal addToCache(Subject s) {
-        if (s == null || s.getPrincipals().isEmpty()) {
-            // anon request
-            return null;
-        }
-        
-        PosixPrincipal pp = identityManager.toPosixPrincipal(s);
-        if (pp == null) {
-            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
-        }
-        identityCache.put(pp, s); // possibly replace old entry
-        return pp;
-    }
-    
-    private Subject getFromCache(PosixPrincipal pp) {
-        Subject so = identityCache.get(pp);
-        if (so == null) {
-            so = identityManager.toSubject(pp);
-            addToCache(so);
-        }
-        return so;
-    }
-    
     @Override
     public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
         return get(uri, false);
@@ -174,16 +150,17 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node get(VOSURI uri, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
-        addToCache(AuthenticationUtil.getCurrentSubject());
+        NodeUtil nut = new NodeUtil(root, posixMapper);
+        nut.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
-            Node ret = NodeUtil.get(root, uri, posixMapper, allowPartialPath);
+            Node ret = nut.get(uri, allowPartialPath);
             if (ret == null) {
                 throw new NodeNotFoundException(uri.getPath());
             }
             Node cur = ret;
             while (cur != null) {
                 PosixPrincipal owner = NodeUtil.getOwner(cur);
-                Subject so = getFromCache(owner);
+                Subject so = nut.getFromCache(owner);
                 cur.appData = new NodeID(-1L, so, owner);
                 cur.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identityManager.toDisplayString(so)));
                 cur = cur.getParent();
@@ -212,12 +189,13 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
+        NodeUtil nut = new NodeUtil(root, posixMapper);
         try {
-            Iterator<Node> ni = NodeUtil.list(root, cn, posixMapper, start, limit);
+            Iterator<Node> ni = nut.list(cn, start, limit);
             while (ni.hasNext()) {
                 Node cur = ni.next();
                 PosixPrincipal owner = NodeUtil.getOwner(cur);
-                Subject so = getFromCache(owner);
+                Subject so = nut.getFromCache(owner);
                 cur.appData = new NodeID(-1L, so, owner);
                 cur.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identityManager.toDisplayString(so)));
                 
@@ -267,8 +245,10 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new UnsupportedOperationException("update of existing node not supported");
         }
         
+        NodeUtil nut = new NodeUtil(root, posixMapper);
+        
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = addToCache(caller);
+        PosixPrincipal owner = nut.addToCache(caller);
             
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
@@ -281,8 +261,8 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         try {
             NodeUtil.setOwner(node, new NodeID(null, caller, owner));
-            NodeUtil.create(root, node, posixMapper);
-            return NodeUtil.get(root, node.getUri(), posixMapper);
+            nut.create(node);
+            return nut.get(node.getUri());
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
@@ -291,6 +271,11 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
         // node arg is the current node, properties are the new props
+        NodeUtil nut = new NodeUtil(root, posixMapper);
+        
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        PosixPrincipal owner = nut.addToCache(caller);
+        
         try {
             Path np = NodeUtil.nodeToPath(root, node);
             for (NodeProperty prop : properties)
@@ -309,7 +294,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     } // else: ignore delete non-existent prop
                 }
             }
-            NodeUtil.setNodeProperties(np, node, posixMapper);
+            nut.setNodeProperties(np, node);
             
             // fix return node
             Iterator<NodeProperty> iter = node.getProperties().iterator();
@@ -348,8 +333,11 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void move(Node node, ContainerNode cn) throws TransientException {
+        NodeUtil nut = new NodeUtil(root, posixMapper);
+        
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = addToCache(caller);
+        PosixPrincipal owner = nut.addToCache(caller);
+        
         log.debug("move: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
         // move rule check: check authorities
         checkSameAuthority(node, cn);
@@ -376,7 +364,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             // NOTE: this optional rename relies on a setName() call in InternalTransferAction (cadc-vos-server)
             // which makes the node URI inconsistent with the node name (temporarily)
             String destName = node.getName(); 
-            NodeUtil.move(root, node.getUri(), cn.getUri(), destName, owner);
+            nut.move(node.getUri(), cn.getUri(), destName, owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
@@ -384,14 +372,16 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void copy(Node node, ContainerNode cn) throws TransientException {
+        NodeUtil nut = new NodeUtil(root, posixMapper);
+        
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = addToCache(caller);
+        PosixPrincipal owner = nut.addToCache(caller);
         log.debug("copy: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
         // copy rule check: check authorities
         checkSameAuthority(node, cn);
 
         try {
-            NodeUtil.copy(root, node.getUri(), cn.getUri(), owner);
+            nut.copy(node.getUri(), cn.getUri(), owner);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }

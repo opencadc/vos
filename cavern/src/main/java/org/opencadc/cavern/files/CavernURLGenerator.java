@@ -235,8 +235,8 @@ public class CavernURLGenerator implements TransferGenerator {
             }
 
             // Use TokenTool to generate a preauth token
-            File privateKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PRIVATE_KEY));
-            File pubKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
+            File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
+            File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
 
             TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
 
@@ -329,7 +329,7 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("targetURI for validation: " + commonFormURI.toString());
         if (token != null) {
 
-            File publicKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
+            File publicKeyFile = findFile(CavernConfig.PUBLIC_KEY);
             TokenTool tk = new TokenTool(publicKeyFile);
 
             Class<? extends Grant> grantClass = null;

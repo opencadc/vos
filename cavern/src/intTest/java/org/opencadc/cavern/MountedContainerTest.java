@@ -368,7 +368,8 @@ public class MountedContainerTest {
 
                 // get from mntDir: strip path since we mounted containerURI directly on mntDir
                 VOSURI fsuri = new VOSURI("vos://" + node.getUri().getURI().getAuthority() + "/" + node.getName());
-                Node fsNode = NodeUtil.get(mntDir, fsuri, posixMapper);
+                NodeUtil nut = new NodeUtil(mntDir, posixMapper);
+                Node fsNode = nut.get(fsuri);
                 Assert.assertNotNull("filesystem node: " + node.getUri(), fsNode);
 
                 log.debug("found: " + restNode.getUri() + " aka " + fsNode.getUri().getPath());
