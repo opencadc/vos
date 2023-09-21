@@ -114,15 +114,15 @@ public abstract class FileAction extends RestAction {
     private UserPrincipalLookupService upLookupSvc;
     private VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
-    private FileSystemNodePersistence fsPersistence;
+    protected final FileSystemNodePersistence nodePersistence;
 
     protected FileAction(boolean isPreauth) {
         this.isPreauth = isPreauth;
 
         // Set up tools needed for generating nodeURI and
         // validating permissions
-        this.fsPersistence = new FileSystemNodePersistence();
-        this.root = this.fsPersistence.getConfig().getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
+        this.nodePersistence = new FileSystemNodePersistence();
+        this.root = this.nodePersistence.getConfig().getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
         if (this.root == null) {
             throw new IllegalStateException("CONFIG: required property not configured - "
                     + CavernConfig.FILESYSTEM_BASE_DIR);
@@ -131,9 +131,9 @@ public abstract class FileAction extends RestAction {
         Path rootPath = Paths.get(this.root);
         this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
 
-        this.pathResolver = new PathResolver(this.fsPersistence, true);
+        this.pathResolver = new PathResolver(this.nodePersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
-        this.authorizer.setNodePersistence(this.fsPersistence);
+        this.authorizer.setNodePersistence(this.nodePersistence);
 
     }
 
@@ -294,7 +294,7 @@ public abstract class FileAction extends RestAction {
                     + "/" + targetVOSURI.getName()));
 
                 newNode.setParent((ContainerNode) pn);
-                fsPersistence.put(newNode);
+                nodePersistence.put(newNode);
                 return newNode;
             } catch (NodeNotSupportedException e2) {
                 throw new IllegalArgumentException("node type not supported.", e2);
