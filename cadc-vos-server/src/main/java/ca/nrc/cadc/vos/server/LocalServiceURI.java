@@ -86,8 +86,8 @@ import org.apache.log4j.Logger;
 public class LocalServiceURI {
     private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
-    private static final String CONFIG_FILE = "VOSpaceWS.properties";
-    private static final String RESOURCE_ID_KEY = "resourceID";
+    private static final String CONFIG_FILE = "cavern.properties";
+    private static final String RESOURCE_ID_KEY = "org.opencadc.cavern.resourceID";
 
     private URI resourceID;
     private VOSURI vosURIBase;
