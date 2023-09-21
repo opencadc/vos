@@ -118,23 +118,16 @@ public abstract class FileAction extends RestAction {
 
     protected FileAction(boolean isPreauth) {
         this.isPreauth = isPreauth;
+        this.fsPersistence = new FileSystemNodePersistence();
+        Path rootPath = this.fsPersistence.getRoot();
+        this.root = rootPath.toString();
+        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
 
         // Set up tools needed for generating nodeURI and
         // validating permissions
-        this.fsPersistence = new FileSystemNodePersistence();
-        this.root = this.fsPersistence.getConfig().getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        if (this.root == null) {
-            throw new IllegalStateException("CONFIG: required property not configured - "
-                    + CavernConfig.FILESYSTEM_BASE_DIR);
-        }
-
-        Path rootPath = Paths.get(this.root);
-        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
-
         this.pathResolver = new PathResolver(this.fsPersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(this.fsPersistence);
-
     }
 
     protected abstract Direction getDirection();

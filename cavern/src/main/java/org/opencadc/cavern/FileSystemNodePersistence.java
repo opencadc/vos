@@ -87,6 +87,7 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipal;
@@ -106,17 +107,14 @@ public class FileSystemNodePersistence implements NodePersistence {
     
     private final PosixIdentityManager identityManager;
     private final Path root;
-
     private final MultiValuedProperties config;
 
     public FileSystemNodePersistence() {
         CavernConfig cavernConfig = new CavernConfig();
         this.config = cavernConfig.getConfig();
-        String rootConfig = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        if (rootConfig == null) {
-            throw new RuntimeException("CONFIG: Failed to find " + CavernConfig.FILESYSTEM_BASE_DIR);
-        }
-        this.root = Paths.get(rootConfig);
+        String baseDir = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
+        String subPath = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
+        this.root = Paths.get(baseDir + subPath);
         this.identityManager = new PosixIdentityManager(root.getFileSystem().getUserPrincipalLookupService());
     }
     

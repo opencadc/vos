@@ -69,6 +69,7 @@
         <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
         <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
     </init-param>
+      <load-on-startup>2</load-on-startup>
   </servlet>
 
    <!-- async recursive node property setting servlet-->
