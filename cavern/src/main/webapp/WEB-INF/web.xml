@@ -69,7 +69,7 @@
         <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
         <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
     </init-param>
-      <load-on-startup>2</load-on-startup>
+    <load-on-startup>2</load-on-startup>
   </servlet>
 
    <!-- async recursive node property setting servlet-->
@@ -96,6 +96,7 @@
          <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
          <param-value>ca.nrc.cadc.vos.server.RecursiveSetNodeInlineContentHandler</param-value>
      </init-param>
+     <load-on-startup>3</load-on-startup>
    </servlet>
 
   <!-- sync transfer servlet-->
@@ -126,6 +127,7 @@
         <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
         <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
     </init-param>
+    <load-on-startup>3</load-on-startup>
   </servlet>
 
   <!-- VOSpace NodesServlet -->
@@ -149,7 +151,7 @@
       <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
       <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
     </init-param>
-    <load-on-startup>2</load-on-startup>
+    <load-on-startup>3</load-on-startup>
   </servlet>
 
   <servlet>
@@ -163,7 +165,7 @@
       <param-name>put</param-name>
       <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
     </init-param>
-    <load-on-startup>2</load-on-startup>
+    <load-on-startup>3</load-on-startup>
   </servlet>
   
   <servlet>
@@ -177,7 +179,7 @@
             <param-name>put</param-name>
             <param-value>org.opencadc.cavern.files.AuthPutAction</param-value>
         </init-param>
-        <load-on-startup>2</load-on-startup>
+        <load-on-startup>3</load-on-startup>
     </servlet>
 
   <!-- VOSpace ViewsServlet -->
@@ -288,7 +290,7 @@
       <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
       <param-value>org.opencadc.cavern.PackageJobManager</param-value>
     </init-param>
-    <load-on-startup>2</load-on-startup>
+    <load-on-startup>3</load-on-startup>
   </servlet>
 
   <servlet-mapping>

@@ -114,20 +114,20 @@ public abstract class FileAction extends RestAction {
     private UserPrincipalLookupService upLookupSvc;
     private VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
-    private FileSystemNodePersistence fsPersistence;
+    protected final FileSystemNodePersistence nodePersistence;
 
     protected FileAction(boolean isPreauth) {
         this.isPreauth = isPreauth;
-        this.fsPersistence = new FileSystemNodePersistence();
-        Path rootPath = this.fsPersistence.getRoot();
-        this.root = rootPath.toString();
-        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
 
         // Set up tools needed for generating nodeURI and
         // validating permissions
-        this.pathResolver = new PathResolver(this.fsPersistence, true);
+        this.nodePersistence = new FileSystemNodePersistence();
+        Path rootPath = this.nodePersistence.getRoot();
+        this.root = rootPath.toString();
+        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
+        this.pathResolver = new PathResolver(this.nodePersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
-        this.authorizer.setNodePersistence(this.fsPersistence);
+        this.authorizer.setNodePersistence(this.nodePersistence);
     }
 
     protected abstract Direction getDirection();
@@ -287,7 +287,7 @@ public abstract class FileAction extends RestAction {
                     + "/" + targetVOSURI.getName()));
 
                 newNode.setParent((ContainerNode) pn);
-                fsPersistence.put(newNode);
+                nodePersistence.put(newNode);
                 return newNode;
             } catch (NodeNotSupportedException e2) {
                 throw new IllegalArgumentException("node type not supported.", e2);

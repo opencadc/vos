@@ -69,6 +69,7 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
@@ -76,9 +77,8 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.Base64;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -102,7 +102,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,6 +110,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
+import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;
@@ -122,6 +122,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
     private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
+    private final PosixIdentityManager identityManager = new PosixIdentityManager();
 
     public static final String KEY_SIGNATURE = "sig";
     public static final String KEY_META = "meta";
@@ -144,7 +145,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
     // for testing
     public CavernURLGenerator(String root) {
-        this.nodes = new FileSystemNodePersistence(root);
+        this.nodes = new FileSystemNodePersistence();
         this.config = this.nodes.getConfig();
         this.sshServerBase = this.config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
     }
@@ -174,7 +175,8 @@ public class CavernURLGenerator implements TransferGenerator {
                 log.debug("addressing protocol: " + protocol);
                 Subject currentSubject = AuthenticationUtil.getCurrentSubject();
                 if (node instanceof ContainerNode) {
-                    UserPrincipal caller = nodes.getPosixUser(currentSubject);
+                    PosixPrincipal caller = identityManager.toPosixPrincipal(currentSubject);
+                    // TODO: handleMount expects the local posix username -- NOT UID
                     uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
                 } else if (node instanceof DataNode) {
                     uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
@@ -191,8 +193,6 @@ public class CavernURLGenerator implements TransferGenerator {
             return ret;
         } catch (NodeNotFoundException ex) {
             throw new FileNotFoundException(target.getPath());
-        } catch (IOException ex) {
-            throw new RuntimeException("OOPS: failed to resolve subject to posix user", ex);
         } catch (LinkingException ex) {
             throw new RuntimeException("OOPS: failed to resolve link?", ex);
         }
@@ -209,17 +209,6 @@ public class CavernURLGenerator implements TransferGenerator {
             Class<? extends Grant> grantClass = null;
 
             switch (protocol.getUri()) {
-                /**
-                 * HTTP not currently supported
-                case VOS.PROTOCOL_HTTP_GET:
-                    scheme = "http";
-                    dir = Direction.pullFromVoSpace;
-                    break;
-                case VOS.PROTOCOL_HTTP_PUT:
-                    scheme = "http";
-                    dir = Direction.pushToVoSpace;
-                    break;
-                */
                 case VOS.PROTOCOL_HTTPS_GET:
                     scheme = "https";
                     dir = Direction.pullFromVoSpace;
@@ -230,7 +219,9 @@ public class CavernURLGenerator implements TransferGenerator {
                     dir = Direction.pushToVoSpace;
                     grantClass = WriteGrant.class;
                     break;
-           }
+                default:
+                    throw new UnsupportedOperationException("unsupported protocol: " + protocol.getUri());
+            }
 
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
             if (baseURLs == null || baseURLs.isEmpty()) {
@@ -244,8 +235,8 @@ public class CavernURLGenerator implements TransferGenerator {
             }
 
             // Use TokenTool to generate a preauth token
-            File privateKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PRIVATE_KEY));
-            File pubKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
+            File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
+            File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
 
             TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
 
@@ -301,7 +292,7 @@ public class CavernURLGenerator implements TransferGenerator {
         }
     }
     
-    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, UserPrincipal caller) {
+    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, PosixPrincipal caller) {
         if (sshServerBase == null) {
             throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in "
                     + CavernConfig.CAVERN_PROPERTIES);
@@ -338,7 +329,7 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("targetURI for validation: " + commonFormURI.toString());
         if (token != null) {
 
-            File publicKeyFile = findFile(config.getFirstPropertyValue(CavernConfig.PUBLIC_KEY));
+            File publicKeyFile = findFile(CavernConfig.PUBLIC_KEY);
             TokenTool tk = new TokenTool(publicKeyFile);
 
             Class<? extends Grant> grantClass = null;

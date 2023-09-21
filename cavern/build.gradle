@@ -1,6 +1,5 @@
 plugins {
     id 'war'
-    id 'application'
     id 'checkstyle'
 }
 
@@ -19,27 +18,11 @@ sourceCompatibility = 1.8
 group = 'org.opencadc'
 
 war {
-    // Include the delegation private key for scoped token
-    // requests
-    from(System.getenv('A') + '/etc/') {
-        into 'WEB-INF/classes/'
-        include 'RsaSignaturePub.key'
-    }
-
     // Include the swagger-ui so that /cavern provides the VOSpace API documentation
     from(System.getenv('RPS') + '/resources/') {
         include 'swagger-ui/'
     }
 }
-
-sourceSets {
-    test {
-        resources.srcDirs += 'src/test/resources'
-    }
-}
-
-
-mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
     providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'
@@ -48,8 +31,8 @@ dependencies {
     implementation 'xerces:xercesImpl:[2.0,)'
     implementation 'commons-net:commons-net:[2.0,)'
 
-    implementation 'org.opencadc:cadc-util:[1.9.0,)'
-    implementation 'org.opencadc:cadc-util-fs:[1.0.0,)'
+    implementation 'org.opencadc:cadc-util:[1.9.11,)'
+    implementation 'org.opencadc:cadc-util-fs:[1.1.0,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'
     implementation 'org.opencadc:cadc-registry:[1.5.9,)'
@@ -66,6 +49,8 @@ dependencies {
 
     runtimeOnly 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
+    // temporary: make sure to get this specific minimal version of the impl
+    runtimeOnly 'org.opencadc:cadc-access-control:[1.1.27,)'
 
     testImplementation 'junit:junit:[4.0,)'
     testImplementation 'xerces:xercesImpl:[2.0,)'
@@ -73,6 +58,6 @@ dependencies {
     testImplementation 'org.opencadc:cadc-test-uws:[1.0,)'
     testImplementation 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
-    intTestImplementation 'org.opencadc:cadc-test-vos:[1.1.0,)'
+    intTestImplementation 'org.opencadc:cadc-test-vos:[1.1.0,2.0)'
     intTestImplementation 'org.opencadc:cadc-test-vosi:[1.0.11,)'
 }

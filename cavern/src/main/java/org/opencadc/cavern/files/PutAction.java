@@ -67,30 +67,35 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.GroupPrincipal;
-import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -103,13 +108,19 @@ public abstract class PutAction extends FileAction {
 
     private static final String INPUT_STREAM = "in";
 
+    private final PosixMapperClient posixMapper;
+    
     public PutAction(boolean isPreauth) {
         super(isPreauth);
+        LocalAuthority loc = new LocalAuthority();
+        // TODO: move constant to cadc-registry
+        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
 
     protected Direction getDirection() {
         return Direction.pushToVoSpace;
-    };
+    }
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {
@@ -128,28 +139,29 @@ public abstract class PutAction extends FileAction {
     @Override
     public void doAction() throws Exception {
         VOSURI nodeURI = getNodeURI();
-        Node node = null;
+        DataNode node = null;
         Path target = null;
-        Path rootPath = null;
         boolean putStarted = false;
         boolean successful = false;
+        
+        Path rootPath = Paths.get(getRoot());
 
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
-
-            rootPath = Paths.get(getRoot());
-            node = NodeUtil.get(rootPath, nodeURI);
-            if (node == null) {
+            
+            Node n = nodePersistence.get(nodeURI);
+            if (n == null) {
                 // Node needs to be created ahead of time for PUT
                 throw new ResourceNotFoundException("node must be created before PUT");
             }
 
             // only support data nodes for now
-            if (!(DataNode.class.isAssignableFrom(node.getClass()))) {
+            if (!(DataNode.class.isAssignableFrom(n.getClass()))) {
                 log.debug("400 error with PUT: not a writable node");
                 throw new IllegalArgumentException("not a writable node");
             }
 
+            node = (DataNode) n;
             target = NodeUtil.nodeToPath(rootPath, node);
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
@@ -172,9 +184,10 @@ public abstract class PutAction extends FileAction {
             }
             
             log.debug(nodeURI + " MD5: " + propValue);
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
+            List<NodeProperty> props = new ArrayList<>();
+            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
 
-            NodeUtil.setNodeProperties(target, node);
+            nodePersistence.updateProperties(node, props);
 
             // doing this last because it requires chown which is most likely to fail during experimentation
             log.debug("restore owner & group");
@@ -230,21 +243,25 @@ public abstract class PutAction extends FileAction {
         }
     }
     
-    private void cleanUpOnFailure(Path target, Node node, Path rootPath) throws IOException {
+    private void cleanUpOnFailure(Path target, DataNode node, Path rootPath) throws IOException {
         log.debug("clean up on put failure " + target);
         Files.delete(target);
         // restore empty DataNode: remove props that are no longer applicable
         NodeProperty npToBeRemoved = node.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
         node.getProperties().remove(npToBeRemoved);
-        NodeUtil.create(rootPath, node);
+        try {
+            nodePersistence.put(node);
+        } catch (NodeNotSupportedException bug) {
+            throw new RuntimeException("BUG: unexpected " + bug, bug);
+        }
         return;
     }
     
     private void restoreOwnNGroup(Path rootPath, Node node) throws IOException {
-        UserPrincipal owner = NodeUtil.getOwner(getUpLookupSvc(), node);
-        GroupPrincipal group = NodeUtil.getDefaultGroup(getUpLookupSvc(), owner);
+        PosixPrincipal pp = NodeUtil.getOwner(node);
+        Integer gid = NodeUtil.getDefaultGroup(pp);
         Path target = NodeUtil.nodeToPath(rootPath, node);
-        NodeUtil.setPosixOwnerGroup(target, owner, group);
+        NodeUtil.setPosixOwnerGroup(target, pp.getUidNumber(), gid);
     }
 
 }
