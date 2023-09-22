@@ -339,7 +339,12 @@ public class CavernURLGeneratorTest
 
     @Test
     public void testInvalidToken() {
+        String userHome = System.getProperty("user.home");
+        log.info("user.home: " + userHome);
         try {
+            File testHome = new File("build/resources/test");
+            System.setProperty("user.home", testHome.getAbsolutePath());
+
             // CavernURLGenerator.validateToken will try to Base64 decode the token passed
             // in before passing it to TokenTool.
             TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
@@ -352,11 +357,13 @@ public class CavernURLGeneratorTest
             } catch (IllegalArgumentException e) {
                 // expected
             }
-
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
+        } finally {
+            System.setProperty("user.home", userHome);
         }
+
     }
 
     class TestTransferGenerator extends CavernURLGenerator {

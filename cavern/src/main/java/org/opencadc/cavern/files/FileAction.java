@@ -89,12 +89,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
@@ -107,12 +105,12 @@ public abstract class FileAction extends RestAction {
 
     // Key values needed for FileAction
     private VOSURI nodeURI;
-    private boolean isPreauth;
+    private final boolean isPreauth;
 
     // Supporting tools and values
-    private String root;
-    private UserPrincipalLookupService upLookupSvc;
-    private VOSpaceAuthorizer authorizer;
+    private final String root;
+    private final UserPrincipalLookupService upLookupSvc;
+    private final VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
     protected final FileSystemNodePersistence nodePersistence;
 
@@ -160,7 +158,7 @@ public abstract class FileAction extends RestAction {
         // be reported to the caller.
         try {
             String path = syncInput.getPath();
-            if (isPreauth == true) {
+            if (isPreauth) {
                 initPreauthTarget(path);
             } else {
                 initAuthTarget(path);
@@ -304,7 +302,7 @@ public abstract class FileAction extends RestAction {
         log.debug("baseURI for cavern deployment: " + baseURI.toString());
 
         String pathStr = null;
-        if (hasToken == true) {
+        if (hasToken) {
             int firstSlashIndex = path.indexOf("/");
             pathStr = path.substring(firstSlashIndex + 1);
         } else {
