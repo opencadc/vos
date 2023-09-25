@@ -70,6 +70,7 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
@@ -113,8 +114,7 @@ public abstract class PutAction extends FileAction {
     public PutAction(boolean isPreauth) {
         super(isPreauth);
         LocalAuthority loc = new LocalAuthority();
-        // TODO: move constant to cadc-registry
-        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
         this.posixMapper = new PosixMapperClient(posixMapperID);
     }
 

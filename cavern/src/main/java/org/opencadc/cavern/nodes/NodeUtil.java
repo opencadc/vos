@@ -117,7 +117,9 @@ import org.opencadc.util.fs.AclCommandExecutor;
 import org.opencadc.util.fs.ExtendedFileAttributes;
 
 /**
- * Utility methods for interacting with nodes.
+ * Utility methods for interacting with nodes. This is now like a DAO class
+ * that is instantiated for short term use so it provides thread safety for the
+ * FileSystemNodePersistence methods.
  *
  * @author pdowler
  */
@@ -147,9 +149,13 @@ public class NodeUtil {
     private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
     private final PosixIdentityManager identityManager = new PosixIdentityManager();
     
-    public NodeUtil(Path root, PosixMapperClient posixMapper) {
+    public NodeUtil(Path root) {
         this.root = root;
-        this.posixMapper = posixMapper;
+        
+        LocalAuthority loc = new LocalAuthority();
+        // only require a group mapper because IVOA GMS does not include numeric gid
+        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
     
     public PosixPrincipal addToCache(Subject s) {
