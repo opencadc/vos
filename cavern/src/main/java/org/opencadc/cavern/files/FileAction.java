@@ -70,7 +70,6 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
-
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -81,17 +80,13 @@ import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.VOSURI;
-
 import ca.nrc.cadc.vos.server.LocalServiceURI;
 import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
@@ -109,7 +104,6 @@ public abstract class FileAction extends RestAction {
 
     // Supporting tools and values
     private final String root;
-    private final UserPrincipalLookupService upLookupSvc;
     private final VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
     protected final FileSystemNodePersistence nodePersistence;
@@ -121,7 +115,6 @@ public abstract class FileAction extends RestAction {
         // validating permissions
         this.nodePersistence = new FileSystemNodePersistence();
         this.root = this.nodePersistence.getRoot().toString();
-        this.upLookupSvc = this.nodePersistence.getRoot().getFileSystem().getUserPrincipalLookupService();
         this.pathResolver = new PathResolver(this.nodePersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(this.nodePersistence);
@@ -140,10 +133,6 @@ public abstract class FileAction extends RestAction {
 
     protected String getRoot() {
         return root;
-    }
-
-    protected UserPrincipalLookupService getUpLookupSvc() {
-        return upLookupSvc;
     }
 
     @Override

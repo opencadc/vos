@@ -154,6 +154,7 @@ public class NodeUtil {
         
         LocalAuthority loc = new LocalAuthority();
         // only require a group mapper because IVOA GMS does not include numeric gid
+        // assume user mapper is the same service
         URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
         this.posixMapper = new PosixMapperClient(posixMapperID);
     }
