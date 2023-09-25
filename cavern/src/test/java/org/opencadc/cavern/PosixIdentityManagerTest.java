@@ -100,15 +100,11 @@ public class PosixIdentityManagerTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-        System.setProperty(IdentityManager.class.getName(), ACIdentityManager.class.getName());
     }
 
-    Subject opsSubject;
+    Subject subject = AuthenticationUtil.getAnonSubject();
     
-    public PosixIdentityManagerTest() throws Exception {
-        File cert = FileUtil.getFileFromResource("servops.pem", PosixIdentityManagerTest.class);
-        opsSubject = SSLUtil.createSubject(cert);
-        log.info("opsSubject: " + opsSubject);
+    public PosixIdentityManagerTest() {
     }
 
     @Test
@@ -132,7 +128,7 @@ public class PosixIdentityManagerTest {
     public void testRoundTrip() {
         try {
             // request subject contains: numeric, http, posix
-            PosixPrincipal orig = new PosixPrincipal(20014);
+            PosixPrincipal orig = new PosixPrincipal(54321);
             Subject s = AuthenticationUtil.getAnonSubject();
             s.getPrincipals().add(orig);
             s.getPrincipals().add(new HttpPrincipal("somebody"));
@@ -146,13 +142,13 @@ public class PosixIdentityManagerTest {
             log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
             Assert.assertTrue(Integer.class.equals(o.getClass()));
             
-            Subject restored = Subject.doAs(opsSubject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
+            Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
             log.info("restored: " + restored);
             
             // default IM to delegate to cannot augment
             Set<Principal> all = restored.getPrincipals();
             Assert.assertNotNull(all);
-            Assert.assertEquals(4, all.size()); // 20014 is a real cadc uid
+            Assert.assertEquals(1, all.size());
             
             Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
             Assert.assertNotNull(ps);

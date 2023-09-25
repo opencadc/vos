@@ -90,7 +90,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -102,7 +101,6 @@ public class FileSystemProbe implements Callable<Boolean> {
 
     private final Path root;
     private final String vosBaseURI;
-    private final PosixMapperClient posixMapper;
     private final NodeUtil nodeUtil;
     
     private final PosixPrincipal ownerPrincipal;
@@ -116,11 +114,7 @@ public class FileSystemProbe implements Callable<Boolean> {
             throws InvalidConfigException {
         this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
         this.vosBaseURI = vosBaseURI;
-        
-        LocalAuthority loc = new LocalAuthority();
-        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new PosixMapperClient(posixMapperID);
-        this.nodeUtil = new NodeUtil(root, posixMapper);
+        this.nodeUtil = new NodeUtil(root);
         
         this.ownerPrincipal = new PosixPrincipal(8675309); // this is cadc-tomcat but could be any uid
         Subject osub = new Subject(false, new TreeSet<>(), new TreeSet<>(), new TreeSet<>());
@@ -129,6 +123,7 @@ public class FileSystemProbe implements Callable<Boolean> {
         
         this.linkTargetOwner = this.owner;
         
+        LocalAuthority loc = new LocalAuthority();
         URI gms = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
         if (gms != null) {
             this.groupURI = URI.create(gms.toASCIIString() + "?cavern-probe-test");
