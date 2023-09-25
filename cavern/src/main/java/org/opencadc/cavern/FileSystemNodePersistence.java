@@ -70,7 +70,6 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -94,7 +93,6 @@ import java.util.Iterator;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.nodes.NodeUtil;
 
 /**
@@ -106,8 +104,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
     
     private final PosixIdentityManager identityManager;
-    private final PosixMapperClient posixMapper;
-
     private final Path root;
     private final MultiValuedProperties config;
 
@@ -120,11 +116,6 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         // must be hard coded to this and not set via java system properties
         this.identityManager = new PosixIdentityManager();
-
-        LocalAuthority loc = new LocalAuthority();
-        // TODO: move constant to cadc-registry
-        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
-        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
 
     public MultiValuedProperties getConfig() {
@@ -143,7 +134,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node get(VOSURI uri, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
-        NodeUtil nut = new NodeUtil(root, posixMapper);
+        NodeUtil nut = new NodeUtil(root);
         nut.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
             Node ret = nut.get(uri, allowPartialPath);
@@ -182,7 +173,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
-        NodeUtil nut = new NodeUtil(root, posixMapper);
+        NodeUtil nut = new NodeUtil(root);
         try {
             Iterator<Node> ni = nut.list(cn, start, limit);
             while (ni.hasNext()) {
@@ -237,9 +228,8 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (node.appData != null) { // persistent node == update == not supported
             throw new UnsupportedOperationException("update of existing node not supported");
         }
-        
-        NodeUtil nut = new NodeUtil(root, posixMapper);
-
+      
+        NodeUtil nut = new NodeUtil(root);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
 
@@ -264,8 +254,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
         // node arg is the current node, properties are the new props
-        NodeUtil nut = new NodeUtil(root, posixMapper);
-
+        NodeUtil nut = new NodeUtil(root);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
 
@@ -326,8 +315,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void move(Node node, ContainerNode cn) throws TransientException {
-        NodeUtil nut = new NodeUtil(root, posixMapper);
-
+        NodeUtil nut = new NodeUtil(root);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
 
@@ -365,8 +353,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public void copy(Node node, ContainerNode cn) throws TransientException {
-        NodeUtil nut = new NodeUtil(root, posixMapper);
-
+        NodeUtil nut = new NodeUtil(root);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
         log.debug("copy: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());

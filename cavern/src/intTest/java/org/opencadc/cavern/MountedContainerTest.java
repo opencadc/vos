@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -259,12 +259,6 @@ public class MountedContainerTest {
     }
     
     private void doConsistencyCheck(VOSpaceClient vos, final Subject s, VOSURI containerURI, Path mntDir, boolean createWithREST) throws Exception {
-        
-        LocalAuthority loc = new LocalAuthority();
-        // TODO: move constant to cadc-registry
-        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
-        final PosixMapperClient posixMapper = new PosixMapperClient(posixMapperID);
-        
         // get numeric ID of test user
         /*
         User u = Subject.doAs(s, new PrivilegedExceptionAction<User>() {
@@ -368,7 +362,7 @@ public class MountedContainerTest {
 
                 // get from mntDir: strip path since we mounted containerURI directly on mntDir
                 VOSURI fsuri = new VOSURI("vos://" + node.getUri().getURI().getAuthority() + "/" + node.getName());
-                NodeUtil nut = new NodeUtil(mntDir, posixMapper);
+                NodeUtil nut = new NodeUtil(mntDir);
                 Node fsNode = nut.get(fsuri);
                 Assert.assertNotNull("filesystem node: " + node.getUri(), fsNode);
 
