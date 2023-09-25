@@ -88,7 +88,6 @@ import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import javax.security.auth.Subject;
@@ -105,18 +104,13 @@ public class FileSystemNodePersistence implements NodePersistence {
     
     private final PosixIdentityManager identityManager;
     private final Path root;
-
     private final MultiValuedProperties config;
 
     public FileSystemNodePersistence() {
         CavernConfig cavernConfig = new CavernConfig();
         this.config = cavernConfig.getConfig();
-        String rootConfig = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        if (rootConfig == null) {
-            throw new RuntimeException("CONFIG: Failed to find " + CavernConfig.FILESYSTEM_BASE_DIR);
-        }
-        this.root = Paths.get(rootConfig);
-        
+        this.root = cavernConfig.getRoot();
+
         // must be hard coded to this and not set via java system properties
         this.identityManager = new PosixIdentityManager();
     }
@@ -185,7 +179,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                 Subject so = nut.getFromCache(owner);
                 cur.appData = new NodeID(-1L, so, owner);
                 cur.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identityManager.toDisplayString(so)));
-                
+
                 cur.setParent(cn);
                 cn.getNodes().add(cur);
                 log.debug("[getChildren] " + cur);
@@ -231,12 +225,11 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (node.appData != null) { // persistent node == update == not supported
             throw new UnsupportedOperationException("update of existing node not supported");
         }
-        
+
         NodeUtil nut = new NodeUtil(root);
-        
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
-            
+
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             try {
@@ -259,10 +252,9 @@ public class FileSystemNodePersistence implements NodePersistence {
     public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
         // node arg is the current node, properties are the new props
         NodeUtil nut = new NodeUtil(root);
-        
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
-        
+
         try {
             Path np = NodeUtil.nodeToPath(root, node);
             for (NodeProperty prop : properties)
@@ -321,10 +313,9 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public void move(Node node, ContainerNode cn) throws TransientException {
         NodeUtil nut = new NodeUtil(root);
-        
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
-        
+
         log.debug("move: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
         // move rule check: check authorities
         checkSameAuthority(node, cn);
@@ -334,7 +325,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             if (node.getParent() == null || node.getParent().getUri().isRoot()) {
                 throw new IllegalArgumentException("Cannot move a root container.");
             }
-            
+
             // move rule check: check that 'src' is not in the path of 'dest' so that
             // circular paths are not created
             // This check is probably done by the file system, consider removing it.
@@ -360,7 +351,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public void copy(Node node, ContainerNode cn) throws TransientException {
         NodeUtil nut = new NodeUtil(root);
-        
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
         log.debug("copy: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());

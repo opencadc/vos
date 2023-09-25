@@ -89,12 +89,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
 
 /**
@@ -107,12 +105,12 @@ public abstract class FileAction extends RestAction {
 
     // Key values needed for FileAction
     private VOSURI nodeURI;
-    private boolean isPreauth;
+    private final boolean isPreauth;
 
     // Supporting tools and values
-    private String root;
-    private UserPrincipalLookupService upLookupSvc;
-    private VOSpaceAuthorizer authorizer;
+    private final String root;
+    private final UserPrincipalLookupService upLookupSvc;
+    private final VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
     protected final FileSystemNodePersistence nodePersistence;
 
@@ -122,19 +120,11 @@ public abstract class FileAction extends RestAction {
         // Set up tools needed for generating nodeURI and
         // validating permissions
         this.nodePersistence = new FileSystemNodePersistence();
-        this.root = this.nodePersistence.getConfig().getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        if (this.root == null) {
-            throw new IllegalStateException("CONFIG: required property not configured - "
-                    + CavernConfig.FILESYSTEM_BASE_DIR);
-        }
-
-        Path rootPath = Paths.get(this.root);
-        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
-
+        this.root = this.nodePersistence.getRoot().toString();
+        this.upLookupSvc = this.nodePersistence.getRoot().getFileSystem().getUserPrincipalLookupService();
         this.pathResolver = new PathResolver(this.nodePersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(this.nodePersistence);
-
     }
 
     protected abstract Direction getDirection();
@@ -167,7 +157,7 @@ public abstract class FileAction extends RestAction {
         // be reported to the caller.
         try {
             String path = syncInput.getPath();
-            if (isPreauth == true) {
+            if (isPreauth) {
                 initPreauthTarget(path);
             } else {
                 initAuthTarget(path);
@@ -311,7 +301,7 @@ public abstract class FileAction extends RestAction {
         log.debug("baseURI for cavern deployment: " + baseURI.toString());
 
         String pathStr = null;
-        if (hasToken == true) {
+        if (hasToken) {
             int firstSlashIndex = path.indexOf("/");
             pathStr = path.substring(firstSlashIndex + 1);
         } else {

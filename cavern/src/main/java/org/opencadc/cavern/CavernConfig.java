@@ -71,6 +71,8 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.apache.log4j.Logger;
 
 public class CavernConfig {
@@ -91,7 +93,6 @@ public class CavernConfig {
 
     public MultiValuedProperties getConfig() {
         PropertiesReader propertiesReader = new PropertiesReader(CAVERN_PROPERTIES);
-        log.info("can read cavern.properties: " + propertiesReader.canRead());
         MultiValuedProperties properties = propertiesReader.getAllProperties();
         if (properties.isEmpty()) {
             throw new IllegalStateException("CONFIG: file not found or no properties found in file - "
@@ -113,6 +114,17 @@ public class CavernConfig {
         }
 
         return properties;
+    }
+
+    public Path getRoot() {
+        MultiValuedProperties config = getConfig();
+        String baseDir = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
+        String subPath = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
+        String sep = "/";
+        if (baseDir.endsWith("/") || subPath.startsWith("/")) {
+            sep = "";
+        }
+        return Paths.get(baseDir + sep + subPath);
     }
 
     private boolean checkProperty(MultiValuedProperties properties, StringBuilder sb,
