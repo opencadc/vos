@@ -68,13 +68,9 @@
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
-import java.io.IOException;
-import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
@@ -111,7 +107,7 @@ public class PosixIdentityManager implements IdentityManager {
 
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
-            Set<Principal> pset = new HashSet<Principal>();
+            Set<Principal> pset = new HashSet<>();
             pset.add(p);
             Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
             return augment(ret);
