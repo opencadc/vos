@@ -120,9 +120,8 @@ public abstract class FileAction extends RestAction {
         // Set up tools needed for generating nodeURI and
         // validating permissions
         this.nodePersistence = new FileSystemNodePersistence();
-        Path rootPath = this.nodePersistence.getRoot();
-        this.root = rootPath.toString();
-        this.upLookupSvc = rootPath.getFileSystem().getUserPrincipalLookupService();
+        this.root = this.nodePersistence.getRoot().toString();
+        this.upLookupSvc = this.nodePersistence.getRoot().getFileSystem().getUserPrincipalLookupService();
         this.pathResolver = new PathResolver(this.nodePersistence, true);
         this.authorizer = new VOSpaceAuthorizer(true);
         this.authorizer.setNodePersistence(this.nodePersistence);

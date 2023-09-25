@@ -70,6 +70,7 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.MultiValuedProperties;
@@ -114,16 +115,13 @@ public class FileSystemNodePersistence implements NodePersistence {
     public FileSystemNodePersistence() {
         CavernConfig cavernConfig = new CavernConfig();
         this.config = cavernConfig.getConfig();
-        String baseDir = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        String subPath = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
-        this.root = Paths.get(baseDir + subPath);
+        this.root = cavernConfig.getRoot();
 
         // must be hard coded to this and not set via java system properties
         this.identityManager = new PosixIdentityManager();
 
         LocalAuthority loc = new LocalAuthority();
-        // TODO: move constant to cadc-registry
-        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
         this.posixMapper = new PosixMapperClient(posixMapperID);
     }
 

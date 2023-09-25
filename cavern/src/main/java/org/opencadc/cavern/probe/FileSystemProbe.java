@@ -118,8 +118,7 @@ public class FileSystemProbe implements Callable<Boolean> {
         this.vosBaseURI = vosBaseURI;
         
         LocalAuthority loc = new LocalAuthority();
-        // TODO: move constant to cadc-registry
-        URI posixMapperID = loc.getServiceURI("http://www.opencadc.org/std/posix#group-mapping-1.0");
+        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
         this.posixMapper = new PosixMapperClient(posixMapperID);
         this.nodeUtil = new NodeUtil(root, posixMapper);
         

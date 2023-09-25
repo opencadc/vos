@@ -96,9 +96,7 @@ public class CavernInitAction extends InitAction {
             MultiValuedProperties props = cavernConfig.getConfig();
 
             // create root directories for node/files
-            String baseDir = props.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-            String subPath = props.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
-            Path root = Paths.get(baseDir + subPath);
+            Path root = cavernConfig.getRoot();
             try {
                 Files.createDirectories(root);
             } catch (IOException e) {
