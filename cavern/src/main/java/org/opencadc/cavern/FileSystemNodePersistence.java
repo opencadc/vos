@@ -148,7 +148,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             }
             log.debug("[get] " + ret);
             return ret;
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
@@ -184,7 +184,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                 cn.getNodes().add(cur);
                 log.debug("[getChildren] " + cur);
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
@@ -243,7 +243,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             NodeUtil.setOwner(node, new NodeID(null, caller, owner));
             nut.create(node);
             return nut.get(node.getUri());
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
@@ -283,7 +283,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     iter.remove();
                 }
             }
-        }  catch (IOException ex) {
+        }  catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
         return node;
