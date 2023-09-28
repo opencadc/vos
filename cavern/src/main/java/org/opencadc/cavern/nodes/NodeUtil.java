@@ -69,6 +69,8 @@ package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -208,7 +210,7 @@ public class NodeUtil {
     }
 
     public Path create(Node node)
-            throws IOException {
+            throws IOException, InterruptedException {
         Path np = nodeToPath(root, node);
         log.debug("[create] path: " + node.getUri() + " -> " + np);
 
@@ -283,7 +285,7 @@ public class NodeUtil {
      * @param node              The VOSpace Node input.
      * @throws IOException          If any I/O errors occur.
      */
-    public void setNodeProperties(Path path, Node node) throws IOException {
+    public void setNodeProperties(Path path, Node node) throws IOException, InterruptedException {
         log.debug("setNodeProperties: " + node);
         if (!node.getProperties().isEmpty() && !(node instanceof LinkNode)) {
             
@@ -311,6 +313,7 @@ public class NodeUtil {
                 } else {
                     // ugh: raw multi-valued node prop is space-separated
                     String val = rop.getPropertyValue();
+                    log.warn("raw read-only prop: " + val);
                     if (val != null) {
                         String[] vals = val.split(" ");
                         if (vals.length > 0) {
@@ -321,10 +324,15 @@ public class NodeUtil {
                                 guris.add(guri);
                             }
                             if (!guris.isEmpty()) {
-                                List<PosixGroup> pgs = posixMapper.getGID(guris);
-                                // TODO: check if any input groups were not resolved/acceptable and do what??
-                                for (PosixGroup pg : pgs) {
-                                    readGroupPrincipals.add(pg.getGID());
+                                try {
+                                    List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                    // TODO: check if any input groups were not resolved/acceptable and do what??
+                                    for (PosixGroup pg : pgs) {
+                                        readGroupPrincipals.add(pg.getGID());
+                                    }
+                                } catch (ResourceNotFoundException | ResourceAlreadyExistsException ex) {
+                                    throw new RuntimeException("failed to map GroupURI(s) to numeric GID(s): "
+                                            + ex.toString(), ex);
                                 }
                             }
                         } else {
@@ -344,6 +352,7 @@ public class NodeUtil {
                 } else {
                     // ugh: raw multi-valued node prop is space-separated
                     String val = rwp.getPropertyValue();
+                    log.warn("raw read-write prop: " + val);
                     if (val != null) {
                         String[] vals = val.split(" ");
                         if (vals.length > 0) {
@@ -354,10 +363,15 @@ public class NodeUtil {
                                 guris.add(guri);
                             }
                             if (!guris.isEmpty()) {
-                                List<PosixGroup> pgs = posixMapper.getGID(guris);
-                                // TODO: check if any input groups were not resolved/acceptable and do what??
-                                for (PosixGroup pg : pgs) {
-                                    writeGroupPrincipals.add(pg.getGID());
+                                try {
+                                    List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                    // TODO: check if any input groups were not resolved/acceptable and do what??
+                                    for (PosixGroup pg : pgs) {
+                                        writeGroupPrincipals.add(pg.getGID());
+                                    }
+                                } catch (ResourceNotFoundException | ResourceAlreadyExistsException ex) {
+                                    throw new RuntimeException("failed to map GroupURI(s) to numeric GID(s): "
+                                            + ex.toString(), ex);
                                 }
                             }
                         } else {
@@ -415,11 +429,12 @@ public class NodeUtil {
         throw new UnsupportedOperationException();
     }
 
-    public Node get(VOSURI uri)  throws IOException {
+    public Node get(VOSURI uri)  throws IOException, InterruptedException {
         return get(uri, false);
     }
     
-    public Node get(VOSURI uri, boolean allowPartialPath) throws IOException {
+    public Node get(VOSURI uri, boolean allowPartialPath) 
+            throws IOException, InterruptedException {
         LinkedList<String> nodeNames = new LinkedList<String>();
         nodeNames.add(uri.getName());
         VOSURI parent = uri.getParentURI();
@@ -506,14 +521,14 @@ public class NodeUtil {
     }
 
     Node pathToNode(Path p, VOSURI rootURI)
-            throws IOException, NoSuchFileException {
+            throws IOException, InterruptedException, NoSuchFileException {
         boolean getAttrs = System.getProperty(NodeUtil.class.getName() + ".disable-get-attrs") == null;
         return pathToNode(p, rootURI, getAttrs);
     }
     
     // getAttrs == false needed in MountedContainerTest
     Node pathToNode(Path p, VOSURI rootURI, boolean getAttrs)
-            throws IOException, NoSuchFileException {
+            throws IOException, InterruptedException, NoSuchFileException {
         Node ret = null;
         VOSURI nuri = pathToURI(root, p, rootURI);
         PosixFileAttributes attrs = Files.readAttributes(p,
@@ -575,9 +590,13 @@ public class NodeUtil {
             StringBuilder sb = new StringBuilder();
             List<Integer> rogids = acl.getReadOnlyACL(attrs.isDirectory());
             if (!rogids.isEmpty()) {
-                List<PosixGroup> pgs = posixMapper.getURI(rogids);
-                for (PosixGroup pg : pgs) {
-                    sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                try {
+                    List<PosixGroup> pgs = posixMapper.getURI(rogids);
+                    for (PosixGroup pg : pgs) {
+                        sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                    }
+                } catch (ResourceNotFoundException | ResourceAlreadyExistsException ex) {
+                    throw new RuntimeException("failed to map numeric GID(s) to GroupURI(s): " + ex.toString(), ex);
                 }
             }
             sb.trimToSize();
@@ -589,9 +608,13 @@ public class NodeUtil {
             
             List<Integer> rwgids = acl.getReadWriteACL(attrs.isDirectory());
             if (!rwgids.isEmpty()) {
-                List<PosixGroup> pgs = posixMapper.getURI(rwgids);
-                for (PosixGroup pg : pgs) {
-                    sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                try {
+                    List<PosixGroup> pgs = posixMapper.getURI(rwgids);
+                    for (PosixGroup pg : pgs) {
+                        sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
+                    }
+                } catch (ResourceNotFoundException | ResourceAlreadyExistsException ex) {
+                    throw new RuntimeException("failed to map numeric GID(s) to GroupURI(s): " + ex.toString(), ex);
                 }
             }
             sb.trimToSize();
@@ -718,7 +741,8 @@ public class NodeUtil {
         }
     }
 
-    public Iterator<Node> list(ContainerNode node, VOSURI start, Integer limit) throws IOException {
+    public Iterator<Node> list(ContainerNode node, VOSURI start, Integer limit) 
+            throws IOException, InterruptedException {
         Path np = nodeToPath(root, node);
         log.debug("[list] " + node.getUri() + " -> " + np);
         VOSURI rootURI = node.getUri();

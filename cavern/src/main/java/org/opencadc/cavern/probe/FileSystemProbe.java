@@ -332,7 +332,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -401,7 +401,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -497,7 +497,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -559,7 +559,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -633,7 +633,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -700,7 +700,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -749,7 +749,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -823,7 +823,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -892,7 +892,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -941,7 +941,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -1026,7 +1026,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
@@ -1104,7 +1104,7 @@ public class FileSystemProbe implements Callable<Boolean> {
                 log.error(sb.toString());
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             log.error("FAIL", ex);
             return false;
         }
