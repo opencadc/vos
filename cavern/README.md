@@ -73,6 +73,11 @@ but it can generate plain URLs.
 The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount. 
 See <a href="https://github.com/opencadc/vos/tree/master/cavern-sshd">cavern-sshd</a> for cavern SSHD support.
 
+### cadcproxy.pem (optional)
+This client certificate may be required to make authenticated server-to-server calls for system-level A&A purposes.
+Specifically, this is needed for the CADC access-control system support and can be used to call a local
+`posix-mapper` service to map between uid/gid(s) and username/groupname(s).
+
 ## building
 ```
 gradle clean build

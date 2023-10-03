@@ -67,7 +67,9 @@
 
 package org.opencadc.cavern.nodes;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
@@ -97,6 +99,9 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.security.cert.CertificateException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -146,10 +151,14 @@ public class NodeUtil {
     );
 
     private final Path root;
-    private final PosixMapperClient posixMapper;
     
-    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
+    private final PosixMapperClient posixMapper;
+    private final Map<GroupURI,PosixGroup> groupCache = new TreeMap<>();
+    private final Map<Integer,PosixGroup> gidCache = new TreeMap<>();
+    
+    
     private final PosixIdentityManager identityManager = new PosixIdentityManager();
+    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
     
     public NodeUtil(Path root) {
         this.root = root;
@@ -158,9 +167,10 @@ public class NodeUtil {
         // only require a group mapper because IVOA GMS does not include numeric gid
         // assume user mapper is the same service
         URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new PosixMapperClient(posixMapperID);
+        this.posixMapper = new MyPosixMapperClient(posixMapperID);
     }
     
+    // FileSystemNodePersistence can prime the cache with caller
     public PosixPrincipal addToCache(Subject s) {
         if (s == null || s.getPrincipals().isEmpty()) {
             // anon request
@@ -175,6 +185,7 @@ public class NodeUtil {
         return pp;
     }
     
+    // FileSystemNodePersistence uses the cache to resolve owner
     public Subject getFromCache(PosixPrincipal pp) {
         Subject so = identityCache.get(pp);
         if (so == null) {
@@ -182,6 +193,72 @@ public class NodeUtil {
             addToCache(so);
         }
         return so;
+    }
+    
+    private List<PosixGroup> getFromGroupCache(List<GroupURI> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        log.warn("getFromGidCache: " + input.size());
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<GroupURI> cacheMiss = new ArrayList<>();
+        for (GroupURI g : input) {
+            PosixGroup pg = gidCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("gidCache miss: " + g);
+            } else {
+                log.warn("gidCache hit  : " + g);
+                ret.add(pg);
+            }
+        }
+        if (!cacheMiss.isEmpty()) {
+            try {
+                log.warn("posixMapper.getURI: " + cacheMiss.size());
+                List<PosixGroup> mpg = posixMapper.getGID(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
+        }
+        
+        return ret;
+    }
+    
+    // this must return a list created with just the specified gid(s)
+    // and not the whole cache
+    private List<PosixGroup> getFromGidCache(List<Integer> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        log.warn("getFromGidCache: " + input.size());
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<Integer> cacheMiss = new ArrayList<>();
+        for (Integer g : input) {
+            PosixGroup pg = gidCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("gidCache miss: " + g);
+            } else {
+                log.warn("gidCache hit  : " + g);
+                ret.add(pg);
+            }
+        }
+        if (!cacheMiss.isEmpty()) {
+            try {
+                log.warn("posixMapper.getURI: " + cacheMiss.size());
+                List<PosixGroup> mpg = posixMapper.getURI(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
+        }
+        
+        return ret;
     }
 
     public static Path nodeToPath(Path root, Node node) {
@@ -325,7 +402,7 @@ public class NodeUtil {
                             }
                             if (!guris.isEmpty()) {
                                 try {
-                                    List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                    List<PosixGroup> pgs = getFromGroupCache(guris);
                                     // TODO: check if any input groups were not resolved/acceptable and do what??
                                     for (PosixGroup pg : pgs) {
                                         readGroupPrincipals.add(pg.getGID());
@@ -364,7 +441,7 @@ public class NodeUtil {
                             }
                             if (!guris.isEmpty()) {
                                 try {
-                                    List<PosixGroup> pgs = posixMapper.getGID(guris);
+                                    List<PosixGroup> pgs = getFromGroupCache(guris);
                                     // TODO: check if any input groups were not resolved/acceptable and do what??
                                     for (PosixGroup pg : pgs) {
                                         writeGroupPrincipals.add(pg.getGID());
@@ -587,11 +664,12 @@ public class NodeUtil {
             }
             
             AclCommandExecutor acl = new AclCommandExecutor(p);
+            // TODO: could collect all gids from read-only and read-write and prime the gid cache in 1 call instead of 2
             StringBuilder sb = new StringBuilder();
             List<Integer> rogids = acl.getReadOnlyACL(attrs.isDirectory());
             if (!rogids.isEmpty()) {
                 try {
-                    List<PosixGroup> pgs = posixMapper.getURI(rogids);
+                    List<PosixGroup> pgs = getFromGidCache(rogids);
                     for (PosixGroup pg : pgs) {
                         sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
                     }
@@ -609,7 +687,7 @@ public class NodeUtil {
             List<Integer> rwgids = acl.getReadWriteACL(attrs.isDirectory());
             if (!rwgids.isEmpty()) {
                 try {
-                    List<PosixGroup> pgs = posixMapper.getURI(rwgids);
+                    List<PosixGroup> pgs = getFromGidCache(rwgids);
                     for (PosixGroup pg : pgs) {
                         sb.append(pg.getGroupURI().getURI().toASCIIString()).append(" ");
                     }
@@ -839,10 +917,127 @@ public class NodeUtil {
 
     // temporarily assume default GID == UID
     public static Integer getDefaultGroup(PosixPrincipal user) throws IOException {
-        // TODO: use PosixMapperClient directly to get default group??
         if (user.defaultGroup != null) {
             return user.defaultGroup;
         }
         throw new RuntimeException("CONFIG or BUG: posix principal default group is null");
+    }
+    
+    // HACK: extension wrapper to figure out how to auth the posix mapper calls used above
+    private class MyPosixMapperClient extends PosixMapperClient {
+
+        private final URI resourceID;
+        
+        public MyPosixMapperClient(URI resourceID) {
+            super(resourceID);
+            this.resourceID = resourceID;
+        }
+
+        private final List<PosixGroup> doURI(List<Integer> groups)
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            return super.getURI(groups);
+        }
+        
+        private final List<PosixGroup> doGID(List<GroupURI> groups)
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            return super.getGID(groups);
+        }
+        
+        @Override
+        public List<PosixGroup> getURI(List<Integer> groups) 
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            Subject s = getUsableSubject();
+            try {
+                return Subject.doAs(s, new PrivilegedExceptionAction<List<PosixGroup>>() {
+                    @Override
+                    public List<PosixGroup> run() throws Exception {
+                        return doURI(groups);
+                    }
+                });
+            } catch (PrivilegedActionException ex) {
+                Exception cause = ex.getException();
+                if (cause instanceof ResourceAlreadyExistsException) {
+                    throw (ResourceAlreadyExistsException) cause;
+                }
+                if (cause instanceof ResourceNotFoundException) {
+                    throw (ResourceNotFoundException) cause;
+                }
+                throw new RuntimeException("failed to call " + resourceID);
+            }
+        }
+
+        @Override
+        public List<PosixGroup> getGID(List<GroupURI> groups) 
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            Subject s = getUsableSubject();
+            try {
+                return Subject.doAs(s, new PrivilegedExceptionAction<List<PosixGroup>>() {
+                    @Override
+                    public List<PosixGroup> run() throws Exception {
+                        return doGID(groups);
+                    }
+                });
+            } catch (PrivilegedActionException ex) {
+                Exception cause = ex.getException();
+                if (cause instanceof ResourceAlreadyExistsException) {
+                    throw (ResourceAlreadyExistsException) cause;
+                }
+                if (cause instanceof ResourceNotFoundException) {
+                    throw (ResourceNotFoundException) cause;
+                }
+                throw new RuntimeException("failed to call " + resourceID);
+            }
+        }
+
+        private Subject doAugment(Subject subject)
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            return super.augment(subject);
+        }
+        
+        @Override
+        public Subject augment(Subject subject) 
+                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
+            Subject s = getUsableSubject();
+            try {
+                return Subject.doAs(s, new PrivilegedExceptionAction<Subject>() {
+                    @Override
+                    public Subject run() throws Exception {
+                        doAugment(subject);
+                        return null;
+                    }
+                });
+            } catch (PrivilegedActionException ex) {
+                Exception cause = ex.getException();
+                if (cause instanceof ResourceAlreadyExistsException) {
+                    throw (ResourceAlreadyExistsException) cause;
+                }
+                if (cause instanceof ResourceNotFoundException) {
+                    throw (ResourceNotFoundException) cause;
+                }
+                throw new RuntimeException("failed to call " + resourceID);
+            }
+        }
+        
+        private Subject getUsableSubject() {
+            // option 1: use caller
+            Subject cur = AuthenticationUtil.getCurrentSubject();
+            try {
+                if (CredUtil.checkCredentials(cur)) {
+                    return cur;
+                }
+            } catch (CertificateException ex) {
+                log.debug("delegated proxy cert invalid, continuing with backup plan", ex);
+            }
+            
+            // option 2: use A&A ops
+            try {
+                return CredUtil.createOpsSubject();
+            } catch (Exception ex) {
+                log.debug("failed to create ops subject, continuing anonymously", ex);
+            }
+            
+            // option 3: use anon
+            return AuthenticationUtil.getAnonSubject();
+        }
     }
 }
