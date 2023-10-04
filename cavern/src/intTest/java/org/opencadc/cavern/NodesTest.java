@@ -62,34 +62,31 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
 */
 
 package org.opencadc.cavern;
 
-
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
 import java.net.URI;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
- *
+ * Test the nodes endpoint.
+ * 
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
+public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
+    private static final Logger log = Logger.getLogger(NodesTest.class);
+
     static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-
+        Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
     }
-
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    
+    public NodesTest() {
+        super(Constants.RESOURCE_ID, "cavern-test.pem");
     }
 }

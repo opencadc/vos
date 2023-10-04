@@ -1,15 +1,11 @@
 plugins {
     id 'war'
-    id 'application'
     id 'checkstyle'
 }
 
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url "https://maven.restlet.talend.com"
-    }
 }
 
 apply from: '../opencadc.gradle'
@@ -19,33 +15,11 @@ sourceCompatibility = 1.8
 group = 'org.opencadc'
 
 war {
-    // Include the private key for preauthorized transfers
-    from(System.getenv('A') + '/etc/') {
-        into 'WEB-INF/classes/'
-        include 'CavernPub.key'
-        include 'CavernPriv.key'
-    }
-    // Include the delegation private key for scoped token
-    // requests
-    from(System.getenv('A') + '/etc/') {
-        into 'WEB-INF/classes/'
-        include 'RsaSignaturePub.key'
-    }
-
-    // Include the swagger-ui so that /vospace provides the VOSpace API documentation
+    // Include the swagger-ui so that /cavern provides the VOSpace API documentation
     from(System.getenv('RPS') + '/resources/') {
         include 'swagger-ui/'
     }
 }
-
-sourceSets {
-    test {
-        resources.srcDirs += 'src/test/resources'
-    }
-}
-
-
-mainClassName = 'org.opencadc.cavern.probe.Main'
 
 dependencies {
     providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'
@@ -54,23 +28,22 @@ dependencies {
     implementation 'xerces:xercesImpl:[2.0,)'
     implementation 'commons-net:commons-net:[2.0,)'
 
-    implementation 'org.opencadc:cadc-util:[1.9.0,)'
-    implementation 'org.opencadc:cadc-util-fs:[1.0.0,)'
+    implementation 'org.opencadc:cadc-util:[1.9.11,)'
+    implementation 'org.opencadc:cadc-util-fs:[1.1.0,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'
-    implementation 'org.opencadc:cadc-registry:[1.5.9,)'
+    implementation 'org.opencadc:cadc-registry:[1.7.2,)'
     implementation 'org.opencadc:cadc-vosi:[1.4.3,)'
     implementation 'org.opencadc:cadc-rest:[1.3.14,)'
     implementation 'org.opencadc:cadc-uws:[1.0.3,)'
     implementation 'org.opencadc:cadc-uws-server:[1.2.9,)'
     implementation 'org.opencadc:cadc-cdp:[1.0,)'
-    implementation 'org.opencadc:cadc-gms:[1.0.0,)'
-    implementation 'org.opencadc:cadc-vos:[1.2.3,2.0)'
-    implementation 'org.opencadc:cadc-vos-server:[1.3,2.0)'
+    implementation 'org.opencadc:cadc-gms:[1.0.7,)'
+    implementation 'org.opencadc:cadc-vos:[2.0,)'
+    implementation 'org.opencadc:cadc-vos-server-alt:[2.0,)'
     implementation 'org.opencadc:cadc-dali:[1.0,)'
     implementation 'org.opencadc:cadc-pkg-server:[1.1.2,)'
 
-    runtimeOnly 'org.restlet.jee:org.restlet.ext.spring:2.0.2'
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
 
     testImplementation 'junit:junit:[4.0,)'
@@ -79,6 +52,6 @@ dependencies {
     testImplementation 'org.opencadc:cadc-test-uws:[1.0,)'
     testImplementation 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
-    intTestImplementation 'org.opencadc:cadc-test-vos:[1.1.0,)'
+    intTestImplementation 'org.opencadc:cadc-test-vos:[2.0,)'
     intTestImplementation 'org.opencadc:cadc-test-vosi:[1.0.11,)'
 }

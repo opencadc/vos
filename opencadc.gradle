@@ -21,6 +21,7 @@ checkstyle {
 sourceSets {
     test {
         resources.srcDirs += 'src/test/resources'
+        resources.srcDirs += new File(System.getenv('A') + '/test-certificates/')
     }
     intTest {
         java {
