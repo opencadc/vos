@@ -102,6 +102,7 @@ public class UpdateNodeAction extends NodeAction {
 
         // get parent container node
         // TBD: resolveLinks=true?
+        voSpaceAuthorizer.setDisregardLocks(true); // locks don't apply to properties updates
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {

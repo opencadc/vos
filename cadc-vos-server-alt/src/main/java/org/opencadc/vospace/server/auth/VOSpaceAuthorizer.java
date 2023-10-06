@@ -85,6 +85,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.gms.IvoaGroupClient;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeLockedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -123,11 +124,18 @@ public class VOSpaceAuthorizer {
 
     private final Profiler profiler = new Profiler(VOSpaceAuthorizer.class);
 
+    private boolean disregardLocks = false;
+
     public VOSpaceAuthorizer(NodePersistence nodePersistence) {
         if (nodePersistence == null) {
             throw new IllegalStateException("BUG: nodePersistence cannot be null");
         }
         this.nodePersistence = nodePersistence;
+    }
+
+    public void setDisregardLocks(boolean disregardLocks)
+    {
+        this.disregardLocks = disregardLocks;
     }
 
     /*
@@ -214,6 +222,11 @@ public class VOSpaceAuthorizer {
      */
     public boolean hasSingleNodeWritePermission(Node node, Subject subject) {
         log.debug("hasSingleNodeWritePermission: " + Utils.getPath(node));
+
+        if ( !disregardLocks && (node.isLocked != null) && node.isLocked) {
+            log.debug("Node locked");
+            return false;
+        }
         if (subject != null) {
             if (isOwner(node, subject)) {
                 log.debug("Node owner granted write permission.");
