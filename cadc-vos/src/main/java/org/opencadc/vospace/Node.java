@@ -123,24 +123,19 @@ public abstract class Node extends Entity implements Comparable<Node> {
     public Object ownerID;
     
     public Boolean isPublic;
+    public transient boolean clearIsPublic = false;
+    
     public Boolean isLocked;
+    public transient boolean clearIsLocked = false;
     
     private final Set<GroupURI> readOnlyGroup = new TreeSet<>();
+    public transient boolean clearReadOnlyGroups = false;
+    
     private final Set<GroupURI> readWriteGroup = new TreeSet<>();
+    public transient boolean clearReadWriteGroups = false;
     
     private final Set<NodeProperty> properties = new TreeSet<>();
 
-    // To be used by controlling applications as they wish.
-    //public transient Object appData; // do not include in metaChecksum
-    
-    // track version of vospace the client appeared to use in request??
-    //public transient int version = VOS.VOSPACE_21; // do not include in metaChecksum
-
-    /**
-     * Node constructor.
-     *
-     * @param name The name of the node.
-     */
     protected Node(String name) {
         super(false);
         NodeUtil.assertNotNull(Node.class, "name", "name");

@@ -85,6 +85,7 @@ public class ContainerNode extends Node {
 
     // true meeans new child nodes inherit permissions from this container node
     public Boolean inheritPermissions;
+    public transient boolean clearInheritPermissions = false;
 
     // The list of child nodes.
     private final transient List<Node> childNodes = new ArrayList<>();
