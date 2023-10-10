@@ -72,8 +72,8 @@ package org.opencadc.conformance.vos;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
 import java.io.ByteArrayOutputStream;
 import java.net.MalformedURLException;
@@ -378,8 +378,7 @@ public class NodesTest extends VOSTest {
             String parentName = "testListBatches";
             URL parentURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI parentURI = getVOSURI(parentName);
-            ContainerNode parent = new ContainerNode(parentName);
-            
+
             // cleanup
             for (String n : childNames) {
                 String child1Path = parentName + "/" + n;
@@ -387,7 +386,8 @@ public class NodesTest extends VOSTest {
                 delete(curl, false);
             }
             delete(parentURL, false);
-            
+
+            ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
             put(parentURL, parentURI, parent);
 
@@ -474,8 +474,7 @@ public class NodesTest extends VOSTest {
             String parentName = "testLimit";
             URL parentURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI parentURI = getVOSURI(parentName);
-            ContainerNode parent = new ContainerNode(parentName);
-            
+
             // cleanup
             for (String n : childNames) {
                 String child1Path = parentName + "/" + n;
@@ -483,7 +482,8 @@ public class NodesTest extends VOSTest {
                 delete(curl, false);
             }
             delete(parentURL, false);
-            
+
+            ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
             put(parentURL, parentURI, parent);
 
@@ -729,7 +729,7 @@ public class NodesTest extends VOSTest {
     }
 
     private void cleanupNodeTree(String[] nodes) throws MalformedURLException {
-        for (int i = nodes.length - 1; i>=0; i--) {
+        for (int i = nodes.length - 1; i >= 0; i--) {
             URL nodeURL = getNodeURL(nodesServiceURL, nodes[i]);
             log.debug("deleting node " + nodeURL);
             delete(nodeURL, false);
