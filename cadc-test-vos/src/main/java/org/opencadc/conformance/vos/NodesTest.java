@@ -394,7 +394,7 @@ public class NodesTest extends VOSTest {
     }
 
     @Test
-    public void testInheritPermissions() throws Exception{
+    public void testInheritPermissions() throws Exception {
         // create a fully populated container node
         String path = "inheritperm";
 
@@ -413,14 +413,14 @@ public class NodesTest extends VOSTest {
         subDirNode.isPublic = null;
 
         URL nodeURL = getNodeURL(nodesServiceURL, path);
-        VOSURI nodeURI = getVOSURI(path);
         URL subDirURL = getNodeURL(nodesServiceURL, subDir);
-        VOSURI subDirURI = getVOSURI(subDir);
 
         // cleanup
         delete(subDirURL, false);
         delete(nodeURL, false);
 
+        VOSURI nodeURI = getVOSURI(path);
+        VOSURI subDirURI = getVOSURI(subDir);
         log.info("put: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
         log.info("put: " + subDirURI + " -> " + subDirURL);
