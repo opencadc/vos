@@ -93,6 +93,8 @@ import org.opencadc.vospace.transfer.Direction;
 public class NodesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
 
+    protected boolean linkNodeProps = true;
+    
     protected NodesTest(URI resourceID, String testCertFilename) {
         super(resourceID, testCertFilename);
     }
@@ -202,8 +204,9 @@ public class NodesTest extends VOSTest {
             String name = "testLinkNode";
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
-            LinkNode testNode = new LinkNode(name, URI.create("target"));
-
+            VOSURI targetURI = getVOSURI("target");
+            LinkNode testNode = new LinkNode(name, targetURI.getURI());
+            log.info("link node: " + nodeURI + " -> " + targetURI);
             // cleanup
             delete(nodeURL, false);
             
@@ -221,21 +224,23 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(testNode.getTarget(), persistedNode.getTarget());
             Assert.assertEquals(testNode.getName(), persistedNode.getName());
 
-            // POST an update to the node
-            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            testNode.getProperties().add(nodeProperty);
-            post(nodeURL, nodeURI, testNode);
+            if (linkNodeProps) {
+                // POST an update to the node
+                NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
+                testNode.getProperties().add(nodeProperty);
+                post(nodeURL, nodeURI, testNode);
 
-            // GET the updated node
-            result = get(nodeURL, 200, XML_CONTENT_TYPE);
-            Assert.assertTrue(result.node instanceof LinkNode);
-            LinkNode updatedNode = (LinkNode) result.node;
-            Assert.assertEquals(testNode, updatedNode);
-            Assert.assertEquals(nodeURI, result.vosURI);
-            Assert.assertEquals(testNode.getTarget(), updatedNode.getTarget());
-            Assert.assertEquals(testNode.getName(), updatedNode.getName());
-            Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
-
+                // GET the updated node
+                result = get(nodeURL, 200, XML_CONTENT_TYPE);
+                Assert.assertTrue(result.node instanceof LinkNode);
+                LinkNode updatedNode = (LinkNode) result.node;
+                Assert.assertEquals(testNode, updatedNode);
+                Assert.assertEquals(nodeURI, result.vosURI);
+                Assert.assertEquals(testNode.getTarget(), updatedNode.getTarget());
+                Assert.assertEquals(testNode.getName(), updatedNode.getName());
+                Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
+            }
+            
             // DELETE the node
             delete(nodeURL);
 

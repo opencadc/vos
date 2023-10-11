@@ -71,23 +71,15 @@ package org.opencadc.vospace.server;
 
 import java.lang.reflect.Constructor;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.MissingResourceException;
-import java.util.ResourceBundle;
+import java.util.TreeMap;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.VOS;
 
 
 /**
- * The class Views is responsible for loading the views from Views.properties and
- * for creating instances of views through method getView(String viewReference)
- * where viewReference can either be the alias or URI of a view that has been loaded
- * from configuration.
  *
  * @author majorb
  */
@@ -103,37 +95,36 @@ public class Views {
     private static final String KEY_VIEW_CLASS = "class";
     private static final String KEY_VIEW_ACCEPTS = "accepts";
     private static final String KEY_VIEW_PROVIDES = "provides";
+    
     // The maps of configured view classes
-    private static Map<URI, Class<AbstractView>> uriViewMap;
-    private static Map<URI, Class<AbstractView>> aliasViewMap;
+    private final Map<URI, Class<AbstractView>> uriViewMap = new TreeMap<>();
+    private final Map<URI, Class<AbstractView>> aliasViewMap = new TreeMap<>();
+    
     // The list of accepting views
-    private static List<URI> accepts;
+    private final List<URI> accepts = new ArrayList<>();
     // The list of providing views
-    private static List<URI> provides;
+    private final List<URI> provides = new ArrayList<>();
 
     // Load the views upon class loading.
-    static {
-        loadConfiguredViews();
-    }
+    //static {
+    //    loadConfiguredViews();
+    //}
 
     /**
      * Get the list of accepts URIs.
      */
-    public static List<URI> accepts() {
+    public List<URI> accepts() {
         return accepts;
     }
 
     /**
      * Get the list of provides URIs.
      */
-    public static List<URI> provides() {
+    public List<URI> provides() {
         return provides;
     }
 
-    /**
-     * Load the view aliases, uri, and classes from Views.properties
-     */
-    @SuppressWarnings("unchecked")
+    /*
     private static void loadConfiguredViews() {
         ResourceBundle rb;
         try {
@@ -228,7 +219,8 @@ public class Views {
         }
 
     }
-
+    */
+    
     /**
      * Given a viewReference, return a new instance of the associated view or
      * null if no mapping exists for the viewReference.

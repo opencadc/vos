@@ -162,7 +162,8 @@ public class VOSpaceAuthorizer {
      * @throws AccessControlException If permission is denied.
      */
     public boolean hasSingleNodeReadPermission(Node node, Subject subject) {
-        log.debug("hasSingleNodeReadPermission: " + Utils.getPath(node));
+        log.debug("hasSingleNodeReadPermission: " + Utils.getPath(node)
+            + "\n" + node);
 
         if ((node.isPublic != null) && node.isPublic) {
             return true; // OK
