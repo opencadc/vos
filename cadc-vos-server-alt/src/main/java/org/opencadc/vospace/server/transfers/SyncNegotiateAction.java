@@ -63,7 +63,7 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.vospace.server.transfers;
 
@@ -76,13 +76,14 @@ import org.apache.log4j.Logger;
  * to handle both GET and POST on the synctrans endpoint. It also does not implement
  * the complete VOSpace-2.1 synctrans spec in that it never redirects to a separate
  * tansfer details endpoint to create the result.
- * 
+ *
  * @author pdowler
  */
 public class SyncNegotiateAction extends RestAction {
+
     private static final Logger log = Logger.getLogger(SyncNegotiateAction.class);
 
-    public SyncNegotiateAction() { 
+    public SyncNegotiateAction() {
     }
 
     @Override
@@ -94,6 +95,5 @@ public class SyncNegotiateAction extends RestAction {
     public void doAction() throws Exception {
         throw new UnsupportedOperationException();
     }
-    
-    
+
 }

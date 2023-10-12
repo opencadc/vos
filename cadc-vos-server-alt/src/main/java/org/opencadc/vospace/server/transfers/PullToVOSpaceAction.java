@@ -65,7 +65,7 @@
 *  $Revision: 5 $
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.vospace.server.transfers;
 
@@ -87,18 +87,16 @@ import org.opencadc.vospace.transfer.TransferParsingException;
  *
  * @author pdowler
  */
-public class PullToVOSpaceAction   extends VOSpaceTransfer
-{
-    public PullToVOSpaceAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
-    {
+public class PullToVOSpaceAction extends VOSpaceTransfer {
+
+    public PullToVOSpaceAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
     }
 
     public void doAction()
-        throws JobPersistenceException, JobNotFoundException,
-        LinkingException, NodeNotFoundException, TransferParsingException,
-        IOException, TransientException, URISyntaxException
-    {
+            throws JobPersistenceException, JobNotFoundException,
+            LinkingException, NodeNotFoundException, TransferParsingException,
+            IOException, TransientException, URISyntaxException {
         throw new UnsupportedOperationException(Direction.pullToVoSpaceValue + " not implemented");
     }
 }

@@ -139,8 +139,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
             // move or copy?
             VOSURI srcURI = new VOSURI(transfer.getTargets().get(0));
             VOSURI destURI = new VOSURI(transfer.getDirection().getValue());
-            if (transfer.isKeepBytes()) // copy
-            {
+            if (transfer.isKeepBytes()) {
                 throw new UnsupportedOperationException("copyNode is not implemented");
             }
 
@@ -171,7 +170,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 throw new TransferException("destination is not a container");
             }
             if (destName == null) {
-                 // destURI is not an existing container: move and/or rename
+                // destURI is not an existing container: move and/or rename
                 // keep destContainer === destParent == destURI.getParent
                 destName = destURI.getName();
             }
@@ -189,7 +188,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
                     throw NodeFault.PermissionDenied.getStatus(loc.getURI(srcNode).getPath());
                 }
             }
-            
+
             log.debug("src permissions OK: " + srcURI + " -> " + destURI);
 
             // check authorization
@@ -225,7 +224,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
             // TODO? 
         }
     }
-    
+
     private void checkRecursiveWritePermission(ContainerNode containderNode, Subject subject, LocalServiceURI loc) throws Exception {
         // collect child containers for later
         List<ContainerNode> childContainers = new ArrayList<>();

@@ -404,12 +404,12 @@ public class TransferRunner implements JobRunner {
         }
     }
 
-    protected void sendError(ErrorType errorType, String message, int code)
+    private void sendError(ErrorType errorType, String message, int code)
             throws JobNotFoundException, JobPersistenceException, IOException, TransientException {
         sendError(null, errorType, message, code, false);
     }
 
-    protected void sendError(ExecutionPhase current, ErrorType errorType, String message, int code, boolean success)
+    private void sendError(ExecutionPhase current, ErrorType errorType, String message, int code, boolean success)
             throws JobNotFoundException, JobPersistenceException, IOException, TransientException {
         logInfo.setSuccess(success);
         logInfo.setMessage(message);
@@ -427,8 +427,8 @@ public class TransferRunner implements JobRunner {
         log.debug(job.getID() + ": " + current + " -> ERROR [OK]");
         job.setExecutionPhase(ep);
 
-        if (!job.getParameterList().isEmpty()) // custom param-based negotiation
-        {
+        if (!job.getParameterList().isEmpty()) {
+            // custom param-based negotiation
             try {
                 log.debug("Setting response code to: " + code);
                 syncOutput.setResponseCode(code);
@@ -443,11 +443,7 @@ public class TransferRunner implements JobRunner {
         }
     }
 
-    /**
-     * @param direction
-     * @return
-     */
-    protected boolean isValidDirection(Direction direction, boolean syncParamRequest) {
+    private boolean isValidDirection(Direction direction, boolean syncParamRequest) {
         if (direction == null || direction.getValue() == null) {
             return false;
         }

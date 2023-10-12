@@ -112,6 +112,8 @@ public class Views {
 
     /**
      * Get the list of accepts URIs.
+     * 
+     * @return list of supported view identifiers
      */
     public List<URI> accepts() {
         return accepts;
@@ -119,6 +121,8 @@ public class Views {
 
     /**
      * Get the list of provides URIs.
+     * 
+     * @return list of supported view identifiers
      */
     public List<URI> provides() {
         return provides;

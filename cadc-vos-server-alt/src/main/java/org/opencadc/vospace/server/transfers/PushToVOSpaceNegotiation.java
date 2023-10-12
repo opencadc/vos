@@ -132,7 +132,7 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
                 throw new TransferException("parent is not a container node");
             }
             ContainerNode parent = (ContainerNode) n;
-            
+
             //Node node = resolveNodeForWrite(authorizer, nodePersistence, target, DataNode.class, true, true, true);
             Node node = nodePersistence.get(parent, target.getName());
             log.debug("Resolved path: " + target + " -> " + node);
@@ -155,7 +155,6 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             //if (busy == VOS.NodeBusyState.busyWithWrite) {
             //    throw new NodeBusyException("node is busy with write");
             //}
-
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
             updateTransferJob(node, loc.getURI(node).getURI(), ExecutionPhase.EXECUTING);
             updated = true;
@@ -229,5 +228,5 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
 
         }
     }
-    */
+     */
 }

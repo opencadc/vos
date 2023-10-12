@@ -139,7 +139,7 @@ public class TransferDetailsServlet extends HttpServlet {
         } catch (Exception ex) {
             log.error("CONFIGURATION ERROR: failed to load " + JOB_MANAGER, ex);
         }
-        
+
         // ugh: recreate cadc-rest appName
         String appName = config.getServletContext().getServletContextName();
         String jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
@@ -267,7 +267,6 @@ public class TransferDetailsServlet extends HttpServlet {
                         && TEXT_XML.equals(jobInfo.getContentType())) {
                     TransferReader reader = new TransferReader();
                     Transfer transfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
-                    Direction dir = transfer.getDirection();
 
                     // Check early to see if this is a package transfer request
                     boolean isPackageTransfer = false;
@@ -302,21 +301,21 @@ public class TransferDetailsServlet extends HttpServlet {
                         // Multiple targets are currently only supported for package transfers
                         throw new UnsupportedOperationException("More than one target found. (" + transfer.getTargets().size() + ")");
                     }
-                    
+
+                    Direction dir = transfer.getDirection();
                     if (dir.equals(Direction.pushToVoSpace) || dir.equals(Direction.pullFromVoSpace) || dir.equals(Direction.BIDIRECTIONAL)) {
-                        List<Parameter> additionalParams = new ArrayList<Parameter>(0);
-                        VOSURI target = new VOSURI(transfer.getTargets().get(0));
-                        List<Protocol> protos = transferGen.getEndpoints(target, transfer, job, additionalParams);
+                        final List<Parameter> additionalParams = new ArrayList<>(0);
 
                         // Set up the base transfer result. Targets are added in next conditional section
                         Transfer result = new Transfer(dir);
 
-                        // Bring over transfer information that hasn't changed
-                        result.getTargets().addAll(transfer.getTargets());
+                        VOSURI target = new VOSURI(transfer.getTargets().get(0));
+                        result.getTargets().add(target.getURI());
                         result.version = transfer.version;
                         result.setContentLength(transfer.getContentLength());
 
                         // Add protocol list with endpoints just built
+                        List<Protocol> protos = transferGen.getEndpoints(target, transfer, job, additionalParams);
                         result.getProtocols().addAll(protos);
                         result.setView(transfer.getView());
 
@@ -330,9 +329,8 @@ public class TransferDetailsServlet extends HttpServlet {
                         return null;
                     } else if (dir.equals(Direction.pushFromVoSpace) || dir.equals(Direction.pullToVoSpace)) {
                         throw new UnsupportedOperationException("not implemented");
-                    } else if (dir.getValue().startsWith("vos")) // move or copy
-                    {
-                        // Get the Output
+                    } else if (dir.getValue().startsWith("vos")) {
+                        // move or copy
                         response.setContentType("text/xml");
                         Writer out = response.getWriter();
 

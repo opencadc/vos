@@ -63,7 +63,7 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.vospace.server.transfers;
 
@@ -94,12 +94,12 @@ import org.opencadc.vospace.transfer.TransferParsingException;
  * @author pdowler
  */
 public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
+
     private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
 
     private VOSpaceAuthorizer authorizer;
 
-    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer)
-    {
+    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
         this.authorizer = new VOSpaceAuthorizer(nodePersistence);
     }
@@ -120,12 +120,11 @@ public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
             if (!(node instanceof ContainerNode)) {
                 throw new TransferException("node is not a container node");
             }
-            
+
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
             updateTransferJob(node, loc.getURI(node).getURI(), ExecutionPhase.EXECUTING);
             updated = true;
-        }
-        finally {
+        } finally {
             if (!updated) {
                 updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
             }

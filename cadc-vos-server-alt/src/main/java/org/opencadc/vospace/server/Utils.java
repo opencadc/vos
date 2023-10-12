@@ -117,6 +117,7 @@ public class Utils {
     /**
      * Get a linked list of nodes from leaf to root.
      *
+     * @param leaf leaf node
      * @return list of nodes, with leaf first and root last
      */
     public static LinkedList<Node> getNodeList(Node leaf) {
@@ -141,14 +142,12 @@ public class Utils {
         return sb.toString();
     }
 
-
     /**
      * Takes a set of old properties and updates it with a new set of properties. Essentially
      * this means updating values or removing and adding elements. It is not a straight replacement.
      *
-     * @param oldProps set of old Node Propertis that are being update
+     * @param oldProps set of old Node Properties that are being updated
      * @param newProps set of new Node Properties to be used for the update
-     * @return
      */
     public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
         for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {

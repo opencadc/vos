@@ -100,6 +100,7 @@ import org.opencadc.vospace.transfer.TransferParsingException;
  * @author pdowler
  */
 public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
+
     private static final Logger log = Logger.getLogger(PullFromVOSpaceNegotiation.class);
 
     private VOSpaceAuthorizer authorizer;
@@ -124,8 +125,7 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
             super.validateView();
         }
     }
-    */
-    
+     */
     @Override
     public void doAction() throws Exception {
         boolean updated = false;
@@ -156,8 +156,7 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
                 updated = true;
                 return;
             }
-            */
-            
+             */
             // Even though Transfer.java supports multiple targets, this type
             // of transfer does not yet.
             // This call confirms a single target exists or throws TransferException.
@@ -174,7 +173,6 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
                 actualNode = resolver2.getNode(target.getPath());
             }
             log.debug("Resolved path: " + target + " -> " + actualNode);
-
 
             if (!(actualNode instanceof DataNode)) {
                 throw new TransferException("target is not a data node");

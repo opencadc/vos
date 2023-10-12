@@ -69,19 +69,6 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteLimitExceededException;
@@ -94,10 +81,18 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import javax.security.auth.Subject;
+import org.apache.log4j.Logger;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeBusyException;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
@@ -106,7 +101,6 @@ import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.Views;
 import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  * Base class for all types of transfers.
@@ -142,14 +136,11 @@ public abstract class VOSpaceTransfer {
     }
 
     void validateView()
-        throws TransferException, Exception
-    {
-        if (transfer.getView() != null && !transfer.getView().getURI().equals(VOS.VIEW_DEFAULT))
-        {
+            throws TransferException, Exception {
+        if (transfer.getView() != null && !transfer.getView().getURI().equals(VOS.VIEW_DEFAULT)) {
             Views views = nodePersistence.getViews();
             View view = views.getView(transfer.getView().getURI());
-            if (view == null)
-            {
+            if (view == null) {
                 updateTransferJob(null, null, job.getExecutionPhase());
                 throw new TransferException("ViewNotSupported (" + transfer.getView().getURI() + ")");
             }
