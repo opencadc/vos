@@ -70,16 +70,25 @@
 package org.opencadc.conformance.vos;
 
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.cred.client.priv.AuthorizationException;
+import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
+import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.FileUtil;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
+import org.opencadc.gms.IvoaGroupClient;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -93,8 +102,50 @@ import org.opencadc.vospace.transfer.Direction;
 public class NodesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
 
-    protected NodesTest(URI resourceID, String testCertFilename) {
+    private Subject groupMember;
+    private String groupMemberCertFilename;
+    private GroupURI accessGroup;
+
+    /**
+     * Ctor
+     * @param resourceID resource ID of the vospace service
+     * @param testCertFilename test certificate of a user with write permissions to the root of the int tests directory
+     * @param accessGroup access group required by the testPermissions test. When null, the test will be skipped
+     * @param groupMemberCertFilename certificate of a member in accessGroup that will be used with testPermissions.
+     *                                Must be present and valid when accessGroup is present.
+     */
+    protected NodesTest(URI resourceID, String testCertFilename, GroupURI accessGroup, String groupMemberCertFilename) {
         super(resourceID, testCertFilename);
+
+        if (accessGroup != null) {
+            this.accessGroup = accessGroup;
+            log.debug("access group URI: " + this.accessGroup);
+            this.groupMemberCertFilename = groupMemberCertFilename;
+            File testCert = FileUtil.getFileFromResource(this.groupMemberCertFilename, NodesTest.class);
+            this.groupMember = SSLUtil.createSubject(testCert);
+            log.debug("groupMember: " + groupMember.toString());
+
+            try {
+                Subject.doAs(groupMember, new PrivilegedExceptionAction<Void>() {
+                    public Void run() throws Exception {
+                        String displPrinc = groupMember.getPrincipals().iterator().next().getName();
+                        try {
+                            IvoaGroupClient gmsClient = new IvoaGroupClient();
+                            if (gmsClient.isMember(accessGroup)) {
+                                return null;
+                            }
+                        } catch (Exception ex) {
+                            log.error("Group (" + accessGroup + ") membership for user " + displPrinc + " failed", ex);
+                            throw ex;
+                        }
+                        throw new RuntimeException("User " + displPrinc + " not a member of group " + accessGroup);
+                    }
+                });
+            } catch (Exception e) {
+                Assert.fail("Group membership: " + e.getMessage());
+            }
+
+        }
     }
 
     @Test
@@ -253,9 +304,8 @@ public class NodesTest extends VOSTest {
         try {
             // create a fully populated container node
             String path = "nodes-complex-node";
-            
+
             // TODO: with DataNode we could test updating content-type and content-encoding
-            // TODO: with ContainerNode we can test updating inheritPermissions
             ContainerNode testNode = new ContainerNode(path);
 
             NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
@@ -270,13 +320,14 @@ public class NodesTest extends VOSTest {
             testNode.getReadOnlyGroup().add(readGroup);
             testNode.getReadWriteGroup().add(writeGroup);
             testNode.isPublic = true;
+            testNode.inheritPermissions = true;
 
             URL nodeURL = getNodeURL(nodesServiceURL, path);
             VOSURI nodeURI = getVOSURI(path);
 
             // cleanup
             delete(nodeURL, false);
-            
+
             log.info("put: " + nodeURI + " -> " + nodeURL);
             put(nodeURL, nodeURI, testNode);
 
@@ -294,6 +345,7 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(readGroup));
             Assert.assertEquals(testNode.getReadWriteGroup().size(), persistedNode.getReadWriteGroup().size());
             Assert.assertTrue(persistedNode.getReadWriteGroup().contains(writeGroup));
+            Assert.assertTrue(persistedNode.inheritPermissions);
 
             // POST an update to the node
             NodeProperty titlePropertyDel = new NodeProperty(VOS.PROPERTY_URI_TITLE);
@@ -309,6 +361,7 @@ public class NodesTest extends VOSTest {
             testNode.getReadWriteGroup().clear();
             testNode.getReadWriteGroup().add(updatedWriteGroup);
             testNode.isPublic = false;
+            testNode.inheritPermissions = false;
 
             post(nodeURL, nodeURI, testNode);
 
@@ -326,6 +379,7 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(updatedNode.getReadOnlyGroup().contains(updatedReadGroup));
             Assert.assertEquals(testNode.getReadWriteGroup().size(), updatedNode.getReadWriteGroup().size());
             Assert.assertTrue(updatedNode.getReadWriteGroup().contains(updatedWriteGroup));
+            Assert.assertFalse(updatedNode.inheritPermissions);
 
             // DELETE the node
             delete(nodeURL);
@@ -337,6 +391,89 @@ public class NodesTest extends VOSTest {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
         }
+    }
+
+    @Test
+    public void testInheritPermissions() throws Exception {
+        // create a fully populated container node
+        String path = "inheritperm";
+
+        ContainerNode testNode = new ContainerNode(path);
+
+        GroupURI readGroup = new GroupURI(URI.create("ivo://org.opencadc/node?ReadGroup"));
+        GroupURI writeGroup = new GroupURI(URI.create("ivo://org.opencadc/node?writeGroup"));
+        testNode.getReadOnlyGroup().add(readGroup);
+        testNode.getReadWriteGroup().add(writeGroup);
+        testNode.isPublic = false;
+        testNode.inheritPermissions = false;
+
+        String subDir = path + "/" + "subdir";
+        ContainerNode subDirNode = new ContainerNode(subDir);
+        subDirNode.inheritPermissions = false;
+        subDirNode.isPublic = null;
+
+        URL nodeURL = getNodeURL(nodesServiceURL, path);
+        URL subDirURL = getNodeURL(nodesServiceURL, subDir);
+
+        // cleanup
+        delete(subDirURL, false);
+        delete(nodeURL, false);
+
+        VOSURI nodeURI = getVOSURI(path);
+        VOSURI subDirURI = getVOSURI(subDir);
+        log.info("put: " + nodeURI + " -> " + nodeURL);
+        put(nodeURL, nodeURI, testNode);
+        log.info("put: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        // GET the new subDir node
+        NodeReader.NodeReaderResult result = get(subDirURL, 200, XML_CONTENT_TYPE);
+        ContainerNode persistedNode = (ContainerNode) result.node;
+        Assert.assertFalse(persistedNode.isPublic);  // null is saved as false
+        Assert.assertTrue(persistedNode.getReadOnlyGroup().isEmpty());
+        Assert.assertTrue(persistedNode.getReadWriteGroup().isEmpty());
+
+        // update the parent node to inherit permissions
+        delete(subDirURL);
+        testNode.inheritPermissions = true;
+        post(nodeURL, nodeURI, testNode);
+
+        log.info("put: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        // GET the new subDir node
+        result = get(subDirURL, 200, XML_CONTENT_TYPE);
+        persistedNode = (ContainerNode) result.node;
+        Assert.assertFalse(persistedNode.isPublic);
+        Assert.assertEquals(testNode.getReadOnlyGroup().size(), persistedNode.getReadOnlyGroup().size());
+        Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(readGroup));
+        Assert.assertEquals(testNode.getReadWriteGroup().size(), persistedNode.getReadWriteGroup().size());
+        Assert.assertTrue(persistedNode.getReadWriteGroup().contains(writeGroup));
+
+        // repeat the test but specify permissions on the subdirectory which inherit permissions is not supposed
+        // to override
+        delete(subDirURL);
+        subDirNode.isPublic = true;
+        GroupURI updatedReadGroup = new GroupURI(URI.create("ivo://org.opencadc/node?UpdatedReadGroup"));
+        subDirNode.getReadOnlyGroup().add(updatedReadGroup);
+        GroupURI updatedWriteGroup = new GroupURI(URI.create("ivo://org.opencadc/node?UpdatedWriteGroup"));
+        subDirNode.getReadWriteGroup().add(updatedWriteGroup);
+
+        log.info("put: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        // GET the new subDir node
+        result = get(subDirURL, 200, XML_CONTENT_TYPE);
+        persistedNode = (ContainerNode) result.node;
+        Assert.assertTrue(persistedNode.isPublic);
+        Assert.assertEquals(1, persistedNode.getReadOnlyGroup().size());
+        Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(updatedReadGroup));
+        Assert.assertEquals(1, persistedNode.getReadWriteGroup().size());
+        Assert.assertTrue(persistedNode.getReadWriteGroup().contains(updatedWriteGroup));
+
+        // cleanup
+        delete(subDirURL, false);
+        delete(nodeURL);
     }
 
     @Test
@@ -356,8 +493,7 @@ public class NodesTest extends VOSTest {
             String parentName = "testListBatches";
             URL parentURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI parentURI = getVOSURI(parentName);
-            ContainerNode parent = new ContainerNode(parentName);
-            
+
             // cleanup
             for (String n : childNames) {
                 String child1Path = parentName + "/" + n;
@@ -367,6 +503,7 @@ public class NodesTest extends VOSTest {
             delete(parentURL, false);
             
             log.info("put: " + parentURI + " -> " + parentURL);
+            ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
 
             // add 6 direct child nodes
@@ -452,8 +589,7 @@ public class NodesTest extends VOSTest {
             String parentName = "testLimit";
             URL parentURL = getNodeURL(nodesServiceURL, parentName);
             VOSURI parentURI = getVOSURI(parentName);
-            ContainerNode parent = new ContainerNode(parentName);
-            
+
             // cleanup
             for (String n : childNames) {
                 String child1Path = parentName + "/" + n;
@@ -463,6 +599,7 @@ public class NodesTest extends VOSTest {
             delete(parentURL, false);
             
             log.info("put: " + parentURI + " -> " + parentURL);
+            ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
 
             // add 3 direct child nodes
@@ -621,6 +758,82 @@ public class NodesTest extends VOSTest {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
         }
+    }
+
+    @Test
+    public void testPermissions() throws Exception {
+
+        org.junit.Assume.assumeTrue("Member group missing", accessGroup != null);
+        // create a directory
+        String parentName = "testPermissions";
+        ContainerNode testNode = new ContainerNode(parentName);
+        testNode.owner = authSubject;
+        testNode.isPublic = false;
+
+        URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+        VOSURI nodeURI = getVOSURI(parentName);
+
+        String childName = "testGroupUser";
+        ContainerNode childNode = new ContainerNode(childName);
+        childNode.parent = testNode;
+
+        // cleanup
+        delete(nodeURL, false);
+
+        // PUT the node
+        log.info("putAction: " + nodeURI + " -> " + nodeURL);
+        put(nodeURL, nodeURI, testNode);
+
+        // try to access it as a different user (memberUser) - it should fail
+        HttpGet getAction = new HttpGet(nodeURL, true);
+        Subject.doAs(groupMember, new RunnableAction(getAction));
+        Assert.assertEquals(403, getAction.getResponseCode());
+
+        // give groupMember read access through the group
+        getAction = new HttpGet(nodeURL, true);
+        testNode.getReadOnlyGroup().add(accessGroup);
+        post(nodeURL, nodeURI, testNode);
+        Subject.doAs(groupMember, new RunnableAction(getAction));
+        Assert.assertEquals("expected GET response code = 200", 200, getAction.getResponseCode());
+        Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
+
+        // permission denied to write in the container without write permission
+        String childPath = parentName + "/" + childName;
+        VOSURI childURI = getVOSURI(childPath);
+        URL childURL = getNodeURL(nodesServiceURL, childPath);
+        InputStream is = prepareInput(childURI, childNode);
+        HttpUpload putAction = new HttpUpload(is, childURL);
+        putAction.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
+        log.debug("PUT rejected " + childURL);
+        Subject.doAs(groupMember, new RunnableAction(putAction));
+        log.debug("PUT responseCode: " + putAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 403",
+                403, putAction.getResponseCode());
+
+        // same test after permission granted
+
+        testNode.getReadWriteGroup().add(accessGroup);
+        log.debug("Node update " + testNode.getReadWriteGroup());
+        post(nodeURL, nodeURI, testNode);
+        log.debug("PUT succeed " + childURL);
+        is.reset();
+        putAction = new HttpUpload(is, childURL);
+        Subject.doAs(groupMember, new RunnableAction(putAction));
+        log.debug("PUT responseCode: " + putAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 200",
+                200, putAction.getResponseCode());
+        Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
+
+        log.debug("Delete node " + childURL);
+        HttpDelete deleteAction = new HttpDelete(childURL, true);
+        Subject.doAs(groupMember, new RunnableAction(deleteAction));
+        log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 200",
+                200, deleteAction.getResponseCode());
+        Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
+
+        // cleanup
+        delete(nodeURL, false);
     }
 
 }
