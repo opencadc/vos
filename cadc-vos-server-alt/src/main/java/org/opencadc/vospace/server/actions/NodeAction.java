@@ -128,6 +128,13 @@ public abstract class NodeAction extends RestAction {
         } catch (Exception oops) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
         }
+
+        checkReadable();
+        if ((this instanceof CreateNodeAction) ||
+                (this instanceof DeleteNodeAction) || (this instanceof UpdateNodeAction)) {
+            checkWritable();
+        }
+
     }
     
     @Override

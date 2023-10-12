@@ -153,6 +153,7 @@ public abstract class VOSTest {
         URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
         VOSURI nodeURI = getVOSURI(null);
         ContainerNode testNode = new ContainerNode(name);
+        testNode.isPublic = true;
 
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
         if (result == null) {
@@ -175,24 +176,18 @@ public abstract class VOSTest {
         return new VOSURI(resourceID, ROOT_TEST_FOLDER + "/" + path);
     }
 
-    public void put(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
+    public InputStream prepareInput(VOSURI vosURI, Node node) throws IOException {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
         String xml = sb.toString();
-        log.debug("put node: " + xml);
-        InputStream in = new ByteArrayInputStream(xml.getBytes());
+        log.debug("input node: " + xml);
+        return new ByteArrayInputStream(xml.getBytes());
+    }
 
-        HttpUpload put = new HttpUpload(in, nodeURL);
-        put.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
-        log.debug("PUT " + nodeURL);
-        Subject.doAs(authSubject, new RunnableAction(put));
-        log.info("PUT response: " + put.getResponseCode() + " " + put.getThrowable());
-        
-        // TODO revert response code back to expected 201
-        Assert.assertEquals("expected PUT response code = 200",
-                            200, put.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", put.getThrowable());
+    public void put(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
+        InputStream in = prepareInput(vosURI, node);
+        put(nodeURL, in, XML_CONTENT_TYPE);
     }
 
     public void put(URL nodeURL, File file, String contentType) {
