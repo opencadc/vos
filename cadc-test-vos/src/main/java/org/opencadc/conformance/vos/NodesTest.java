@@ -118,7 +118,6 @@ public class NodesTest extends VOSTest {
      * 
      * @param group1 a valid group URI
      * @param group2 a different valid group URI
-     * @param group3 another different group URI
      */
     protected void enablePermissionPropsTest(GroupURI group1, GroupURI group2) {
         this.group1 = group1;
