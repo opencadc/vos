@@ -519,7 +519,7 @@ public class NodesTest extends VOSTest {
 
             ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
-            ContainerNode parent = new ContainerNode(parentName);
+            parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
 
             // add 6 direct child nodes
@@ -616,7 +616,7 @@ public class NodesTest extends VOSTest {
 
             ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
-            ContainerNode parent = new ContainerNode(parentName);
+            parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
 
             // add 3 direct child nodes
