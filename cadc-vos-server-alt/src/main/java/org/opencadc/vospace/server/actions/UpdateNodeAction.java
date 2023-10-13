@@ -68,6 +68,7 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
@@ -118,6 +119,10 @@ public class UpdateNodeAction extends NodeAction {
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
             throw NodeFault.PermissionDenied.getStatus(clientNodeTarget.toString());
         }
+        
+        PosixPrincipal no = (PosixPrincipal) serverNode.ownerID;
+        log.debug("server node owner: " + no.getUidNumber() + ":" + no.defaultGroup + " aka " + no.username);
+        log.debug("server node owner: " + serverNode.owner);
         
         // merge change request
         // TODO: add something to Node to differentiate if a Set<URI> property was missing or explicitly nil="true"

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,34 +62,38 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern;
+package org.opencadc.vospace.server.transfers;
 
-
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
-import java.net.URI;
-import org.apache.log4j.Level;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.rest.RestAction;
 import org.apache.log4j.Logger;
 
 /**
+ * Sync transfer negotiation action. Experiment: this class can be safely configured
+ * to handle both GET and POST on the synctrans endpoint. It also does not implement
+ * the complete VOSpace-2.1 synctrans spec in that it never redirects to a separate
+ * tansfer details endpoint to create the result.
  *
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
-    static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+public class SyncNegotiateAction extends RestAction {
 
+    private static final Logger log = Logger.getLogger(SyncNegotiateAction.class);
+
+    public SyncNegotiateAction() {
     }
 
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    @Override
+    protected InlineContentHandler getInlineContentHandler() {
+        return new InlineTransferHandler();
     }
+
+    @Override
+    public void doAction() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
 }

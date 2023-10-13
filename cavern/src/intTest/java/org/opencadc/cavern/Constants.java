@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,34 +62,22 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
 */
 
 package org.opencadc.cavern;
 
-
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
 import java.net.URI;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
  *
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
-    static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+public abstract class Constants {
 
-    }
+    public static final URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
 
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    private Constants() { 
     }
 }

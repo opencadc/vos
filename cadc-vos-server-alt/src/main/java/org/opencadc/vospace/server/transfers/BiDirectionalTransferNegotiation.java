@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2018.                            (c) 2018.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,34 +62,72 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern;
+package org.opencadc.vospace.server.transfers;
 
-
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
-import java.net.URI;
-import org.apache.log4j.Level;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeBusyException;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  *
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
-    static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
 
+    private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
+
+    private VOSpaceAuthorizer authorizer;
+
+    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
+        super(per, ju, job, transfer);
+        this.authorizer = new VOSpaceAuthorizer(nodePersistence);
     }
 
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    @Override
+    public void doAction() throws Exception {
+        boolean updated = false;
+        try {
+            // Even though Transfer.java supports multiple targets, this type
+            // of transfer does not.
+            // This call confirms a single target exists or throws TransferException.
+            confirmSingleTarget(transfer);
+            VOSURI target = new VOSURI(transfer.getTargets().get(0));
+
+            PathResolver resolver = new PathResolver(nodePersistence, authorizer, true);
+
+            Node node = resolver.getNode(target.getPath());
+            if (!(node instanceof ContainerNode)) {
+                throw new TransferException("node is not a container node");
+            }
+
+            LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
+            updateTransferJob(node, loc.getURI(node).getURI(), ExecutionPhase.EXECUTING);
+            updated = true;
+        } finally {
+            if (!updated) {
+                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
+            }
+        }
     }
 }

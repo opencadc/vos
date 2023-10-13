@@ -138,7 +138,7 @@ public class GetNodeAction extends NodeAction {
         if (serverNode == null) {
             throw NodeFault.NodeNotFound.getStatus(target.toString());
         }
-        log.warn("found: " + target + " as " + serverNode);
+        log.debug("found: " + target + " as " + serverNode);
         
         if (serverNode instanceof ContainerNode) {
             ContainerNode node = (ContainerNode) serverNode;
@@ -176,7 +176,7 @@ public class GetNodeAction extends NodeAction {
             if (StringUtil.hasText(startURI)) {
                 VOSURI vuri = new VOSURI(startURI);
                 String parentPath = vuri.getParent();
-                log.warn("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
+                log.debug("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
                 if (!target.getPath().equals(parentPath)) {
                     throw NodeFault.InvalidURI.getStatus(
                             "uri parameter (" + vuri.toString() + ") not a child of target uri ("

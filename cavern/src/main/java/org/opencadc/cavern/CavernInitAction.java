@@ -69,7 +69,12 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.rest.InitAction;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
@@ -86,6 +91,19 @@ public class CavernInitAction extends InitAction {
     @Override
     public void doInit() {
         try {
+            // Check config file
+            CavernConfig cavernConfig = new CavernConfig();
+            MultiValuedProperties props = cavernConfig.getConfig();
+
+            // create root directories for node/files
+            Path root = cavernConfig.getRoot();
+            try {
+                Files.createDirectories(root);
+            } catch (IOException e) {
+                throw new IllegalStateException("Error creating filesystem root directory " + root, e);
+            }
+            log.info("created root directory: " + root);
+
             // Init UWS database
             DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
             InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");

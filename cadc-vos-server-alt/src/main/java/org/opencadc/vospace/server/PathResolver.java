@@ -199,9 +199,8 @@ public class PathResolver {
         VOSURI nodeURI = localServiceURI.getURI(linkNode);
         VOSURI targetURI = new VOSURI(linkNode.getTarget());
 
-        log.debug("Validating target: " + targetURI.toString());
-
-        if (targetURI.getServiceURI() != localServiceURI.getVOSBase().getServiceURI()) {
+        log.debug("Validating target: " + targetURI.getServiceURI() + " vs " + localServiceURI.getVOSBase().getServiceURI());
+        if (!localServiceURI.getVOSBase().getServiceURI().equals(targetURI.getServiceURI())) {
             throw NodeFault.InvalidArgument.getStatus("External link " + targetURI.getServiceURI().toASCIIString());
         }
         return targetURI;

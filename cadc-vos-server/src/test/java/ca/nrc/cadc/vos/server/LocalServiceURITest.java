@@ -89,6 +89,7 @@ public class LocalServiceURITest
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
     }
     
     @Test
