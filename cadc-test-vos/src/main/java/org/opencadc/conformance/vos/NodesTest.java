@@ -336,6 +336,7 @@ public class NodesTest extends VOSTest {
             if (group2 != null) {
                 Assert.assertTrue(persistedNode.getReadWriteGroup().contains(group2));
             }
+            Assert.assertNotNull(persistedNode.inheritPermissions);
             Assert.assertTrue(persistedNode.inheritPermissions);
 
             // POST an update to the node
