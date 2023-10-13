@@ -118,7 +118,6 @@ public class NodesTest extends VOSTest {
      * 
      * @param group1 a valid group URI
      * @param group2 a different valid group URI
-     * @param group3 another different group URI
      */
     protected void enablePermissionPropsTest(GroupURI group1, GroupURI group2) {
         this.group1 = group1;
@@ -336,6 +335,7 @@ public class NodesTest extends VOSTest {
             if (group2 != null) {
                 Assert.assertTrue(persistedNode.getReadWriteGroup().contains(group2));
             }
+            Assert.assertNotNull(persistedNode.inheritPermissions);
             Assert.assertTrue(persistedNode.inheritPermissions);
 
             // POST an update to the node
