@@ -25,16 +25,20 @@ jobs:
     - name: build and test cadc-vos-client
       run: cd cadc-vos-client && ../gradlew --info clean build javadoc checkstyleMain install
       
-    # - name: build and test cadc-vos-server
-    # run: cd cadc-vos-server && ../gradlew --info clean build javadoc install
+    - name: build and test cadc-vos-server-alt
+      run: cd cadc-vos-server-alt && ../gradlew --info clean build javadoc install
      
-    # OBSOLETE 
+    # OBSOLETE vs cadc-vos-2.0
+    # - name: build and test cadc-vos-server
+    #   run: cd cadc-vos-server && ../gradlew --info clean build javadoc install
+    #
     # - name: build and test cadc-vos-server-db
     # run: cd cadc-vos-server-db && ../gradlew --info clean build javadoc install
 
     - name: build and test cadc-test-vos
       run: cd cadc-test-vos && ../gradlew --info clean build javadoc install
-      
-    # - name: build and test cavern
-    # run: cd cavern && ../gradlew --info clean assemble
+     
+    # temporarily diabled until port builds 
+    #- name: build and test cavern
+    #  run: cd cavern && ../gradlew --info clean assemble
       

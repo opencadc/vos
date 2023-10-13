@@ -69,30 +69,27 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import org.opencadc.vospace.server.NodeFault;
-
 /**
  * @author pdowler
  */
 public class TransferException extends Exception {
-    private static final long serialVersionUID = 201304061030L;
 
-    private NodeFault fault;
+    //private NodeFault fault;
 
     public TransferException(String msg) {
         super(msg);
     }
 
-    public TransferException(NodeFault fault) {
-        super(fault.getMessage());
-        this.fault = fault;
-    }
+    //public TransferException(NodeFault fault) {
+    //    super(fault.getMessage());
+    //    this.fault = fault;
+    //}
 
-    @Override
-    public String getMessage() {
-        if (fault != null) {
-            return fault.getStatus().getMessage() + " " + fault.getMessage();
-        }
-        return super.getMessage();
-    }
+    //@Override
+    //public String getMessage() {
+    //    if (fault != null) {
+    //        return fault.getStatus().getMessage() + " " + fault.getMessage();
+    //    }
+    //    return super.getMessage();
+    //}
 }

@@ -62,102 +62,87 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  : 5 $
+ *
  ************************************************************************
  */
 
-package org.opencadc.vospace.server;
+package org.opencadc.cavern;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Set;
+import ca.nrc.cadc.util.MultiValuedProperties;
+import ca.nrc.cadc.util.PropertiesReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeProperty;
 
-/**
- * Utility methods
- *
- * @author adriand
- */
-public class Utils {
-    final Logger log = Logger.getLogger(Utils.class);
+public class CavernConfig {
 
-    /**
-     * Returns the path of the parent with no leading or trailing backslashes
-     *
-     * @param nodePath the path of the node
-     * @return the path of the parent
-     */
-    public static String getParentPath(final String nodePath) {
-        if (isRoot(nodePath)) {
-            return null; // there is no parent of the root
-        }
-        String np = nodePath;
-        if (np.endsWith("/")) {
-            np = np.substring(0, np.length() - 1);
-        }
-        if (nodePath.startsWith("/")) {
-            np = np.substring(1, np.length());
-        }
-        int index = np.lastIndexOf("/");
-        if (index > 0) {
-            return np.substring(0, index);
-        } else {
-            return null;
-        }
-    }
+    private static final Logger log = Logger.getLogger(CavernConfig.class);
 
-    public static boolean isRoot(String nodePath) {
-        if (nodePath == null || nodePath.length() == 0 || nodePath.equals("/")) {
-            return true;
+    public static final String DEFAULT_CONFIG_DIR = System.getProperty("user.home") + "/config/";
+    public static final String CAVERN_PROPERTIES = "cavern.properties";
+    private static final String CAVERN_KEY = CavernConfig.class.getPackage().getName();
+    public static final String RESOURCE_ID = CAVERN_KEY + ".resourceID";
+    public static final String FILESYSTEM_BASE_DIR = CAVERN_KEY + ".filesystem.baseDir";
+    public static final String FILESYSTEM_SUB_PATH = CAVERN_KEY + ".filesystem.subPath";
+    public static final String PRIVATE_KEY = CAVERN_KEY + ".privateKey";
+    public static final String PUBLIC_KEY = CAVERN_KEY + ".publicKey";
+    public static final String SSHFS_SERVER_BASE = CAVERN_KEY + ".sshfs.serverBase";
+
+    public CavernConfig() {}
+
+    public MultiValuedProperties getConfig() {
+        PropertiesReader propertiesReader = new PropertiesReader(CAVERN_PROPERTIES);
+        MultiValuedProperties properties = propertiesReader.getAllProperties();
+        if (properties.isEmpty()) {
+            throw new IllegalStateException("CONFIG: file not found or no properties found in file - "
+                    + CAVERN_PROPERTIES);
         }
-        return false;
-    }
 
-    /**
-     * Get a linked list of nodes from leaf to root.
-     *
-     * @param leaf leaf node
-     * @return list of nodes, with leaf first and root last
-     */
-    public static LinkedList<Node> getNodeList(Node leaf) {
-        LinkedList<Node> nodes = new LinkedList<Node>();
-        Node cur = leaf;
-        while (cur != null) {
-            nodes.add(cur);
-            cur = cur.parent;
-        }
-        return nodes;
-    }
-
-
-    public static String getPath(Node node) {
         StringBuilder sb = new StringBuilder();
-        sb.append(node.getName());
-        Node tmp = node.parent;
-        while (tmp != null) {
-            sb.insert(0, tmp.getName() + "/");
-            tmp = tmp.parent;
+        sb.append("CONFIG: incomplete/invalid: ");
+
+        boolean resourceID = checkProperty(properties, sb, RESOURCE_ID, true);
+        boolean baseDir = checkProperty(properties, sb, FILESYSTEM_BASE_DIR, true);
+        boolean subPath = checkProperty(properties, sb, FILESYSTEM_SUB_PATH, true);
+        boolean privateKey = checkProperty(properties, sb, PRIVATE_KEY, false);
+        boolean publicKey = checkProperty(properties, sb, PUBLIC_KEY, false);
+        boolean sshfsServerBase = checkProperty(properties, sb, SSHFS_SERVER_BASE, false);
+
+        if (!resourceID || !baseDir || !subPath) {
+            throw new IllegalStateException(sb.toString());
         }
-        return sb.toString();
+
+        return properties;
     }
 
-    /**
-     * Takes a set of old properties and updates it with a new set of properties. Essentially
-     * this means updating values or removing and adding elements. It is not a straight replacement.
-     *
-     * @param oldProps set of old Node Properties that are being updated
-     * @param newProps set of new Node Properties to be used for the update
-     */
-    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
-        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
-            NodeProperty newProperty = newIter.next();
-            if (oldProps.contains(newProperty)) {
-                oldProps.remove(newProperty);
-            }
-            if (!newProperty.isMarkedForDeletion()) {
-                oldProps.add(newProperty);
-            }
+    public Path getRoot() {
+        MultiValuedProperties config = getConfig();
+        String baseDir = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
+        String subPath = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
+        String sep = "/";
+        if (baseDir.endsWith("/") || subPath.startsWith("/")) {
+            sep = "";
         }
+        return Paths.get(baseDir + sep + subPath);
     }
+
+    private boolean checkProperty(MultiValuedProperties properties, StringBuilder sb,
+                                         String key, boolean required) {
+        boolean ok = true;
+        String value = properties.getFirstPropertyValue(key);
+        if (value == null && !required) {
+            return false;
+        }
+        sb.append("\n\t").append(key).append(" - ");
+        if (value == null) {
+            sb.append("MISSING");
+            ok = false;
+        } else {
+            sb.append("OK");
+        }
+        sb.append("\n");
+        return ok;
+    }
+
 }

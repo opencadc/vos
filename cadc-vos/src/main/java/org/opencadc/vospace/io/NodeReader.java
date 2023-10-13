@@ -330,6 +330,7 @@ public class NodeReader implements XmlProcessor {
         
         // instantiate a ContainerNode class
         ContainerNode node = new ContainerNode(vosURI.getName());
+        node.clearInheritPermissions = getPropertyNil(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, properties);
         node.inheritPermissions = getBooleanProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, properties);
         
         setNodeVariables(element, namespace, node, properties);
@@ -479,17 +480,19 @@ public class NodeReader implements XmlProcessor {
         throws NodeParsingException {
         Set<GroupURI> groups = new TreeSet<>();
         NodeProperty nodeProperty = getNodeProperty(key, properties);
-        if (nodeProperty != null && nodeProperty.getValue() != null) {
-            String[] values = nodeProperty.getValue().split(delimiter);
-            for (String value : values) {
-                GroupURI groupURI;
-                try {
-                    groupURI = new GroupURI(new URI(value));
-                } catch (URISyntaxException e) {
-                    throw new NodeParsingException(String.format("node property %s has invalid group URI %s",
-                                                                 key.toASCIIString(), value));
+        if (nodeProperty != null) {
+            if (nodeProperty.getValue() != null) {
+                String[] values = nodeProperty.getValue().split(delimiter);
+                for (String value : values) {
+                    GroupURI groupURI;
+                    try {
+                        groupURI = new GroupURI(new URI(value));
+                    } catch (URISyntaxException e) {
+                        throw new NodeParsingException(String.format("node property %s has invalid group URI %s",
+                                                                     key.toASCIIString(), value));
+                    }
+                    groups.add(groupURI);
                 }
-                groups.add(groupURI);
             }
             properties.remove(nodeProperty);
         }
@@ -512,14 +515,18 @@ public class NodeReader implements XmlProcessor {
         throws NodeParsingException {
 
         node.ownerDisplay = getStringProperty(VOS.PROPERTY_URI_CREATOR, properties);
+        node.clearIsLocked = getPropertyNil(VOS.PROPERTY_URI_ISLOCKED, properties);
         node.isLocked = getBooleanProperty(VOS.PROPERTY_URI_ISLOCKED, properties);
+        node.clearIsPublic = getPropertyNil(VOS.PROPERTY_URI_ISPUBLIC, properties);
         node.isPublic = getBooleanProperty(VOS.PROPERTY_URI_ISPUBLIC, properties);
         if (node instanceof DataNode) {
             DataNode dn = (DataNode) node;
             dn.getAccepts().addAll(getViewURIs(element, namespace, "accepts"));
             dn.getProvides().addAll(getViewURIs(element, namespace, "provides"));
         }
+        node.clearReadOnlyGroups = getPropertyNil(VOS.PROPERTY_URI_GROUPREAD, properties);
         node.getReadOnlyGroup().addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPREAD, VOS.PROPERTY_DELIM_GROUPREAD, properties));
+        node.clearReadWriteGroups = getPropertyNil(VOS.PROPERTY_URI_GROUPWRITE, properties);
         node.getReadWriteGroup().addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPWRITE, VOS.PROPERTY_DELIM_GROUPWRITE, properties));
     }
 
@@ -716,6 +723,14 @@ public class NodeReader implements XmlProcessor {
             }
         }
         return null;
+    }
+    
+    public boolean getPropertyNil(URI key, Set<NodeProperty> properties) {
+        NodeProperty nodeProperty = getNodeProperty(key, properties);
+        if (nodeProperty != null) {
+            return nodeProperty.isMarkedForDeletion();
+        }
+        return false;
     }
 
     public static class NodeReaderResult {

@@ -75,37 +75,35 @@ import ca.nrc.cadc.uws.Parameter;
 import java.io.FileNotFoundException;
 import java.util.List;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.View;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
 
 /**
- * An interface to vospace storage back-end for provided transfer details
+ * An interface to the storage back-end for provided transfer details
  * in the transfer negotiation process.
  */
 public interface TransferGenerator {
 
     /**
-     * Request a list of endpoints for the given transfer request information.
-     * This method returns a list of endpoints and thus supports the case where
-     * the storage system has multiple copies of a file or multiple locations
-     * in which a file can be stored or retrieved from. Implementations are also
-     * responsible for filtering out unsupported  protocol/securityMethod combinations
-     * and can sort the result list in order of preference (since clients should
-     * try the endpoints in order until one works). Returning only one endpoint 
-     * in the list is a perfectly normal response.
+     * Request a list of endpoints for the given transfer request information.This method returns a list of endpoints and thus supports the case where
+ the storage system has multiple copies of a file or multiple locations
+ in which a file can be stored or retrieved from.
+     * Implementations are also
+ responsible for filtering out unsupported  protocol/securityMethod combinations
+ and can sort the result list in order of preference (since clients should
+ try the endpoints in order until one works). Returning only one endpoint 
+ in the list is a perfectly normal response.
      *
-     * @param target The target data node
+     * @param target single target URI from the transfer
      * @param transfer The transfer object with requested protocol(s)
-     * @param view The view being requested (may be null)
      * @param job The UWS job associated with the transfer request.
      * @param additionalParams Any additional parameters associated with the request.
      * 
      * @return list of protocol(s) with endpoints
      * 
-     * @throws FileNotFoundException If the storage system cannot find an object for the target.
-     * @throws TransientException If an unexpected error occurs.
+     * @throws Exception implementations are responsible for throwing right exception 
+     *         to generate the correct output
      */
-    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view, Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException;
+    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams)
+            throws Exception;
 }

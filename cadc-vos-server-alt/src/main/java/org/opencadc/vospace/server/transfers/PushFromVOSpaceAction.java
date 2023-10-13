@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,31 +65,38 @@
 *  $Revision: 5 $
 *
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern;
+package org.opencadc.vospace.server.transfers;
 
-
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
-import java.net.URI;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  *
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
-    static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+public class PushFromVOSpaceAction extends VOSpaceTransfer {
 
+    public PushFromVOSpaceAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
+        super(per, ju, job, transfer);
     }
 
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    public void doAction()
+            throws JobPersistenceException, JobNotFoundException,
+            LinkingException, NodeNotFoundException, TransferParsingException,
+            IOException, TransientException, URISyntaxException {
+        throw new UnsupportedOperationException(Direction.pushFromVoSpaceValue + " not implemented");
     }
 }

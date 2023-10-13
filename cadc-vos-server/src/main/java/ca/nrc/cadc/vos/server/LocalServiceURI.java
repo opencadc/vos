@@ -87,21 +87,32 @@ public class LocalServiceURI {
     private static final Logger log = Logger.getLogger(LocalServiceURI.class);
 
     private static final String CONFIG_FILE = "VOSpaceWS.properties";
+    private static final String ALT_CONFIG_FILE = "cavern.properties";
     private static final String RESOURCE_ID_KEY = "resourceID";
+    private static final String ALT_RESOURCE_ID_KEY = "org.opencadc.cavern.resourceID";
 
     private URI resourceID;
     private VOSURI vosURIBase;
 
     public LocalServiceURI() {
         PropertiesReader pr = new PropertiesReader(CONFIG_FILE);
+        if (!pr.canRead()) {
+            pr = new PropertiesReader(ALT_CONFIG_FILE);
+        }
+
         MultiValuedProperties mvp = pr.getAllProperties();
         if (mvp == null) {
             throw new RuntimeException("Cannot load config file: " + CONFIG_FILE);
         }
+
         String id = mvp.getFirstPropertyValue(RESOURCE_ID_KEY);
         if (id == null) {
-            throw new RuntimeException("Cannot find value for " + RESOURCE_ID_KEY + " in " + CONFIG_FILE);
+            id = mvp.getFirstPropertyValue(ALT_RESOURCE_ID_KEY);
+            if (id == null) {
+                throw new RuntimeException("Cannot find value for " + RESOURCE_ID_KEY + " in " + CONFIG_FILE);
+            }
         }
+
         try {
             resourceID = new URI(id);
             log.debug("VOSpace resourceID: " + resourceID);

@@ -80,6 +80,7 @@ import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.server.transfers.TransferGenerator;
 
 /**
  * An interface defining the methods available for working with VOSpace
@@ -115,6 +116,20 @@ public interface NodePersistence {
      */
     public Set<URI> getImmutableProps();
 
+    /**
+     * Get the views supported by this node peristence implementation.
+     * 
+     * @return a views object, possibly empty
+     */
+    public Views getViews();
+    
+    /**
+     * Get the transfer generator implementation.
+     * 
+     * @return a transfer generator
+     */
+    public TransferGenerator getTransferGenerator();
+    
     /**
      * Get a node by name. Concept: The caller uses this to navigate the path from the root
      * node to the target, checking permissions and deciding what to do about

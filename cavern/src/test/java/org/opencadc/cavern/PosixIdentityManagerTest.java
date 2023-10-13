@@ -69,20 +69,22 @@ package org.opencadc.cavern;
 
 
 import ca.nrc.cadc.ac.ACIdentityManager;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NumericPrincipal;
+import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.attribute.UserPrincipal;
-import java.nio.file.attribute.UserPrincipalLookupService;
+import java.io.File;
+import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 import java.util.UUID;
 
 import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -98,22 +100,17 @@ public class PosixIdentityManagerTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-        System.setProperty(IdentityManager.class.getName(), ACIdentityManager.class.getName());
     }
 
-    private UserPrincipalLookupService users = FileSystems.getDefault().getUserPrincipalLookupService();
-
+    Subject subject = AuthenticationUtil.getAnonSubject();
+    
     public PosixIdentityManagerTest() {
-    }
-
-    private UserPrincipal getTestPrincipal() throws IOException {
-        return users.lookupPrincipalByName(System.getProperty("user.name"));
     }
 
     @Test
     public void testNull() {
         try {
-            PosixIdentityManager im = new PosixIdentityManager(users);
+            PosixIdentityManager im = new PosixIdentityManager();
 
             Assert.assertNull("toOwner", im.toOwner(null));
 
@@ -130,38 +127,35 @@ public class PosixIdentityManagerTest {
     @Test
     public void testRoundTrip() {
         try {
-            PosixIdentityManager im = new PosixIdentityManager(users);
-            UserPrincipal orig = getTestPrincipal();
-            HttpPrincipal expected = new HttpPrincipal(orig.getName());
-
-            Subject s = im.toSubject(orig);
-            Assert.assertNotNull(s);
-            Set<HttpPrincipal> ps = s.getPrincipals(HttpPrincipal.class);
-            Assert.assertFalse(ps.isEmpty());
-            HttpPrincipal hp = ps.iterator().next();
-            log.info("toSubject: " + orig.getClass().getSimpleName() + " " + orig.getName() 
-                    + " -> " + hp.getClass().getSimpleName() + " " + hp.getName());
-            Assert.assertEquals(expected, hp);
-
-            // add other principal types to subject
-            String dn = "cn=" + orig.getName() + ",ou=opencadc.org,c=ca";
-            X500Principal x500 = new X500Principal(dn);
-            s.getPrincipals().add(x500);
-            s.getPrincipals().add(new NumericPrincipal(UUID.randomUUID()));
-
+            // request subject contains: numeric, http, posix
+            PosixPrincipal orig = new PosixPrincipal(54321);
+            Subject s = AuthenticationUtil.getAnonSubject();
+            s.getPrincipals().add(orig);
+            s.getPrincipals().add(new HttpPrincipal("somebody"));
+            
+            PosixIdentityManager im = new PosixIdentityManager();
+            
             // the value to "store"
+            log.info("orig: " + s);
             Object o = im.toOwner(s);
             Assert.assertNotNull(o);
             log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
-            String owner = (String) o;
-            UserPrincipal actual = users.lookupPrincipalByName(owner);
+            Assert.assertTrue(Integer.class.equals(o.getClass()));
+            
+            Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
+            log.info("restored: " + restored);
+            
+            // default IM to delegate to cannot augment
+            Set<Principal> all = restored.getPrincipals();
+            Assert.assertNotNull(all);
+            Assert.assertEquals(1, all.size());
+            
+            Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
+            Assert.assertNotNull(ps);
+            Assert.assertFalse(ps.isEmpty());
+            PosixPrincipal actual = ps.iterator().next();
             Assert.assertEquals(orig, actual);
-            Assert.assertEquals(expected.getName(), actual.getName());
-
-            String actualStr = im.toDisplayString(s);
-            log.info("display string: " + actualStr);
-            Assert.assertNotNull(actualStr);
-            Assert.assertEquals(orig.getName(), actualStr);
+            
 
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);

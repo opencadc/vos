@@ -222,9 +222,6 @@ public class NodeReaderWriterTest {
         }
     }
 
-    /**
-     * Test of write method, of class NodeWriter.
-     */
     @Test
     public void writeValidContainerNode() {
         try {
@@ -482,6 +479,43 @@ public class NodeReaderWriterTest {
                 }
             }
             compareNodes(expectedNode, minResult.node);
+        } catch (Exception t) {
+            log.error(t);
+            Assert.fail(t.getMessage());
+        }
+    }
+    
+    @Test
+    public void testPropertyDeletionMarkers() {
+        try {
+            log.debug("testPropertyDeletionMarkers");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            ContainerNode containerNode = new ContainerNode(containerURI.getName());
+            containerNode.clearIsLocked = true;
+            containerNode.clearIsPublic = true;
+            containerNode.clearReadOnlyGroups = true;
+            containerNode.clearReadWriteGroups = true;
+            containerNode.clearInheritPermissions = true;
+
+            instance.write(containerURI, containerNode, sb, VOS.Detail.max);
+            log.info(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            NodeReader.NodeReaderResult result = reader.read(sb.toString());
+            Assert.assertNotNull(result.node);
+            
+            Assert.assertTrue(result.node instanceof ContainerNode);
+            Assert.assertEquals(containerURI, result.vosURI);
+            
+            ContainerNode actual = (ContainerNode) result.node;
+            compareNodes(containerNode, actual);
+            Assert.assertTrue(actual.clearIsLocked);
+            Assert.assertTrue(actual.clearIsPublic);
+            Assert.assertTrue(actual.clearReadOnlyGroups);
+            Assert.assertTrue(actual.clearReadWriteGroups);
+            Assert.assertTrue(actual.clearInheritPermissions);
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());

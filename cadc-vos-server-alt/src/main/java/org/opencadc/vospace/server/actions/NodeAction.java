@@ -119,7 +119,7 @@ public abstract class NodeAction extends RestAction {
 
     @Override
     public void initAction() throws Exception {
-        String jndiNodePersistence = componentID + ".nodePersistence";
+        String jndiNodePersistence = super.appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
             this.nodePersistence = ((NodePersistence) ctx.lookup(jndiNodePersistence));

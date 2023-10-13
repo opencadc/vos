@@ -320,10 +320,16 @@ public class NodeWriter implements XmlProcessor {
         }
         if (node.isLocked != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(node.isLocked)));
+        } else if (node.clearIsLocked) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED)); // markForDeletion
         }
+
         if (node.isPublic != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic)));
+        } else if (node.clearIsPublic) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC)); // markForDeletion
         }
+
         if (!node.getReadOnlyGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (GroupURI group : node.getReadOnlyGroup()) {
@@ -333,7 +339,10 @@ public class NodeWriter implements XmlProcessor {
                 sb.append(group.getURI().toASCIIString());
             }
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, sb.toString()));
+        } else if (node.clearReadOnlyGroups) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD)); // markForDeletion
         }
+
         if (!node.getReadWriteGroup().isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (GroupURI group : node.getReadWriteGroup()) {
@@ -343,6 +352,8 @@ public class NodeWriter implements XmlProcessor {
                 sb.append(group.getURI().toASCIIString());
             }
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, sb.toString()));
+        } else if (node.clearReadWriteGroups) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE));
         }
     }
 
@@ -355,6 +366,8 @@ public class NodeWriter implements XmlProcessor {
     protected void addContainerNodeVariablesToProperties(ContainerNode node, Set<NodeProperty> properties) {
         if (node.inheritPermissions != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS, node.inheritPermissions.toString()));
+        } else if (node.clearInheritPermissions) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS));
         }
         if (node.getLastModified() != null) {
             DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);

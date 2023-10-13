@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,34 +62,66 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 5 $
-*
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.vospace.server.transfers;
 
-
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.AvailabilityTest;
-import java.net.URI;
-import org.apache.log4j.Level;
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentException;
+import ca.nrc.cadc.rest.InlineContentHandler;
+import ca.nrc.cadc.rest.InlineContentHandler.Content;
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.server.NodeFault;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
+import org.opencadc.vospace.transfer.TransferReader;
+import org.opencadc.vospace.transfer.TransferWriter;
 
 /**
- *
+ * Inline content handler for transfer jobs.
+ * 
  * @author pdowler
  */
-public class VosiAvailabilityTest extends AvailabilityTest {
-    private static final Logger log = Logger.getLogger(VosiAvailabilityTest.class);
-    
-    static {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+public class InlineTransferHandler implements UWSInlineContentHandler {
+    private static final Logger log = Logger.getLogger(InlineTransferHandler.class);
 
+    private static final String KB_LIMIT = "32KiB";
+    public static final long INPUT_LIMIT = 32 * 1024L;
+    
+    public InlineTransferHandler() {
     }
 
-    public VosiAvailabilityTest() {
-        super(Constants.RESOURCE_ID);
+    @Override
+    public Content accept(String name, String contentType, InputStream inputStream) 
+            throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
+        try {
+            ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
+            TransferReader r = new TransferReader();
+            Transfer trans = r.read(inputStream, null);
+            // validated
+            
+            TransferWriter tw = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            tw.write(trans, sw);
+            
+            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            content.name = UWSInlineContentHandler.CONTENT_JOBINFO;
+            content.value = new JobInfo(sw.toString(), contentType, true);
+            return content;
+        } catch (TransferParsingException ex) {
+            throw (IllegalArgumentException) NodeFault.InvalidArgument.getStatus(ex.getMessage());
+        } catch (ByteLimitExceededException ex) {
+            throw (InlineContentException)
+                    NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
+        }
     }
 }
