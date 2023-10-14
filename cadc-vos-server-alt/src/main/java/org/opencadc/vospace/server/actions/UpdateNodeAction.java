@@ -121,8 +121,6 @@ public class UpdateNodeAction extends NodeAction {
             throw NodeFault.PermissionDenied.getStatus(clientNodeTarget.toString());
         }
         
-        PosixPrincipal no = (PosixPrincipal) serverNode.ownerID;
-        log.debug("server node owner: " + no.getUidNumber() + ":" + no.defaultGroup + " aka " + no.username);
         log.debug("server node owner: " + serverNode.owner);
         
         // merge change request

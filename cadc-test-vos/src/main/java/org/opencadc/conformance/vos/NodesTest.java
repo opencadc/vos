@@ -366,9 +366,13 @@ public class NodesTest extends VOSTest {
             testNode.getProperties().add(descriptionProperty2);
 
             testNode.getReadOnlyGroup().clear();
-            testNode.getReadOnlyGroup().add(group2);
+            if (group2 != null) {
+                testNode.getReadOnlyGroup().add(group2);
+            }
             testNode.getReadWriteGroup().clear();
-            testNode.getReadWriteGroup().add(group1);
+            if (group1 != null) {
+                testNode.getReadWriteGroup().add(group1);
+            }
             testNode.isPublic = false;
             testNode.inheritPermissions = false;
 
