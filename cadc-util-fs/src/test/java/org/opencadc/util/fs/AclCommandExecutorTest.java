@@ -170,17 +170,19 @@ public class AclCommandExecutorTest {
         writeGroupPrincipals.add(g3);
         final boolean[] commandChecked = new boolean[]{false};
 
-        final String[] expectedCommand = new String[3];
+        final boolean worldReadable = false; // other::---
+        final String[] expectedCommand = new String[4];
         expectedCommand[0] = "setfacl";
-        expectedCommand[1] = "--set=user::rwx,group::rw-,other::---,mask::rw-,group:" 
+        expectedCommand[1] = "--physical";
+        expectedCommand[2] = "--set=user::rw-,group::rw-,other::---,mask::rw-,group:" 
                 + g1 + ":r--,group:" + g2 + ":r--,group:" + g3 + ":rw-";
-        expectedCommand[2] = target.toString();
+        expectedCommand[3] = target.toString();
         if (isDir) {
-            expectedCommand[1] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
+            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
                     + g1 + ":r-x,group:" + g2 + ":r-x,group:" + g3 + ":rwx";
         }
         
-        AclCommandExecutor acl = new AclCommandExecutor(target) {
+        AclCommandExecutor acl = new AclCommandExecutor(target, isDir) {
             @Override
             void executeCommand(final String[] command) throws IOException {
                 Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
@@ -188,24 +190,56 @@ public class AclCommandExecutorTest {
             }
         };
 
-        acl.setACL(readGroupPrincipals, writeGroupPrincipals, isDir);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
         Assert.assertTrue("Command not checked", commandChecked[0]);
 
         // now actually run it for real
-        acl = new AclCommandExecutor(target);
-        acl.setACL(readGroupPrincipals, writeGroupPrincipals, isDir);
+        acl = new AclCommandExecutor(target, isDir);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
 
         // get ACLs and verify correct state
-        List<Integer> roActual = acl.getReadOnlyACL(isDir);
+        Set<Integer> roActual = acl.getReadOnlyACL();
         Assert.assertNotNull(roActual);
         Assert.assertEquals(2, roActual.size());
         Assert.assertTrue(roActual.contains(g1));
         Assert.assertTrue(roActual.contains(g2));
 
-        List<Integer> rwActual = acl.getReadWriteACL(isDir);
+        Set<Integer> rwActual = acl.getReadWriteACL();
         Assert.assertNotNull(rwActual);
         Assert.assertEquals(1, rwActual.size());
         Assert.assertTrue(rwActual.contains(g3));
+        
+        
+        // get defaults
+        Set<Integer> roDefault = acl.getReadOnlyACL(true);
+        Assert.assertNotNull(roDefault);
+        Assert.assertTrue(roDefault.isEmpty());
+
+        Set<Integer> rwDefault = acl.getReadWriteACL(true);
+        Assert.assertNotNull(rwDefault);
+        Assert.assertTrue(rwDefault.isEmpty());
+
+        if (isDir) {
+            // set defaults
+            acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertFalse(roDefault.isEmpty());
+            Assert.assertTrue(roDefault.contains(g1));
+            Assert.assertTrue(roDefault.contains(g2));
+
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            Assert.assertFalse(rwDefault.isEmpty());
+            Assert.assertTrue(rwDefault.contains(g3));
+        } else {
+            try {
+                acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+                Assert.fail("expected IllegalArgumentException for setACL on file");
+            } catch (IllegalArgumentException ex) {
+                log.info("caught expected: " + ex);
+            }
+        }
     }
 
     @Test
@@ -228,11 +262,12 @@ public class AclCommandExecutorTest {
         writeGroupPrincipals.add(g3);
         final boolean[] commandChecked = new boolean[]{false};
 
+        boolean worldReadable = false; // other::---
         final String[] expectedCommand = new String[]{
-            "setfacl", "--set=user::rwx,group::rw-,other::---,mask::rw-,group:" + g3 + ":rw-", target.toString()
+            "setfacl", "--physical", "--set=user::rw-,group::rw-,other::---,mask::rw-,group:" + g3 + ":rw-", target.toString()
         };
 
-        AclCommandExecutor acl = new AclCommandExecutor(target) {
+        AclCommandExecutor acl = new AclCommandExecutor(target, false) {
             @Override
             void executeCommand(final String[] command) {
                 Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
@@ -240,7 +275,7 @@ public class AclCommandExecutorTest {
             }
         };
 
-        acl.setACL(readGroupPrincipals, writeGroupPrincipals, false);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
         Assert.assertTrue("Command not checked", commandChecked[0]);
 
         // TODO: get ACLs and verify correct state
@@ -294,17 +329,18 @@ public class AclCommandExecutorTest {
         readWriteGroups.add(RESOLVABLE_RW_GROUP);
         final boolean[] commandChecked = new boolean[]{false};
 
-        final String[] expectedCommand = new String[3];
+        final String[] expectedCommand = new String[4];
         expectedCommand[0] = "setfacl";
-        expectedCommand[1] = "--set=user::rwx,group::rw-,other::---,mask::rw-,group:" 
+        expectedCommand[1] = "--physical";
+        expectedCommand[2] = "--set=user::rwx,group::rw-,other::---,mask::rw-,group:" 
                 + RESOLVABLE_RO_GROUP + ":r--,group:" + RESOLVABLE_RW_GROUP + ":rw-";
-        expectedCommand[2] = target.toString();
+        expectedCommand[3] = target.toString();
         if (isDir) {
-            expectedCommand[1] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
+            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
                     + RESOLVABLE_RO_GROUP + ":r-x,group:" + RESOLVABLE_RW_GROUP + ":rwx";
         }
         
-        AclCommandExecutor acl = new AclCommandExecutor(target) {
+        AclCommandExecutor acl = new AclCommandExecutor(target, isDir) {
             @Override
             void executeCommand(final String[] command) throws IOException {
                 Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
@@ -312,20 +348,20 @@ public class AclCommandExecutorTest {
             }
         };
 
-        acl.setResolvedACL(readOnlyGroups, readWriteGroups, isDir);
+        acl.setResolvedACL(readOnlyGroups, readWriteGroups);
         Assert.assertTrue("Command not checked", commandChecked[0]);
 
         // now actually run it for real
-        acl = new AclCommandExecutor(target);
-        acl.setResolvedACL(readOnlyGroups, readWriteGroups, isDir);
+        acl = new AclCommandExecutor(target, isDir);
+        acl.setResolvedACL(readOnlyGroups, readWriteGroups);
 
         // get ACLs and verify correct state
-        List<String> roActual = acl.getResolvedReadOnlyACL(isDir);
+        Set<String> roActual = acl.getResolvedReadOnlyACL();
         Assert.assertNotNull(roActual);
         Assert.assertEquals(1, roActual.size());
         Assert.assertTrue(roActual.contains(RESOLVABLE_RO_GROUP));
 
-        List<String> rwActual = acl.getResolvedReadWriteACL(isDir);
+        Set<String> rwActual = acl.getResolvedReadWriteACL();
         Assert.assertNotNull(rwActual);
         Assert.assertEquals(1, rwActual.size());
         Assert.assertTrue(rwActual.contains(RESOLVABLE_RW_GROUP));

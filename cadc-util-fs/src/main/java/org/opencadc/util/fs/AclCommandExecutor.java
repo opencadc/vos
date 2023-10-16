@@ -70,18 +70,24 @@ package org.opencadc.util.fs;
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 
 /**
- *
+ * Wrapper to manage directory and file ACLs with the permission concepts from
+ * VOSpace: read-only and read-write.
+ * 
  * @author pdowler
  */
 public class AclCommandExecutor {
@@ -92,7 +98,9 @@ public class AclCommandExecutor {
     private static final String GETACL = "getfacl";
     private static final String SETACL = "setfacl";
     private static final String FILE_RO = "r--";
+    private static final String FILE_RX = "r-x"; // executable file: unused
     private static final String FILE_RW = "rw-";
+    private static final String FILE_RWX = "rwx"; // executable file: unused
     private static final String DIR_RO = "r-x";
     private static final String DIR_RW = "rwx";
     
@@ -101,10 +109,12 @@ public class AclCommandExecutor {
     };
     
     private final Path path;
+    private final boolean isDir;
     private UserPrincipalLookupService users;
     
-    public AclCommandExecutor(Path path) { 
+    public AclCommandExecutor(Path path, boolean isDir) { 
         this.path = path;
+        this.isDir = isDir;
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(CHECK_ACL_SUPPORT);
         if (grabber.getExitValue() != 0) {
@@ -125,24 +135,52 @@ public class AclCommandExecutor {
         }
     }
 
+    public void setACL(boolean worldReadable, final Set<Integer> readOnlyGroups, final Set<Integer> readWriteGroups)
+            throws IOException {
+        setACL(worldReadable, readOnlyGroups, readWriteGroups, false);
+    }
+    
     /**
-     * Set the read and read/wite Groups for the current path using raw GID values.  
+     * Set the read and read/wite Groups for the current path using raw GID values.
      * This will cleanly set whatever group principals are provided and remove all other ACLs.
-     * 
+     *
+     * @param worldReadable         set the target to world-readable
      * @param readOnlyGroups   The unique set of GroupPrincipals representing the ReadOnly groups.
      * @param readWriteGroups  The unique set of GroupPrincipals representing the ReadWrite groups.
      * @param isDir     Whether the path is a directory or not.
+     * @param defaultACL set default ACLs instead of actual ACLs
+     * 
      * @throws IOException  If setting failed.
      */
-    public void setACL(final Set<Integer> readOnlyGroups, final Set<Integer> readWriteGroups, final boolean isDir) 
-            throws IOException {
+    public void setACL(boolean worldReadable, final Set<Integer> readOnlyGroups, 
+            final Set<Integer> readWriteGroups, boolean defaultACL) throws IOException {
         if (readOnlyGroups == null || readWriteGroups == null) {
             throw new IllegalArgumentException("Null input to setACL().");
         }
+        
+        if (defaultACL && !isDir) {
+            throw new IllegalArgumentException("only directories can have default ACLs");
+        }
+        
+        // try to preserve execute bit on files (executables)
+        PosixFileAttributeView pv = Files.getFileAttributeView(path, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        Set<PosixFilePermission> perms = pv.readAttributes().permissions(); // current perms
+        boolean ux = perms.contains(PosixFilePermission.OWNER_EXECUTE);
+        boolean gx = perms.contains(PosixFilePermission.GROUP_EXECUTE);
+        boolean ox = perms.contains(PosixFilePermission.OTHERS_EXECUTE);
 
-        final String readOnlyPermission = isDir ? AclCommandExecutor.DIR_RO : AclCommandExecutor.FILE_RO;
-        final String readWritePermission = isDir ? AclCommandExecutor.DIR_RW : AclCommandExecutor.FILE_RW;
-
+        //final String uRreadOnlyPermission = isDir ? DIR_RO : (ux ? FILE_RX : FILE_RO); // unused: locked??
+        final String uReadWritePermission = isDir ? DIR_RW : (gx ? FILE_RWX : FILE_RW);
+        
+        final String readOnlyPermission = isDir ? DIR_RO : FILE_RO;
+        final String readWritePermission = isDir ? DIR_RW : FILE_RW;
+        
+        String otherPermission = worldReadable ? readOnlyPermission : "---";
+        if (worldReadable && !isDir && ox) {
+            otherPermission = FILE_RX;
+        }
+        log.debug("setACL: worldReadable=" + worldReadable + " -> " + otherPermission);
+        
         final String readGroupCommandInput = readOnlyGroups.stream()
                                                                     .map(p -> "group:" + p.toString() + ":"
                                                                               + readOnlyPermission)
@@ -152,8 +190,13 @@ public class AclCommandExecutor {
                                                                                 + readWritePermission)
                                                                       .collect(Collectors.joining(","));
 
+        StringBuilder sb = new StringBuilder();
+        sb.append("--set=user::").append(uReadWritePermission);
+        sb.append(",group::").append(uReadWritePermission); // always same as user
+        sb.append(",other::").append(otherPermission);
+            
         if (StringUtil.hasText(readGroupCommandInput) || StringUtil.hasText(writeGroupCommandInput)) {
-            final List<String> commandList = new ArrayList<>();
+           
             final String groupMask;
             final String groupListString;
             if (StringUtil.hasText(readGroupCommandInput) && StringUtil.hasText(writeGroupCommandInput)) {
@@ -167,21 +210,25 @@ public class AclCommandExecutor {
                 groupListString = writeGroupCommandInput;
             }
 
-            log.debug("Base Masks: \nuser::rwx\ngroup::" + groupMask);
-            final String setACLInput = "--set=user::rwx" + ",group::" + groupMask + ",other::---,mask::" + groupMask
-                                       + "," + groupListString;
-
-            commandList.add(AclCommandExecutor.SETACL);
-            commandList.add(setACLInput);
-            commandList.add(toAbsolutePath(path));
-
-            final String[] commandArray = commandList.toArray(new String[0]);
-            log.debug("Executing " + Arrays.toString(commandArray));
-            executeCommand(commandArray);
-            log.debug("Executing " + Arrays.toString(commandArray) + ": OK");
-        } else {
-            log.debug("Nothing to do in setACL().");
+            sb.append(",mask::").append(groupMask);
+            sb.append(",").append(groupListString);
+            
         }
+
+        final List<String> commandList = new ArrayList<>();
+        commandList.add(AclCommandExecutor.SETACL);
+        commandList.add("--physical"); // do not follow symlinks
+        if (defaultACL) {
+            commandList.add("--default");
+        }
+        commandList.add(sb.toString());
+        commandList.add(toAbsolutePath(path));
+
+        final String[] commandArray = commandList.toArray(new String[0]);
+        String logStr = Arrays.toString(commandArray);
+        log.debug("Executing " + logStr);
+        executeCommand(commandArray);
+        log.debug("Executing " + logStr + ": OK");
     }
     
     /**
@@ -193,7 +240,7 @@ public class AclCommandExecutor {
      * @param isDir     Whether the path is a directory or not.
      * @throws IOException  If setting failed.
      */
-    public void setResolvedACL(final Set<String> readOnlyGroups, final Set<String> readWriteGroups, final boolean isDir)
+    public void setResolvedACL(final Set<String> readOnlyGroups, final Set<String> readWriteGroups)
             throws IOException {
         if (readOnlyGroups == null || readWriteGroups == null) {
             throw new IllegalArgumentException("Null input to setACL().");
@@ -231,6 +278,7 @@ public class AclCommandExecutor {
                                        + "," + groupListString;
 
             commandList.add(AclCommandExecutor.SETACL);
+            commandList.add("--physical"); // do not follow symlinks
             commandList.add(setACLInput);
             commandList.add(toAbsolutePath(path));
 
@@ -252,41 +300,49 @@ public class AclCommandExecutor {
         }
     }
     
-    public List<Integer> getReadOnlyACL(boolean isDir) throws IOException {
+    public Set<Integer> getReadOnlyACL() throws IOException {
+        return getReadOnlyACL(false);
+    }
+
+    public Set<Integer> getReadOnlyACL(boolean defaultACL) throws IOException {
         String perm = FILE_RO.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RO;
         }
-        return getACL(perm, false);
+        return getACL(perm, defaultACL, false);
     }
     
-    public List<Integer> getReadWriteACL(boolean isDir) throws IOException {
+    public Set<Integer> getReadWriteACL() throws IOException {
+        return getReadWriteACL(false);
+    }
+    
+    public Set<Integer> getReadWriteACL(boolean defaultACL) throws IOException {
         String perm = FILE_RW.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RW;
         }
-        return getACL(perm, false);
+        return getACL(perm, defaultACL, false);
     }
 
-    public List<String> getResolvedReadOnlyACL(boolean isDir) throws IOException {
+    public Set<String> getResolvedReadOnlyACL() throws IOException {
         String perm = FILE_RO.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RO;
         }
-        return getACL(perm, true);
+        return getACL(perm, false, true);
     }
 
-    public List<String> getResolvedReadWriteACL(boolean isDir) throws IOException {
+    public Set<String> getResolvedReadWriteACL() throws IOException {
         String perm = FILE_RW.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
             perm = DIR_RW;
         }
-        return getACL(perm, true);
+        return getACL(perm, false, true);
     }
     
     public String getMask() throws IOException {
         String[] cmd = new String[] {
-            GETACL, "--omit-header", "--skip-base", toAbsolutePath(path)
+            GETACL, "--omit-header", "--skip-base", "--physical", toAbsolutePath(path)
         };
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
@@ -308,8 +364,10 @@ public class AclCommandExecutor {
         return null;
     }
     
-    private List getACL(String perm, boolean resolve) throws IOException {
-        List aclList = new ArrayList();
+    // type: default | group
+    private Set getACL(String perm, boolean defaultACL, boolean resolve) throws IOException {
+        log.debug("getACL: " + perm + " " + defaultACL + " " + resolve);
+        Set aclList = new TreeSet();
         
         List<String> cmdList = new ArrayList<>();
         cmdList.add(GETACL);
@@ -318,6 +376,7 @@ public class AclCommandExecutor {
         }
         cmdList.add("--omit-header");
         cmdList.add("--skip-base");
+        cmdList.add("--physical"); // do not follow symlinks
         cmdList.add(toAbsolutePath(path));
         final String[] cmd = cmdList.toArray(new String[0]);
         
@@ -329,19 +388,31 @@ public class AclCommandExecutor {
         String out = grabber.getOutput(true);
         String[] lines = out.split("[\n]");
         for (String s : lines) {
-            log.debug("getfacl line: " + s);
             String[] tokens = s.split(":");
-            if ("group".equals(tokens[0])
-                    && tokens[1].length() > 0
-                    && tokens[2].startsWith(perm)) {
-                log.debug("getACL(" + perm + "): found " + s + " -> " + tokens[1]);
+            String gidToken = null;
+            String permToken = null;
+            if (defaultACL && "default".equals(tokens[0]) && "group".equals(tokens[1])) {
+                if (tokens.length == 4 && tokens[2].length() > 0) {
+                    gidToken = tokens[2];
+                    permToken = tokens[3];
+                }
+            } else if (!defaultACL && "group".equals(tokens[0]) && tokens[1].length() > 0) {
+                if (tokens.length == 3) {
+                    gidToken = tokens[1];
+                    permToken = tokens[2];
+                }
+            } else {
+                log.debug("skip: " + s);
+            }
+            
+            if (gidToken != null && permToken != null && permToken.startsWith(perm)) {
+                log.debug("found: " + gidToken + "," + permToken + " in " + s);
                 if (resolve) {
-                    aclList.add(tokens[1]);
+                    aclList.add(gidToken);
                 } else {
-                    aclList.add(Integer.parseInt(tokens[1]));
+                    aclList.add(Integer.parseInt(gidToken));
                 }
             }                   
-            log.debug("getACL(" + perm + "): skip " + s);
         }
         log.debug("getACL(" + perm + "): found: null");
         return aclList;
