@@ -74,14 +74,13 @@ import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URL;
 import javax.security.auth.Subject;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -96,8 +95,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
-    protected FilesTest(URI resourceID, String testCertFilename) {
-        super(resourceID, testCertFilename);
+    protected FilesTest(URI resourceID, File testCert) {
+        super(resourceID, testCert);
     }
 
     @Test

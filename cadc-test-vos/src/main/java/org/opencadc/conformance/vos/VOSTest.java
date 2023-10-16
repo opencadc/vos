@@ -118,7 +118,6 @@ public abstract class VOSTest {
     public static final String ROOT_TEST_FOLDER = "/int-tests";
     
     public final URI resourceID;
-    public final String testCertFilename;
     
     public final URL nodesServiceURL;
     public final URL filesServiceURL;
@@ -126,9 +125,11 @@ public abstract class VOSTest {
     public final URL transferServiceURL;
     public final Subject authSubject;
 
-    protected VOSTest(URI resourceID, String testCertFilename) {
+    protected VOSTest(URI resourceID, File testCert) {
         this.resourceID = resourceID;
-        this.testCertFilename = testCertFilename;
+        this.authSubject = SSLUtil.createSubject(testCert);
+        log.info("authSubject: " + authSubject);
+        
         RegistryClient regClient = new RegistryClient();
         this.nodesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_NODES_20, nodesServiceURL));
@@ -141,10 +142,6 @@ public abstract class VOSTest {
 
         this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
-
-        File testCert = FileUtil.getFileFromResource(this.testCertFilename, VOSTest.class);
-        this.authSubject = SSLUtil.createSubject(testCert);
-        log.debug("authSubject: " + authSubject);
     }
 
     @Before
@@ -158,6 +155,8 @@ public abstract class VOSTest {
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
         if (result == null) {
             put(nodeURL, nodeURI, testNode);
+        } else {
+            post(nodeURL, nodeURI, testNode);
         }
     }
     

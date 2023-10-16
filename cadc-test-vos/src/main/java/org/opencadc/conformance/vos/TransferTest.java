@@ -78,6 +78,7 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -105,8 +106,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
-    protected TransferTest(URI resourceID, String testCertFilename) {
-        super(resourceID, testCertFilename);
+    protected TransferTest(URI resourceID, File testCert) {
+        super(resourceID, testCert);
     }
 
     @Test

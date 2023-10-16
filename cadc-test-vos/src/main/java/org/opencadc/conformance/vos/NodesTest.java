@@ -75,6 +75,7 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.FileUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -109,8 +110,8 @@ public class NodesTest extends VOSTest {
     
     protected boolean linkNodeProps = true;
     
-    protected NodesTest(URI resourceID, String testCertFilename) {
-        super(resourceID, testCertFilename);
+    protected NodesTest(URI resourceID, File testCert) {
+        super(resourceID, testCert);
     }
 
     /**
@@ -124,9 +125,9 @@ public class NodesTest extends VOSTest {
         this.group2 = group2;
     }
     
-    protected void enablePermissionTests(GroupURI accessGroup, File groupMemberCertFile) {
+    protected void enablePermissionTests(GroupURI accessGroup, File groupMemberCert) {
         this.accessGroup = accessGroup;
-        this.groupMember = SSLUtil.createSubject(groupMemberCertFile);
+        this.groupMember = SSLUtil.createSubject(groupMemberCert);
     }
 
     @Test
@@ -398,7 +399,7 @@ public class NodesTest extends VOSTest {
         Assume.assumeTrue("enablePermissionPropsTest not called", group1 != null);
         
         // create a fully populated container node
-        String path = "inheritperm";
+        String path = "testInheritPermissions";
 
         ContainerNode testNode = new ContainerNode(path);
 
