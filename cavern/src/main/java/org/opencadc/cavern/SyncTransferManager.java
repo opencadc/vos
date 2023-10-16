@@ -70,9 +70,8 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.SyncJobExecutor;
-import ca.nrc.cadc.vos.server.transfers.TransferRunner;
-
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.server.transfers.TransferRunner;
 
 /**
  *
@@ -85,11 +84,9 @@ public class SyncTransferManager extends JobManager {
         super();
 
         JobUpdater ju = (JobUpdater) jp;
-
-        JobExecutor je = new SyncJobExecutor(ju, TransferRunner.class);
-
+        JobExecutor jobExec = new SyncJobExecutor(ju, TransferRunner.class);
         super.setJobPersistence(jp);
-        super.setJobExecutor(je);
+        super.setJobExecutor(jobExec);
 
         // TODO: would be nice to enable a feature like destroy-on-complete instead of timed destruction
         super.setMaxDestruction(20000L);

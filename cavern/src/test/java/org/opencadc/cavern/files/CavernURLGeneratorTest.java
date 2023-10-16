@@ -69,14 +69,7 @@ package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -98,13 +91,17 @@ import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.View;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 public class CavernURLGeneratorTest
 {
@@ -194,7 +191,7 @@ public class CavernURLGeneratorTest
                 @Override
                 public Protocol run() throws Exception {
                     TestTransferGenerator urlGen = new TestTransferGenerator(ROOT);
-                    List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+                    List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, job, null);
                     return result.get(0);
                 }
                 
@@ -234,7 +231,7 @@ public class CavernURLGeneratorTest
             trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, job, null);
             Protocol p = result.get(0);
             Assert.assertNotNull(p);
             String suri = p.getEndpoint();
@@ -274,7 +271,7 @@ public class CavernURLGeneratorTest
             trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, job, null);
             Protocol p = result.get(0);
             Assert.assertNotNull(p);
             String suri = p.getEndpoint();
@@ -312,7 +309,7 @@ public class CavernURLGeneratorTest
             trans.getProtocols().addAll(protos);
             View view = null;
             Job job = null;
-            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, view, job, null);
+            List<Protocol> result = urlGen.getEndpoints(nodeURI, trans, job, null);
             Protocol p = result.get(0);
             Assert.assertNotNull(p);
             String suri = p.getEndpoint();
@@ -326,8 +323,9 @@ public class CavernURLGeneratorTest
             try {
                 urlGen.validateToken(token, nodeURI, Direction.pullFromVoSpace);
                 Assert.fail();
-            } catch (IllegalArgumentException e) {
-                Assert.assertTrue(e.getMessage().contains("Wrong direction"));
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected: " + expected);
+                Assert.assertTrue(expected.getMessage().contains("Wrong direction"));
             }
 
         } catch (Exception unexpected) {
@@ -335,7 +333,6 @@ public class CavernURLGeneratorTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
 
     @Test
     public void testInvalidToken() {
@@ -354,8 +351,8 @@ public class CavernURLGeneratorTest
             try {
                 urlGen.validateToken(badToken, nodeURI, Direction.pushToVoSpace);
                 Assert.fail();
-            } catch (IllegalArgumentException e) {
-                // expected
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected: " + expected);
             }
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
@@ -369,14 +366,14 @@ public class CavernURLGeneratorTest
     class TestTransferGenerator extends CavernURLGenerator {
 
         public TestTransferGenerator(String root) {
-            super(root);
+            super();
         }
 
         @Override
         List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
             List<URL> list = new ArrayList<URL>(1);
             try {
-                list.add(new URL("http://example.com/service/path"));
+                list.add(new URL("https://example.net/service/path"));
             } catch (MalformedURLException e) {
                 throw new RuntimeException("failure", e);
             }

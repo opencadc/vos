@@ -72,17 +72,11 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.MultiValuedProperties;
-import ca.nrc.cadc.util.PropertiesReader;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.LocalServiceURI;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import ca.nrc.cadc.vosi.AvailabilityPlugin;
 import ca.nrc.cadc.vosi.Availability;
+import ca.nrc.cadc.vosi.AvailabilityPlugin;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
-import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlContext;
@@ -91,7 +85,6 @@ import java.security.Principal;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.probe.FileSystemProbe;
 
 /**
  *
@@ -126,13 +119,6 @@ public class ServiceAvailability implements AvailabilityPlugin {
         boolean isGood = true;
         String note = "service is accepting requests";
         try {
-            String state = getState();
-            if (VOSpaceAuthorizer.OFFLINE.equals(state)) {
-                return new Availability(false, VOSpaceAuthorizer.OFFLINE_MSG);
-            }
-            if (VOSpaceAuthorizer.READ_ONLY.equals(state)) {
-                return new Availability(false, VOSpaceAuthorizer.READ_ONLY_MSG);
-            }
 
             // File system probe
             // PropertiesReader pr = new PropertiesReader("cavern.properties");
@@ -166,6 +152,8 @@ public class ServiceAvailability implements AvailabilityPlugin {
             CheckResource checkResource;
             
             LocalAuthority localAuthority = new LocalAuthority();
+            
+            // TODO: oh the assumptions....
 
             URI credURI = localAuthority.getServiceURI(Standards.CRED_PROXY_10.toString());
             url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
@@ -200,35 +188,6 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
     @Override
     public void setState(String state) {
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        if (subject == null) {
-            return;
-        }
-
-        Principal caller = AuthenticationUtil.getX500Principal(subject);
-        if (AuthenticationUtil.equals(TRUSTED, caller)) {
-            String key = VOSpaceAuthorizer.class.getName() + ".state";
-            if (VOSpaceAuthorizer.OFFLINE.equals(state)) {
-                System.setProperty(key, VOSpaceAuthorizer.OFFLINE);
-            } else if (VOSpaceAuthorizer.READ_ONLY.equals(state)) {
-                System.setProperty(key, VOSpaceAuthorizer.READ_ONLY);
-            } else if (VOSpaceAuthorizer.READ_WRITE.equals(state)) {
-                System.setProperty(key, VOSpaceAuthorizer.READ_WRITE);
-            }
-            log.info("WebService state changed to " + state + " by " + caller + " [OK]");
-        } else {
-            log.warn("WebService state change to " + state + " by " + caller + " [DENIED]");
-        }
-    }
-
-    private String getState() {
-        String key = VOSpaceAuthorizer.MODE_KEY;
-        String ret = System.getProperty(key);
-        if (ret == null) {
-            return VOSpaceAuthorizer.READ_WRITE;
-        }
-        return ret;
+        throw new UnsupportedOperationException("TODO: re-implement using cadc-rest mechanism");
     }
 }

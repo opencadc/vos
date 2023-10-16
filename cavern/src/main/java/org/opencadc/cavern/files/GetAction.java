@@ -68,14 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
 import java.nio.file.AccessDeniedException;
@@ -85,8 +77,14 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
-
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.transfer.Direction;
 
 /**
  *
@@ -107,23 +105,12 @@ public abstract class GetAction extends FileAction {
 
     @Override
     public void doAction()  throws Exception {
-
         try {
             VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                log.debug("not found: " + nodeURI.toString());
-                throw new ResourceNotFoundException("not found: " + nodeURI.toString());
-            }
-            if (!Files.isReadable(source)) {
-                log.debug("permission denied for: " + nodeURI.toString());
-                throw new AccessControlException("permission denied for " + nodeURI.toString());
-            }
+            log.warn("target: " + nodeURI);
             
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // Authorization checks should have been done in initAction already.
-            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+            // PathResolver checks read permission: nothing else to do
+            Node node = pathResolver.getNode(nodeURI.getPath());
 
             // GetAction code is common for both /files and /preauth endpoints. Neither will support
             // GET for container nodes
@@ -131,6 +118,8 @@ public abstract class GetAction extends FileAction {
                 log.debug("container nodes not supported for GET");
                 throw new IllegalArgumentException("GET for directories not supported");
             }
+            
+            final Path source = nodePersistence.nodeToPath(nodeURI);
 
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());

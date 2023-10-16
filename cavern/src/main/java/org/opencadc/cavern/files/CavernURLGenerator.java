@@ -69,9 +69,9 @@ package org.opencadc.cavern.files;
 
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
 import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
@@ -81,19 +81,7 @@ import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.server.PathResolver;
-import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
+import java.beans.PersistenceDelegate;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -105,7 +93,6 @@ import java.nio.file.FileSystems;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
@@ -115,12 +102,24 @@ import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;
 import org.opencadc.permissions.WriteGrant;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
+import org.opencadc.vospace.server.transfers.TransferGenerator;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 public class CavernURLGenerator implements TransferGenerator {
 
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
-    private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
     private final PosixIdentityManager identityManager = new PosixIdentityManager();
 
@@ -130,11 +129,16 @@ public class CavernURLGenerator implements TransferGenerator {
     private static final String KEY_META_DIRECTION = "dir";
     private static final String ANON_USER = "anon";
     private final MultiValuedProperties config;
+    
+    private final FileSystemNodePersistence nodePersistence;
+    private final VOSpaceAuthorizer authorizer;
 
 
-    public CavernURLGenerator() {
-        this.nodes = new FileSystemNodePersistence();
-        this.config = this.nodes.getConfig();
+    public CavernURLGenerator(FileSystemNodePersistence nodePersistence, MultiValuedProperties config) {
+        this.nodePersistence = nodePersistence;
+        this.authorizer = new VOSpaceAuthorizer(nodePersistence);
+        this.config = config;
+        
         String sb = config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
         // make sure server bas ends with /
         if (sb != null && !sb.endsWith("/")) {
@@ -143,17 +147,17 @@ public class CavernURLGenerator implements TransferGenerator {
         this.sshServerBase = sb;
     }
 
-    // for testing
-    public CavernURLGenerator(String root) {
-        this.nodes = new FileSystemNodePersistence();
-        this.config = this.nodes.getConfig();
-        this.sshServerBase = this.config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
+    // unit test
+    
+    public CavernURLGenerator() {
+        this.sshServerBase = null;
+        this.config = null;
+        this.nodePersistence = null;
+        this.authorizer = null;
     }
 
     @Override
-    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view,
-            Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException {
+    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams) throws Exception {
         if (target == null) {
             throw new IllegalArgumentException("target is required");
         }
@@ -162,12 +166,8 @@ public class CavernURLGenerator implements TransferGenerator {
         }
 
         try {
-            // get the node to check the type - consider changing this API
-            // so that the node instead of the URI is passed in so this step
-            // can be avoided.
-            FileSystem fs = FileSystems.getDefault();
-            PathResolver ps = new PathResolver(nodes, true);
-            Node node = ps.resolveWithReadPermissionCheck(target, null, true);
+            PathResolver ps = new PathResolver(nodePersistence, authorizer, true);
+            Node node = ps.getNode(target.getPath());
 
             List<Protocol> ret = new ArrayList<>();
             List<URI> uris;
@@ -176,13 +176,12 @@ public class CavernURLGenerator implements TransferGenerator {
                 Subject currentSubject = AuthenticationUtil.getCurrentSubject();
                 if (node instanceof ContainerNode) {
                     PosixPrincipal caller = identityManager.toPosixPrincipal(currentSubject);
-                    // TODO: handleMount expects the local posix username -- NOT UID
-                    uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
+                    uris = handleContainerMount(target, protocol, caller);
                 } else if (node instanceof DataNode) {
                     uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
                 } else {
-                    throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
-                        + node.getUri());
+                    throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer "
+                            + target.getPath());
                 }
                 for (URI u : uris) {
                     Protocol p = new Protocol(protocol.getUri(), u.toASCIIString(), null);
@@ -208,19 +207,16 @@ public class CavernURLGenerator implements TransferGenerator {
             // Used in TokenTool.generateToken()
             Class<? extends Grant> grantClass = null;
 
-            switch (protocol.getUri()) {
-                case VOS.PROTOCOL_HTTPS_GET:
-                    scheme = "https";
-                    dir = Direction.pullFromVoSpace;
-                    grantClass = ReadGrant.class;
-                    break;
-                case VOS.PROTOCOL_HTTPS_PUT:
-                    scheme = "https";
-                    dir = Direction.pushToVoSpace;
-                    grantClass = WriteGrant.class;
-                    break;
-                default:
-                    throw new UnsupportedOperationException("unsupported protocol: " + protocol.getUri());
+            if (VOS.PROTOCOL_HTTPS_GET.equals(protocol.getUri())) {
+                scheme = "https";
+                dir = Direction.pullFromVoSpace;
+                grantClass = ReadGrant.class;
+            } else if (VOS.PROTOCOL_HTTPS_PUT.equals(protocol.getUri())) {
+                scheme = "https";
+                dir = Direction.pushToVoSpace;
+                grantClass = WriteGrant.class;
+            } else {
+                throw new UnsupportedOperationException("unsupported protocol: " + protocol.getUri());
             }
 
             List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
@@ -237,36 +233,29 @@ public class CavernURLGenerator implements TransferGenerator {
             // Use TokenTool to generate a preauth token
             File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
             File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
-
-            TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
-
-            // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
-            Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
-            String callingUser = "";
-            if (authUsers.size() > 0) {
-                callingUser = authUsers.iterator().next();
-            } else {
-                callingUser = ANON_USER;
+            TokenTool gen = null; 
+            if (pubKeyFile != null && privateKeyFile != null) {
+                gen = new TokenTool(pubKeyFile, privateKeyFile);
             }
 
-            // Use this function in case the incoming URI uses '!' instead of '~'
-            // in the authority.
-            // This will translate the URI to use '~' in it's authority.
-            log.debug("URI passed in :" + target.getURI());
-            VOSURI commonFormURI = target.getCommonFormURI();
-            log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
-            String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
-            String encodedToken = new String(Base64.encode(token.getBytes()));
+            // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
+            IdentityManager im = AuthenticationUtil.getIdentityManager();
+            Subject caller = AuthenticationUtil.getCurrentSubject();
+            String callingUser = im.toDisplayString(caller); // should be null for anon
 
-            // build the request path
+            // Use CommonFormURI in case the incoming URI uses '!' instead of '~' in the authority.
             StringBuilder path = new StringBuilder();
-            path.append("/");
-            path.append(encodedToken);
-            path.append("/");
+            if (gen != null) {
+                String token = gen.generateToken(target.getCommonFormURI().getURI(), grantClass, callingUser);
+                String encodedToken = new String(Base64.encode(token.getBytes()));
+                path.append("/");
+                path.append(encodedToken);
+                path.append("/");
+            }
 
             if (Direction.pushToVoSpace.equals(dir)) {
                 // put to resolved path
-                path.append(node.getUri().getPath());
+                path.append(target.getPath());
             } else {
                 // get from unresolved path so filename at end of url is correct
                 path.append(target.getURI().getPath());
@@ -292,17 +281,22 @@ public class CavernURLGenerator implements TransferGenerator {
         }
     }
     
-    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, PosixPrincipal caller) {
+    private List<URI> handleContainerMount(VOSURI target, Protocol protocol, PosixPrincipal caller) {
         if (sshServerBase == null) {
             throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in "
                     + CavernConfig.CAVERN_PROPERTIES);
         }
+        if (!VOS.PROTOCOL_SSHFS.equals(protocol.getUri())) {
+            throw new IllegalArgumentException("cannot use protocol " + protocol.getUri() + " with ContainerNode "
+                    + target.getPath());
+        }
+        
         List<URI> ret = new ArrayList<URI>();
         StringBuilder sb = new StringBuilder();
         sb.append("sshfs:");
-        sb.append(caller.getName()).append("@");
+        sb.append(caller.username).append("@");
         sb.append(sshServerBase);
-        sb.append(node.getUri().getPath().substring(1)); // sshServerBase includes the initial /
+        sb.append(target.getPath().substring(1)); // sshServerBase includes the initial /
         try {
             URI u = new URI(sb.toString());
             ret.add(u);
@@ -389,7 +383,7 @@ public class CavernURLGenerator implements TransferGenerator {
     protected File findFile(String key) {
         String value = this.config.getFirstPropertyValue(key);
         if (value == null) {
-            throw new IllegalStateException("CONFIG: expected property not found - " + key);
+            return null;
         }
         File ret = new File(CavernConfig.DEFAULT_CONFIG_DIR, value);
         if (!ret.exists()) {

@@ -70,9 +70,8 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
-import ca.nrc.cadc.vos.server.transfers.TransferRunner;
-
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.server.transfers.TransferRunner;
 
 /**
  *

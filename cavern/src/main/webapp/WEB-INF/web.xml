@@ -5,171 +5,187 @@
     "http://java.sun.com/j2ee/dtds/web-app_2_3.dtd">
 
 <web-app>
+    <display-name>cavern</display-name>
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+    
+    <context-param>
+        <param-name>VOSpaceStylesheetReference</param-name>
+        <param-value>/cavern/vospace.xsl</param-value>
+    </context-param>
 
-  <display-name>cavern</display-name>
-
-  <context-param>
-    <param-name>VOSpaceStylesheetReference</param-name>
-    <param-value>/cavern/vospace.xsl</param-value>
-  </context-param>
-
-<servlet>
-    <servlet-name>logControl</servlet-name>
-    <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
-    <init-param>
-      <param-name>logLevel</param-name>
-      <param-value>info</param-value>
-    </init-param>
-    <init-param>
-      <param-name>logLevelPackages</param-name>
-      <param-value>
+    <servlet>
+        <servlet-name>logControl</servlet-name>
+        <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
+        <init-param>
+            <param-name>logLevel</param-name>
+            <param-value>info</param-value>
+        </init-param>
+        <init-param>
+            <param-name>logLevelPackages</param-name>
+            <param-value>
             org.opencadc.cavern
+            org.opencadc.vospace
             ca.nrc.cadc.ac
             ca.nrc.cadc.rest
             ca.nrc.cadc.vos
             ca.nrc.cadc.vosi
-      </param-value>
-    </init-param>
-    <init-param>
-      <param-name>logAccessGroup</param-name>
-      <param-value>ivo://cadc.nrc.ca/gms?CADC</param-value>
-    </init-param>
-    <init-param>
-      <param-name>groupAuthorizer</param-name>
-      <param-value>ca.nrc.cadc.ac.client.GroupAuthorizer</param-value>
-    </init-param>
-    <load-on-startup>1</load-on-startup>
-  </servlet>
+            </param-value>
+        </init-param>
+            <init-param>
+            <param-name>logAccessGroup</param-name>
+            <param-value>ivo://cadc.nrc.ca/gms?CADC</param-value>
+        </init-param>
+            <init-param>
+            <param-name>groupAuthorizer</param-name>
+            <param-value>ca.nrc.cadc.ac.client.GroupAuthorizer</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
   
-  <!-- async transfer servlet-->
-  <servlet>
-    <servlet-name>TransferServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-    <init-param>
-        <param-name>init</param-name>
-        <param-value>org.opencadc.cavern.CavernInitAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>get</param-name>
-        <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>post</param-name>
-        <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>delete</param-name>
-        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-        <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
-    </init-param>
-    <load-on-startup>2</load-on-startup>
-  </servlet>
+    <servlet>
+        <servlet-name>NodesServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
+        <init-param>
+            <param-name>augmentSubject</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>init</param-name>
+            <param-value>org.opencadc.cavern.CavernInitAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>org.opencadc.vospace.server.actions.GetNodeAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>put</param-name>
+            <param-value>org.opencadc.vospace.server.actions.CreateNodeAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>org.opencadc.vospace.server.actions.UpdateNodeAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>org.opencadc.vospace.server.actions.DeleteNodeAction</param-value>
+        </init-param>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+    
+    <!-- async transfer servlet-->
+    <servlet>
+        <servlet-name>TransferServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+            <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+            <param-value>org.opencadc.vospace.server.transfers.InlineTransferHandler</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
 
-   <!-- async recursive node property setting servlet-->
-   <servlet>
-     <servlet-name>RecursiveSetNodeServlet</servlet-name>
-     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-     <init-param>
-         <param-name>get</param-name>
-         <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
-     </init-param>
-     <init-param>
-         <param-name>post</param-name>
-         <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
-     </init-param>
-     <init-param>
-         <param-name>delete</param-name>
-         <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
-     </init-param>
-     <init-param>
-         <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-         <param-value>org.opencadc.cavern.RecursiveSetNodeJobManager</param-value>
-     </init-param>
-     <init-param>
-         <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-         <param-value>ca.nrc.cadc.vos.server.RecursiveSetNodeInlineContentHandler</param-value>
-     </init-param>
-     <load-on-startup>3</load-on-startup>
-   </servlet>
+    <!-- async recursive node property setting servlet-->
+    <servlet>
+        <servlet-name>RecursiveSetNodeServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+            <param-value>org.opencadc.cavern.RecursiveSetNodeJobManager</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+            <param-value>ca.nrc.cadc.vos.server.RecursiveSetNodeInlineContentHandler</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
 
-  <!-- sync transfer servlet-->
-  <servlet>
-    <servlet-name>SyncTransferServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
-    <init-param>
-        <param-name>get</param-name>
-        <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>post</param-name>
-        <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>delete</param-name>
-        <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.web.SyncPostAction.execOnPOST</param-name>
-        <param-value>true</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-        <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
-    </init-param>
-    <init-param>
-        <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-        <param-value>ca.nrc.cadc.vos.server.TransferInlineContentHandler</param-value>
-    </init-param>
-    <load-on-startup>3</load-on-startup>
-  </servlet>
-
-  <!-- VOSpace NodesServlet -->
-  <servlet>
-    <servlet-name>NodesServlet</servlet-name>
-    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-
-    <init-param>
-      <param-name>org.restlet.application</param-name>
-      <param-value>ca.nrc.cadc.vos.server.web.restlet.NodesApplication</param-value>
-    </init-param>
-
-    <load-on-startup>4</load-on-startup>
-  </servlet>
+    <!-- sync transfer servlet-->
+    <servlet>
+        <servlet-name>SyncTransferServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.web.SyncPostAction.execOnPOST</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+            <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
+            <param-value>org.opencadc.vospace.server.transfers.InlineTransferHandler</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
 
     <!-- internal servlet to assist async transfer servlet -->
-  <servlet>
-    <servlet-name>TransferDetailsServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.vos.server.transfers.TransferDetailsServlet</servlet-class>
-    <init-param>
-      <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-      <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
-    </init-param>
-    <load-on-startup>3</load-on-startup>
-  </servlet>
+    <servlet>
+        <servlet-name>TransferDetailsServlet</servlet-name>
+        <servlet-class>org.opencadc.vospace.server.transfers.TransferDetailsServlet</servlet-class>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+            <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
 
-  <servlet>
-    <servlet-name>PreauthFileActionServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
-    <init-param>
-      <param-name>get</param-name>
-      <param-value>org.opencadc.cavern.files.PreauthGetAction</param-value>
-    </init-param>
-    <init-param>
-      <param-name>put</param-name>
-      <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
-    </init-param>
-    <load-on-startup>3</load-on-startup>
-  </servlet>
+    <servlet>
+        <servlet-name>PreauthFileActionServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>org.opencadc.cavern.files.PreauthGetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>put</param-name>
+            <param-value>org.opencadc.cavern.files.PreauthPutAction</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
   
-  <servlet>
-    <servlet-name>AuthFileActionServlet</servlet-name>
+    <servlet>
+        <servlet-name>AuthFileActionServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
         <init-param>
             <param-name>get</param-name>
@@ -182,99 +198,100 @@
         <load-on-startup>3</load-on-startup>
     </servlet>
 
-  <!-- VOSpace ViewsServlet -->
-  <servlet>
-    <servlet-name>ViewsServlet</servlet-name>
-    <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+    <!-- VOSpace ViewsServlet -->
+    <servlet>
+        <servlet-name>ViewsServlet</servlet-name>
+        <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
 
-    <init-param>
-      <param-name>org.restlet.application</param-name>
-      <param-value>ca.nrc.cadc.vos.server.web.restlet.ViewsApplication
-      </param-value>
-    </init-param>
+        <init-param>
+        <param-name>org.restlet.application</param-name>
+        <param-value>ca.nrc.cadc.vos.server.web.restlet.ViewsApplication
+        </param-value>
+        </init-param>
 
-    <load-on-startup>4</load-on-startup>
-  </servlet>
+        <load-on-startup>4</load-on-startup>
+    </servlet>
 
-  <!-- VOSI availability -->
-  <servlet>
-    <servlet-name>AvailabilityServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.vosi.AvailabilityServlet</servlet-class>
-    <init-param>
-      <param-name>ca.nrc.cadc.vosi.AvailabilityPlugin</param-name>
-      <param-value>org.opencadc.cavern.ServiceAvailability</param-value>
-    </init-param>
-    <init-param>
-      <param-name>availabilityProperties</param-name>
-      <param-value>cadc-vosi.properties</param-value>
-    </init-param>
-    <load-on-startup>5</load-on-startup>
-  </servlet>
+    <!-- VOSI availability -->
+    <servlet>
+        <servlet-name>AvailabilityServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.vosi.AvailabilityServlet</servlet-class>
+        <init-param>
+            <param-name>ca.nrc.cadc.vosi.AvailabilityPlugin</param-name>
+            <param-value>org.opencadc.cavern.ServiceAvailability</param-value>
+        </init-param>
+        <init-param>
+            <param-name>availabilityProperties</param-name>
+            <param-value>cadc-vosi.properties</param-value>
+        </init-param>
+        <load-on-startup>5</load-on-startup>
+    </servlet>
 
-  <!-- VOSI capabilities -->
-  <servlet>
-    <servlet-name>CapabilitiesServlet</servlet-name>
-    <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
-    <init-param>
-        <param-name>init</param-name>
-        <param-value>ca.nrc.cadc.vosi.CapInitAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>get</param-name>
-        <param-value>ca.nrc.cadc.vosi.CapGetAction</param-value>
-    </init-param>
-    <init-param>
-        <param-name>input</param-name>
-        <param-value>/capabilities.xml</param-value>
-    </init-param>
-    <init-param>
-      <param-name>head</param-name>
-      <param-value>ca.nrc.cadc.vosi.CapHeadAction</param-value>
-    </init-param>
-    <load-on-startup>3</load-on-startup>
-  </servlet>
+    <!-- VOSI capabilities -->
+    <servlet>
+        <servlet-name>CapabilitiesServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
+        <init-param>
+            <param-name>init</param-name>
+            <param-value>ca.nrc.cadc.vosi.CapInitAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>ca.nrc.cadc.vosi.CapGetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>input</param-name>
+            <param-value>/capabilities.xml</param-value>
+        </init-param>
+        <init-param>
+            <param-name>head</param-name>
+            <param-value>ca.nrc.cadc.vosi.CapHeadAction</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
 
-  <!-- the VOSpace Endpoints -->
-  <servlet-mapping>
-    <servlet-name>NodesServlet</servlet-name>
-    <url-pattern>/nodes/*</url-pattern>
-  </servlet-mapping>
-  
-  <servlet-mapping>
-    <servlet-name>ViewsServlet</servlet-name>
-    <url-pattern>/views</url-pattern>
-  </servlet-mapping>
+    <!-- the VOSpace Endpoints -->
+    <servlet-mapping>
+        <servlet-name>NodesServlet</servlet-name>
+        <url-pattern>/nodes/*</url-pattern>
+    </servlet-mapping>
 
-  <servlet-mapping>
-    <servlet-name>PreauthFileActionServlet</servlet-name>
-    <url-pattern>/preauth/*</url-pattern>
-  </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ViewsServlet</servlet-name>
+        <url-pattern>/views</url-pattern>
+    </servlet-mapping>
 
-  <servlet-mapping>
-    <servlet-name>AuthFileActionServlet</servlet-name>
-    <url-pattern>/files/*</url-pattern>
-  </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>PreauthFileActionServlet</servlet-name>
+        <url-pattern>/preauth/*</url-pattern>
+    </servlet-mapping>
 
-  
-  <!-- Transfer servlet endpoints -->
-  <servlet-mapping>
-    <servlet-name>TransferServlet</servlet-name>
-    <url-pattern>/transfers/*</url-pattern>
-  </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AuthFileActionServlet</servlet-name>
+        <url-pattern>/files/*</url-pattern>
+    </servlet-mapping>
 
-  <!-- Resursive Set Node servlet endpoints -->
-  <servlet-mapping>
-    <servlet-name>RecursiveSetNodeServlet</servlet-name>
-    <url-pattern>/nodeprops/*</url-pattern>
-  </servlet-mapping>
-  
-    <!-- Client transfer servlet endpoints -->
-  <servlet-mapping>
-    <servlet-name>TransferDetailsServlet</servlet-name>
-    <url-pattern>/xfer/*</url-pattern>
-  </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>SyncTransferServlet</servlet-name>
+        <url-pattern>/synctrans/*</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>TransferServlet</servlet-name>
+        <url-pattern>/transfers/*</url-pattern>
+    </servlet-mapping>
 
-  <!--  PackageServlet and pkg endpoint -->
+    <servlet-mapping>
+        <servlet-name>RecursiveSetNodeServlet</servlet-name>
+        <url-pattern>/nodeprops/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>TransferDetailsServlet</servlet-name>
+        <url-pattern>/xfer/*</url-pattern>
+    </servlet-mapping>
+
+  <!--
   <servlet>
     <servlet-name>PackageServlet</servlet-name>
     <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
@@ -297,33 +314,23 @@
     <servlet-name>PackageServlet</servlet-name>
     <url-pattern>/pkg/*</url-pattern>
   </servlet-mapping>
+  -->
 
+    <!-- Availability servlet endpoint -->
+    <servlet-mapping>
+        <servlet-name>AvailabilityServlet</servlet-name>
+        <url-pattern>/availability</url-pattern>
+    </servlet-mapping>
 
-  <!-- Availability servlet endpoint -->
-  <servlet-mapping>
-    <servlet-name>AvailabilityServlet</servlet-name>
-    <url-pattern>/availability</url-pattern>
-  </servlet-mapping>
+    <!-- Capability servlet endpoint -->
+    <servlet-mapping>
+        <servlet-name>CapabilitiesServlet</servlet-name>
+        <url-pattern>/capabilities</url-pattern>
+    </servlet-mapping>
 
-  <!-- Capability servlet endpoint -->
-  <servlet-mapping>
-    <servlet-name>CapabilitiesServlet</servlet-name>
-    <url-pattern>/capabilities</url-pattern>
-  </servlet-mapping>
-
-  <!-- Log control servlet endpoint -->
-  <servlet-mapping>
-    <servlet-name>logControl</servlet-name>
-    <url-pattern>/logControl</url-pattern>
-  </servlet-mapping>
-
-  <servlet-mapping>
-    <servlet-name>SyncTransferServlet</servlet-name>
-    <url-pattern>/synctrans/*</url-pattern>
-  </servlet-mapping>
-
-  <welcome-file-list>
-    <welcome-file>index.html</welcome-file>
-  </welcome-file-list>
-
+    <!-- Log control servlet endpoint -->
+    <servlet-mapping>
+        <servlet-name>logControl</servlet-name>
+        <url-pattern>/logControl</url-pattern>
+    </servlet-mapping>
 </web-app>

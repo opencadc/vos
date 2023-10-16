@@ -67,10 +67,13 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.File;
 import java.net.URI;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.opencadc.gms.GroupURI;
 
 /**
  * Test the nodes endpoint.
@@ -80,13 +83,27 @@ import org.apache.log4j.Logger;
 public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
 
+    static final File TEST_CERT;
+    
     static {
         Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.vos", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        
+        TEST_CERT = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
     }
     
+    private File testCert = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
+    
     public NodesTest() {
-        super(Constants.RESOURCE_ID, "cavern-test.pem");
+        super(Constants.RESOURCE_ID, TEST_CERT);
+        super.linkNodeProps = false; // xattrs not supported in posix filesystem
+        
+        GroupURI group1 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?CADC"));
+        GroupURI group2 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
+        super.enablePermissionPropsTest(group1, group2);
+
+        File groupMemberCert = FileUtil.getFileFromResource("cavern-auth-test.pem", NodesTest.class);
+        super.enablePermissionTests(group2, groupMemberCert);
     }
 }

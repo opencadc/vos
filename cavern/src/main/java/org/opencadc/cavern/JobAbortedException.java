@@ -65,40 +65,34 @@
 *  $Revision: 4 $
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.vos.VOSException;
+import org.opencadc.vospace.VOSException;
 
 /**
  * Exception indicating the a job has been aborted by the client.
- * 
+ *
  * @author yeunga
  *
  */
-public class JobAbortedException extends VOSException
-{
+public class JobAbortedException extends VOSException {
 
-    private static final long serialVersionUID = -4453433718383619175L;
-    
     private Job job;
-    
-    public JobAbortedException(Job job)
-    {
+
+    public JobAbortedException(Job job) {
         super("job aborted");
         this.job = job;
     }
 
-    public JobAbortedException(Job job, String message)
-    {
+    public JobAbortedException(Job job, String message) {
         super(message);
         this.job = job;
     }
-    
-    public Job getJob()
-    {
+
+    public Job getJob() {
         return job;
     }
 

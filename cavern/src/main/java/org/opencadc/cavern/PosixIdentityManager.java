@@ -99,12 +99,6 @@ public class PosixIdentityManager implements IdentityManager {
             return null;
         }
 
-        // handle integer for symmetry with toOwner
-        if (o instanceof Integer) {
-            Integer i = (Integer) o;
-            o = new PosixPrincipal(i);
-        }
-
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
             Set<Principal> pset = new HashSet<>();
@@ -130,11 +124,7 @@ public class PosixIdentityManager implements IdentityManager {
 
     @Override
     public Object toOwner(Subject subject) {
-        PosixPrincipal p = toPosixPrincipal(subject);
-        if (p == null) {
-            return null;
-        }
-        return (Integer) p.getUidNumber(); // autobox
+        return toPosixPrincipal(subject);
     }
 
     @Override
@@ -157,6 +147,7 @@ public class PosixIdentityManager implements IdentityManager {
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         log.warn("augment: " + subject);
         Subject ret = im.augment(subject);
+        log.warn("augmented: " + subject);
         return ret;
     }
 }

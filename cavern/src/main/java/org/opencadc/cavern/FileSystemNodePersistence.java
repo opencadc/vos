@@ -69,33 +69,36 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.util.FileMetadata;
-import ca.nrc.cadc.util.MultiValuedProperties;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeNotSupportedException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodeID;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.PathResolver;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.files.CavernURLGenerator;
 import org.opencadc.cavern.nodes.NodeUtil;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Views;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
+import org.opencadc.vospace.server.transfers.TransferGenerator;
 
 /**
- *
+ * NodePersistence implementation that uses a POSIX file system for node metadata
+ * and file data.
+ * 
  * @author pdowler
  */
 public class FileSystemNodePersistence implements NodePersistence {
@@ -103,108 +106,136 @@ public class FileSystemNodePersistence implements NodePersistence {
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
     
     private final PosixIdentityManager identityManager;
-    private final Path root;
-    private final MultiValuedProperties config;
+    
+    private final ContainerNode root;
+    private final Path rootPath;
+    private final VOSURI rootURI;
+    private final CavernConfig config;
 
     public FileSystemNodePersistence() {
-        CavernConfig cavernConfig = new CavernConfig();
-        this.config = cavernConfig.getConfig();
-        this.root = cavernConfig.getRoot();
+        this.config = new CavernConfig();
+        this.rootPath = config.getRoot();
+        
+        LocalServiceURI loc = new LocalServiceURI(config.getResourceID());
+        this.rootURI = loc.getVOSBase();
 
         // must be hard coded to this and not set via java system properties
         this.identityManager = new PosixIdentityManager();
+        
+        // root node
+        Subject rawOwner = config.getRootOwner();
+        UUID rootID = new UUID(0L, 0L);
+        this.root = new ContainerNode(rootID, "");
+        root.owner = identityManager.augment(rawOwner);
+        root.ownerDisplay = identityManager.toDisplayString(root.owner);
+        log.warn("ROOT owner: " + root.owner);
+        root.ownerID = identityManager.toPosixPrincipal(root.owner);
+        root.isPublic = true;
+        root.inheritPermissions = false;
+        // TODO: create and chown the root directory (idempotent)
     }
-
-    public MultiValuedProperties getConfig() {
-        return this.config;
+    
+    // support FileAction
+    public Path nodeToPath(VOSURI uri) {
+        return NodeUtil.nodeToPath(rootPath, uri);
+    }
+    
+    @Override
+    public URI getResourceID() {
+        return config.getResourceID();
     }
 
     @Override
-    public Node get(VOSURI uri) throws NodeNotFoundException, TransientException {
-        return get(uri, false);
+    public ContainerNode getRootNode() {
+        return root;
     }
 
     @Override
-    public Node get(VOSURI uri, boolean allowPartialPath) throws NodeNotFoundException, TransientException {
-        return get(uri, allowPartialPath, true);
+    public Set<URI> getImmutableProps() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public Node get(VOSURI uri, boolean allowPartialPath, boolean resolveMetadata) throws NodeNotFoundException, TransientException {
-        NodeUtil nut = new NodeUtil(root);
+    public Views getViews() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TransferGenerator getTransferGenerator() {
+        return new CavernURLGenerator(this, config.getProperties());
+    }
+
+    @Override
+    public Node get(ContainerNode parent, String name) throws TransientException {
+        NodeUtil nut = new NodeUtil(rootPath, rootURI);
         nut.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
-            Node ret = nut.get(uri, allowPartialPath);
+            Node ret = nut.get(parent, name);
             if (ret == null) {
-                throw new NodeNotFoundException(uri.getPath());
+                return null;
             }
-            Node cur = ret;
-            while (cur != null) {
-                PosixPrincipal owner = NodeUtil.getOwner(cur);
-                Subject so = nut.getFromCache(owner);
-                cur.appData = new NodeID(-1L, so, owner);
-                cur.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identityManager.toDisplayString(so)));
-                cur = cur.getParent();
-            }
-            log.debug("[get] " + ret);
+            
+            PosixPrincipal owner = NodeUtil.getOwner(ret);
+            Subject so = nut.getFromCache(owner);
+            ret.owner = so;
+            ret.ownerID = identityManager.toPosixPrincipal(so);
+            ret.ownerDisplay = identityManager.toDisplayString(so);
+            ret.parent = parent;
             return ret;
         } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
-    
-    @Override
-    public void getChildren(ContainerNode cn) throws TransientException {
-        getChildren(cn, null, 100, true);
-    }
 
     @Override
-    public void getChildren(ContainerNode cn, VOSURI vosuri, Integer intgr) throws TransientException {
-        getChildren(cn, vosuri, 100, true);
-    }
-
-    @Override
-    public void getChildren(ContainerNode cn, boolean bln) throws TransientException {
-        getChildren(cn, null, 100, bln);
-    }
-
-    @Override
-    public void getChildren(ContainerNode cn, VOSURI start, Integer limit, boolean bln) throws TransientException {
-        NodeUtil nut = new NodeUtil(root);
+    public ResourceIterator<Node> iterator(ContainerNode parent, Integer limit, String start) {
+        
+        NodeUtil nut = new NodeUtil(rootPath, rootURI);
         try {
-            Iterator<Node> ni = nut.list(cn, start, limit);
-            while (ni.hasNext()) {
-                Node cur = ni.next();
-                PosixPrincipal owner = NodeUtil.getOwner(cur);
-                Subject so = nut.getFromCache(owner);
-                cur.appData = new NodeID(-1L, so, owner);
-                cur.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identityManager.toDisplayString(so)));
-
-                cur.setParent(cn);
-                cn.getNodes().add(cur);
-                log.debug("[getChildren] " + cur);
-            }
+            // this is a complicated way to get the Path
+            LocalServiceURI loc = new LocalServiceURI(getResourceID());
+            VOSURI vu = loc.getURI(parent);
+            Iterator<Node> ni = nut.list(vu, limit, start);
+            return new IdentWrapper(parent, ni, nut);
         } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
+    
+    private class IdentWrapper implements ResourceIterator<Node> {
 
-    @Override
-    public void getChild(ContainerNode cn, String name) throws TransientException {
-        getChild(cn, name, true);
-    }
+        private final ContainerNode parent;
+        //private final ResourceIterator<Node> childIter;
+        private final Iterator<Node> childIter;
+        private final NodeUtil nut;
+        
+        //IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
+        IdentWrapper(ContainerNode parent, Iterator<Node> childIter, NodeUtil nut) {
+            this.parent = parent;
+            this.childIter = childIter;
+            this.nut = nut;
+        }
+        
+        @Override
+        public boolean hasNext() {
+            return childIter.hasNext();
+        }
 
-    @Override
-    public void getChild(ContainerNode cn, String name, boolean resolveMetadata) throws TransientException {
-        VOSURI vuri = new VOSURI(URI.create(cn.getUri().getURI().toASCIIString() + "/" + name));
-        try {
+        @Override
+        public Node next() {
+            Node ret = childIter.next();
+            PosixPrincipal owner = NodeUtil.getOwner(ret);
+            Subject so = nut.getFromCache(owner);
+            ret.owner = so;
+            ret.ownerID = identityManager.toPosixPrincipal(so);
+            ret.ownerDisplay = identityManager.toDisplayString(so);
+            ret.parent = parent;
+            return ret;
+        }
 
-            Node child = get(vuri);
-            if (child != null) {
-                cn.getNodes().add(child);
-            }
-        } catch (NodeNotFoundException ignore) {
-            log.debug("not found: " + vuri);
+        @Override
+        public void close() throws IOException {
+            //childIter.close();
         }
     }
 
@@ -215,164 +246,61 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node put(Node node) throws NodeNotSupportedException, TransientException {
-        if (node.isStructured()) {
-            throw new NodeNotSupportedException("StructuredDataNode is not supported.");
+        if (node == null) {
+            throw new IllegalArgumentException("arg cannot be null: node");
         }
-        if (node.getParent() != null && node.getParent().appData == null) {
-            throw new IllegalArgumentException("parent of node is not a persistent node: " + node.getUri().getPath());
+        if (node.parentID == null) {
+            if (node.parent == null) {
+                throw new RuntimeException("BUG: cannot persist node without parent: " + node);
+            }
+            node.parentID = node.parent.getID();
         }
+        if (node.ownerID == null) {
+            if (node.owner == null) {
+                throw new RuntimeException("BUG: cannot persist node without owner: " + node);
+            }
+            node.ownerID = identityManager.toPosixPrincipal(node.owner);
+        }
+        
+        //if (node.isStructured()) {
+        //    throw new NodeNotSupportedException("StructuredDataNode is not supported.");
+        //}
 
-        if (node.appData != null) { // persistent node == update == not supported
-            throw new UnsupportedOperationException("update of existing node not supported");
-        }
-
-        NodeUtil nut = new NodeUtil(root);
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI);
 
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             try {
-                PathResolver.validateTargetURI(ln);
-            } catch (LinkingException ex) {
+                PathResolver ps = new PathResolver(this, new VOSpaceAuthorizer(this), true);
+                ps.validateTargetURI(ln);
+            } catch (Exception ex) {
                 throw new UnsupportedOperationException("link to external resource", ex);
             }
         }
 
         try {
-            NodeUtil.setOwner(node, new NodeID(null, caller, owner));
-            nut.create(node);
-            return nut.get(node.getUri());
+            // this is a complicated way to get the Path
+            LocalServiceURI loc = new LocalServiceURI(getResourceID());
+            VOSURI vu = loc.getURI(node);
+            nut.put(node, vu);
+            return node;
         } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
 
     @Override
-    public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException {
-        // node arg is the current node, properties are the new props
-        NodeUtil nut = new NodeUtil(root);
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
-
-        try {
-            Path np = NodeUtil.nodeToPath(root, node);
-            for (NodeProperty prop : properties)
-            {
-                NodeProperty cur = node.findProperty(prop.getPropertyURI());
-                if (cur != null) {
-                    if (prop.isMarkedForDeletion()) { // delete
-                        //node.getProperties().remove(cur);
-                        cur.setMarkedForDeletion(true);
-                    } else { // update
-                        cur.setValue(prop.getPropertyValue());
-                    }
-                } else { // add
-                    if (!prop.isMarkedForDeletion()) {
-                        node.getProperties().add(prop);
-                    } // else: ignore delete non-existent prop
-                }
-            }
-            nut.setNodeProperties(np, node);
-            
-            // fix return node
-            Iterator<NodeProperty> iter = node.getProperties().iterator();
-            while (iter.hasNext()) {
-                NodeProperty p = iter.next();
-                if (p.isMarkedForDeletion()) {
-                    iter.remove();
-                }
-            }
-        }  catch (IOException | InterruptedException ex) {
-            throw new RuntimeException("oops", ex);
-        }
-        return node;
-    }
-
-    @Override
     public void delete(Node node) throws TransientException {
-        try {
-            NodeUtil.delete(root, node.getUri());
-        } catch (IOException ex) {
-            throw new RuntimeException("oops", ex);
-        }
-    }
-
-    @Override
-    public void setFileMetadata(DataNode dn, FileMetadata fm, boolean bln) throws TransientException {
-        // callback from storage system
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setBusyState(DataNode dn, VOS.NodeBusyState nbs, VOS.NodeBusyState nbs1) throws TransientException {
-        // callback from storage system
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void move(Node node, ContainerNode cn) throws TransientException {
-        NodeUtil nut = new NodeUtil(root);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = nut.addToCache(caller);
-
-        log.debug("move: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
-        // move rule check: check authorities
-        checkSameAuthority(node, cn);
-
-        if (node instanceof ContainerNode) {
-            // move rule check: check that we are not moving root or a root container
-            if (node.getParent() == null || node.getParent().getUri().isRoot()) {
-                throw new IllegalArgumentException("Cannot move a root container.");
-            }
-
-            // move rule check: check that 'src' is not in the path of 'dest' so that
-            // circular paths are not created
-            // This check is probably done by the file system, consider removing it.
-            Node target = cn;
-            while (target != null && !target.getUri().isRoot()) {
-                if (target.getUri().getPath().equals(node.getUri().getPath())) {
-                    throw new IllegalArgumentException("Cannot move to a contained sub-node.");
-                }
-                target = target.getParent();
-            }
-        }
-
         try {
-            // NOTE: this optional rename relies on a setName() call in InternalTransferAction (cadc-vos-server)
-            // which makes the node URI inconsistent with the node name (temporarily)
-            String destName = node.getName(); 
-            nut.move(node.getUri(), cn.getUri(), destName, owner);
+            // this is a complicated way to get the Path to delete
+            LocalServiceURI loc = new LocalServiceURI(getResourceID());
+            VOSURI vu = loc.getURI(node);
+            nut.delete(vu);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
-    }
-
-    @Override
-    public void copy(Node node, ContainerNode cn) throws TransientException {
-        NodeUtil nut = new NodeUtil(root);
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
-        log.debug("copy: " + node.getUri() + " to " + cn.getUri() + " as " + node.getName());
-        // copy rule check: check authorities
-        checkSameAuthority(node, cn);
-
-        try {
-            nut.copy(node.getUri(), cn.getUri(), owner);
-        } catch (IOException ex) {
-            throw new RuntimeException("oops", ex);
-        }
-    }
-
-    private void checkSameAuthority(Node n1, Node n2) {
-        URI srcAuthority = n1.getUri().getServiceURI(); // this removes the ! vs ~ issue
-        URI destAuthority = n2.getUri().getServiceURI();
-        if (!srcAuthority.equals(destAuthority)) {
-            throw new RuntimeException("Nodes have different authorities.");
-        }
-    }
-
-    public Path getRoot() {
-        return root;
     }
 }
