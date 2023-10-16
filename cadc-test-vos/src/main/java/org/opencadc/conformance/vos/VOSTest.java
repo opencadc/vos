@@ -249,9 +249,10 @@ public abstract class VOSTest {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
-
+        log.warn("post content: " + sb.toString());
+                
         FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
-
+        
         HttpPost post = new HttpPost(nodeURL, content, true);
         log.debug("POST: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(post));

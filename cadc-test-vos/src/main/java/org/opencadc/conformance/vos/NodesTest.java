@@ -287,7 +287,7 @@ public class NodesTest extends VOSTest {
     public void testNodePropertyUpdates() {
         try {
             // create a fully populated container node
-            String path = "nodes-complex-node";
+            String path = "testNodePropertyUpdates";
 
             // TODO: with DataNode we could test updating content-type and content-encoding
             ContainerNode testNode = new ContainerNode(path);
@@ -346,9 +346,13 @@ public class NodesTest extends VOSTest {
             testNode.getProperties().add(descriptionProperty2);
 
             testNode.getReadOnlyGroup().clear();
-            testNode.getReadOnlyGroup().add(group2);
+            if (group2 != null) {
+                testNode.getReadOnlyGroup().add(group2);
+            }
             testNode.getReadWriteGroup().clear();
-            testNode.getReadWriteGroup().add(group1);
+            if (group1 != null) {
+                testNode.getReadWriteGroup().add(group1);
+            }
             testNode.isPublic = false;
             testNode.inheritPermissions = false;
 
