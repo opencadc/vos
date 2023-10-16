@@ -70,32 +70,29 @@
 package org.opencadc.cavern.pkg;
 
 import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.EnumSet;
-import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.pkg.server.PackageItem;
-import org.opencadc.pkg.server.PackageRunner;
-
-import org.opencadc.cavern.nodes.NodeUtil;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.Files;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Path;
-
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.FileSystemNodePersistence;
+import org.opencadc.cavern.nodes.NodeUtil;
+import org.opencadc.pkg.server.PackageItem;
+import org.opencadc.pkg.server.PackageRunner;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
+import org.opencadc.vospace.transfer.TransferReader;
 
 
 public class CavernPackageRunner extends PackageRunner {

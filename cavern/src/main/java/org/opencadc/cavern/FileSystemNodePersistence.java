@@ -195,7 +195,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
-            Iterator<Node> ni = nut.list(vu, limit, start);
+            ResourceIterator<Node> ni = nut.list(vu, limit, start);
             return new IdentWrapper(parent, ni, nut);
         } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
@@ -206,11 +206,11 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         private final ContainerNode parent;
         //private final ResourceIterator<Node> childIter;
-        private final Iterator<Node> childIter;
+        private final ResourceIterator<Node> childIter;
         private final NodeUtil nut;
         
         //IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
-        IdentWrapper(ContainerNode parent, Iterator<Node> childIter, NodeUtil nut) {
+        IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
             this.parent = parent;
             this.childIter = childIter;
             this.nut = nut;
@@ -235,7 +235,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         @Override
         public void close() throws IOException {
-            //childIter.close();
+            childIter.close();
         }
     }
 

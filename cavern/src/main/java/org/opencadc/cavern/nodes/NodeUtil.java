@@ -71,6 +71,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
@@ -119,12 +120,10 @@ import org.opencadc.util.fs.ExtendedFileAttributes;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.NodeFault;
 
 /**
  * Utility methods for interacting with nodes. This is now like a DAO class
@@ -773,32 +772,47 @@ public class NodeUtil {
     }
 
     
-    public Iterator<Node> list(VOSURI vu, Integer limit, String start) 
+    public ResourceIterator<Node> list(VOSURI vu, Integer limit, String start) 
             throws IOException, InterruptedException {
         Path np = nodeToPath(root, vu);
         log.debug("[list] " + vu.getPath() + " -> " + np);
         
-        // TODO: rewrite this to not instantiate a list of children and just stream
-        // return a ResourceIterator<Node>
-        List<Node> nodes = new ArrayList<Node>();
-        if (limit == null || limit > 0) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(np)) {
-                for (Path file : stream) {
-                    log.debug("[list] visit: " + file);
-                    Node n = pathToNode(file);
-                    if (!nodes.isEmpty() || start == null
-                            || start.equals(n.getName())) {
-                        nodes.add(n);
-                    }
-                    
-                    if (limit != null && limit == nodes.size()) {
-                        break;
-                    }
-                }
+        if (limit != null || start != null) {
+            throw new UnsupportedOperationException("not supported: batch container node listing");
+        }
+        
+        return new NodeIterator(np);
+    }
+
+    private class NodeIterator implements ResourceIterator<Node> {
+        DirectoryStream<Path> stream;
+        private final Iterator<Path> content;
+        
+        NodeIterator(Path path) throws IOException {
+            this.stream = Files.newDirectoryStream(path);
+            this.content = stream.iterator();
+        }
+        
+        @Override
+        public boolean hasNext() {
+            return content.hasNext();
+        }
+
+        @Override
+        public Node next() {
+            Path cur = content.next();
+            try {
+                return pathToNode(cur);
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("container node listing failed", ex);
             }
         }
-        log.debug("[list] found: " + nodes.size());
-        return nodes.iterator();
+
+        @Override
+        public void close() throws IOException {
+            stream.close();
+        }
+        
     }
 
     // currently unused visitor with the minimal setup to call pathToNode

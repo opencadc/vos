@@ -69,11 +69,10 @@ package org.opencadc.cavern.probe;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.File;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.VOSURI;
 
 /**
  *

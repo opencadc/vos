@@ -71,14 +71,6 @@ import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.InvalidConfigException;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodeID;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -91,6 +83,13 @@ import java.util.concurrent.Callable;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NodeUtil;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  *
@@ -100,27 +99,26 @@ public class FileSystemProbe implements Callable<Boolean> {
     private static final Logger log = Logger.getLogger(FileSystemProbe.class);
 
     private final Path root;
-    private final String vosBaseURI;
+    private final VOSURI vosBaseURI;
     private final NodeUtil nodeUtil;
     
     private final PosixPrincipal ownerPrincipal;
-    private final NodeID owner;
-    private final NodeID linkTargetOwner;
+    private final Subject owner;
+    private final Subject linkTargetOwner;
     private final Integer gid = 123456789;
     private final URI groupURI;
     
 
-    public FileSystemProbe(File baseDir, String vosBaseURI, String owner, String linkTargetOwner, String group) 
+    public FileSystemProbe(File baseDir, VOSURI vosBaseURI, String owner, String linkTargetOwner, String group) 
             throws InvalidConfigException {
         this.root = FileSystems.getDefault().getPath(baseDir.getAbsolutePath());
         this.vosBaseURI = vosBaseURI;
-        this.nodeUtil = new NodeUtil(root);
+        this.nodeUtil = new NodeUtil(root,vosBaseURI);
         
         this.ownerPrincipal = new PosixPrincipal(8675309); // this is cadc-tomcat but could be any uid
         Subject osub = new Subject(false, new TreeSet<>(), new TreeSet<>(), new TreeSet<>());
         osub.getPrincipals().add(ownerPrincipal);
-        this.owner = new NodeID(null, osub, ownerPrincipal);
-        
+        this.owner = osub;
         this.linkTargetOwner = this.owner;
         
         LocalAuthority loc = new LocalAuthority();
