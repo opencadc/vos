@@ -112,6 +112,12 @@ public class AclCommandExecutor {
     private final boolean isDir;
     private UserPrincipalLookupService users;
     
+    /**
+     * Constructor.
+     * 
+     * @param path the target path
+     * @param isDir true for directory, false for normal file
+     */
     public AclCommandExecutor(Path path, boolean isDir) { 
         this.path = path;
         this.isDir = isDir;
@@ -135,6 +141,15 @@ public class AclCommandExecutor {
         }
     }
 
+    /**
+     * Set the read and read/wite Groups for the current path using raw GID values.
+     * This will cleanly set whatever group principals are provided and remove all other ACLs.
+     * 
+     * @param worldReadable    set the target to world-readable (r-x for dir, r-- for normal file)
+     * @param readOnlyGroups   unique set of group IDs representing the ReadOnly groups
+     * @param readWriteGroups  unique set of group IDs representing the ReadWrite groups
+     * @throws IOException     if operation failed
+     */
     public void setACL(boolean worldReadable, final Set<Integer> readOnlyGroups, final Set<Integer> readWriteGroups)
             throws IOException {
         setACL(worldReadable, readOnlyGroups, readWriteGroups, false);
@@ -144,13 +159,11 @@ public class AclCommandExecutor {
      * Set the read and read/wite Groups for the current path using raw GID values.
      * This will cleanly set whatever group principals are provided and remove all other ACLs.
      *
-     * @param worldReadable         set the target to world-readable
-     * @param readOnlyGroups   The unique set of GroupPrincipals representing the ReadOnly groups.
-     * @param readWriteGroups  The unique set of GroupPrincipals representing the ReadWrite groups.
-     * @param isDir     Whether the path is a directory or not.
-     * @param defaultACL set default ACLs instead of actual ACLs
-     * 
-     * @throws IOException  If setting failed.
+     * @param worldReadable    set the target to world-readable (r-x for dir, r-- for normal file)
+     * @param readOnlyGroups   unique set of group IDs representing the ReadOnly groups
+     * @param readWriteGroups  unique set of group IDs representing the ReadWrite groups
+     * @param defaultACL       set default ACLs instead of actual ACLs
+     * @throws IOException     if operation failed
      */
     public void setACL(boolean worldReadable, final Set<Integer> readOnlyGroups, 
             final Set<Integer> readWriteGroups, boolean defaultACL) throws IOException {
@@ -235,11 +248,12 @@ public class AclCommandExecutor {
      * Set the read and read/wite Groups for the current path using resolved group names.  
      * This will cleanly set whatever group principals are provided and remove all other ACLs.
      * 
-     * @param readOnlyGroups   The unique set of GroupPrincipals representing the ReadOnly groups.
-     * @param readWriteGroups  The unique set of GroupPrincipals representing the ReadWrite groups.
-     * @param isDir     Whether the path is a directory or not.
-     * @throws IOException  If setting failed.
+     * @param readOnlyGroups   unique set of group IDs representing the ReadOnly groups
+     * @param readWriteGroups  unique set of group IDs representing the ReadWrite groups
+     * @throws IOException     if operation failed
+     * @deprecated use the GID version
      */
+    @Deprecated
     public void setResolvedACL(final Set<String> readOnlyGroups, final Set<String> readWriteGroups)
             throws IOException {
         if (readOnlyGroups == null || readWriteGroups == null) {
@@ -324,6 +338,7 @@ public class AclCommandExecutor {
         return getACL(perm, defaultACL, false);
     }
 
+    @Deprecated
     public Set<String> getResolvedReadOnlyACL() throws IOException {
         String perm = FILE_RO.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
@@ -332,6 +347,7 @@ public class AclCommandExecutor {
         return getACL(perm, false, true);
     }
 
+    @Deprecated
     public Set<String> getResolvedReadWriteACL() throws IOException {
         String perm = FILE_RW.substring(0, 2); // ignore execute when reading file perms
         if (isDir) {
@@ -364,7 +380,7 @@ public class AclCommandExecutor {
         return null;
     }
     
-    // type: default | group
+    // exec getfacl and parse output
     private Set getACL(String perm, boolean defaultACL, boolean resolve) throws IOException {
         log.debug("getACL: " + perm + " " + defaultACL + " " + resolve);
         Set aclList = new TreeSet();
