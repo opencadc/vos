@@ -287,14 +287,14 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
                 if (child instanceof ContainerNode) {
                     childContainers.add((ContainerNode) child);
                 } else {
-                    if (!vospaceAuthorizer.hasSingleNodeWritePermission(child.parent, caller)) {
+                    if (vospaceAuthorizer.hasSingleNodeWritePermission(child.parent, caller)) {
+                        nodePersistence.delete(child);
+                        log.debug("Deleted non-container node " + Utils.getPath(child));
+                        deleteCount++;
+                    } else {
                         log.debug("Unauthorized to delete node " + Utils.getPath(child));
                         errors = true;
                         incErrorCount();
-                    } else {
-                        nodePersistence.delete(child);
-                        log.debug("Recursive deleted non-container node " + Utils.getPath(child));
-                        deleteCount++;
                     }
                 }
             }
@@ -306,15 +306,12 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
             }
             if (!errors) {
                 // delete the empty container
-                try {
-                    if (!vospaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)) {
-                        throw NodeFault.PermissionDenied.getStatus(Utils.getPath(node));
-                    }
+                if (vospaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)) {
                     nodePersistence.delete(node);
-                    log.debug("Recursive deleted container node " + Utils.getPath(node));
+                    log.debug("Deleted container node " + Utils.getPath(node));
                     deleteCount++;
-                } catch (Exception e) {
-                    log.debug("Failed to (recursive) delete container node " + Utils.getPath(node), e);
+                } else {
+                    log.debug("Failed to delete container node " + Utils.getPath(node));
                     incErrorCount();
                     errors = true;
                 }

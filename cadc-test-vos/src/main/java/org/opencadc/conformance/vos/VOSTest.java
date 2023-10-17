@@ -279,7 +279,7 @@ public abstract class VOSTest {
             throws Exception {
 
         Map<String, Object> val = new HashMap<>();
-        val.put("nodeURI", vosURI.getURI());
+        val.put("target", vosURI.getURI());
         HttpPost post = new HttpPost(nodeURL, val, false);
         log.debug("POST: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(post));
