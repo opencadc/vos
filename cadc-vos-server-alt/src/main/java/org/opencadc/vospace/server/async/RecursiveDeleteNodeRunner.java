@@ -280,6 +280,7 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
         boolean errors = false;
         List<ContainerNode> childContainers = new ArrayList<>();
         log.debug("Deleting container " + Utils.getPath(node));
+        boolean writableParent = vospaceAuthorizer.hasSingleNodeWritePermission(node, caller);
         try (ResourceIterator<Node> iterator = nodePersistence.iterator(node, null, null)) {
             while (iterator.hasNext()) {
                 checkJobPhase();
@@ -287,7 +288,7 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
                 if (child instanceof ContainerNode) {
                     childContainers.add((ContainerNode) child);
                 } else {
-                    if (vospaceAuthorizer.hasSingleNodeWritePermission(child.parent, caller)) {
+                    if (writableParent) {
                         nodePersistence.delete(child);
                         log.debug("Deleted non-container node " + Utils.getPath(child));
                         deleteCount++;
