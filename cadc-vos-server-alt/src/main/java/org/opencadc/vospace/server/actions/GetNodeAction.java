@@ -187,7 +187,11 @@ public class GetNodeAction extends NodeAction {
 
             long start = System.currentTimeMillis();
             log.debug(String.format("get children of %s: start=[%s] limit=[%s]", target.getPath(), startURI, pageLimit));
-            node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
+            try {
+                node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
+            } catch (UnsupportedOperationException ex) {
+                throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
+            }
 
             long end = System.currentTimeMillis();
             long dt = (end - start);

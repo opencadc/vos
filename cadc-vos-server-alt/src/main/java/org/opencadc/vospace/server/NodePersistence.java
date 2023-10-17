@@ -185,6 +185,7 @@ public interface NodePersistence {
      * @param limit  max number of nodes to return, may be null
      * @param start  first node in order to consider, may be null
      * @return iterator of matching child nodes, may be empty
+     * @throws UnsupportedOperationException if pagination options (limit, start) are not supported
      */
     ResourceIterator<Node> iterator(ContainerNode parent, Integer limit, String start);
 }

@@ -778,7 +778,7 @@ public class NodeUtil {
         log.debug("[list] " + vu.getPath() + " -> " + np);
         
         if (limit != null || start != null) {
-            throw new UnsupportedOperationException("not supported: batch container node listing");
+            throw new UnsupportedOperationException("batch options for container node listing");
         }
         
         return new NodeIterator(np);

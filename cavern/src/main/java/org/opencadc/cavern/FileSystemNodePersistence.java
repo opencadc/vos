@@ -74,7 +74,6 @@ import ca.nrc.cadc.net.TransientException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import javax.security.auth.Subject;
@@ -83,12 +82,11 @@ import org.opencadc.cavern.files.CavernURLGenerator;
 import org.opencadc.cavern.nodes.NodeUtil;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -205,11 +203,9 @@ public class FileSystemNodePersistence implements NodePersistence {
     private class IdentWrapper implements ResourceIterator<Node> {
 
         private final ContainerNode parent;
-        //private final ResourceIterator<Node> childIter;
         private final ResourceIterator<Node> childIter;
         private final NodeUtil nut;
         
-        //IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
         IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
             this.parent = parent;
             this.childIter = childIter;

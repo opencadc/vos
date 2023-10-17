@@ -95,6 +95,11 @@ public enum NodeFault {
     InvalidToken(VOS.IVOA_FAULT_INVALID_TOKEN),
     InvalidArgument(VOS.IVOA_FAULT_INVALID_ARG),
     TypeNotSupported(VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED),
+    ViewNotSupported(VOS.IVOA_FAULT_VIEW_NOT_SUPPORTED),
+
+    // prototype faults
+    OptionNotSupported(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED),
+
     // CADC defined faults
     ContainerNotFound(VOS.CADC_FAULT_CONTAINER_NOT_FOUND),
     RequestEntityTooLarge(VOS.CADC_FAULT_REQUEST_TOO_LARGE),
@@ -125,6 +130,8 @@ public enum NodeFault {
             case VOS.IVOA_FAULT_INVALID_ARG:
             case VOS.IVOA_FAULT_INVALID_TOKEN:
             case VOS.IVOA_FAULT_TYPE_NOT_SUPPORTED:
+            case VOS.IVOA_FAULT_VIEW_NOT_SUPPORTED:
+            case VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED:
                 return new IllegalArgumentException(exMsg);
             case VOS.IVOA_FAULT_NODE_NOT_FOUND:
             case VOS.CADC_FAULT_CONTAINER_NOT_FOUND:
