@@ -81,6 +81,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -109,6 +110,7 @@ public class NodesTest extends VOSTest {
     private GroupURI group2;
     
     protected boolean linkNodeProps = true;
+    protected boolean paginationSupported = true;
     
     protected NodesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -505,6 +507,26 @@ public class NodesTest extends VOSTest {
             log.info("put: " + parentURI + " -> " + parentURL);
             ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
+            
+            if (!paginationSupported) {
+                // check that a pagination request is rejected in the spec-compliant way
+                URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
+                HttpGet get = new HttpGet(nodeURL, true);
+                try {
+                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                        get.prepare();
+                        return null;
+                    });
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + get.getResponseCode());
+                } catch (IllegalArgumentException ex) {
+                    if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
+                        log.info("caught valid reject: " + ex.getMessage());
+                    } else {
+                        throw ex;
+                    }
+                }
+                return; // done
+            }
 
             // add 6 direct child nodes
             int i = 0;
@@ -601,6 +623,26 @@ public class NodesTest extends VOSTest {
             log.info("put: " + parentURI + " -> " + parentURL);
             ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
+            
+            if (!paginationSupported) {
+                // check that a pagination request is rejected in the spec-compliant way
+                URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
+                HttpGet get = new HttpGet(nodeURL, true);
+                try {
+                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                        get.prepare();
+                        return null;
+                    });
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + get.getResponseCode());
+                } catch (IllegalArgumentException ex) {
+                    if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
+                        log.info("caught valid reject: " + ex.getMessage());
+                    } else {
+                        throw ex;
+                    }
+                }
+                return; // done
+            }
 
             // add 3 direct child nodes
             int i = 0;

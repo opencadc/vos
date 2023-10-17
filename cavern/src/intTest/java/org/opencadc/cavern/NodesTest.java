@@ -97,7 +97,8 @@ public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
     
     public NodesTest() {
         super(Constants.RESOURCE_ID, TEST_CERT);
-        super.linkNodeProps = false; // xattrs not supported in posix filesystem
+        super.linkNodeProps = false;       // xattrs on links not supported in posix filesystem
+        super.paginationSupported = false; // not implemented because it is not scalable
         
         GroupURI group1 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?CADC"));
         GroupURI group2 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
