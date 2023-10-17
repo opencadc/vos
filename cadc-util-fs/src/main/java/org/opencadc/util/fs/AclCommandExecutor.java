@@ -175,7 +175,7 @@ public class AclCommandExecutor {
             throw new IllegalArgumentException("only directories can have default ACLs");
         }
         
-        // try to preserve execute bit on files (executables)
+        // not settable via input args, but preserve execute bit on files (executables)
         PosixFileAttributeView pv = Files.getFileAttributeView(path, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         Set<PosixFilePermission> perms = pv.readAttributes().permissions(); // current perms
         boolean ux = perms.contains(PosixFilePermission.OWNER_EXECUTE);
@@ -183,16 +183,16 @@ public class AclCommandExecutor {
         boolean ox = perms.contains(PosixFilePermission.OTHERS_EXECUTE);
 
         //final String uRreadOnlyPermission = isDir ? DIR_RO : (ux ? FILE_RX : FILE_RO); // unused: locked??
-        final String uReadWritePermission = isDir ? DIR_RW : (gx ? FILE_RWX : FILE_RW);
+        final String uReadWritePermission = isDir ? DIR_RW : (ux ? FILE_RWX : FILE_RW);
+        final String gReadWritePermission = isDir ? DIR_RW : (gx ? FILE_RWX : FILE_RW);
         
-        final String readOnlyPermission = isDir ? DIR_RO : FILE_RO;
-        final String readWritePermission = isDir ? DIR_RW : FILE_RW;
+        final String readOnlyPermission = isDir ? DIR_RO : (ox ? FILE_RX : FILE_RO);
+        final String readWritePermission = isDir ? DIR_RW : (ox ? FILE_RWX : FILE_RW);
         
         String otherPermission = worldReadable ? readOnlyPermission : "---";
         if (worldReadable && !isDir && ox) {
             otherPermission = FILE_RX;
         }
-        log.debug("setACL: worldReadable=" + worldReadable + " -> " + otherPermission);
         
         final String readGroupCommandInput = readOnlyGroups.stream()
                                                                     .map(p -> "group:" + p.toString() + ":"
@@ -205,22 +205,19 @@ public class AclCommandExecutor {
 
         StringBuilder sb = new StringBuilder();
         sb.append("--set=user::").append(uReadWritePermission);
-        sb.append(",group::").append(uReadWritePermission); // always same as user
+        sb.append(",group::").append(gReadWritePermission); // always same as user
         sb.append(",other::").append(otherPermission);
             
         if (StringUtil.hasText(readGroupCommandInput) || StringUtil.hasText(writeGroupCommandInput)) {
-           
-            final String groupMask;
-            final String groupListString;
+            // default
+            String groupMask = readWritePermission;
+            String groupListString = writeGroupCommandInput;
             if (StringUtil.hasText(readGroupCommandInput) && StringUtil.hasText(writeGroupCommandInput)) {
                 groupMask = readWritePermission;
                 groupListString = String.join(",", readGroupCommandInput, writeGroupCommandInput);
             } else if (StringUtil.hasText(readGroupCommandInput)) {
                 groupMask = readOnlyPermission;
                 groupListString = readGroupCommandInput;
-            } else {
-                groupMask = readWritePermission;
-                groupListString = writeGroupCommandInput;
             }
 
             sb.append(",mask::").append(groupMask);

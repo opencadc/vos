@@ -72,8 +72,10 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -100,7 +102,7 @@ public class AclCommandExecutorTest {
         Log4jInit.setLevel("ca.nrc.cadc.exec", Level.DEBUG);
     }
 
-    static final String ROOT = "build/tmp/cavern-tests";
+    static final String ROOT = "build/tmp/acl-tests";
 
     static final String RESOLVABLE_RO_GROUP = "users";
     static final String RESOLVABLE_RW_GROUP = "adm";
@@ -240,6 +242,39 @@ public class AclCommandExecutorTest {
                 log.info("caught expected: " + ex);
             }
         }
+        
+        // manually set execute bit(s) on file
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+        perms.add(PosixFilePermission.OTHERS_EXECUTE);
+        
+        PosixFileAttributeView pv = Files.getFileAttributeView(target, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        pv.setPermissions(perms);
+        
+        Set<PosixFilePermission> curp = pv.readAttributes().permissions();
+        Assert.assertTrue(curp.contains(PosixFilePermission.OWNER_EXECUTE));
+        Assert.assertTrue(curp.contains(PosixFilePermission.GROUP_EXECUTE));
+        Assert.assertTrue(curp.contains(PosixFilePermission.OTHERS_EXECUTE));
+        
+        // verify that applying ACLs preserves execute bit(s)
+        acl.setACL(true, readGroupPrincipals, writeGroupPrincipals);
+        roActual = acl.getReadOnlyACL();
+        Assert.assertNotNull(roActual);
+        Assert.assertEquals(2, roActual.size());
+        Assert.assertTrue(roActual.contains(g1));
+        Assert.assertTrue(roActual.contains(g2));
+
+        rwActual = acl.getReadWriteACL();
+        Assert.assertNotNull(rwActual);
+        Assert.assertEquals(1, rwActual.size());
+        Assert.assertTrue(rwActual.contains(g3));
+        
+        // check execute bit
+        Set<PosixFilePermission> actual = pv.readAttributes().permissions();
+        Assert.assertTrue(actual.contains(PosixFilePermission.OWNER_EXECUTE));
+        Assert.assertTrue(actual.contains(PosixFilePermission.GROUP_EXECUTE));
+        Assert.assertTrue(actual.contains(PosixFilePermission.OTHERS_EXECUTE));
     }
 
     @Test
