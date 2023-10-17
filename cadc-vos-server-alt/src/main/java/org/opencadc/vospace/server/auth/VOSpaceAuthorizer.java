@@ -133,8 +133,7 @@ public class VOSpaceAuthorizer {
         this.nodePersistence = nodePersistence;
     }
 
-    public void setDisregardLocks(boolean disregardLocks)
-    {
+    public void setDisregardLocks(boolean disregardLocks) {
         this.disregardLocks = disregardLocks;
     }
 
@@ -224,7 +223,7 @@ public class VOSpaceAuthorizer {
     public boolean hasSingleNodeWritePermission(Node node, Subject subject) {
         log.debug("hasSingleNodeWritePermission: " + Utils.getPath(node));
 
-        if ( !disregardLocks && (node.isLocked != null) && node.isLocked) {
+        if (!disregardLocks && (node.isLocked != null) && node.isLocked) {
             log.debug("Node locked");
             return false;
         }

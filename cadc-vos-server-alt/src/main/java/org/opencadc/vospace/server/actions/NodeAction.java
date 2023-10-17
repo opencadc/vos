@@ -130,8 +130,8 @@ public abstract class NodeAction extends RestAction {
         }
 
         checkReadable();
-        if ((this instanceof CreateNodeAction) ||
-                (this instanceof DeleteNodeAction) || (this instanceof UpdateNodeAction)) {
+        if ((this instanceof CreateNodeAction)
+                || (this instanceof DeleteNodeAction) || (this instanceof UpdateNodeAction)) {
             checkWritable();
         }
 

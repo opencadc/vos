@@ -79,9 +79,9 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
 import java.io.ByteArrayOutputStream;
-import java.net.MalformedURLException;
 import java.io.File;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import javax.security.auth.Subject;
@@ -255,13 +255,13 @@ public class NodesTest extends VOSTest {
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             VOSURI targetURI = getVOSURI("target");
-            LinkNode testNode = new LinkNode(name, targetURI.getURI());
             log.info("link node: " + nodeURI + " -> " + targetURI);
             // cleanup
             delete(nodeURL, false);
             
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
+            LinkNode testNode = new LinkNode(name, targetURI.getURI());
             put(nodeURL, nodeURI, testNode);
 
             // GET the new node

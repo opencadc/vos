@@ -310,7 +310,6 @@ public abstract class VOSTest {
 
         log.debug("Job XML: \n" + out);
         JobReader jr = new JobReader();
-        https://localhost.cadc.dao.nrc.ca/vault/recursiveDelete/or86x0frxikba0rv
         return jr.read(new StringReader(out.toString()));
     }
 
