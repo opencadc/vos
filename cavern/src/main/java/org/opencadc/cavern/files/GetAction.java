@@ -70,9 +70,9 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -84,6 +84,7 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.transfer.Direction;
 
 /**
@@ -101,7 +102,7 @@ public abstract class GetAction extends FileAction {
 
     protected Direction getDirection() {
         return Direction.pullFromVoSpace;
-    };
+    }
 
     @Override
     public void doAction()  throws Exception {
@@ -111,6 +112,9 @@ public abstract class GetAction extends FileAction {
             
             // PathResolver checks read permission: nothing else to do
             Node node = pathResolver.getNode(nodeURI.getPath());
+            if (node == null) {
+                throw NodeFault.NodeNotFound.getStatus(nodeURI.getURI().toASCIIString());
+            }
 
             // GetAction code is common for both /files and /preauth endpoints. Neither will support
             // GET for container nodes
@@ -123,14 +127,22 @@ public abstract class GetAction extends FileAction {
 
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());
-            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
-            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
             syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
             syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", contentEncoding);
-            syncOutput.setHeader("Content-Length", contentLength);
-            syncOutput.setHeader("Content-MD5", contentMD5);
+            syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
+            syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            
+            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (contentMD5 != null) {
+                try {
+                    URI md5 = new URI(contentMD5);
+                    syncOutput.setDigest(md5);
+                } catch (URISyntaxException ex) {
+                    log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);
+                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
+                    // user mistake
+                }
+            }
 
             // IOExceptions thrown from getOutputStream, Files.copy and out.flush
             // will be handled by RestServlet

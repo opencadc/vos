@@ -83,20 +83,17 @@ import org.opencadc.gms.GroupURI;
 public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
 
-    static final File TEST_CERT;
-    
     static {
-        Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.vos", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
         
-        TEST_CERT = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
     
     private File testCert = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
     
     public NodesTest() {
-        super(Constants.RESOURCE_ID, TEST_CERT);
+        super(Constants.RESOURCE_ID, Constants.TEST_CERT);
         super.linkNodeProps = false;       // xattrs on links not supported in posix filesystem
         super.paginationSupported = false; // not implemented because it is not scalable
         

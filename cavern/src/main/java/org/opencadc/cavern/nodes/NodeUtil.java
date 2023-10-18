@@ -285,7 +285,7 @@ public class NodeUtil {
     }
 
     // put node, create if necessary
-    public Path put(Node node, VOSURI uri)
+    public void put(Node node, VOSURI uri)
             throws IOException, InterruptedException {
         Path np = nodeToPath(root, uri);
         log.debug("[put] path: " + node + " -> " + np);
@@ -340,8 +340,6 @@ public class NodeUtil {
             throw new UnsupportedOperationException("failed to put " + node.getClass().getSimpleName()
                     + " " + node.getName(), ex);
         }
-
-        return ret;
     }
     
     public static void setPosixOwnerGroup(Path p, Integer owner, Integer group) throws IOException {
@@ -410,7 +408,7 @@ public class NodeUtil {
             throw new RuntimeException("failed to map GroupURI(s) to numeric GID(s): " + ex.toString(), ex);
         }
         Set<Integer> curGID = acl.getReadOnlyACL();
-        log.warn("cur ro: " + curGID);
+        log.debug("cur ro: " + curGID);
         final boolean changeRO = !roGIDs.containsAll(curGID) || !curGID.containsAll(roGIDs);
 
         final Set<Integer> rwGIDs = new TreeSet<>();
@@ -426,7 +424,7 @@ public class NodeUtil {
         }
 
         curGID = acl.getReadWriteACL();
-        log.warn("cur rw: " + curGID);
+        log.debug("cur rw: " + curGID);
         boolean changeRW = !rwGIDs.containsAll(curGID) || !curGID.containsAll(rwGIDs);
 
         boolean changePublic = false;
@@ -452,26 +450,25 @@ public class NodeUtil {
 
         boolean changeDefaultACL = false;
         if (changeRO || changeRW || changePublic) {
-            log.warn("set ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
+            log.debug("set ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
             acl.setACL(worldReadable, roGIDs, rwGIDs);
             changeDefaultACL = true; // permissions changed: reset defaults as well
         }
 
         if (isDir) {
             if (inherit || changeDefaultACL) {
-                log.warn("set default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
+                log.debug("set default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
                 acl.setACL(worldReadable, roGIDs, rwGIDs, true);
             } else if (!inherit) {
                 roGIDs.clear();
                 rwGIDs.clear();
-                log.warn("clear default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
+                log.debug("clear default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
                 acl.setACL(worldReadable, roGIDs, rwGIDs, true);
             }
         }
-        
 
-        log.warn("final ro: " + acl.getReadOnlyACL());
-        log.warn("final rw: " + acl.getReadWriteACL());
+        log.debug("final ro: " + acl.getReadOnlyACL());
+        log.debug("final rw: " + acl.getReadWriteACL());
     }
 
     public Node get(ContainerNode parent, String name) 
@@ -503,14 +500,18 @@ public class NodeUtil {
         return pathToNode(np);
     }
     
-    public void move(VOSURI source, VOSURI destDir, String destName, PosixPrincipal owner) throws IOException {
+    // move without rename
+    public void move(VOSURI source, VOSURI destDir, PosixPrincipal owner, String destName) throws IOException {
         Path sourcePath = nodeToPath(root, source);
+        if (destName == null) {
+            destName = source.getName(); // no rename
+        }
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
+        log.warn("atomic move: " + sourcePath + " -> " + destPath);
         Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
 
         Integer group = getDefaultGroup(owner);
-        assertNotNull("group", group);
         setPosixOwnerGroup(destPath, owner.getUidNumber(), group);
     }
 
@@ -772,15 +773,10 @@ public class NodeUtil {
     }
 
     
-    public ResourceIterator<Node> list(VOSURI vu, Integer limit, String start) 
+    public ResourceIterator<Node> list(VOSURI vu) 
             throws IOException, InterruptedException {
         Path np = nodeToPath(root, vu);
         log.debug("[list] " + vu.getPath() + " -> " + np);
-        
-        if (limit != null || start != null) {
-            throw new UnsupportedOperationException("batch options for container node listing");
-        }
-        
         return new NodeIterator(np);
     }
 

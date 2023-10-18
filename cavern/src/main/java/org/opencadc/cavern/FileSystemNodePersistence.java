@@ -74,6 +74,7 @@ import ca.nrc.cadc.net.TransientException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import javax.security.auth.Subject;
@@ -187,16 +188,40 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public ResourceIterator<Node> iterator(ContainerNode parent, Integer limit, String start) {
+        if (start == null && limit != null && limit == 0) {
+            return new EmptyNodeIterator();
+        }
+        if (limit != null || start != null) {
+            throw new UnsupportedOperationException("batch options for container node listing");
+        }
         
         NodeUtil nut = new NodeUtil(rootPath, rootURI);
         try {
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
-            ResourceIterator<Node> ni = nut.list(vu, limit, start);
+            ResourceIterator<Node> ni = nut.list(vu);
             return new IdentWrapper(parent, ni, nut);
         } catch (IOException | InterruptedException ex) {
             throw new RuntimeException("oops", ex);
+        }
+    }
+    
+    private class EmptyNodeIterator implements ResourceIterator<Node> {
+
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public Node next() {
+            throw new NoSuchElementException();
+        }
+
+        @Override
+        public void close() throws IOException {
+            // no-op
         }
     }
     
@@ -274,16 +299,42 @@ public class FileSystemNodePersistence implements NodePersistence {
             }
         }
 
+        // this is a complicated way to get the Path
+        LocalServiceURI loc = new LocalServiceURI(getResourceID());
+        VOSURI vu = loc.getURI(node);
         try {
-            // this is a complicated way to get the Path
-            LocalServiceURI loc = new LocalServiceURI(getResourceID());
-            VOSURI vu = loc.getURI(node);
             nut.put(node, vu);
             return node;
         } catch (IOException | InterruptedException ex) {
-            throw new RuntimeException("oops", ex);
+            throw new RuntimeException("failed to create/update node at " + vu.getPath(), ex);
         }
     }
+
+    @Override
+    public void move(Node node, ContainerNode dest, String newName) {
+        if (node == null || dest == null) {
+            throw new IllegalArgumentException("args cannot be null");
+        }
+        if (node.parent == null || dest.parent == null) {
+            throw new IllegalArgumentException("args must both be peristent nodes before move");
+        }
+        
+        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        PosixPrincipal owner = nut.addToCache(caller);
+        
+        LocalServiceURI loc = new LocalServiceURI(getResourceID());
+        VOSURI srcURI = loc.getURI(node);
+        VOSURI destURI = loc.getURI(dest);
+
+        try {
+            nut.move(srcURI, destURI, owner, newName);
+        } catch (IOException ex) {
+            throw new RuntimeException("failed to move " + srcURI.getPath() + " -> " + destURI.getPath(), ex);
+        }
+    }
+    
+    
 
     @Override
     public void delete(Node node) throws TransientException {

@@ -67,6 +67,8 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.util.FileUtil;
+import java.io.File;
 import java.net.URI;
 import org.apache.log4j.Logger;
 
@@ -75,9 +77,13 @@ import org.apache.log4j.Logger;
  * @author pdowler
  */
 public abstract class Constants {
-
-    public static final URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
-
+    static final URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
+    static final File TEST_CERT;
+    
+    static {
+        TEST_CERT = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
+    }
+    
     private Constants() { 
     }
 }
