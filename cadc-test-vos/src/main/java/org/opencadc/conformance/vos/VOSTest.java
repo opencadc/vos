@@ -79,11 +79,8 @@ import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -95,13 +92,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom2.JDOMException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.opencadc.vospace.ContainerNode;
@@ -153,8 +148,7 @@ public abstract class VOSTest {
         this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
 
-        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE,
-                AuthMethod.ANON);
+        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
         log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
     }
 
@@ -276,13 +270,13 @@ public abstract class VOSTest {
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
     }
 
-    public Job postRecursiveDelete(URL nodeURL, VOSURI vosURI)
+    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI)
             throws Exception {
-
+        log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
         Map<String, Object> val = new HashMap<>();
         val.put("target", vosURI.getURI());
-        HttpPost post = new HttpPost(nodeURL, val, false);
-        log.debug("POST: " + nodeURL);
+        HttpPost post = new HttpPost(asyncURL, val, false);
+        log.debug("POST: " + asyncURL);
         Subject.doAs(authSubject, new RunnableAction(post));
         log.debug("POST responseCode: " + post.getResponseCode());
         Assert.assertEquals("expected POST response code = 303",

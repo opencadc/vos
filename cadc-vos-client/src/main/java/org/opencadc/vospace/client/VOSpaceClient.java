@@ -189,7 +189,8 @@ public class VOSpaceClient {
                     parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri="
                         + NetUtil.encode(vosURI.toString()));
                 } else {
-                    parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=0");
+                    //parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=0");
+                    parentNode = this.getNode(parentURI.getPath(), "detail=min");
                 }
 
                 log.debug("found parent: " + parentURI);

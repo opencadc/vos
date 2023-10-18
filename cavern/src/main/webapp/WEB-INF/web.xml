@@ -103,6 +103,28 @@
 
     <!-- async recursive node property setting servlet-->
     <servlet>
+        <servlet-name>RecursiveDeleteServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
+        <init-param>
+            <param-name>get</param-name>
+            <param-value>ca.nrc.cadc.uws.web.GetAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>post</param-name>
+            <param-value>ca.nrc.cadc.uws.web.PostAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>delete</param-name>
+            <param-value>ca.nrc.cadc.uws.web.DeleteAction</param-value>
+        </init-param>
+        <init-param>
+            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+            <param-value>org.opencadc.cavern.RecursiveDeleteJobManager</param-value>
+        </init-param>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
+    
+    <servlet>
         <servlet-name>RecursiveSetNodeServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
         <init-param>
@@ -267,6 +289,11 @@
         <url-pattern>/nodeprops/*</url-pattern>
     </servlet-mapping>
 
+    <servlet-mapping>
+        <servlet-name>RecursiveDeleteServlet</servlet-name>
+        <url-pattern>/async-delete/*</url-pattern>
+    </servlet-mapping>
+    
     <servlet-mapping>
         <servlet-name>TransferDetailsServlet</servlet-name>
         <url-pattern>/xfer/*</url-pattern>

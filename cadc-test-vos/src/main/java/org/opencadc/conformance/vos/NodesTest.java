@@ -114,6 +114,7 @@ public class NodesTest extends VOSTest {
     
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
+    protected boolean nodelockSupported = true;
     
     protected NodesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -162,7 +163,9 @@ public class NodesTest extends VOSTest {
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             testNode.getProperties().add(nodeProperty);
-            testNode.isLocked = true; // lock node
+            if (nodelockSupported) {
+                testNode.isLocked = true; // lock node
+            }
             post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
@@ -172,20 +175,24 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
-            Assert.assertTrue(updatedNode.isLocked);
+            if (nodelockSupported) {
+                Assert.assertTrue(updatedNode.isLocked);
+            }
 
             // failed to add a subdirectory (node locked)
-            String subDirName = name + "/subDir";
-            URL subDirURL = getNodeURL(nodesServiceURL, subDirName);
-            VOSURI subDirURI = getVOSURI(subDirName);
-            ContainerNode subDirNode = new ContainerNode(subDirName);
-            log.info("put: " + subDirURI + " -> " + subDirURL);
-            try {
-                put(subDirURL, subDirURI, subDirNode);
-                Assert.fail("New node should fail when parent is locked");
-            } catch (AssertionError ex) {
-                Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
-                        ex.getMessage());
+            if (nodelockSupported) {
+                String subDirName = name + "/subDir";
+                URL subDirURL = getNodeURL(nodesServiceURL, subDirName);
+                VOSURI subDirURI = getVOSURI(subDirName);
+                ContainerNode subDirNode = new ContainerNode(subDirName);
+                log.info("put: " + subDirURI + " -> " + subDirURL);
+                try {
+                    put(subDirURL, subDirURI, subDirNode);
+                    Assert.fail("New node should fail when parent is locked");
+                } catch (AssertionError ex) {
+                    Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
+                            ex.getMessage());
+                }
             }
 
             // DELETE the node
@@ -850,6 +857,10 @@ public class NodesTest extends VOSTest {
         // cleanup
         cleanupNodeTree(testTree);
 
+        if (!nodelockSupported) {
+            return;
+        }
+        
         // repeat test but lock the subdirectory
         createNodeTree(testTree);
 
