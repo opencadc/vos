@@ -149,21 +149,22 @@ public class FilesTest extends VOSTest {
                                 Direction.pushToVoSpace, details.getDirection());
             Assert.assertTrue("expected >0 endpoints", details.getProtocols().size() > 0);
             URL endpoint = new URL(details.getProtocols().get(0).getEndpoint());
-            log.debug("endpoint: " + endpoint);
 
             // PUT a file to the endpoint
-            String expected = "test content for files endpoint";
+            log.info("PUT: " + endpoint);
+            String expected = "test content for files endpoint\n";
             ByteArrayInputStream is = new ByteArrayInputStream(expected.getBytes());
             put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
 
             // get the file using files endpoint
             URL fileURL = getNodeURL(filesServiceURL, name);
+            log.info("GET: " + fileURL);
             out = new ByteArrayOutputStream();
-            get = new HttpGet(fileURL, out);
-            Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("GET responseCode: " + get.getResponseCode());
-            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            HttpGet getFile = new HttpGet(fileURL, out);
+            Subject.doAs(authSubject, new RunnableAction(getFile));
+            log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
+            Assert.assertEquals("expected GET response code = 200", 200, getFile.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
 
             String actual = out.toString();
             log.debug("file content: " + actual);

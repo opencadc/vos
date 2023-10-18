@@ -291,14 +291,14 @@ public class TransferTest extends VOSTest {
 
             // Create a Transfer
             Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            //transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            //transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             // Write the Transfer document
             TransferWriter transferWriter = new TransferWriter();
             StringWriter sw = new StringWriter();
             transferWriter.write(transfer, sw);
-            log.debug("transfer request XML: " + sw);
+            log.info("transfer request XML: " + sw);
 
             // Post the transfer document
             FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
@@ -306,13 +306,13 @@ public class TransferTest extends VOSTest {
             Subject.doAs(authSubject, new RunnableAction(post));
             Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
             Assert.assertNull("expected POST throwable == null", post.getThrowable());
-
-            // Wait for job to complete
-            Thread.sleep(3000);
-
+            URL jobURL = post.getRedirectURL();
+            log.info("jobURL: " + jobURL);
+            Assert.assertNotNull(jobURL);
+            
             // Get the job
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(post.getRedirectURL(), out);
+            HttpGet get = new HttpGet(jobURL, out);
             log.debug("GET: " + post.getRedirectURL());
             Subject.doAs(authSubject, new RunnableAction(get));
             log.debug("GET responseCode: " + get.getResponseCode());
@@ -322,7 +322,7 @@ public class TransferTest extends VOSTest {
                               get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
             // Read the job
-            log.debug("Job XML: \n" + out);
+            log.info("job XML:\n" + out);
             JobReader reader = new JobReader();
             Job job = reader.read(new StringReader(out.toString()));
             Assert.assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
@@ -330,40 +330,45 @@ public class TransferTest extends VOSTest {
             // Run the job.
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("PHASE", "RUN");
-            URL jobPhaseURL = new URL(post.getRedirectURL() + "/phase");
+            URL jobPhaseURL = new URL(jobURL + "/phase");
             post = new HttpPost(jobPhaseURL, parameters, false);
             Subject.doAs(authSubject, new RunnableAction(post));
             Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
 
-            // Poll the job phase for 5(?) secs until complete
+            // polling: WAIT will block for up to 6 sec or until phase change or if job is in
+            // a terminal phase
+            URL jobPoll = new URL(jobURL + "?WAIT=6"); 
             int count = 0;
             boolean done = false;
-            while (!done) {
+            while (!done && count < 10) { // max 10*6 = 60 sec polling
                 out = new ByteArrayOutputStream();
-                get = new HttpGet(jobPhaseURL, out);
+                log.info("poll: " + jobPoll);
+                get = new HttpGet(jobPoll, out);
                 Subject.doAs(authSubject, new RunnableAction(get));
-                if ("COMPLETED".equals(out.toString())) {
-                    done = true;
-                } else {
-                    Thread.sleep(1000);
-                    if (count++ >= 5) {
+                Assert.assertNull(get.getThrowable());
+                job = reader.read(new StringReader(out.toString()));
+                log.info("current phase: " + job.getExecutionPhase());
+                switch (job.getExecutionPhase()) {
+                    case QUEUED: 
+                    case EXECUTING:
+                        count++;
+                        break;
+                    default:
                         done = true;
-                    }
                 }
+                log.info("done: " + job.getExecutionPhase() + " " + job.getErrorSummary());
+                Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
             }
 
             // Check if the job completed
             out = new ByteArrayOutputStream();
-            get = new HttpGet(post.getRedirectURL(), out);
+            get = new HttpGet(jobURL, out);
             Subject.doAs(authSubject, new RunnableAction(get));
             job = reader.read(new StringReader(out.toString()));
-            if (!job.getExecutionPhase().equals(ExecutionPhase.COMPLETED)) {
-                Assert.fail(String.format("Job error - phase: %s, reason: %s",
-                                          job.getExecutionPhase(), job.getErrorSummary()));
-            }
+            Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             // Source node should not be found
-            get(sourceNodeURL, 404, XML_CONTENT_TYPE);
+            get(sourceNodeURL, 404, TEXT_CONTENT_TYPE);
 
             // Get the destination node
             NodeReader.NodeReaderResult result = get(destinationNodeURL, 200, XML_CONTENT_TYPE);

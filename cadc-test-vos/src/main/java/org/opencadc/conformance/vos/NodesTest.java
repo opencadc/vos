@@ -525,6 +525,9 @@ public class NodesTest extends VOSTest {
                         throw ex;
                     }
                 }
+
+                // delete the parent node
+                delete(parentURL);
                 return; // done
             }
 
@@ -624,16 +627,27 @@ public class NodesTest extends VOSTest {
             ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
             
+            // check that limit=0 is supported
+            {
+                final URL nodeURL = new URL(parentURL + "?limit=0");
+                final HttpGet get = new HttpGet(nodeURL, true);
+                Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                    get.prepare();
+                    return null;
+                });
+                Assert.assertEquals(200, get.getResponseCode());
+            }
+            
             if (!paginationSupported) {
                 // check that a pagination request is rejected in the spec-compliant way
-                URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
-                HttpGet get = new HttpGet(nodeURL, true);
+                final URL limitURL = new URL(parentURL + "?limit=2");
+                final HttpGet limitGet = new HttpGet(limitURL, true);
                 try {
                     Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-                        get.prepare();
+                        limitGet.prepare();
                         return null;
                     });
-                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + get.getResponseCode());
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + limitGet.getResponseCode());
                 } catch (IllegalArgumentException ex) {
                     if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
                         log.info("caught valid reject: " + ex.getMessage());
@@ -641,9 +655,12 @@ public class NodesTest extends VOSTest {
                         throw ex;
                     }
                 }
+                
+                // delete the parent node
+                delete(parentURL);
                 return; // done
             }
-
+            
             // add 3 direct child nodes
             int i = 0;
             for (String n : childNames) {

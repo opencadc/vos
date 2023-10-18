@@ -151,6 +151,7 @@ public abstract class VOSTest {
         VOSURI nodeURI = getVOSURI(null);
         ContainerNode testNode = new ContainerNode(name);
         testNode.isPublic = true;
+        testNode.inheritPermissions = false;
 
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
         if (result == null) {
