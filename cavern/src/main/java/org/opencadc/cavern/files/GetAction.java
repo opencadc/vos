@@ -67,26 +67,28 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
-
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.permissions.ReadGrant;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
  *
@@ -94,36 +96,44 @@ import org.apache.log4j.Logger;
  * @author jeevesh
  */
 
-public abstract class GetAction extends FileAction {
+public class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
-    public GetAction(boolean isPreauth) {
-        super(isPreauth);
+    public GetAction() {
+        super();
     }
-
-    protected Direction getDirection() {
-        return Direction.pullFromVoSpace;
-    };
 
     @Override
     public void doAction()  throws Exception {
-
         try {
             VOSURI nodeURI = getNodeURI();
-            FileSystem fs = FileSystems.getDefault();
-            Path source = fs.getPath(getRoot(), nodeURI.getPath());
-            if (!Files.exists(source)) {
-                log.debug("not found: " + nodeURI.toString());
-                throw new ResourceNotFoundException("not found: " + nodeURI.toString());
-            }
-            if (!Files.isReadable(source)) {
-                log.debug("permission denied for: " + nodeURI.toString());
-                throw new AccessControlException("permission denied for " + nodeURI.toString());
-            }
+            log.warn("target: " + nodeURI);
             
-            // set HTTP headers.  To get node, resolve links but no authorization (null authorizer)
-            // Authorization checks should have been done in initAction already.
-            Node node = pathResolver.resolveWithReadPermissionCheck(nodeURI, null, true);
+            boolean preauthGranted = false;
+            if (preauthToken != null) {
+                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                String tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
+                preauthGranted = true;
+                // reset loggables
+                Subject subject = AuthenticationUtil.getCurrentSubject();
+                subject.getPrincipals().clear();
+                if (tokenUser != null) {
+                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
+                    identityManager.augment(subject);
+                }
+                logInfo.setSubject(subject);
+                logInfo.setResource(nodeURI.getURI());
+                logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
+                logInfo.setGrant("read: preauth-token");
+            }
+            log.debug("preauthGranted:" + preauthGranted);
+            
+            // PathResolver checks read permission
+            // TODO: disable permission checks in resolver if preauthGranted
+            Node node = pathResolver.getNode(nodeURI.getPath());
+            if (node == null) {
+                throw NodeFault.NodeNotFound.getStatus(nodeURI.getURI().toASCIIString());
+            }
 
             // GetAction code is common for both /files and /preauth endpoints. Neither will support
             // GET for container nodes
@@ -131,17 +141,27 @@ public abstract class GetAction extends FileAction {
                 log.debug("container nodes not supported for GET");
                 throw new IllegalArgumentException("GET for directories not supported");
             }
+            
+            final Path source = nodePersistence.nodeToPath(nodeURI);
 
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());
-            String contentEncoding = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
-            String contentLength = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
             syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
             syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", contentEncoding);
-            syncOutput.setHeader("Content-Length", contentLength);
-            syncOutput.setHeader("Content-MD5", contentMD5);
+            syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
+            syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            
+            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (contentMD5 != null) {
+                try {
+                    URI md5 = new URI(contentMD5);
+                    syncOutput.setDigest(md5);
+                } catch (URISyntaxException ex) {
+                    log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);
+                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
+                    // user mistake
+                }
+            }
 
             // IOExceptions thrown from getOutputStream, Files.copy and out.flush
             // will be handled by RestServlet

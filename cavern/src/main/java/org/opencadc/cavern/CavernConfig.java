@@ -69,10 +69,22 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.PrincipalExtractor;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.util.InvalidConfigException;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
+import java.util.HashSet;
+import java.util.Set;
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 public class CavernConfig {
@@ -85,16 +97,20 @@ public class CavernConfig {
     public static final String RESOURCE_ID = CAVERN_KEY + ".resourceID";
     public static final String FILESYSTEM_BASE_DIR = CAVERN_KEY + ".filesystem.baseDir";
     public static final String FILESYSTEM_SUB_PATH = CAVERN_KEY + ".filesystem.subPath";
+    public static final String ROOT_OWNER = CAVERN_KEY + ".filesystem.rootOwner";
     public static final String PRIVATE_KEY = CAVERN_KEY + ".privateKey";
     public static final String PUBLIC_KEY = CAVERN_KEY + ".publicKey";
     public static final String SSHFS_SERVER_BASE = CAVERN_KEY + ".sshfs.serverBase";
+    
+    private final URI resourceID;
+    private final Path root;
+    
+    private final MultiValuedProperties mvp;
 
-    public CavernConfig() {}
-
-    public MultiValuedProperties getConfig() {
+    public CavernConfig() {
         PropertiesReader propertiesReader = new PropertiesReader(CAVERN_PROPERTIES);
-        MultiValuedProperties properties = propertiesReader.getAllProperties();
-        if (properties.isEmpty()) {
+        this.mvp = propertiesReader.getAllProperties();
+        if (mvp.isEmpty()) {
             throw new IllegalStateException("CONFIG: file not found or no properties found in file - "
                     + CAVERN_PROPERTIES);
         }
@@ -102,29 +118,63 @@ public class CavernConfig {
         StringBuilder sb = new StringBuilder();
         sb.append("CONFIG: incomplete/invalid: ");
 
-        boolean resourceID = checkProperty(properties, sb, RESOURCE_ID, true);
-        boolean baseDir = checkProperty(properties, sb, FILESYSTEM_BASE_DIR, true);
-        boolean subPath = checkProperty(properties, sb, FILESYSTEM_SUB_PATH, true);
-        boolean privateKey = checkProperty(properties, sb, PRIVATE_KEY, false);
-        boolean publicKey = checkProperty(properties, sb, PUBLIC_KEY, false);
-        boolean sshfsServerBase = checkProperty(properties, sb, SSHFS_SERVER_BASE, false);
+        boolean resourceProp = checkProperty(mvp, sb, RESOURCE_ID, true);
+        boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
+        boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
+        boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
+        boolean privateKeyProp = checkProperty(mvp, sb, PRIVATE_KEY, false);
+        boolean publicKeyProp = checkProperty(mvp, sb, PUBLIC_KEY, false);
+        boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
 
-        if (!resourceID || !baseDir || !subPath) {
+        if (!resourceProp || !baseDirProp || !subPathProp) {
             throw new IllegalStateException(sb.toString());
         }
 
-        return properties;
-    }
-
-    public Path getRoot() {
-        MultiValuedProperties config = getConfig();
-        String baseDir = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
-        String subPath = config.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
+        String s = mvp.getFirstPropertyValue(RESOURCE_ID);
+        this.resourceID = URI.create(s);
+        
+        String baseDir = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
+        String subPath = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
         String sep = "/";
         if (baseDir.endsWith("/") || subPath.startsWith("/")) {
             sep = "";
         }
-        return Paths.get(baseDir + sep + subPath);
+        this.root = Paths.get(baseDir + sep + subPath);
+    }
+
+    public URI getResourceID() {
+        return resourceID;
+    }
+    
+    public Path getRoot() {
+        return root;
+    }
+    
+    // raw subject
+    public Subject getRootOwner() {
+        final String owner = mvp.getFirstPropertyValue(CavernConfig.ROOT_OWNER);
+        if (owner == null) {
+            throw new InvalidConfigException(CavernConfig.ROOT_OWNER + " cannot be null");
+        }
+        
+        return AuthenticationUtil.getSubject(new PrincipalExtractor() {
+            @Override
+            public Set<Principal> getPrincipals() {
+                Set<Principal> ret = new HashSet<>();
+                ret.add(new HttpPrincipal(owner));
+                return ret;
+            }
+
+            @Override
+            public X509CertificateChain getCertificateChain() {
+                return null;
+            }
+        });
+    }
+    
+    // for non-mandatory prop use
+    public MultiValuedProperties getProperties() {
+        return mvp;
     }
 
     private boolean checkProperty(MultiValuedProperties properties, StringBuilder sb,

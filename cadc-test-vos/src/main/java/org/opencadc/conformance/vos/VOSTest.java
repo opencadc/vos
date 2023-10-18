@@ -79,11 +79,8 @@ import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -95,13 +92,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom2.JDOMException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.opencadc.vospace.ContainerNode;
@@ -127,7 +122,6 @@ public abstract class VOSTest {
     public static final String ROOT_TEST_FOLDER = "/int-tests";
     
     public final URI resourceID;
-    public final String testCertFilename;
     
     public final URL nodesServiceURL;
     public final URL filesServiceURL;
@@ -136,9 +130,11 @@ public abstract class VOSTest {
     public final URL recursiveDeleteServiceURL;
     public final Subject authSubject;
 
-    protected VOSTest(URI resourceID, String testCertFilename) {
+    protected VOSTest(URI resourceID, File testCert) {
         this.resourceID = resourceID;
-        this.testCertFilename = testCertFilename;
+        this.authSubject = SSLUtil.createSubject(testCert);
+        log.info("authSubject: " + authSubject);
+        
         RegistryClient regClient = new RegistryClient();
         this.nodesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_NODES_20, nodesServiceURL));
@@ -152,13 +148,8 @@ public abstract class VOSTest {
         this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
 
-        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE,
-                AuthMethod.ANON);
+        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
         log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
-
-        File testCert = FileUtil.getFileFromResource(this.testCertFilename, VOSTest.class);
-        this.authSubject = SSLUtil.createSubject(testCert);
-        log.debug("authSubject: " + authSubject);
     }
 
     @Before
@@ -168,10 +159,13 @@ public abstract class VOSTest {
         VOSURI nodeURI = getVOSURI(null);
         ContainerNode testNode = new ContainerNode(name);
         testNode.isPublic = true;
+        testNode.inheritPermissions = false;
 
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
         if (result == null) {
             put(nodeURL, nodeURI, testNode);
+        } else {
+            post(nodeURL, nodeURI, testNode);
         }
     }
     
@@ -263,9 +257,10 @@ public abstract class VOSTest {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
-
+        log.warn("post content: " + sb.toString());
+                
         FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
-
+        
         HttpPost post = new HttpPost(nodeURL, content, true);
         log.debug("POST: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(post));
@@ -275,13 +270,13 @@ public abstract class VOSTest {
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
     }
 
-    public Job postRecursiveDelete(URL nodeURL, VOSURI vosURI)
+    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI)
             throws Exception {
-
+        log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
         Map<String, Object> val = new HashMap<>();
         val.put("target", vosURI.getURI());
-        HttpPost post = new HttpPost(nodeURL, val, false);
-        log.debug("POST: " + nodeURL);
+        HttpPost post = new HttpPost(asyncURL, val, false);
+        log.debug("POST: " + asyncURL);
         Subject.doAs(authSubject, new RunnableAction(post));
         log.debug("POST responseCode: " + post.getResponseCode());
         Assert.assertEquals("expected POST response code = 303",

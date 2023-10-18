@@ -1,12 +1,11 @@
 swagger: '2.0'
 info:
-    version: 0.4.3
-    title: VOSpace
+    title: cavern API
     description: |-
         The CANFAR Cavern web service, a VOSpace storage implementation.<br/><br/>VOSpace is the IVOA (International Virtual Observatory Alliance) standard interface to distributed storage.  This VOSpace web service is an access point for a distributed storage network.  There are three main functions of the VOSpace service:<br/><br/>1. Add, replace, or delete data objects in a tree data structure.<br/><br/>2. Manipulate the metadata for the data objects.<br/><br/>3. Obtain URIs through which the content of the data objects can be accessed.<br/><br/>Please see the specification for full details: <a href="http://ivoa.net/documents/VOSpace" target="_blank">VOSpace 2.1 Specification</a><br/><br/>Interaction with the synchronous and asynchronous data object transfer endpoints use the job management patterns defined in the IVOA Universal Worker Service (UWS) specification: <a href="http://www.ivoa.net/documents/UWS" target="_blank">UWS 1.1 Specification</a><br/><br/>Deployed service endpoint will be a different name (ie 'arc'.)<br/><br/>
 schemes:
     - https
-basePath: /arc
+basePath: /cavern
 paths:
     /protocols:
         get:
@@ -39,16 +38,12 @@ paths:
             responses:
                 '200':
                     description: Successful response
-                    schema:
-                        $ref: '#/definitions/Views'
                 '500':
                     description: Internal error
                 '503':
                     description: Service busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
     /properties:
         get:
             description: |
@@ -60,16 +55,12 @@ paths:
             responses:
                 '200':
                     description: Successful response
-                    schema:
-                        $ref: '#/definitions/Views'
                 '500':
                     description: Internal error
                 '503':
                     description: Service busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
     /files/{filePath}:
 
         get:
@@ -92,8 +83,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
         put:
             description: |
                 Create a file at a specified location
@@ -116,8 +105,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
         parameters:
             - name: filePath
               in: path
@@ -133,8 +120,6 @@ paths:
             responses:
                 '200':
                     description: Successful response
-                    schema:
-                        $ref: '#/definitions/Node'
                 '403':
                     description: If the user does not have permission.
                 '404':
@@ -145,8 +130,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpeced error
-                    schema:
-                        $ref: '#/definitions/Error'
             parameters:
                 - name: detail
                   in: query
@@ -189,8 +172,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpeced error
-                    schema:
-                        $ref: '#/definitions/Error'
             parameters:
                 - name: Node
                   in: body
@@ -222,15 +203,11 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
             parameters:
                 - name: Node
                   in: body
                   description: The new Node
                   required: true
-                  schema:
-                      $ref: '#/definitions/Node'
         delete:
             description: |
                 Delete a node. When the target is a ContainerNode, all its children (the contents of the container) SHALL also be deleted.
@@ -251,8 +228,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpeced error
-                    schema:
-                        $ref: '#/definitions/Error'
         parameters:
             - name: nodePath
               in: path
@@ -290,8 +265,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpeced error
-                    schema:
-                        $ref: '#/definitions/Error'
             parameters:
                 - name: Transfer
                   in: body
@@ -329,8 +302,6 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpeced error
-                    schema:
-                        $ref: '#/definitions/Error'
             parameters:
                 - name: target
                   in: query
@@ -364,12 +335,8 @@ paths:
             responses:
                 '200':
                     description: A VOSI availability document in XML.
-                    schema:
-                        $ref: '#/definitions/availability'
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
     /capabilities:
         get:
             summary: VOSI Capabilities
@@ -386,139 +353,9 @@ paths:
             responses:
                 '200':
                     description: A VOSI Capabilities document in XML.
-                    schema:
-                        $ref: '#/definitions/capabilities'
                 '500':
                     description: Internal server error
                 '503':
                     description: Service too busy
                 default:
                     description: Unexpected error
-                    schema:
-                        $ref: '#/definitions/Error'
-definitions:
-    Properties:
-        type: array
-        items:
-            $ref: '#/definitions/Property'
-    Views:
-        type: array
-        items:
-            $ref: '#/definitions/Views'
-    Protocols:
-        type: array
-        items:
-            $ref: '#/definitions/Protocol'
-    Property:
-        type: object
-        required:
-            - uri
-        description: The property identifier
-        properties:
-            uri:
-                type: string
-                format: uri
-    View:
-        type: object
-        required:
-            - uri
-        description: The view identifier
-        properties:
-            uri:
-                type: string
-                format: uri
-    Protocol:
-        type: object
-        required:
-            - uri
-        description: The protocol identifier
-        properties:
-            uri:
-                type: string
-                format: uri
-    Node:
-        type: object
-        required:
-            - uri
-        description: The node identifier
-        properties:
-            uri:
-                type: string
-                format: uri
-    Transfer:
-        type: object
-        required:
-            - target
-            - direction
-            - protocol
-        description: The transfer negotiation document
-        properties:
-            target:
-                type: string
-                format: uri
-            direction:
-                type: string
-            protocol:
-                type: string
-                format: uri
-    availability:
-        type: object
-        xml:
-            name: availability
-            namespace: http://www.ivoa.net/xml/VOSIAvailability/v1.0
-            prefix: vosi
-        properties:
-            available:
-                type: boolean
-                xml:
-                    attribute: true
-                    prefix: vosi
-            note:
-                type: string
-                xml:
-                    attribute: true
-                    prefix: vosi
-    capabilities:
-        type: array
-        items:
-            $ref: '#/definitions/capability'
-        xml:
-            namespace: http://www.ivoa.net/xml/VOSICapabilities/v1.0
-            prefix: vosi
-            wrapped: true
-    capability:
-        type: object
-        properties:
-            standardID:
-                type: string
-                format: uri
-                xml:
-                    attribute: true
-            interface:
-                type: object
-                properties:
-                    accessURL:
-                        type: string
-                        properties:
-                            use:
-                                type: string
-                                xml:
-                                    attribute: true
-                    securityMethod:
-                        type: string
-                        properties:
-                            standardID:
-                                type: string
-                                format: uri
-                                xml:
-                                    attribute: true
-    Error:
-        required:
-            - code
-            - message
-        properties:
-            code:
-                type: integer
-                format: int32
-            message:
-                type: string

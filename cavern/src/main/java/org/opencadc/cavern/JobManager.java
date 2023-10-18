@@ -70,20 +70,26 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.SimpleJobManager;
-
 import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
 import org.apache.log4j.Logger;
 
-public abstract class JobManager extends SimpleJobManager
-{
-
+abstract class JobManager extends SimpleJobManager {
     private static final Logger log = Logger.getLogger(JobManager.class);
 
-    protected static JobPersistence jp;
-
-    static {
-        log.info("Creating shared (postgres) job manager");
-        jp = new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    private static String jndiKey;
+    
+    protected JobManager() {
+        super();
+    }
+    
+    protected final JobPersistence createJobPersistence() {
+        return new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    }
+    
+    @Override
+    public void terminate() throws InterruptedException {
+        super.terminate();
     }
 
+    
 }

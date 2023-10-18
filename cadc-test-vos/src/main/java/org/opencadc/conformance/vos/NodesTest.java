@@ -84,6 +84,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -112,9 +113,11 @@ public class NodesTest extends VOSTest {
     private GroupURI group2;
     
     protected boolean linkNodeProps = true;
+    protected boolean paginationSupported = true;
+    protected boolean nodelockSupported = true;
     
-    protected NodesTest(URI resourceID, String testCertFilename) {
-        super(resourceID, testCertFilename);
+    protected NodesTest(URI resourceID, File testCert) {
+        super(resourceID, testCert);
     }
 
     /**
@@ -128,9 +131,9 @@ public class NodesTest extends VOSTest {
         this.group2 = group2;
     }
     
-    protected void enablePermissionTests(GroupURI accessGroup, File groupMemberCertFile) {
+    protected void enablePermissionTests(GroupURI accessGroup, File groupMemberCert) {
         this.accessGroup = accessGroup;
-        this.groupMember = SSLUtil.createSubject(groupMemberCertFile);
+        this.groupMember = SSLUtil.createSubject(groupMemberCert);
     }
 
     @Test
@@ -160,7 +163,9 @@ public class NodesTest extends VOSTest {
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             testNode.getProperties().add(nodeProperty);
-            testNode.isLocked = true; // lock node
+            if (nodelockSupported) {
+                testNode.isLocked = true; // lock node
+            }
             post(nodeURL, nodeURI, testNode);
 
             // GET the updated node
@@ -170,20 +175,24 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
-            Assert.assertTrue(updatedNode.isLocked);
+            if (nodelockSupported) {
+                Assert.assertTrue(updatedNode.isLocked);
+            }
 
             // failed to add a subdirectory (node locked)
-            String subDirName = name + "/subDir";
-            URL subDirURL = getNodeURL(nodesServiceURL, subDirName);
-            VOSURI subDirURI = getVOSURI(subDirName);
-            ContainerNode subDirNode = new ContainerNode(subDirName);
-            log.info("put: " + subDirURI + " -> " + subDirURL);
-            try {
-                put(subDirURL, subDirURI, subDirNode);
-                Assert.fail("New node should fail when parent is locked");
-            } catch (AssertionError ex) {
-                Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
-                        ex.getMessage());
+            if (nodelockSupported) {
+                String subDirName = name + "/subDir";
+                URL subDirURL = getNodeURL(nodesServiceURL, subDirName);
+                VOSURI subDirURI = getVOSURI(subDirName);
+                ContainerNode subDirNode = new ContainerNode(subDirName);
+                log.info("put: " + subDirURI + " -> " + subDirURL);
+                try {
+                    put(subDirURL, subDirURI, subDirNode);
+                    Assert.fail("New node should fail when parent is locked");
+                } catch (AssertionError ex) {
+                    Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
+                            ex.getMessage());
+                }
             }
 
             // DELETE the node
@@ -307,7 +316,7 @@ public class NodesTest extends VOSTest {
     public void testNodePropertyUpdates() {
         try {
             // create a fully populated container node
-            String path = "nodes-complex-node";
+            String path = "testNodePropertyUpdates";
 
             // TODO: with DataNode we could test updating content-type and content-encoding
             ContainerNode testNode = new ContainerNode(path);
@@ -418,7 +427,7 @@ public class NodesTest extends VOSTest {
         Assume.assumeTrue("enablePermissionPropsTest not called", group1 != null);
         
         // create a fully populated container node
-        String path = "inheritperm";
+        String path = "testInheritPermissions";
 
         ContainerNode testNode = new ContainerNode(path);
 
@@ -497,6 +506,11 @@ public class NodesTest extends VOSTest {
 
     @Test
     public void testListBatches() {
+        if (!paginationSupported) {
+            // testLimit tests the minimal required behaviour
+            return; // done
+        }
+        
         String[] childNames = new String[] {
             "list-batches-child-1",
             "list-batches-child-2",
@@ -622,7 +636,39 @@ public class NodesTest extends VOSTest {
             log.info("put: " + parentURI + " -> " + parentURL);
             parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
-
+            
+            // check that limit=0 is supported
+            final URL limitZeroURL = new URL(parentURL + "?limit=0");
+            final HttpGet limitZeroGet = new HttpGet(limitZeroURL, true);
+            Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                limitZeroGet.prepare();
+                return null;
+            });
+            Assert.assertEquals(200, limitZeroGet.getResponseCode());
+            
+            if (!paginationSupported) {
+                // check that a pagination request is rejected in the spec-compliant way
+                final URL limitURL = new URL(parentURL + "?limit=2");
+                final HttpGet limitGet = new HttpGet(limitURL, true);
+                try {
+                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                        limitGet.prepare();
+                        return null;
+                    });
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + limitGet.getResponseCode());
+                } catch (IllegalArgumentException ex) {
+                    if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
+                        log.info("caught valid reject: " + ex.getMessage());
+                    } else {
+                        throw ex;
+                    }
+                }
+                
+                // delete the parent node
+                delete(parentURL);
+                return; // done
+            }
+            
             // add 3 direct child nodes
             int i = 0;
             for (String n : childNames) {
@@ -811,6 +857,10 @@ public class NodesTest extends VOSTest {
         // cleanup
         cleanupNodeTree(testTree);
 
+        if (!nodelockSupported) {
+            return;
+        }
+        
         // repeat test but lock the subdirectory
         createNodeTree(testTree);
 

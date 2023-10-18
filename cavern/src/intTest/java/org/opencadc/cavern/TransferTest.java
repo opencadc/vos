@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,14 +65,27 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern.files;
+package org.opencadc.cavern;
+
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  *
- * @author jeevesh
+ * @author pdowler
  */
-public class PreauthGetAction extends GetAction {
-    public PreauthGetAction() {
-        super(true);
+public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
+    private static final Logger log = Logger.getLogger(TransferTest.class);
+
+    static {
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+    }
+    
+    public TransferTest() {
+        super(Constants.RESOURCE_ID, Constants.TEST_CERT);
     }
 }

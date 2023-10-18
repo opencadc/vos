@@ -67,7 +67,8 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
@@ -75,51 +76,40 @@ import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotSupportedException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.AccessControlException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.List;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
-import org.opencadc.cavern.nodes.NodeUtil;
+import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.permissions.WriteGrant;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  *
  * @author majorb
  * @author jeevesh
  */
-public abstract class PutAction extends FileAction {
+public class PutAction extends FileAction {
     private static final Logger log = Logger.getLogger(PutAction.class);
 
     private static final String INPUT_STREAM = "in";
 
-    private final PosixMapperClient posixMapper;
-    
-    public PutAction(boolean isPreauth) {
-        super(isPreauth);
-        LocalAuthority loc = new LocalAuthority();
-        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new PosixMapperClient(posixMapperID);
-    }
-
-    protected Direction getDirection() {
-        return Direction.pushToVoSpace;
+    public PutAction() {
+        super();
     }
 
     @Override
@@ -144,25 +134,59 @@ public abstract class PutAction extends FileAction {
         boolean putStarted = false;
         boolean successful = false;
         
-        Path rootPath = Paths.get(getRoot());
-
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
-            Node n = nodePersistence.get(nodeURI);
+            boolean preauthGranted = false;
+            if (preauthToken != null) {
+                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                String tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
+                preauthGranted = true;
+                // reset loggables
+                Subject subject = AuthenticationUtil.getCurrentSubject();
+                subject.getPrincipals().clear();
+                if (tokenUser != null) {
+                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
+                    identityManager.augment(subject);
+                }
+                logInfo.setSubject(subject);
+                logInfo.setResource(nodeURI.getURI());
+                logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
+                logInfo.setGrant("read: preauth-token");
+            }
+            log.debug("preauthGranted: " + preauthGranted);
+            
+            // PathResolver checks read permission
+            String parentPath = nodeURI.getParentURI().getPath();
+            // TODO: disable permission checks in resolver
+            Node n = pathResolver.getNode(parentPath);
             if (n == null) {
-                // Node needs to be created ahead of time for PUT
-                throw new ResourceNotFoundException("node must be created before PUT");
+                throw new ResourceNotFoundException("not found: parent container " + parentPath);
             }
-
+            if (!(n instanceof ContainerNode)) {
+                throw new IllegalArgumentException("parent is not a container node");
+            }
+            ContainerNode cn = (ContainerNode) n;
+            n = nodePersistence.get(cn, nodeURI.getName());
+            
             // only support data nodes for now
-            if (!(DataNode.class.isAssignableFrom(n.getClass()))) {
-                log.debug("400 error with PUT: not a writable node");
-                throw new IllegalArgumentException("not a writable node");
+            if (n != null && !(DataNode.class.isAssignableFrom(n.getClass()))) {
+                throw new IllegalArgumentException("not a data node");
             }
-
             node = (DataNode) n;
-            target = NodeUtil.nodeToPath(rootPath, node);
+            
+            // check write permission
+            if (!preauthGranted) {
+                if (n != null && authorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
+                    log.debug("authorized to write to existing data node");
+                } else if (authorizer.hasSingleNodeWritePermission(cn, AuthenticationUtil.getCurrentSubject())) {
+                    log.debug("authorized to write to parent container");
+                } else {
+                    throw new AccessControlException("permission denied: write to " + nodeURI.getPath());
+                }
+            }
+            
+            target = nodePersistence.nodeToPath(nodeURI);
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -172,77 +196,85 @@ public abstract class PutAction extends FileAction {
             Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("copy: done " + target);
 
-            String expectedMD5 = syncInput.getHeader("Content-MD5");
-            log.debug("set properties");
+            URI expectedMD5 = syncInput.getDigest();
             byte[] md5 = md.digest();
             String propValue = HexUtil.toHex(md5);
-            if (expectedMD5 != null && !expectedMD5.equals(propValue)) {
+            URI actualMD5 = URI.create("md5:" + propValue);
+            if (expectedMD5 != null && !expectedMD5.equals(actualMD5)) {
                 // upload failed: do not keep corrupt data
                 log.debug("upload corrupt: " + expectedMD5 + " != " + propValue);
-                cleanUpOnFailure(target, node, rootPath);
+                //cleanupOnFailure(target); already in finally
                 return;
             }
             
+            // re-read node from filesystem
+            node = (DataNode) nodePersistence.get(cn, nodeURI.getName());
+            
+            // update Node
+            Subject caller = AuthenticationUtil.getCurrentSubject();
+            node.owner = caller;
+            node.ownerID = identityManager.toPosixPrincipal(caller);
+        
             log.debug(nodeURI + " MD5: " + propValue);
-            List<NodeProperty> props = new ArrayList<>();
-            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, propValue));
+            NodeProperty csp = node.getProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            if (csp == null) {
+                csp = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, actualMD5.toASCIIString());
+                node.getProperties().add(csp);
+            } else {
+                csp.setValue(actualMD5.toASCIIString());
+            }
 
-            nodePersistence.updateProperties(node, props);
-
-            // doing this last because it requires chown which is most likely to fail during experimentation
-            log.debug("restore owner & group");
-            restoreOwnNGroup(rootPath, node);
+            nodePersistence.put(node);
             successful = true;
         } catch (AccessDeniedException e) {
+            // TODO: this is a deployment error because cavern doesn't have permission to filesystem
             log.debug("403 error with PUT: ",  e);
             throw new AccessControlException(e.getLocalizedMessage());
 
-        } catch (IOException e) {
-            String msg = e.getMessage();
+        } catch (IOException ex) {
+            String msg = ex.getMessage();
             if (msg != null && msg.contains("quota")) {
-                rootPath = Paths.get(getRoot());
-                restoreOwnNGroup(rootPath, node);
-                Node curNode = node.getParent();
-                String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
-                while (limitValue == null) {
-                    curNode = curNode.getParent();
-                    if (curNode == null) {
-                        // quota limit not defined in a parent container, exit while loop
-                        break;
-                    } else {
-                        limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                // TODO: traverse up the path to find quota
+                //rootPath = Paths.get(getRoot());
+                //restoreOwnNGroup(rootPath, node);
+                long limit = -1;
+                ContainerNode curNode = node.parent;
+                while (curNode != null && limit == -1) {
+                    String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                    if (limitValue != null) {
+                        limit = Long.parseLong(limitValue);
                     }
                 }
 
                 // TODO: Replace the quota limit below with the number of bytes 
                 //       remaining in the quota when we can determine it. This 
                 //       means the above code to obtain the limitValue will need
-                //       to be changed.
-                // get quota limit from a parent container
-                // -1 to indicate quota limit not defined
-                long limit = -1;
-                if (limitValue == null) {
-                    // VOS.PROPERTY_URI_QUOTA attribute is not set on the node
-                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + e.getMessage();
+                //       to be changed
+                
+                if (limit == -1) {
+                    // VOS.PROPERTY_URI_QUOTA attribute is not set on any parent node
+                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + ex.getMessage();
                     log.warn(msg);
-                } else {
-                    limit = Long.parseLong(limitValue);
                 }
 
-                throw new ByteLimitExceededException(e.getMessage(), limit);
-            } else {
-                // unexpected IOException
-                throw e;
+                throw new ByteLimitExceededException(ex.getMessage(), limit);
             }
+            
+            throw ex;
         } finally {
             if (successful) {
                 log.debug("put: done " + nodeURI.getURI().toASCIIString());
             } else if (putStarted) {
-                cleanUpOnFailure(target, node, rootPath);
+                cleanupOnFailure(target);
             }
         }
     }
     
+    private void cleanupOnFailure(Path target) {
+        throw new UnsupportedOperationException();
+    }
+    
+    /*
     private void cleanUpOnFailure(Path target, DataNode node, Path rootPath) throws IOException {
         log.debug("clean up on put failure " + target);
         Files.delete(target);
@@ -263,5 +295,5 @@ public abstract class PutAction extends FileAction {
         Path target = NodeUtil.nodeToPath(rootPath, node);
         NodeUtil.setPosixOwnerGroup(target, pp.getUidNumber(), gid);
     }
-
+    */
 }

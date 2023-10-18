@@ -65,38 +65,37 @@
 *  $Revision: 4 $
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.cavern;
 
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+import org.apache.log4j.Logger;
 
 /**
  *
  * @author pdowler, majorb, yeunga
  */
-public class RecursiveSetNodeJobManager extends JobManager
-{
+public class RecursiveSetNodeJobManager extends JobManager {
+
     private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
 
-    private static final Long MAX_EXEC_DURATION = Long.valueOf(12*7200L); // 24 hours?
-    private static final Long MAX_DESTRUCTION = Long.valueOf(7*24*3600L); // 1 week
-    private static final Long MAX_QUOTE = Long.valueOf(12*7200L); // same as exec
+    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
+    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
+    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
 
-    public RecursiveSetNodeJobManager()
-    {
+    public RecursiveSetNodeJobManager() {
         super();
-        // jp is instantiated in parent org.opencadc.cavern.JobManager
+        JobPersistence jp = createJobPersistence();
         JobUpdater ju = (JobUpdater) jp;
         super.setJobPersistence(jp);
 
         JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
         super.setJobExecutor(jobExec);
-        
+
         super.setMaxExecDuration(MAX_EXEC_DURATION);
         super.setMaxDestruction(MAX_DESTRUCTION);
         super.setMaxQuote(MAX_QUOTE);

@@ -67,6 +67,8 @@
 
 package org.opencadc.vospace.transfer;
 
+import java.util.Objects;
+
 /**
  * Class to hold the direction information for a transfer.
  *
@@ -114,12 +116,17 @@ public class Direction {
     @Override
     public boolean equals(Object o) {
         if (o instanceof Direction) {
-            String value = ((Direction) o).getValue();
-            if (value != null) {
-                return value.equalsIgnoreCase(value);
-            }
+            Direction rhs = (Direction) o;
+            return value.equalsIgnoreCase(rhs.value);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 97 * hash + Objects.hashCode(this.value);
+        return hash;
     }
 
     @Override

@@ -444,7 +444,7 @@ public class Main implements Runnable {
             }
             node.getProperties().addAll(this.properties);
 
-            Node nodeRtn = client.createNode(this.target, node);
+            Node nodeRtn = client.createNode(this.target, node, false);
             log.info("created: " + nodeRtn.getName());
         } catch (Throwable t) {
             msg("failed to create: " + target);

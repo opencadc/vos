@@ -166,6 +166,15 @@ public interface NodePersistence {
     Node put(Node node) throws NodeNotSupportedException, TransientException;
 
     /**
+     * Move a node to a new container (parent).
+     * 
+     * @param node the node to move
+     * @param dest the destination container
+     * @param newName optional new node name (rename)
+     */
+    void move(Node node, ContainerNode dest, String newName);
+    
+    /**
      * Delete the specified node.
      *
      * @param node the node to delete
@@ -185,6 +194,7 @@ public interface NodePersistence {
      * @param limit  max number of nodes to return, may be null
      * @param start  first node in order to consider, may be null
      * @return iterator of matching child nodes, may be empty
+     * @throws UnsupportedOperationException if pagination options (limit, start) are not supported
      */
     ResourceIterator<Node> iterator(ContainerNode parent, Integer limit, String start);
 }

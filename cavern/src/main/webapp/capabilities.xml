@@ -60,6 +60,7 @@
     </interface>
   </capability>
 
+<!--
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/Pkg-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.me.com/cavern/pkg</accessURL>
@@ -69,11 +70,18 @@
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
-
+-->
+  <capability standardID="ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto">
+      <interface xsi:type="vs:ParamHTTP" role="std">
+      <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
+      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
+    </interface>
+  </capability>
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
-      <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>
@@ -90,10 +98,9 @@
     </interface>
   </capability>
   
-  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/archive#file-1.0">
+  <capability standardID="ivo://ivoa.net/std/VOSpace#recursive-delete-proto">
     <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/preauth</accessURL>
-      <securityMethod/>
+      <accessURL use="full">https://replace.com/cavern/async-delete</accessURL>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>

@@ -279,6 +279,8 @@ public class VOS {
     public static final String IVOA_FAULT_INVALID_TOKEN = "InvalidToken";
     public static final String IVOA_FAULT_TYPE_NOT_SUPPORTED = "TypeNotSupported";
     public static final String IVOA_FAULT_VIEW_NOT_SUPPORTED = "ViewNotSupported";
+    public static final String IVOA_FAULT_OPTION_NOT_SUPPORTED = "OptionNotSupported";
+    
     // 401
     public static final String IVOA_FAULT_PERMISSION_DENIED = "PermissionDenied";
 

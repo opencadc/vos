@@ -69,27 +69,15 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.io.ByteLimitExceededException;
-import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URISyntaxException;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeBusyException;
-import org.opencadc.vospace.NodeLockedException;
-import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
@@ -97,7 +85,6 @@ import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  *
@@ -132,23 +119,44 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
                 throw new TransferException("parent is not a container node");
             }
             ContainerNode parent = (ContainerNode) n;
-
+            log.debug("found parent: " + parent);
+            Subject caller = AuthenticationUtil.getCurrentSubject();
+            if (!authorizer.hasSingleNodeWritePermission(parent, caller)) {
+                throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
+            }
+            
             //Node node = resolveNodeForWrite(authorizer, nodePersistence, target, DataNode.class, true, true, true);
             Node node = nodePersistence.get(parent, target.getName());
-            log.debug("Resolved path: " + target + " -> " + node);
+            log.debug("target node: " + target + " -> " + node);
+            
+            DataNode dn = null;
             if (node == null) {
-                // TODO: create new DataNode??
-                throw new TransferException("not found: destination data node");
-            }
-
-            if (!(node instanceof DataNode)) {
-                throw new TransferException("destination is not a data node");
+                if (!authorizer.hasSingleNodeWritePermission(parent, caller)) {
+                    throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
+                }
+                // create: this should do the same things that CreateNodeAction does
+                dn = new DataNode(target.getName());
+                dn.parent = parent;
+                dn.owner = caller;
+                if (parent.inheritPermissions != null && parent.inheritPermissions) {
+                    dn.isPublic = parent.isPublic;
+                    dn.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
+                    dn.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+                }
+                nodePersistence.put(dn);
+            } else if (node instanceof DataNode) {
+                dn = (DataNode) node;
+                if (!authorizer.hasSingleNodeWritePermission(dn, caller)) {
+                    throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
+                }
+            } else {
+                throw NodeFault.InvalidArgument.getStatus("transfer destination is not a data node");
             }
 
             // Check the user's quota
             // Note: content length is always null until it has can
             // be collected from the transfer information
-            checkQuota(node, null);
+            checkQuota(dn, null);
 
             // If trying to write a node and the node is busy, then fail
             //VOS.NodeBusyState busy = ((DataNode) node).getBusy();
@@ -156,7 +164,7 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             //    throw new NodeBusyException("node is busy with write");
             //}
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
-            updateTransferJob(node, loc.getURI(node).getURI(), ExecutionPhase.EXECUTING);
+            updateTransferJob(node, loc.getURI(dn).getURI(), ExecutionPhase.EXECUTING);
             updated = true;
         } finally {
             if (!updated) {
