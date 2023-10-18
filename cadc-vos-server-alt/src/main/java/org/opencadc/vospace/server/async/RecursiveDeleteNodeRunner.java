@@ -299,23 +299,23 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
                     }
                 }
             }
-            if (!childContainers.isEmpty()) {
-                // descend down one level
-                for (ContainerNode cn : childContainers) {
-                    errors |= deleteContainer(cn, caller);
-                }
+        }
+        if (!childContainers.isEmpty()) {
+            // descend down one level
+            for (ContainerNode cn : childContainers) {
+                errors |= deleteContainer(cn, caller);
             }
-            if (!errors) {
-                // delete the empty container
-                if (vospaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)) {
-                    nodePersistence.delete(node);
-                    log.debug("Deleted container node " + Utils.getPath(node));
-                    deleteCount++;
-                } else {
-                    log.debug("Failed to delete container node " + Utils.getPath(node));
-                    incErrorCount();
-                    errors = true;
-                }
+        }
+        if (!errors) {
+            // delete the empty container
+            if (vospaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)) {
+                nodePersistence.delete(node);
+                log.debug("Deleted container node " + Utils.getPath(node));
+                deleteCount++;
+            } else {
+                log.debug("Failed to delete container node " + Utils.getPath(node));
+                incErrorCount();
+                errors = true;
             }
         }
         return errors;
