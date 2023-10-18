@@ -103,6 +103,7 @@ public class UpdateNodeAction extends NodeAction {
 
         // get parent container node
         // TBD: resolveLinks=true?
+        voSpaceAuthorizer.setDisregardLocks(true); // locks don't apply to properties updates
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {
@@ -120,8 +121,6 @@ public class UpdateNodeAction extends NodeAction {
             throw NodeFault.PermissionDenied.getStatus(clientNodeTarget.toString());
         }
         
-        PosixPrincipal no = (PosixPrincipal) serverNode.ownerID;
-        log.debug("server node owner: " + no.getUidNumber() + ":" + no.defaultGroup + " aka " + no.username);
         log.debug("server node owner: " + serverNode.owner);
         
         // merge change request
