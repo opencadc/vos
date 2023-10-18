@@ -181,7 +181,7 @@ public class NodeUtil {
             // anon request
             return null;
         }
-        
+        identityManager.augment(s);
         PosixPrincipal pp = identityManager.toPosixPrincipal(s);
         if (pp == null) {
             throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
@@ -409,7 +409,7 @@ public class NodeUtil {
         }
         Set<Integer> curGID = acl.getReadOnlyACL();
         log.debug("cur ro: " + curGID);
-        final boolean changeRO = !roGIDs.containsAll(curGID) || !curGID.containsAll(roGIDs);
+        final boolean changeRO = !roGIDs.equals(curGID);
 
         final Set<Integer> rwGIDs = new TreeSet<>();
         try {
@@ -425,7 +425,7 @@ public class NodeUtil {
 
         curGID = acl.getReadWriteACL();
         log.debug("cur rw: " + curGID);
-        boolean changeRW = !rwGIDs.containsAll(curGID) || !curGID.containsAll(rwGIDs);
+        boolean changeRW = !rwGIDs.equals(curGID);
 
         boolean changePublic = false;
         boolean worldReadable = false;

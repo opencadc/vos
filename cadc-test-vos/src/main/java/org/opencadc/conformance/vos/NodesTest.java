@@ -480,6 +480,11 @@ public class NodesTest extends VOSTest {
 
     @Test
     public void testListBatches() {
+        if (!paginationSupported) {
+            // testLimit tests the minimal required behaviour
+            return; // done
+        }
+        
         String[] childNames = new String[] {
             "list-batches-child-1",
             "list-batches-child-2",
@@ -507,29 +512,6 @@ public class NodesTest extends VOSTest {
             log.info("put: " + parentURI + " -> " + parentURL);
             ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
-            
-            if (!paginationSupported) {
-                // check that a pagination request is rejected in the spec-compliant way
-                URL nodeURL = new URL(String.format("%s?limit=%d", parentURL, 2));
-                HttpGet get = new HttpGet(nodeURL, true);
-                try {
-                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-                        get.prepare();
-                        return null;
-                    });
-                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + get.getResponseCode());
-                } catch (IllegalArgumentException ex) {
-                    if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
-                        log.info("caught valid reject: " + ex.getMessage());
-                    } else {
-                        throw ex;
-                    }
-                }
-
-                // delete the parent node
-                delete(parentURL);
-                return; // done
-            }
 
             // add 6 direct child nodes
             int i = 0;
@@ -628,15 +610,13 @@ public class NodesTest extends VOSTest {
             put(parentURL, parentURI, parent);
             
             // check that limit=0 is supported
-            {
-                final URL nodeURL = new URL(parentURL + "?limit=0");
-                final HttpGet get = new HttpGet(nodeURL, true);
-                Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-                    get.prepare();
-                    return null;
-                });
-                Assert.assertEquals(200, get.getResponseCode());
-            }
+            final URL limitZeroURL = new URL(parentURL + "?limit=0");
+            final HttpGet limitZeroGet = new HttpGet(limitZeroURL, true);
+            Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                limitZeroGet.prepare();
+                return null;
+            });
+            Assert.assertEquals(200, limitZeroGet.getResponseCode());
             
             if (!paginationSupported) {
                 // check that a pagination request is rejected in the spec-compliant way

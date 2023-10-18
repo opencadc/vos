@@ -67,6 +67,8 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -77,7 +79,9 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.permissions.ReadGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
@@ -85,7 +89,6 @@ import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.NodeFault;
-import org.opencadc.vospace.transfer.Direction;
 
 /**
  *
@@ -93,15 +96,11 @@ import org.opencadc.vospace.transfer.Direction;
  * @author jeevesh
  */
 
-public abstract class GetAction extends FileAction {
+public class GetAction extends FileAction {
     private static final Logger log = Logger.getLogger(GetAction.class);
 
-    public GetAction(boolean isPreauth) {
-        super(isPreauth);
-    }
-
-    protected Direction getDirection() {
-        return Direction.pullFromVoSpace;
+    public GetAction() {
+        super();
     }
 
     @Override
@@ -110,7 +109,27 @@ public abstract class GetAction extends FileAction {
             VOSURI nodeURI = getNodeURI();
             log.warn("target: " + nodeURI);
             
-            // PathResolver checks read permission: nothing else to do
+            boolean preauthGranted = false;
+            if (preauthToken != null) {
+                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                String tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
+                preauthGranted = true;
+                // reset loggables
+                Subject subject = AuthenticationUtil.getCurrentSubject();
+                subject.getPrincipals().clear();
+                if (tokenUser != null) {
+                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
+                    identityManager.augment(subject);
+                }
+                logInfo.setSubject(subject);
+                logInfo.setResource(nodeURI.getURI());
+                logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
+                logInfo.setGrant("read: preauth-token");
+            }
+            log.debug("preauthGranted:" + preauthGranted);
+            
+            // PathResolver checks read permission
+            // TODO: disable permission checks in resolver if preauthGranted
             Node node = pathResolver.getNode(nodeURI.getPath());
             if (node == null) {
                 throw NodeFault.NodeNotFound.getStatus(nodeURI.getURI().toASCIIString());

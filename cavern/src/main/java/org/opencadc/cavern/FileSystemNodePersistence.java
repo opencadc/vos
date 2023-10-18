@@ -135,6 +135,11 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
     
     // support FileAction
+    public CavernConfig getConfig() {
+        return config;
+    }
+    
+    // support FileAction
     public Path nodeToPath(VOSURI uri) {
         return NodeUtil.nodeToPath(rootPath, uri);
     }
@@ -161,7 +166,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public TransferGenerator getTransferGenerator() {
-        return new CavernURLGenerator(this, config.getProperties());
+        return new CavernURLGenerator(this);
     }
 
     @Override

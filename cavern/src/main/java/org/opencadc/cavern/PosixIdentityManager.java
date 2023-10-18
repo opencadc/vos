@@ -143,7 +143,6 @@ public class PosixIdentityManager implements IdentityManager {
 
     @Override
     public Subject augment(Subject subject) {
-        // delegate to configured IM
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         log.warn("augment: " + subject);
         Subject ret = im.augment(subject);

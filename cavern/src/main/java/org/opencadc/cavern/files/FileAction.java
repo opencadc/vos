@@ -68,25 +68,22 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.AccessControlException;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.LinkingException;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeLockedException;
-import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
@@ -104,18 +101,22 @@ public abstract class FileAction extends RestAction {
 
     // Key values needed for FileAction
     private VOSURI nodeURI;
-    private final boolean isPreauth;
+    protected String preauthToken;
 
     protected FileSystemNodePersistence nodePersistence;
     protected VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
+    protected CavernConfig config;
     
-
-    protected FileAction(boolean isPreauth) {
-        this.isPreauth = isPreauth;
+    protected final PosixIdentityManager identityManager = new PosixIdentityManager();
+    protected final PosixMapperClient posixMapper;
+    
+    protected FileAction() {
+        super();
+        LocalAuthority loc = new LocalAuthority();
+        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
-
-    protected abstract Direction getDirection();
 
     @Override
     protected InlineContentHandler getInlineContentHandler() {
@@ -124,7 +125,7 @@ public abstract class FileAction extends RestAction {
 
     protected VOSURI getNodeURI() {
         if (nodeURI == null) {
-            this.nodeURI = getURIFromPath(syncInput.getPath(), false);
+            this.nodeURI = parsePath(syncInput.getPath(), false);
         }
         return nodeURI;
     }
@@ -137,75 +138,37 @@ public abstract class FileAction extends RestAction {
             this.nodePersistence = (FileSystemNodePersistence) ctx.lookup(jndiNodePersistence);
             this.authorizer = new VOSpaceAuthorizer(nodePersistence);
             this.pathResolver = new PathResolver(nodePersistence, authorizer, true);
+            this.config = nodePersistence.getConfig();
         } catch (NamingException oops) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
         }
     }
 
-    protected void initPreauthTarget(String path) throws IllegalArgumentException {
-
-        // Long debug marker as cavern debug is rather verbose
-        log.debug("---------------- initPreauthTarget debug log ----------------------");
-        log.debug("path passed in: " + path);
-
-        if (!StringUtil.hasLength(path)) {
-            throw new IllegalArgumentException("Invalid preauthorized request");
+    private VOSURI parsePath(String path, boolean hasToken) {
+        log.warn("parsePath: '" + path + "'");
+        int start = 0;
+        String[] pathcomps = path.split("/");
+        if (pathcomps.length > 0) {
+            if (pathcomps[0].startsWith("preauth:")) {
+                URI u = URI.create(pathcomps[0]);
+                this.preauthToken = u.getSchemeSpecificPart();
+                start = 1;
+            }
         }
-        String[] parts = path.split("/");
-        log.debug(" number of parts in path: " + parts.length);
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid preauthorized request");
+        
+        LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
+        StringBuilder sb = new StringBuilder();
+        sb.append(loc.getVOSBase().getURI().toASCIIString());
+        for (int i = start; i < pathcomps.length; i++) {
+            sb.append("/").append(pathcomps[i]);
         }
-
-        String token = parts[0];
-        log.debug("token: " + token);
 
         try {
-            VOSURI tmpURI = getURIFromPath(path, true);
-            log.debug("checking preauth token for node uri: " + tmpURI);
-
-            // preauth token is validated in this step.
-            // Exceptions are thrown if it's not valid
-            CavernURLGenerator urlGen = (CavernURLGenerator) nodePersistence.getTransferGenerator();
-            nodeURI = urlGen.validateToken(token, tmpURI, getDirection());
-
-            log.debug("preauth token good node uri: " + nodeURI);
-
-        } catch (IOException ex) {
-            log.debug("unable to init preauth target: " + path + ": " + ex);
-            throw new IllegalArgumentException(ex.getCause());
-        }
-    }
-
-    private VOSURI getURIFromPath(String path, boolean hasToken) {
-
-        log.debug("getURIFromPath for " + path);
-        LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
-        VOSURI baseURI = localServiceURI.getVOSBase();
-        log.debug("baseURI for cavern deployment: " + baseURI.toString());
-
-        String pathStr = null;
-        if (hasToken) {
-            int firstSlashIndex = path.indexOf("/");
-            pathStr = path.substring(firstSlashIndex + 1);
-        } else {
-            pathStr = path;
-        }
-
-        log.debug("path: " + pathStr);
-        String targetURIStr = baseURI.toString() + "/" + pathStr;
-        log.debug("target URI for validating token: " + targetURIStr);
-
-        try {
-            URI targetURI = new URI(targetURIStr);
-            log.debug("targetURI for system: " + targetURI.toString());
+            URI targetURI = new URI(sb.toString());
             VOSURI targetVOSURI = new VOSURI(targetURI);
-            log.debug("targetVOSURI: " + targetVOSURI.getURI().toString());
             return targetVOSURI;
         } catch (URISyntaxException ex) {
             throw new RuntimeException("BUG (probably): failed to generate VOSURI from path: " + path, ex);
         }
-
-        
     }
 }

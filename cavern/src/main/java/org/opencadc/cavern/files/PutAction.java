@@ -68,7 +68,7 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
@@ -90,36 +90,26 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.transfer.Direction;
 
 /**
  *
  * @author majorb
  * @author jeevesh
  */
-public abstract class PutAction extends FileAction {
+public class PutAction extends FileAction {
     private static final Logger log = Logger.getLogger(PutAction.class);
 
     private static final String INPUT_STREAM = "in";
 
-    private final PosixIdentityManager identityManager = new PosixIdentityManager();
-    private final PosixMapperClient posixMapper;
-    
-    public PutAction(boolean isPreauth) {
-        super(isPreauth);
-        LocalAuthority loc = new LocalAuthority();
-        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new PosixMapperClient(posixMapperID);
-    }
-
-    protected Direction getDirection() {
-        return Direction.pushToVoSpace;
+    public PutAction() {
+        super();
     }
 
     @Override
@@ -147,8 +137,28 @@ public abstract class PutAction extends FileAction {
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
+            boolean preauthGranted = false;
+            if (preauthToken != null) {
+                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                String tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
+                preauthGranted = true;
+                // reset loggables
+                Subject subject = AuthenticationUtil.getCurrentSubject();
+                subject.getPrincipals().clear();
+                if (tokenUser != null) {
+                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
+                    identityManager.augment(subject);
+                }
+                logInfo.setSubject(subject);
+                logInfo.setResource(nodeURI.getURI());
+                logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
+                logInfo.setGrant("read: preauth-token");
+            }
+            log.debug("preauthGranted: " + preauthGranted);
+            
             // PathResolver checks read permission
             String parentPath = nodeURI.getParentURI().getPath();
+            // TODO: disable permission checks in resolver
             Node n = pathResolver.getNode(parentPath);
             if (n == null) {
                 throw new ResourceNotFoundException("not found: parent container " + parentPath);
@@ -166,12 +176,14 @@ public abstract class PutAction extends FileAction {
             node = (DataNode) n;
             
             // check write permission
-            if (n != null && authorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
-                log.debug("authorized to write to existing data node");
-            } else if (authorizer.hasSingleNodeWritePermission(cn, AuthenticationUtil.getCurrentSubject())) {
-                log.debug("authorized to write to parent container");
-            } else {
-                throw new AccessControlException("permission denied: write to " + nodeURI.getPath());
+            if (!preauthGranted) {
+                if (n != null && authorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
+                    log.debug("authorized to write to existing data node");
+                } else if (authorizer.hasSingleNodeWritePermission(cn, AuthenticationUtil.getCurrentSubject())) {
+                    log.debug("authorized to write to parent container");
+                } else {
+                    throw new AccessControlException("permission denied: write to " + nodeURI.getPath());
+                }
             }
             
             target = nodePersistence.nodeToPath(nodeURI);
