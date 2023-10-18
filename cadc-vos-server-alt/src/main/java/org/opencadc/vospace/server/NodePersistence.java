@@ -166,6 +166,15 @@ public interface NodePersistence {
     Node put(Node node) throws NodeNotSupportedException, TransientException;
 
     /**
+     * Move a node to a new container (parent).
+     * 
+     * @param node the node to move
+     * @param dest the destination container
+     * @param newName optional new node name (rename)
+     */
+    void move(Node node, ContainerNode dest, String newName);
+    
+    /**
      * Delete the specified node.
      *
      * @param node the node to delete

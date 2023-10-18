@@ -178,21 +178,14 @@ public class InternalTransferAction extends VOSpaceTransfer {
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
 
             Subject caller = AuthenticationUtil.getCurrentSubject();
-            // check src side of move permission
-            //authorizer.getDeletePermission(srcNode);
-            if (srcNode instanceof ContainerNode) {
-                checkRecursiveWritePermission((ContainerNode) srcNode, caller, loc);
-            } else {
-                if (!authorizer.hasSingleNodeWritePermission(srcNode, caller)) {
-                    // TODO: put the path here
-                    throw NodeFault.PermissionDenied.getStatus(loc.getURI(srcNode).getPath());
-                }
+            // check permission to remove src from it's current parent
+            if (!authorizer.hasSingleNodeWritePermission(srcNode.parent, caller)) {
+                throw NodeFault.PermissionDenied.getStatus(loc.getURI(srcNode).getPath());
             }
 
             log.debug("src permissions OK: " + srcURI + " -> " + destURI);
 
-            // check authorization
-            //authorizer.getWritePermission(destContainer);
+            // check write permission in destination container
             if (!authorizer.hasSingleNodeWritePermission(destContainer, caller)) {
                 // TODO: put the path here
                 throw NodeFault.PermissionDenied.getStatus(loc.getURI(destContainer).getPath());
@@ -201,11 +194,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
 
             // perform the move
             log.debug("performing move: " + srcNode + " -> " + destContainer + "/" + destName);
-            srcNode.setName(destName);
-            srcNode.parent = destContainer;
-            // TODO: srcNode.owner = caller; ??
-            //nodePersistence.move(srcNode, destContainer);
-            nodePersistence.put(srcNode);
+            nodePersistence.move(srcNode, destContainer, destName);
 
             // final job state
             List<Result> resultsList = new ArrayList<Result>();
@@ -225,6 +214,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
         }
     }
 
+    // no longer used above but keeping for now
     private void checkRecursiveWritePermission(ContainerNode containderNode, Subject subject, LocalServiceURI loc) throws Exception {
         // collect child containers for later
         List<ContainerNode> childContainers = new ArrayList<>();
@@ -232,7 +222,6 @@ public class InternalTransferAction extends VOSpaceTransfer {
             while (iter.hasNext()) {
                 Node n = iter.next();
                 if (!authorizer.hasSingleNodeWritePermission(n, subject)) {
-                    // TODO: put the path here
                     throw NodeFault.PermissionDenied.getStatus(loc.getURI(n).getPath());
                 }
                 if (n instanceof ContainerNode) {

@@ -86,7 +86,7 @@ public class Transfer {
      * is here to facilitate reading and writing the same version of documents
      * on the server side in order to maintain support for older clients.
      */
-    public int version = VOS.VOSPACE_20;
+    public int version = VOS.VOSPACE_21;
 
     private List<URI> targets = new ArrayList<URI>();
     private List<Protocol> protocols = new ArrayList<Protocol>();
