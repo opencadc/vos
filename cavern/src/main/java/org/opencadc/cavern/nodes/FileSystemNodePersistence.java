@@ -65,7 +65,7 @@
 ************************************************************************
  */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
@@ -79,6 +79,8 @@ import java.util.Set;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.CavernConfig;
+import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.cavern.files.CavernURLGenerator;
 import org.opencadc.cavern.nodes.NodeUtil;
 import org.opencadc.vospace.ContainerNode;

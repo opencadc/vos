@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,42 +67,106 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.permissions.ReadGrant;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
- * Get file bytes from the filesystem.
+ * Get file metadata from filesystem and output http headers.
  * 
  * @author pdowler
  */
+public class HeadAction extends FileAction {
+    private static final Logger log = Logger.getLogger(HeadAction.class);
 
-public class GetAction extends HeadAction {
-    private static final Logger log = Logger.getLogger(GetAction.class);
-
-    public GetAction() {
-        super();
+    public HeadAction() { 
     }
 
     @Override
-    public void doAction()  throws Exception {
+    public void doAction() throws Exception {
+        resolveAndSetMetadata();
+    }
+    
+    // GetAction re-uses all this logic
+    Path resolveAndSetMetadata() throws Exception {
         try {
-            Path source = resolveAndSetMetadata();
+            VOSURI nodeURI = getNodeURI();
+            log.warn("target: " + nodeURI);
             
-            OutputStream out = syncOutput.getOutputStream();
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
+            boolean preauthGranted = false;
+            if (preauthToken != null) {
+                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                String tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
+                preauthGranted = true;
+                // reset loggables
+                Subject subject = AuthenticationUtil.getCurrentSubject();
+                subject.getPrincipals().clear();
+                if (tokenUser != null) {
+                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
+                    identityManager.augment(subject);
+                }
+                logInfo.setSubject(subject);
+                logInfo.setResource(nodeURI.getURI());
+                logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
+                logInfo.setGrant("read: preauth-token");
+            }
+            log.debug("preauthGranted:" + preauthGranted);
+            
+            // PathResolver checks read permission
+            // TODO: disable permission checks in resolver if preauthGranted
+            Node node = pathResolver.getNode(nodeURI.getPath());
+            if (node == null) {
+                throw NodeFault.NodeNotFound.getStatus(nodeURI.getURI().toASCIIString());
+            }
 
+            // GetAction code is common for both /files and /preauth endpoints. Neither will support
+            // GET for container nodes
+            if (node instanceof ContainerNode) {
+                log.debug("container nodes not supported for GET");
+                throw new IllegalArgumentException("GET for directories not supported");
+            }
+            
+            log.debug("node path resolved: " + node.getName());
+            log.debug("node type: " + node.getClass().getCanonicalName());
+            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
+            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
+            syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
+            syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            
+            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (contentMD5 != null) {
+                try {
+                    URI md5 = new URI(contentMD5);
+                    syncOutput.setDigest(md5);
+                } catch (URISyntaxException ex) {
+                    log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);
+                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
+                    // user mistake
+                }
+            }
+
+            Path ret = nodePersistence.nodeToPath(nodeURI);
+            syncOutput.setCode(200);
+            return ret;
         } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {
             log.debug("404 error with GET: ",  e);
             throw new ResourceNotFoundException(e.getMessage());

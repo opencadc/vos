@@ -74,12 +74,12 @@ import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.vospace.server.NodePersistence;
 
 /**

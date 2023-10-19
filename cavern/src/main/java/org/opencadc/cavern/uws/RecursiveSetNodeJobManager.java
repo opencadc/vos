@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,37 +62,43 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.server.transfers.TransferRunner;
+import org.opencadc.cavern.RecursiveSetNodeRunner;
 
 /**
  *
- * @author pdowler
+ * @author pdowler, majorb, yeunga
  */
-public class AsyncTransferManager extends JobManager {
-    private static final Logger log = Logger.getLogger(AsyncTransferManager.class);
+public class RecursiveSetNodeJobManager extends CavernJobManager {
 
-    public AsyncTransferManager() {
+    private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
+
+    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
+    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
+    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
+
+    public RecursiveSetNodeJobManager() {
         super();
         JobPersistence jp = createJobPersistence();
         JobUpdater ju = (JobUpdater) jp;
-
-        JobExecutor je = new ThreadPoolExecutor(ju, TransferRunner.class, 6);
-
         super.setJobPersistence(jp);
-        super.setJobExecutor(je);
 
-        super.setMaxDestruction(60000L);
-        super.setMaxExecDuration(2000L);
-        super.setMaxQuote(40000L);
+        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
+        super.setJobExecutor(jobExec);
+
+        super.setMaxExecDuration(MAX_EXEC_DURATION);
+        super.setMaxDestruction(MAX_DESTRUCTION);
+        super.setMaxQuote(MAX_QUOTE);
     }
 }

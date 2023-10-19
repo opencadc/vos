@@ -65,24 +65,34 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
-
+import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.server.transfers.TransferRunner;
 
 /**
  *
  * @author pdowler
  */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+public class AsyncTransferManager extends CavernJobManager {
+    private static final Logger log = Logger.getLogger(AsyncTransferManager.class);
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
+    public AsyncTransferManager() {
+        super();
+        JobPersistence jp = createJobPersistence();
+        JobUpdater ju = (JobUpdater) jp;
 
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), AuthenticationUtil.getIdentityManager(), JOB_CLEANER_INTERVAL);
+        JobExecutor je = new ThreadPoolExecutor(ju, TransferRunner.class, 6);
+
+        super.setJobPersistence(jp);
+        super.setJobExecutor(je);
+
+        super.setMaxDestruction(60000L);
+        super.setMaxExecDuration(2000L);
+        super.setMaxQuote(40000L);
     }
 }

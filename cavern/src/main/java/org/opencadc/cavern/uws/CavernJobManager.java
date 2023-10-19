@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2017.                            (c) 2017.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,37 +65,29 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
-import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+import ca.nrc.cadc.uws.server.SimpleJobManager;
+import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.server.async.RecursiveDeleteNodeRunner;
 
-/**
- *
- * @author pdowler
- */
-public class RecursiveDeleteJobManager extends JobManager {
-    private static final Logger log = Logger.getLogger(RecursiveDeleteJobManager.class);
+abstract class CavernJobManager extends SimpleJobManager {
+    private static final Logger log = Logger.getLogger(CavernJobManager.class);
 
-    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
-    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
-    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
-    
-    public RecursiveDeleteJobManager() {
+    protected CavernJobManager() {
         super();
-        JobPersistence jp = createJobPersistence();
-        JobUpdater ju = (JobUpdater) jp;
-        super.setJobPersistence(jp);
-
-        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveDeleteNodeRunner.class, 6);
-        super.setJobExecutor(jobExec);
-
-        super.setMaxExecDuration(MAX_EXEC_DURATION);
-        super.setMaxDestruction(MAX_DESTRUCTION);
-        super.setMaxQuote(MAX_QUOTE);
     }
+    
+    protected final JobPersistence createJobPersistence() {
+        return new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    }
+    
+    @Override
+    public void terminate() throws InterruptedException {
+        super.terminate();
+    }
+
+    
 }

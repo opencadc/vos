@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.files;
 
-
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
@@ -91,8 +90,8 @@ import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.FileSystemNodePersistence;
 import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;

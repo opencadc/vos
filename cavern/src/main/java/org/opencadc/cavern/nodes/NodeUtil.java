@@ -132,7 +132,7 @@ import org.opencadc.vospace.VOSURI;
  *
  * @author pdowler
  */
-public class NodeUtil {
+class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
     
@@ -148,7 +148,7 @@ public class NodeUtil {
                     VOS.PROPERTY_URI_GROUPREAD,
                     VOS.PROPERTY_URI_GROUPWRITE,
                     VOS.PROPERTY_URI_GROUPMASK,
-                    VOS.PROPERTY_URI_ISLOCKED,
+                    VOS.PROPERTY_URI_ISLOCKED, // not supported
                     VOS.PROPERTY_URI_ISPUBLIC,
                     VOS.PROPERTY_URI_QUOTA)
     );

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -72,8 +72,6 @@ import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
-import ca.nrc.cadc.util.StringUtil;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.naming.Context;
@@ -82,14 +80,13 @@ import javax.naming.NamingException;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.FileSystemNodePersistence;
 import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
-import org.opencadc.vospace.transfer.Direction;
 
 /**
  *
