@@ -448,23 +448,19 @@ class NodeUtil {
             changePublic = false;
         }
 
-        boolean changeDefaultACL = false;
         if (changeRO || changeRW || changePublic) {
             log.debug("set ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
             acl.setACL(worldReadable, roGIDs, rwGIDs);
-            changeDefaultACL = true; // permissions changed: reset defaults as well
         }
 
         if (isDir) {
-            if (inherit || changeDefaultACL) {
+            if (inherit) {
                 log.debug("set default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
                 acl.setACL(worldReadable, roGIDs, rwGIDs, true);
             } else if (!inherit) {
-                roGIDs.clear();
-                rwGIDs.clear();
-                log.debug("clear default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
-                acl.setACL(worldReadable, roGIDs, rwGIDs, true);
-            }
+                log.debug("clear default ACL: public=" + worldReadable);
+                acl.clearDefaultACL();
+            } // else: leave it alone
         }
 
         log.debug("final ro: " + acl.getReadOnlyACL());

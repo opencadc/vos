@@ -224,6 +224,7 @@ public class AclCommandExecutorTest {
         if (isDir) {
             // set defaults
             acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+            
             roDefault = acl.getReadOnlyACL(true);
             Assert.assertNotNull(roDefault);
             Assert.assertFalse(roDefault.isEmpty());
@@ -234,6 +235,15 @@ public class AclCommandExecutorTest {
             Assert.assertNotNull(rwDefault);
             Assert.assertFalse(rwDefault.isEmpty());
             Assert.assertTrue(rwDefault.contains(g3));
+            
+            acl.clearDefaultACL();
+            
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertTrue(roDefault.isEmpty());
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            Assert.assertTrue(rwDefault.isEmpty());
         } else {
             try {
                 acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);

@@ -131,12 +131,24 @@ public class AclCommandExecutor {
     public void clearACL()  throws IOException {
         
         String[] cmd = new String[] {
-            SETACL, "-b", toAbsolutePath(path)
+            SETACL, "--remove-all", toAbsolutePath(path)
         };
         BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(cmd);
         if (grabber.getExitValue() != 0) {
             throw new IOException("failed to clear ACLs on " + path + ": "
+                + grabber.getErrorOutput(true));
+        }
+    }
+    
+    public void clearDefaultACL() throws IOException {
+        String[] cmd = new String[] {
+            SETACL, "--remove-default", toAbsolutePath(path)
+        };
+        BuilderOutputGrabber grabber = new BuilderOutputGrabber();
+        grabber.captureOutput(cmd);
+        if (grabber.getExitValue() != 0) {
+            throw new IOException("failed to clear default ACLs on " + path + ": "
                 + grabber.getErrorOutput(true));
         }
     }

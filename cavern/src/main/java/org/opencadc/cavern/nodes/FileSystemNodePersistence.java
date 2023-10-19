@@ -73,6 +73,8 @@ import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -82,14 +84,12 @@ import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.cavern.files.CavernURLGenerator;
-import org.opencadc.cavern.nodes.NodeUtil;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -130,10 +130,21 @@ public class FileSystemNodePersistence implements NodePersistence {
         root.owner = identityManager.augment(rawOwner);
         root.ownerDisplay = identityManager.toDisplayString(root.owner);
         log.warn("ROOT owner: " + root.owner);
-        root.ownerID = identityManager.toPosixPrincipal(root.owner);
+        PosixPrincipal rootAdmin = identityManager.toPosixPrincipal(root.owner);
+        root.ownerID = rootAdmin;
         root.isPublic = true;
         root.inheritPermissions = false;
-        // TODO: create and chown the root directory (idempotent)
+
+        // create root directories for node/files
+        try {
+            if (!Files.exists(rootPath, LinkOption.NOFOLLOW_LINKS)) {
+                Files.createDirectories(rootPath);
+            }
+            log.info("root node: " + rootPath + " owner: " + rootAdmin.getUidNumber() + "(" + rootAdmin.username + ")");
+            NodeUtil.setPosixOwnerGroup(rootPath, rootAdmin.getUidNumber(), rootAdmin.defaultGroup);
+        } catch (IOException e) {
+            throw new IllegalStateException("Error creating filesystem root directory " + root, e);
+        }
     }
     
     // support FileAction
