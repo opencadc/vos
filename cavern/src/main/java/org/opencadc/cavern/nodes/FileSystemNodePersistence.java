@@ -124,24 +124,22 @@ public class FileSystemNodePersistence implements NodePersistence {
         this.identityManager = new PosixIdentityManager();
         
         // root node
-        Subject rawOwner = config.getRootOwner();
-        UUID rootID = new UUID(0L, 0L);
+        UUID rootID = new UUID(0L, 0L); // cosmetic: not used in cavern
         this.root = new ContainerNode(rootID, "");
-        root.owner = identityManager.augment(rawOwner);
+        root.owner = config.getRootOwner();
         root.ownerDisplay = identityManager.toDisplayString(root.owner);
-        log.warn("ROOT owner: " + root.owner);
-        PosixPrincipal rootAdmin = identityManager.toPosixPrincipal(root.owner);
-        root.ownerID = rootAdmin;
+        root.ownerID = identityManager.toPosixPrincipal(root.owner);
         root.isPublic = true;
         root.inheritPermissions = false;
-
+        
         // create root directories for node/files
         try {
             if (!Files.exists(rootPath, LinkOption.NOFOLLOW_LINKS)) {
                 Files.createDirectories(rootPath);
             }
-            log.info("root node: " + rootPath + " owner: " + rootAdmin.getUidNumber() + "(" + rootAdmin.username + ")");
-            NodeUtil.setPosixOwnerGroup(rootPath, rootAdmin.getUidNumber(), rootAdmin.defaultGroup);
+            PosixPrincipal admin = identityManager.toPosixPrincipal(root.owner);
+            log.info("root node: " + rootPath + " owner: " + admin.getUidNumber() + "(" + admin.username + ")");
+            NodeUtil.setPosixOwnerGroup(rootPath, admin.getUidNumber(), admin.defaultGroup);
         } catch (IOException e) {
             throw new IllegalStateException("Error creating filesystem root directory " + root, e);
         }
@@ -184,16 +182,16 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node get(ContainerNode parent, String name) throws TransientException {
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
-        nut.addToCache(AuthenticationUtil.getCurrentSubject());
+        identityManager.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
+            NodeUtil nut = new NodeUtil(rootPath, rootURI);
             Node ret = nut.get(parent, name);
             if (ret == null) {
                 return null;
             }
             
             PosixPrincipal owner = NodeUtil.getOwner(ret);
-            Subject so = nut.getFromCache(owner);
+            Subject so = identityManager.toSubject(owner);
             ret.owner = so;
             ret.ownerID = identityManager.toPosixPrincipal(so);
             ret.ownerDisplay = identityManager.toDisplayString(so);
@@ -213,8 +211,8 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new UnsupportedOperationException("batch options for container node listing");
         }
         
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
         try {
+            NodeUtil nut = new NodeUtil(rootPath, rootURI);
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
@@ -264,7 +262,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         public Node next() {
             Node ret = childIter.next();
             PosixPrincipal owner = NodeUtil.getOwner(ret);
-            Subject so = nut.getFromCache(owner);
+            Subject so = identityManager.toSubject(owner);
             ret.owner = so;
             ret.ownerID = identityManager.toPosixPrincipal(so);
             ret.ownerDisplay = identityManager.toDisplayString(so);
@@ -339,7 +337,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         
         NodeUtil nut = new NodeUtil(rootPath, rootURI);
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
+        PosixPrincipal owner = identityManager.addToCache(caller);
         
         LocalServiceURI loc = new LocalServiceURI(getResourceID());
         VOSURI srcURI = loc.getURI(node);
@@ -358,7 +356,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public void delete(Node node) throws TransientException {
         NodeUtil nut = new NodeUtil(rootPath, rootURI);
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
+        PosixPrincipal owner = identityManager.addToCache(caller);
         try {
             // this is a complicated way to get the Path to delete
             LocalServiceURI loc = new LocalServiceURI(getResourceID());

@@ -73,7 +73,9 @@ import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import java.security.Principal;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
@@ -90,9 +92,25 @@ public class PosixIdentityManager implements IdentityManager {
 
     private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
+    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
+    
     public PosixIdentityManager() {
     }
-
+    
+    // FileSystemNodePersistence can prime the cache with caller
+    public PosixPrincipal addToCache(Subject s) {
+        if (s == null || s.getPrincipals().isEmpty()) {
+            // anon request
+            return null;
+        }
+        PosixPrincipal pp = toPosixPrincipal(s);
+        if (pp == null) {
+            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
+        }
+        identityCache.put(pp, s); // possibly replace old entry
+        return pp;
+    }
+    
     @Override
     public Subject toSubject(Object o) {
         if (o == null) {
@@ -101,10 +119,17 @@ public class PosixIdentityManager implements IdentityManager {
 
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
-            Set<Principal> pset = new HashSet<>();
-            pset.add(p);
-            Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
-            return augment(ret);
+            Subject so = identityCache.get(p);
+            if (so == null) {
+                Set<Principal> pset = new HashSet<>();
+                pset.add(p);
+                Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
+                so = augment(ret);
+                addToCache(so);
+            } else {
+                log.warn("cache hit: " + p);
+            }
+            return so;
         }
         throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
     }
@@ -143,10 +168,17 @@ public class PosixIdentityManager implements IdentityManager {
 
     @Override
     public Subject augment(Subject subject) {
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        PosixPrincipal pp = toPosixPrincipal(subject);
+        if (pp != null && subject.getPrincipals().size() > 1) {
+            log.warn("augment: skip " + subject, new RuntimeException());
+            return subject;
+        }
+        if (pp.getUidNumber() == 0) {
+            log.warn("augment: root", new RuntimeException());
+        }
+        
         log.warn("augment: " + subject);
-        Subject ret = im.augment(subject);
-        log.warn("augmented: " + subject);
-        return ret;
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.augment(subject);
     }
 }

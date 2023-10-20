@@ -160,10 +160,6 @@ class NodeUtil {
     private final Map<GroupURI,PosixGroup> groupCache = new TreeMap<>();
     private final Map<Integer,PosixGroup> gidCache = new TreeMap<>();
     
-    
-    private final PosixIdentityManager identityManager = new PosixIdentityManager();
-    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
-    
     public NodeUtil(Path root, VOSURI rootURI) {
         this.root = root;
         this.rootURI = rootURI;
@@ -173,33 +169,6 @@ class NodeUtil {
         // assume user mapper is the same service
         URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
         this.posixMapper = new MyPosixMapperClient(posixMapperID);
-    }
-    
-    // FileSystemNodePersistence can prime the cache with caller
-    public PosixPrincipal addToCache(Subject s) {
-        if (s == null || s.getPrincipals().isEmpty()) {
-            // anon request
-            return null;
-        }
-        identityManager.augment(s);
-        PosixPrincipal pp = identityManager.toPosixPrincipal(s);
-        if (pp == null) {
-            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
-        }
-        identityCache.put(pp, s); // possibly replace old entry
-        return pp;
-    }
-    
-    // FileSystemNodePersistence uses the cache to resolve owner
-    public Subject getFromCache(PosixPrincipal pp) {
-        Subject so = identityCache.get(pp);
-        if (so == null) {
-            log.warn("cache miss: " + pp);
-            so = identityManager.toSubject(pp);
-            addToCache(so);
-        }
-        log.warn("getFromCache: "  + pp);
-        return so;
     }
     
     private List<PosixGroup> getFromGroupCache(Collection<GroupURI> input)

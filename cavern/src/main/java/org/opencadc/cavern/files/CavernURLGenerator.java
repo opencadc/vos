@@ -201,11 +201,13 @@ public class CavernURLGenerator implements TransferGenerator {
             gen = new TokenTool(pubKeyFile, privateKeyFile);
         }
         
+        boolean allowAnon = true;
         Class<? extends Grant> grantClass = null;
         if (Direction.pullFromVoSpace.equals(dir)) {
             grantClass = ReadGrant.class;
         } else if (Direction.pushToVoSpace.equals(dir)) {
             grantClass = WriteGrant.class;
+            allowAnon = false;
         } else {
             throw new UnsupportedOperationException("unsupported direction: " + dir);
         }
@@ -239,17 +241,16 @@ public class CavernURLGenerator implements TransferGenerator {
                 log.debug("added: " + pre);
                 returnList.add(pre);
             }
-            
-            StringBuilder sb = new StringBuilder();
-            sb.append(filesURL.toExternalForm());
-            sb.append(parentPath).append("/").append(name);
-            String endpoint = sb.toString();
-            Protocol pe = new Protocol(p.getUri(), endpoint, params);
-            pe.setSecurityMethod(p.getSecurityMethod());
-            log.debug("added: " + pe);
-            returnList.add(pe);
-            
-            
+            if (allowAnon || !anon) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(filesURL.toExternalForm());
+                sb.append(parentPath).append("/").append(name);
+                String endpoint = sb.toString();
+                Protocol pe = new Protocol(p.getUri(), endpoint, params);
+                pe.setSecurityMethod(p.getSecurityMethod());
+                log.debug("added: " + pe);
+                returnList.add(pe);
+            }
         }
         return returnList;
     }

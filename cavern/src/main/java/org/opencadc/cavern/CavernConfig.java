@@ -150,13 +150,13 @@ public class CavernConfig {
         return root;
     }
     
-    // raw subject
     public Subject getRootOwner() {
         final String owner = mvp.getFirstPropertyValue(CavernConfig.ROOT_OWNER);
         if (owner == null) {
             throw new InvalidConfigException(CavernConfig.ROOT_OWNER + " cannot be null");
         }
         
+        // this creates an augmented subject using the configured IdentityManager
         return AuthenticationUtil.getSubject(new PrincipalExtractor() {
             @Override
             public Set<Principal> getPrincipals() {
