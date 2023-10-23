@@ -73,6 +73,7 @@ import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -218,7 +219,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             VOSURI vu = loc.getURI(parent);
             ResourceIterator<Node> ni = nut.list(vu);
             return new IdentWrapper(parent, ni, nut);
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
@@ -350,18 +351,18 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
     }
     
-    
-
     @Override
     public void delete(Node node) throws TransientException {
         NodeUtil nut = new NodeUtil(rootPath, rootURI);
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = identityManager.addToCache(caller);
+        identityManager.addToCache(caller);
         try {
             // this is a complicated way to get the Path to delete
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(node);
             nut.delete(vu);
+        } catch (DirectoryNotEmptyException ex) {
+            throw new IllegalArgumentException("container node '" + node.getName() + "' is not empty");
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }

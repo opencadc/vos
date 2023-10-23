@@ -632,15 +632,11 @@ class NodeUtil {
 
     public void delete(VOSURI uri) throws IOException {
         Path p = nodeToPath(root, uri);
-        delete(p);
+        Files.delete(p);
     }
     
-    public static void delete(Path root, VOSURI uri) throws IOException {
-        Path np = nodeToPath(root, uri);
-        log.debug("[create] path: " + uri + " -> " + np);
-        delete(np);
-    }
-
+    /* 
+    // magic recursive delete is obsolete
     private static void delete(Path path) throws IOException {
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
             Files.walkFileTree(path, new DeleteVisitor());
@@ -680,7 +676,8 @@ class NodeUtil {
             return FileVisitResult.CONTINUE;
         }
     }
-
+    */
+    
     private static class CopyVisitor implements FileVisitor<Path> {
 
         PosixPrincipal owner;
@@ -737,9 +734,7 @@ class NodeUtil {
         }
     }
 
-    
-    public ResourceIterator<Node> list(VOSURI vu) 
-            throws IOException, InterruptedException {
+    public ResourceIterator<Node> list(VOSURI vu) throws IOException {
         Path np = nodeToPath(root, vu);
         log.debug("[list] " + vu.getPath() + " -> " + np);
         return new NodeIterator(np);
@@ -763,7 +758,8 @@ class NodeUtil {
         public Node next() {
             Path cur = content.next();
             try {
-                return pathToNode(cur);
+                Node ret = pathToNode(cur);
+                return ret;
             } catch (IOException | InterruptedException ex) {
                 throw new RuntimeException("container node listing failed", ex);
             }

@@ -934,14 +934,18 @@ public class NodesTest extends VOSTest {
         testNode.owner = authSubject;
         testNode.isPublic = false;
 
-        URL nodeURL = getNodeURL(nodesServiceURL, parentName);
-        VOSURI nodeURI = getVOSURI(parentName);
+        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+        final VOSURI nodeURI = getVOSURI(parentName);
 
         String childName = "testGroupUser";
         ContainerNode childNode = new ContainerNode(childName);
         childNode.parent = testNode;
-
+        String childPath = parentName + "/" + childName;
+        final VOSURI childURI = getVOSURI(childPath);
+        final URL childURL = getNodeURL(nodesServiceURL, childPath);
+        
         // cleanup
+        delete(childURL, false);
         delete(nodeURL, false);
 
         // PUT the node
@@ -962,9 +966,6 @@ public class NodesTest extends VOSTest {
         Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
 
         // permission denied to write in the container without write permission
-        String childPath = parentName + "/" + childName;
-        VOSURI childURI = getVOSURI(childPath);
-        URL childURL = getNodeURL(nodesServiceURL, childPath);
         InputStream is = prepareInput(childURI, childNode);
         HttpUpload putAction = new HttpUpload(is, childURL);
         putAction.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
@@ -997,7 +998,7 @@ public class NodesTest extends VOSTest {
         Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
 
         // cleanup
-        delete(nodeURL, false);
+        delete(nodeURL);
     }
 
 }
