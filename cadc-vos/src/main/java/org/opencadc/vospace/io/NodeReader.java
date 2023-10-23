@@ -682,12 +682,13 @@ public class NodeReader implements XmlProcessor {
     }
 
     /**
-     * Get the Long value of a NodeProperty for the given key. If the NodeProperty is
-     * found in the Set of all NodeProperty's it is removed from the Set.
+     * Get the Long value of a NodeProperty for the given key.If the NodeProperty is
+ found in the Set of all NodeProperty's it is removed from the Set.
      *
      * @param key a NodeProperty key.
      * @param properties the set of all node properties.
      * @return the NodeProperty Long value for the given key, else null if not found.
+     * @throws org.opencadc.vospace.io.NodeParsingException invalid long value
      */
     public Long getLongProperty(URI key, Set<NodeProperty> properties)
         throws NodeParsingException {
@@ -699,7 +700,7 @@ public class NodeReader implements XmlProcessor {
                     return Long.parseLong(nodeProperty.getValue());
                 }
             } catch (NumberFormatException e) {
-                throw new NodeParsingException(String.format("invalid Long property: %s = %s ",
+                throw new NodeParsingException(String.format("invalid long property: %s = %s ",
                                                              key, nodeProperty.getValue()), e);
             }
         }
@@ -728,6 +729,9 @@ public class NodeReader implements XmlProcessor {
     public boolean getPropertyNil(URI key, Set<NodeProperty> properties) {
         NodeProperty nodeProperty = getNodeProperty(key, properties);
         if (nodeProperty != null) {
+            if (nodeProperty.isMarkedForDeletion()) {
+                properties.remove(nodeProperty);
+            }
             return nodeProperty.isMarkedForDeletion();
         }
         return false;
