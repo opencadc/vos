@@ -79,6 +79,7 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -100,6 +101,7 @@ import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.vospace.transfer.TransferParsingException;
 import org.opencadc.vospace.transfer.TransferReader;
 import org.opencadc.vospace.transfer.TransferWriter;
 
@@ -111,53 +113,28 @@ public class TransferTest extends VOSTest {
     }
 
     @Test
-    public void syncPushToVospaceTest() {
+    public void syncPushPullTest() {
         try {
             // Create a DataNode.
-            String path = "sync-push-node";
+            String path = "sync-push-pull-node";
             URL nodeURL = getNodeURL(nodesServiceURL, path);
             VOSURI nodeURI = getVOSURI(path);
             log.debug("nodeURL: " + nodeURL);
 
-            // Create a Transfer
-            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
-            transfer.version = VOS.VOSPACE_21;
+            // Cleanup leftover node
+            delete(nodeURL, false);
+
+            // Create a push-to-vospace Transfer for the node
+            Transfer pushTransfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
+            pushTransfer.version = VOS.VOSPACE_21;
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            transfer.getProtocols().add(protocol);
+            pushTransfer.getProtocols().add(protocol);
 
-            // Get the transfer document
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            log.debug("transfer XML: " + sw);
-
-            // POST the transfer document
-            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-            URL transferURL = getNodeURL(synctransServiceURL, path);
-            log.debug("transfer URL: " + transferURL);
-            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-            Subject.doAs(authSubject, new RunnableAction(post));
-            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
-            Assert.assertNull("expected POST throwable == null", post.getThrowable());
-
-            // Get the transfer
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(post.getRedirectURL(), out);
-            log.debug("GET: " + post.getRedirectURL());
-            Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("GET responseCode: " + get.getResponseCode());
-            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
-            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
-                              get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
-
-            // Get the transfer details
-            log.debug("transfer details XML: " + out);
-            TransferReader transferReader = new TransferReader();
-            Transfer details = transferReader.read(out.toString(), "vos");
+            // Do the transfer
+            Transfer details = doTransfer(pushTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
-                                Direction.pushToVoSpace, details.getDirection());
+                    Direction.pushToVoSpace, details.getDirection());
             Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
             String endpoint = null;
             for (Protocol p : details.getProtocols()) {
@@ -170,65 +147,19 @@ public class TransferTest extends VOSTest {
                 }
             }
 
-            // Delete the nodes
-            delete(nodeURL);
-
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
-
-    @Test
-    public void syncPullFromVospaceTest() {
-        try {
-            // Create a DataNode
-            String path = "sync-pull-node";
-            URL nodeURL = getNodeURL(nodesServiceURL, path);
-            VOSURI nodeURI = getVOSURI(path);
-            DataNode testNode = new DataNode(path);
-            log.debug("nodeURL: " + nodeURL);
-
-            put(nodeURL, nodeURI, testNode);
-
-            // Create a Transfer
-            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            // Create a pull-from-vospace Transfer for the node
+            Transfer pullTransfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            pullTransfer.version = VOS.VOSPACE_21;
+            protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            transfer.getProtocols().add(protocol);
+            pullTransfer.getProtocols().add(protocol);
 
-            // Write a transfer document
-            TransferWriter transferWriter = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            transferWriter.write(transfer, sw);
-            log.debug("transfer XML: " + sw);
-
-            // POST the transfer document
-            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-            Subject.doAs(authSubject, new RunnableAction(post));
-            Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
-            Assert.assertNull("expected POST throwable == null", post.getThrowable());
-
-            // Get the transfer details
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(post.getRedirectURL(), out);
-            log.debug("GET: " + post.getRedirectURL());
-            Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("GET responseCode: " + get.getResponseCode());
-            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
-            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
-                              get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
-
-            // Read the transfer
-            log.debug("Transfer details XML: " + out);
-            TransferReader transferReader = new TransferReader();
-            Transfer details = transferReader.read(out.toString(), "vos");
+            // Do the transfer
+            details = doTransfer(pullTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
-                                Direction.pullFromVoSpace, details.getDirection());
+                    Direction.pullFromVoSpace, details.getDirection());
             Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
-            String endpoint = null;
+            endpoint = null;
             for (Protocol p : details.getProtocols()) {
                 try {
                     endpoint = p.getEndpoint();
@@ -239,8 +170,8 @@ public class TransferTest extends VOSTest {
                 }
             }
 
-            // Delete the nodes
-            delete(nodeURL);
+            // Delete the node
+            delete(nodeURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -258,7 +189,20 @@ public class TransferTest extends VOSTest {
             ContainerNode sourceNode = new ContainerNode(sourceName);
             log.debug("source URL: " + sourceNodeURL);
 
+            // Destination ContainerNode
+            String destinationName = "move-destination-node";
+            URL destinationNodeURL = getNodeURL(nodesServiceURL, destinationName);
+            VOSURI destinationNodeURI = getVOSURI(destinationName);
+            ContainerNode destinationNode = new ContainerNode(destinationName);
+            log.debug("destination URL: " + destinationNodeURL);
+
+            // Cleanup old nodes
+            delete(destinationNodeURL, false);
+            delete(destinationNodeURL, false);
+
+            // Put new nodes
             put(sourceNodeURL, sourceNodeURI, sourceNode);
+            put(destinationNodeURL, destinationNodeURI, destinationNode);
 
             // Source child ContainerNode
             String childContainerName = "move-source-container-child-node";
@@ -280,25 +224,16 @@ public class TransferTest extends VOSTest {
 
             put(childDataNodeURL, childDataNodeURI, childDataNode);
 
-            // Destination ContainerNode
-            String destinationName = "move-destination-node";
-            URL destinationNodeURL = getNodeURL(nodesServiceURL, destinationName);
-            VOSURI destinationNodeURI = getVOSURI(destinationName);
-            ContainerNode destinationNode = new ContainerNode(destinationName);
-            log.debug("destination URL: " + destinationNodeURL);
-
-            put(destinationNodeURL, destinationNodeURI, destinationNode);
-
             // Create a Transfer
             Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
-            //transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            //transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
 
             // Write the Transfer document
             TransferWriter transferWriter = new TransferWriter();
             StringWriter sw = new StringWriter();
             transferWriter.write(transfer, sw);
-            log.info("transfer request XML: " + sw);
+            log.debug("transfer request XML: " + sw);
 
             // Post the transfer document
             FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
@@ -307,7 +242,7 @@ public class TransferTest extends VOSTest {
             Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
             Assert.assertNull("expected POST throwable == null", post.getThrowable());
             URL jobURL = post.getRedirectURL();
-            log.info("jobURL: " + jobURL);
+            log.debug("jobURL: " + jobURL);
             Assert.assertNotNull(jobURL);
             
             // Get the job
@@ -322,7 +257,7 @@ public class TransferTest extends VOSTest {
                               get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
             // Read the job
-            log.info("job XML:\n" + out);
+            log.debug("job XML:\n" + out);
             JobReader reader = new JobReader();
             Job job = reader.read(new StringReader(out.toString()));
             Assert.assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
@@ -342,12 +277,12 @@ public class TransferTest extends VOSTest {
             boolean done = false;
             while (!done && count < 10) { // max 10*6 = 60 sec polling
                 out = new ByteArrayOutputStream();
-                log.info("poll: " + jobPoll);
+                log.debug("poll: " + jobPoll);
                 get = new HttpGet(jobPoll, out);
                 Subject.doAs(authSubject, new RunnableAction(get));
                 Assert.assertNull(get.getThrowable());
                 job = reader.read(new StringReader(out.toString()));
-                log.info("current phase: " + job.getExecutionPhase());
+                log.debug("current phase: " + job.getExecutionPhase());
                 switch (job.getExecutionPhase()) {
                     case QUEUED: 
                     case EXECUTING:
@@ -356,7 +291,7 @@ public class TransferTest extends VOSTest {
                     default:
                         done = true;
                 }
-                log.info("done: " + job.getExecutionPhase() + " " + job.getErrorSummary());
+                log.debug("done: " + job.getExecutionPhase() + " " + job.getErrorSummary());
                 Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
             }
 
@@ -384,12 +319,44 @@ public class TransferTest extends VOSTest {
             Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode));
 
             // Delete nodes
-            delete(destinationNodeURL);
+            delete(sourceNodeURL, false);
+            delete(destinationNodeURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
         }
+    }
+
+    private Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
+        // Write a transfer document
+        TransferWriter transferWriter = new TransferWriter();
+        StringWriter sw = new StringWriter();
+        transferWriter.write(transfer, sw);
+        log.debug("POST Transfer XML: " + sw);
+
+        // POST the transfer document
+        FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+        HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
+        Subject.doAs(authSubject, new RunnableAction(post));
+        Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
+        Assert.assertNull("expected POST throwable == null", post.getThrowable());
+
+        // Get the updated transfer
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        HttpGet get = new HttpGet(post.getRedirectURL(), out);
+        log.debug("GET: " + post.getRedirectURL());
+        Subject.doAs(authSubject, new RunnableAction(get));
+        log.debug("GET responseCode: " + get.getResponseCode());
+        Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+        Assert.assertNull("expected GET throwable == null", get.getThrowable());
+        Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
+                get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+        // Read the transfer
+        log.debug("GET Transfer XML: " + out);
+        TransferReader transferReader = new TransferReader();
+        return transferReader.read(out.toString(), "vos");
     }
 
 }

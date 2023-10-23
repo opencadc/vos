@@ -122,7 +122,6 @@ public abstract class VOSTest {
     public static final String ROOT_TEST_FOLDER = "/int-tests";
     
     public final URI resourceID;
-    
     public final URL nodesServiceURL;
     public final URL filesServiceURL;
     public final URL synctransServiceURL;
@@ -257,7 +256,7 @@ public abstract class VOSTest {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
-        log.warn("post content: " + sb.toString());
+        log.debug("post content: " + sb.toString());
                 
         FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
         
@@ -315,9 +314,9 @@ public abstract class VOSTest {
     // verify==false ignores 404 only
     public void delete(URL nodeURL, boolean verify) {
         HttpDelete delete = new HttpDelete(nodeURL, true);
-        log.info("DELETE: " + nodeURL);
+        log.debug("DELETE: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(delete));
-        log.info("DELETE response: " + delete.getResponseCode() + " " + delete.getThrowable());
+        log.debug("DELETE response: " + delete.getResponseCode() + " " + delete.getThrowable());
         if (!verify && delete.getResponseCode() == 404) {
             return;
         }
