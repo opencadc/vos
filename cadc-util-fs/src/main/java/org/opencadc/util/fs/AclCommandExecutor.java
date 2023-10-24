@@ -219,24 +219,24 @@ public class AclCommandExecutor {
         sb.append("--set=user::").append(uReadWritePermission);
         sb.append(",group::").append(gReadWritePermission); // always same as user
         sb.append(",other::").append(otherPermission);
-            
+        
         if (StringUtil.hasText(readGroupCommandInput) || StringUtil.hasText(writeGroupCommandInput)) {
-            // default
+            // always make group mask rwx
             String groupMask = readWritePermission;
             String groupListString = writeGroupCommandInput;
             if (StringUtil.hasText(readGroupCommandInput) && StringUtil.hasText(writeGroupCommandInput)) {
-                groupMask = readWritePermission;
+                //groupMask = readWritePermission;
                 groupListString = String.join(",", readGroupCommandInput, writeGroupCommandInput);
             } else if (StringUtil.hasText(readGroupCommandInput)) {
-                groupMask = readOnlyPermission;
+                //groupMask = readOnlyPermission;
                 groupListString = readGroupCommandInput;
             }
 
-            sb.append(",mask::").append(groupMask);
+            // allow setfacl to recalculate mask
+            //sb.append(",mask::").append(groupMask);
             sb.append(",").append(groupListString);
-            
         }
-
+        
         final List<String> commandList = new ArrayList<>();
         commandList.add(AclCommandExecutor.SETACL);
         commandList.add("--physical"); // do not follow symlinks
@@ -365,6 +365,7 @@ public class AclCommandExecutor {
         return getACL(perm, false, true);
     }
     
+    @Deprecated
     public String getMask() throws IOException {
         String[] cmd = new String[] {
             GETACL, "--omit-header", "--skip-base", "--physical", toAbsolutePath(path)
@@ -413,11 +414,12 @@ public class AclCommandExecutor {
         String out = grabber.getOutput(true);
         String[] lines = out.split("[\n]");
         for (String s : lines) {
-            String[] tokens = s.split(":");
+            String[] tokens = s.split("[:#]"); // hash to split effective permissions when masked
+            log.debug("raw: (" + tokens.length + ") " + s);
             String gidToken = null;
             String permToken = null;
             if (defaultACL && "default".equals(tokens[0]) && "group".equals(tokens[1])) {
-                if (tokens.length == 4 && tokens[2].length() > 0) {
+                if (tokens.length >= 4 && tokens[2].length() > 0) {
                     gidToken = tokens[2];
                     permToken = tokens[3];
                 }
@@ -425,13 +427,15 @@ public class AclCommandExecutor {
                 if (tokens.length == 3) {
                     gidToken = tokens[1];
                     permToken = tokens[2];
+                } else if (tokens.length == 5) {
+                    gidToken = tokens[1];
+                    permToken = tokens[4]; // effective permissions due to masked
                 }
             } else {
                 log.debug("skip: " + s);
             }
-            
+            log.debug("found: " + gidToken + "," + permToken + " in " + s);
             if (gidToken != null && permToken != null && permToken.startsWith(perm)) {
-                log.debug("found: " + gidToken + "," + permToken + " in " + s);
                 if (resolve) {
                     aclList.add(gidToken);
                 } else {
@@ -439,7 +443,6 @@ public class AclCommandExecutor {
                 }
             }                   
         }
-        log.debug("getACL(" + perm + "): found: null");
         return aclList;
     }
     
