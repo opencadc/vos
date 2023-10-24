@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,101 +65,99 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.nodes;
 
-
-import ca.nrc.cadc.ac.ACIdentityManager;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.auth.NumericPrincipal;
-import ca.nrc.cadc.auth.PosixPrincipal;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-
-import java.io.File;
-import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Level;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.opencadc.auth.PosixGroup;
+import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.gms.GroupURI;
 
 /**
- *
+ * Simple read-through cache for group information. There is currently no time-based
+ * eviction of entries from the cache since we assume group name-to-gid mapping is
+ * extremely stable.
+ * 
  * @author pdowler
  */
-public class PosixIdentityManagerTest {
-    private static final Logger log = Logger.getLogger(PosixIdentityManagerTest.class);
+class GroupCache {
+    private static final Logger log = Logger.getLogger(GroupCache.class);
 
-    static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-    }
-
-    Subject subject = AuthenticationUtil.getAnonSubject();
+    private final PosixMapperClient posixMapper;
+    private final Map<GroupURI,PosixGroup> groupCache = new ConcurrentHashMap<>();
+    private final Map<Integer,PosixGroup> gidCache = new ConcurrentHashMap<>();
     
-    public PosixIdentityManagerTest() {
+    public GroupCache(PosixMapperClient posixMapper) {
+        this.posixMapper = posixMapper;
     }
-
-    @Test
-    public void testNull() {
-        try {
-            PosixIdentityManager im = new PosixIdentityManager();
-
-            Assert.assertNull("toOwner", im.toOwner(null));
-
-            Assert.assertNull("toSubject", im.toSubject(null));
-
-            Assert.assertNull("toDisplayString", im.toDisplayString(null));
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
+    
+    public List<PosixGroup> getFromGroupCache(Collection<GroupURI> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<GroupURI> cacheMiss = new ArrayList<>();
+        for (GroupURI g : input) {
+            PosixGroup pg = groupCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("group cache miss: " + g);
+            } else {
+                log.warn("group cache hit  : " + g);
+                ret.add(pg);
+            }
         }
-    }
-
-    @Test
-    public void testRoundTrip() {
-        try {
-            // request subject contains: numeric, http, posix
-            PosixPrincipal orig = new PosixPrincipal(54321);
-            Subject s = AuthenticationUtil.getAnonSubject();
-            s.getPrincipals().add(orig);
-            s.getPrincipals().add(new HttpPrincipal("somebody"));
-            
-            PosixIdentityManager im = new PosixIdentityManager();
-            
-            // the value to "store"
-            log.info("orig: " + s);
-            Object o = im.toOwner(s);
-            Assert.assertNotNull(o);
-            log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
-            Assert.assertTrue(PosixPrincipal.class.equals(o.getClass()));
-            
-            Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
-            log.info("restored: " + restored);
-            
-            // default IM to delegate to cannot augment
-            Set<Principal> all = restored.getPrincipals();
-            Assert.assertNotNull(all);
-            Assert.assertEquals(1, all.size());
-            
-            Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
-            Assert.assertNotNull(ps);
-            Assert.assertFalse(ps.isEmpty());
-            PosixPrincipal actual = ps.iterator().next();
-            Assert.assertEquals(orig, actual);
-            
-
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
+        if (!cacheMiss.isEmpty()) {
+            try {
+                List<PosixGroup> mpg = posixMapper.getGID(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
         }
+        
+        return ret;
     }
+    
+    // this must return a list created with just the specified gid(s)
+    // and not the whole cache
+    public List<PosixGroup> getFromGidCache(Collection<Integer> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<Integer> cacheMiss = new ArrayList<>();
+        for (Integer g : input) {
+            PosixGroup pg = gidCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("gid cache miss: " + g);
+            } else {
+                log.warn("gid cache hit  : " + g);
+                ret.add(pg);
+            }
+        }
+        if (!cacheMiss.isEmpty()) {
+            try {
+                List<PosixGroup> mpg = posixMapper.getURI(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
+        }
+        
+        return ret;
+    }
+
 }

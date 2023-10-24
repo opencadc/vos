@@ -71,8 +71,13 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
+import ca.nrc.cadc.util.InvalidConfigException;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -82,8 +87,8 @@ import java.util.Set;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.cavern.files.CavernURLGenerator;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
@@ -108,6 +113,8 @@ public class FileSystemNodePersistence implements NodePersistence {
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
     
     private final PosixIdentityManager identityManager;
+    private final PosixMapperClient posixMapper;
+    private final GroupCache groupCache;
     
     private final ContainerNode root;
     private final Path rootPath;
@@ -144,11 +151,31 @@ public class FileSystemNodePersistence implements NodePersistence {
         } catch (IOException e) {
             throw new IllegalStateException("Error creating filesystem root directory " + root, e);
         }
+        
+        LocalAuthority la = new LocalAuthority();
+        // only require a group mapper because IVOA GMS does not include numeric gid
+        // assume user mapper is the same service
+        URI posixMapperID = la.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        if ("https".equals(posixMapperID.getScheme())) {
+            try {
+                URL baseURL = posixMapperID.toURL();
+                this.posixMapper = new MyPosixMapperClient(baseURL);
+            } catch (MalformedURLException ex) {
+                throw new InvalidConfigException("invalid " + Standards.POSIX_GROUPMAP.toASCIIString() + " base URL: " + posixMapperID, ex);
+            }
+        } else {
+            this.posixMapper = new MyPosixMapperClient(posixMapperID);
+        }
+        this.groupCache = new GroupCache(posixMapper);
     }
     
     // support FileAction
     public CavernConfig getConfig() {
         return config;
+    }
+    
+    public PosixIdentityManager getIdentityManager() {
+        return identityManager;
     }
     
     // support FileAction
@@ -185,7 +212,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public Node get(ContainerNode parent, String name) throws TransientException {
         identityManager.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
-            NodeUtil nut = new NodeUtil(rootPath, rootURI);
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
             Node ret = nut.get(parent, name);
             if (ret == null) {
                 return null;
@@ -213,7 +240,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
         
         try {
-            NodeUtil nut = new NodeUtil(rootPath, rootURI);
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
@@ -304,7 +331,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         //    throw new NodeNotSupportedException("StructuredDataNode is not supported.");
         //}
 
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
 
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
@@ -336,7 +363,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new IllegalArgumentException("args must both be peristent nodes before move");
         }
         
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = identityManager.addToCache(caller);
         
@@ -353,7 +380,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     
     @Override
     public void delete(Node node) throws TransientException {
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         identityManager.addToCache(caller);
         try {

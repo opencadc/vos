@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2017.                            (c) 2017.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -63,102 +63,125 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern.files;
+package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.rest.RestAction;
-import java.net.URI;
-import java.net.URISyntaxException;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.auth.PosixPrincipal;
+import java.security.Principal;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.nodes.FileSystemNodePersistence;
-import org.opencadc.cavern.nodes.PosixIdentityManager;
-import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
+ * An IdentityManager implementation that picks the PosixPrincipal(uid) as
+ * the persistent object to "own" resources. This implementation should only
+ * be used for NodePersistence operations as the toOwner/toSubject uses file
+ * system identities and that might conflict with what's expected for
+ * JobPersistence usage.
  *
- * @author majorb
- * @author jeevesh
+ * @author pdowler
  */
-public abstract class FileAction extends RestAction {
-    private static final Logger log = Logger.getLogger(FileAction.class);
+public class PosixIdentityManager implements IdentityManager {
 
-    // Key values needed for FileAction
-    private VOSURI nodeURI;
-    protected String preauthToken;
+    private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
-    protected FileSystemNodePersistence nodePersistence;
-    protected VOSpaceAuthorizer authorizer;
-    protected PathResolver pathResolver;
-    protected CavernConfig config;
-    protected PosixIdentityManager identityManager;
+    // implementation note: here we have an identity cache inside the function so 
+    // other code doesn't know about the caching -- for groups the GroupCache is
+    // currently more explicit
+    private final Map<PosixPrincipal,Subject> identityCache = new ConcurrentHashMap<>();
     
-    protected FileAction() {
-        super();
+    public PosixIdentityManager() {
+    }
+    
+    // FileSystemNodePersistence can prime the cache with caller
+    public PosixPrincipal addToCache(Subject s) {
+        if (s == null || s.getPrincipals().isEmpty()) {
+            // anon request
+            return null;
+        }
+        PosixPrincipal pp = toPosixPrincipal(s);
+        if (pp == null) {
+            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
+        }
+        identityCache.put(pp, s); // possibly replace old entry
+        return pp;
+    }
+    
+    @Override
+    public Subject toSubject(Object o) {
+        if (o == null) {
+            return null;
+        }
+
+        if (o instanceof PosixPrincipal) {
+            PosixPrincipal p = (PosixPrincipal) o;
+            Subject so = identityCache.get(p);
+            if (so == null) {
+                Set<Principal> pset = new HashSet<>();
+                pset.add(p);
+                Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
+                so = augment(ret);
+                addToCache(so);
+            } else {
+                log.warn("cache hit: " + p);
+            }
+            return so;
+        }
+        throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
     }
 
-    @Override
-    protected InlineContentHandler getInlineContentHandler() {
+    public PosixPrincipal toPosixPrincipal(Subject subject) {
+        if (subject == null) {
+            return null;
+        }
+
+        Set<PosixPrincipal> principals = subject.getPrincipals(PosixPrincipal.class);
+        if (!principals.isEmpty()) {
+            PosixPrincipal p = principals.iterator().next();
+            return p;
+        }
         return null;
     }
 
-    protected VOSURI getNodeURI() {
-        if (nodeURI == null) {
-            this.nodeURI = parsePath(syncInput.getPath(), false);
-        }
-        return nodeURI;
+    @Override
+    public Object toOwner(Subject subject) {
+        return toPosixPrincipal(subject);
     }
 
     @Override
-    public void initAction() throws ResourceNotFoundException, IllegalArgumentException {
-        String jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
-        try {
-            Context ctx = new InitialContext();
-            this.nodePersistence = (FileSystemNodePersistence) ctx.lookup(jndiNodePersistence);
-            this.authorizer = new VOSpaceAuthorizer(nodePersistence);
-            this.pathResolver = new PathResolver(nodePersistence, authorizer, true);
-            this.config = nodePersistence.getConfig();
-            this.identityManager = nodePersistence.getIdentityManager();
-        } catch (NamingException oops) {
-            throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
-        }
+    public String toDisplayString(Subject subject) {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.toDisplayString(subject);
     }
 
-    private VOSURI parsePath(String path, boolean hasToken) {
-        log.warn("parsePath: '" + path + "'");
-        int start = 0;
-        String[] pathcomps = path.split("/");
-        if (pathcomps.length > 0) {
-            if (pathcomps[0].startsWith("preauth:")) {
-                URI u = URI.create(pathcomps[0]);
-                this.preauthToken = u.getSchemeSpecificPart();
-                start = 1;
-            }
+    @Override
+    public Subject validate(Subject subject) throws NotAuthenticatedException {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.validate(subject);
+    }
+
+    @Override
+    public Subject augment(Subject subject) {
+        PosixPrincipal pp = toPosixPrincipal(subject);
+        if (pp != null && subject.getPrincipals().size() > 1) {
+            log.warn("augment: skip " + subject, new RuntimeException());
+            return subject;
+        }
+        if (pp.getUidNumber() == 0) {
+            log.warn("augment: root", new RuntimeException());
         }
         
-        LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
-        StringBuilder sb = new StringBuilder();
-        sb.append(loc.getVOSBase().getURI().toASCIIString());
-        for (int i = start; i < pathcomps.length; i++) {
-            sb.append("/").append(pathcomps[i]);
-        }
-
-        try {
-            URI targetURI = new URI(sb.toString());
-            VOSURI targetVOSURI = new VOSURI(targetURI);
-            return targetVOSURI;
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("BUG (probably): failed to generate VOSURI from path: " + path, ex);
-        }
+        log.warn("augment: " + subject);
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.augment(subject);
     }
 }

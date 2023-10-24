@@ -90,7 +90,6 @@ import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
@@ -116,8 +115,6 @@ public class CavernURLGenerator implements TransferGenerator {
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
     private final String sshServerBase;
-    private final PosixIdentityManager identityManager = new PosixIdentityManager();
-
     private final MultiValuedProperties config;
     
     private final FileSystemNodePersistence nodePersistence;
@@ -136,15 +133,6 @@ public class CavernURLGenerator implements TransferGenerator {
             sb = sb + "/";
         }
         this.sshServerBase = sb;
-    }
-
-    // unit test
-    
-    public CavernURLGenerator() {
-        this.sshServerBase = null;
-        this.config = null;
-        this.nodePersistence = null;
-        this.authorizer = null;
     }
 
     @Override
@@ -212,9 +200,8 @@ public class CavernURLGenerator implements TransferGenerator {
             throw new UnsupportedOperationException("unsupported direction: " + dir);
         }
 
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        String callingUser = im.toDisplayString(caller); // should be null for anon
+        String callingUser = nodePersistence.getIdentityManager().toDisplayString(caller); // should be null for anon
         
         LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
         VOSURI vp = loc.getURI(parent);
@@ -259,7 +246,7 @@ public class CavernURLGenerator implements TransferGenerator {
         Direction dir = trans.getDirection();
         final Map<String,String> params = new TreeMap<>(); // empty for now
         
-        PosixPrincipal pp = identityManager.toPosixPrincipal(caller);
+        PosixPrincipal pp = nodePersistence.getIdentityManager().toPosixPrincipal(caller);
         List<Protocol> ret = new ArrayList<>();
         for (Protocol p : trans.getProtocols()) {
             if (VOS.PROTOCOL_SSHFS.equals(p.getUri())) {
