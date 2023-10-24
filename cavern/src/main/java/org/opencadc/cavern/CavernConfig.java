@@ -72,6 +72,7 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.auth.PrincipalExtractor;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.util.InvalidConfigException;
@@ -83,8 +84,8 @@ import java.nio.file.Paths;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 public class CavernConfig {
@@ -101,6 +102,11 @@ public class CavernConfig {
     public static final String PRIVATE_KEY = CAVERN_KEY + ".privateKey";
     public static final String PUBLIC_KEY = CAVERN_KEY + ".publicKey";
     public static final String SSHFS_SERVER_BASE = CAVERN_KEY + ".sshfs.serverBase";
+    
+    // HACK (temporary?): provide complete matching PosixPrincipal for root owner
+    public static final String ROOT_OWNER_USERNAME = CAVERN_KEY + ".filesystem.rootOwner.username";
+    public static final String ROOT_OWNER_UID = CAVERN_KEY + ".filesystem.rootOwner.uid";
+    public static final String ROOT_OWNER_GID = CAVERN_KEY + ".filesystem.rootOwner.gid";
     
     private final URI resourceID;
     private final Path root;
@@ -151,25 +157,28 @@ public class CavernConfig {
     }
     
     public Subject getRootOwner() {
-        final String owner = mvp.getFirstPropertyValue(CavernConfig.ROOT_OWNER);
+        final String owner = mvp.getFirstPropertyValue(ROOT_OWNER);
         if (owner == null) {
             throw new InvalidConfigException(CavernConfig.ROOT_OWNER + " cannot be null");
         }
+        Subject ret = new Subject();
+        ret.getPrincipals().add(new HttpPrincipal(owner));
         
-        // this creates an augmented subject using the configured IdentityManager
-        return AuthenticationUtil.getSubject(new PrincipalExtractor() {
-            @Override
-            public Set<Principal> getPrincipals() {
-                Set<Principal> ret = new HashSet<>();
-                ret.add(new HttpPrincipal(owner));
-                return ret;
-            }
-
-            @Override
-            public X509CertificateChain getCertificateChain() {
-                return null;
-            }
-        });
+        String username = mvp.getFirstPropertyValue(ROOT_OWNER_USERNAME);
+        String uidStr = mvp.getFirstPropertyValue(ROOT_OWNER_UID);
+        String gidStr = mvp.getFirstPropertyValue(ROOT_OWNER_GID);
+        if (username != null && uidStr != null && gidStr != null) {
+            int uid = Integer.parseInt(uidStr);
+            int gid = Integer.parseInt(gidStr);
+            PosixPrincipal pp = new PosixPrincipal(uid);
+            pp.defaultGroup = gid;
+            pp.username = username;
+            ret.getPrincipals().add(pp);
+        } else {
+            IdentityManager im = AuthenticationUtil.getIdentityManager();
+            ret = im.augment(ret);
+        }
+        return ret;
     }
     
     // for non-mandatory prop use
