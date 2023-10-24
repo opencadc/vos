@@ -125,21 +125,31 @@ class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
     
+    static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
+        Arrays.asList(
+            VOS.PROPERTY_URI_AVAILABLESPACE,
+            VOS.PROPERTY_URI_CONTENTLENGTH,
+            VOS.PROPERTY_URI_CREATION_DATE,
+            VOS.PROPERTY_URI_CREATOR,
+            VOS.PROPERTY_URI_DATE,
+            VOS.PROPERTY_URI_QUOTA
+        )
+    );
+    
     // set of node properties that are stored in some special way 
     // and *not* as extended attributes
     private static final Set<URI> FILESYSTEM_PROPS = new HashSet<>(
-            Arrays.asList(
-                    VOS.PROPERTY_URI_AVAILABLESPACE,
-                    VOS.PROPERTY_URI_CONTENTLENGTH,
-                    VOS.PROPERTY_URI_CREATION_DATE,
-                    VOS.PROPERTY_URI_CREATOR,
-                    VOS.PROPERTY_URI_DATE,
-                    VOS.PROPERTY_URI_GROUPREAD,
-                    VOS.PROPERTY_URI_GROUPWRITE,
-                    VOS.PROPERTY_URI_GROUPMASK,
-                    VOS.PROPERTY_URI_ISLOCKED, // not supported
-                    VOS.PROPERTY_URI_ISPUBLIC,
-                    VOS.PROPERTY_URI_QUOTA)
+        Arrays.asList(
+            VOS.PROPERTY_URI_AVAILABLESPACE,
+            VOS.PROPERTY_URI_CONTENTLENGTH,
+            VOS.PROPERTY_URI_CREATION_DATE,
+            VOS.PROPERTY_URI_CREATOR,
+            VOS.PROPERTY_URI_DATE,
+            VOS.PROPERTY_URI_GROUPREAD,
+            VOS.PROPERTY_URI_GROUPWRITE,
+            VOS.PROPERTY_URI_ISLOCKED, // but not supported
+            VOS.PROPERTY_URI_ISPUBLIC
+        )
     );
 
     private final Path root;
@@ -472,9 +482,7 @@ class NodeUtil {
         //    NodeProperty(VOS.PROPERTY_URI_ACCESS_DATE, df.format(accessed)));
         //ret.getProperties().add(new
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
-        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE,
-                df.format(modified)));
-        
+        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(modified)));
         if (attrs.isRegularFile()) {
             ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
         }
@@ -533,10 +541,10 @@ class NodeUtil {
                     throw new RuntimeException("failed to map numeric GID(s) to GroupURI(s): " + ex.toString(), ex);
                 }
             }
-            String mask = acl.getMask();
-            if (mask != null) {
-                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, mask));
-            }
+            //String mask = acl.getMask();
+            //if (mask != null) {
+            //    ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, mask));
+            //}
         }
 
         ret.isPublic = false;
@@ -544,6 +552,15 @@ class NodeUtil {
             log.debug("posix perm: " + pfp);
             if (PosixFilePermission.OTHERS_READ.equals(pfp)) {
                 ret.isPublic = true;
+            }
+        }
+        
+        // set immutable flags
+        for (NodeProperty np : ret.getProperties()) {
+            if (IMMUTABLE_PROPS.contains(np.getKey())) {
+                np.readOnly = true;
+            } else {
+                np.readOnly = false;
             }
         }
         return ret;

@@ -84,6 +84,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -94,6 +95,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
@@ -195,7 +197,7 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Set<URI> getImmutableProps() {
-        throw new UnsupportedOperationException();
+        return NodeUtil.IMMUTABLE_PROPS;
     }
 
     @Override

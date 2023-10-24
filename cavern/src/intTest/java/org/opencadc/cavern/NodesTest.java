@@ -104,5 +104,7 @@ public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
 
         File groupMemberCert = FileUtil.getFileFromResource("cavern-auth-test.pem", NodesTest.class);
         super.enablePermissionTests(group2, groupMemberCert);
+        
+        super.cleanupOnSuccess = false;
     }
 }
