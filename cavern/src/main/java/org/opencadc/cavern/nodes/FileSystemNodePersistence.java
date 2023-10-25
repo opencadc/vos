@@ -196,6 +196,11 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
+    public Set<URI> getAdminProps() {
+        return NodeUtil.ADMIN_PROPS;
+    }
+
+    @Override
     public Set<URI> getImmutableProps() {
         return NodeUtil.IMMUTABLE_PROPS;
     }

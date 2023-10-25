@@ -125,14 +125,19 @@ class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
     
+    static final Set<URI> ADMIN_PROPS = new TreeSet<>(
+        Arrays.asList(
+            VOS.PROPERTY_URI_CREATOR,
+            VOS.PROPERTY_URI_QUOTA
+        )
+    );
+    
     static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
         Arrays.asList(
             VOS.PROPERTY_URI_AVAILABLESPACE,
             VOS.PROPERTY_URI_CONTENTLENGTH,
             VOS.PROPERTY_URI_CREATION_DATE,
-            VOS.PROPERTY_URI_CREATOR,
-            VOS.PROPERTY_URI_DATE,
-            VOS.PROPERTY_URI_QUOTA
+            VOS.PROPERTY_URI_DATE
         )
     );
     

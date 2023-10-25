@@ -141,7 +141,6 @@ public class PosixIdentityManagerTest {
             Object o = im.toOwner(s);
             Assert.assertNotNull(o);
             log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
-            Assert.assertTrue(PosixPrincipal.class.equals(o.getClass()));
             
             Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
             log.info("restored: " + restored);

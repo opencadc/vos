@@ -67,10 +67,13 @@
 
 package org.opencadc.cavern.files;
 
-import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Capabilities;
+import ca.nrc.cadc.reg.Capability;
+import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.MultiValuedProperties;
@@ -81,11 +84,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -119,8 +122,7 @@ public class CavernURLGenerator implements TransferGenerator {
     
     private final FileSystemNodePersistence nodePersistence;
     private final VOSpaceAuthorizer authorizer;
-    private URL filesURL;
-
+    private Capability filesCap;
 
     public CavernURLGenerator(FileSystemNodePersistence nodePersistence) {
         this.nodePersistence = nodePersistence;
@@ -137,6 +139,7 @@ public class CavernURLGenerator implements TransferGenerator {
 
     @Override
     public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams) throws Exception {
+        log.debug("getEndpoints: " + target);
         if (target == null) {
             throw new IllegalArgumentException("target is required");
         }
@@ -158,7 +161,6 @@ public class CavernURLGenerator implements TransferGenerator {
                 // creates the DataNode
                 ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
             } else if (node instanceof DataNode) {
-                DataNode dn = (DataNode) node;
                 ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
             } else if (node instanceof ContainerNode) {
                 ret = handleContainerMount(target.getPath(), transfer, currentSubject);
@@ -176,9 +178,14 @@ public class CavernURLGenerator implements TransferGenerator {
 
     private List<Protocol> handleDataNode(ContainerNode parent, String name, Transfer trans, Subject s) {
         log.debug("handleDataNode: " + parent +  " " + name);
-                
+
+        try {
+            initFilesCap();
+        } catch (IOException | ResourceNotFoundException ex) {
+            throw new RuntimeException("CONFIG: failed to find files endpoint via registry self-lookup (ugh)", ex);
+        }
+        
         Direction dir = trans.getDirection();
-        final URL filesURL = getFilesEndpoint();
         final Map<String,String> params = new TreeMap<>(); // empty for now
 
         // Use TokenTool to generate a preauth token
@@ -186,6 +193,7 @@ public class CavernURLGenerator implements TransferGenerator {
         File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
         TokenTool gen = null; 
         if (pubKeyFile != null && privateKeyFile != null) {
+            log.debug("found keys - creating TokenTool");
             gen = new TokenTool(pubKeyFile, privateKeyFile);
         }
         
@@ -195,48 +203,58 @@ public class CavernURLGenerator implements TransferGenerator {
             grantClass = ReadGrant.class;
         } else if (Direction.pushToVoSpace.equals(dir)) {
             grantClass = WriteGrant.class;
-            allowAnon = false;
+            allowAnon = false; // never really anon write
         } else {
             throw new UnsupportedOperationException("unsupported direction: " + dir);
         }
 
+        IdentityManager im = nodePersistence.getIdentityManager();
+        Set<URI> supportedSecurityMethods = im.getSecurityMethods();
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        String callingUser = nodePersistence.getIdentityManager().toDisplayString(caller); // should be null for anon
+        Object userObject = im.toOwner(caller); // posix
+        String callingUser = (userObject == null ? null : userObject.toString()); // uid, null for anon is OK
         
         LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
         VOSURI vp = loc.getURI(parent);
         String parentPath = vp.getPath();
         // this should be the resolved target URL
         VOSURI target = new VOSURI(nodePersistence.getResourceID(), parentPath + "/" + name);
-
+        
         List<Protocol> returnList = new ArrayList<>();
         for (Protocol p : trans.getProtocols()) {
             log.debug("requested protocol: " + p);
-            boolean anon = p.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(p.getSecurityMethod());
-            if (gen != null && anon) {
-                // create an additional anon with preauth token
-                StringBuilder sb2 = new StringBuilder();
-                sb2.append(filesURL.toExternalForm());
-                
-                // Use CommonFormURI in case the incoming URI uses '!' instead of '~' in the authority.
-                URI resourceURI = target.getCommonFormURI().getURI();
-                String token = gen.generateToken(resourceURI, grantClass, callingUser);
-                sb2.append("/preauth:").append(token);
-
-                sb2.append(parentPath).append("/").append(name);
-                Protocol pre = new Protocol(p.getUri(), sb2.toString(), params);
-                log.debug("added: " + pre);
-                returnList.add(pre);
+            URI secM = p.getSecurityMethod();
+            if (secM == null) {
+                secM = Standards.SECURITY_METHOD_ANON;
             }
-            if (allowAnon || !anon) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(filesURL.toExternalForm());
-                sb.append(parentPath).append("/").append(name);
-                String endpoint = sb.toString();
-                Protocol pe = new Protocol(p.getUri(), endpoint, params);
-                pe.setSecurityMethod(p.getSecurityMethod());
-                log.debug("added: " + pe);
-                returnList.add(pe);
+            Interface iface = filesCap.findInterface(secM);
+            if (iface != null && supportedSecurityMethods.contains(secM)) {
+                String baseURL = iface.getAccessURL().getURL().toExternalForm();
+                boolean anon = Standards.SECURITY_METHOD_ANON.equals(secM);
+                if (gen != null && anon) {
+                    // create an additional anon with preauth token
+                    StringBuilder sb2 = new StringBuilder(baseURL);
+
+                    // Use CommonFormURI in case the incoming URI uses '!' instead of '~' in the authority.
+                    URI resourceURI = target.getCommonFormURI().getURI();
+                    String token = gen.generateToken(resourceURI, grantClass, callingUser);
+                    sb2.append("/preauth:").append(token);
+                    sb2.append(target.getPath());
+                    Protocol pre = new Protocol(p.getUri(), sb2.toString(), params);
+                    log.debug("added: " + pre);
+                    returnList.add(pre);
+                }
+                if (allowAnon || !anon) {
+                    StringBuilder sb = new StringBuilder(baseURL);
+                    sb.append(target.getPath());
+                    String endpoint = sb.toString();
+                    Protocol pe = new Protocol(p.getUri(), endpoint, params);
+                    pe.setSecurityMethod(p.getSecurityMethod());
+                    log.debug("added: " + pe);
+                    returnList.add(pe);
+                }
+            } else {
+                log.debug("unsupported security method: " + p.getSecurityMethod() + " -- SKIP");
             }
         }
         return returnList;
@@ -281,7 +299,7 @@ public class CavernURLGenerator implements TransferGenerator {
     }
 
     // return the user
-    String validateToken(String token, VOSURI targetVOSURI, Class grantClass)
+    Object validateToken(String token, VOSURI targetVOSURI, Class grantClass)
             throws AccessControlException, IOException {
 
         // Use TokenTool to generate a preauth token
@@ -309,17 +327,17 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("grant class: " + grantClass);
 
         String tokenUser = tk.validateToken(token, commonFormURI.getURI(), grantClass);
-
+        
         return tokenUser;
     }
 
-    URL getFilesEndpoint() {
-        if (filesURL == null) {
+    void initFilesCap() throws IOException, ResourceNotFoundException {
+        if (filesCap == null) {
             // ugh: self lookup
             RegistryClient reg = new RegistryClient();
-            this.filesURL = reg.getServiceURL(nodePersistence.getResourceID(), Standards.VOSPACE_FILES_20, AuthMethod.ANON);
+            Capabilities caps = reg.getCapabilities(nodePersistence.getResourceID());
+            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES_20);
         }
-        return filesURL;
     }
     
     protected File findFile(String key) {

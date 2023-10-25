@@ -139,14 +139,14 @@ public class PutAction extends FileAction {
             boolean preauthGranted = false;
             if (preauthToken != null) {
                 CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
-                String tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
+                Object tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
                 preauthGranted = true;
                 // reset loggables
                 Subject subject = AuthenticationUtil.getCurrentSubject();
                 subject.getPrincipals().clear();
                 if (tokenUser != null) {
-                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
-                    caller = identityManager.augment(subject);
+                    subject = identityManager.toSubject(tokenUser);
+                    caller = subject;
                 }
                 logInfo.setSubject(subject);
                 logInfo.setResource(nodeURI.getURI());

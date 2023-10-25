@@ -115,14 +115,13 @@ public class HeadAction extends FileAction {
             boolean preauthGranted = false;
             if (preauthToken != null) {
                 CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
-                String tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
+                Object tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
                 preauthGranted = true;
                 // reset loggables
                 Subject subject = AuthenticationUtil.getCurrentSubject();
                 subject.getPrincipals().clear();
                 if (tokenUser != null) {
-                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
-                    identityManager.augment(subject);
+                    subject = identityManager.toSubject(tokenUser);
                 }
                 logInfo.setSubject(subject);
                 logInfo.setResource(nodeURI.getURI());

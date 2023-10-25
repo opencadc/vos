@@ -71,6 +71,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import java.net.URI;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Map;
@@ -113,6 +114,14 @@ public class PosixIdentityManager implements IdentityManager {
         identityCache.put(pp, s); // possibly replace old entry
         return pp;
     }
+
+    @Override
+    public Set<URI> getSecurityMethods() {
+        // delegate to configured IM
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        return im.getSecurityMethods();
+    }
+
     
     @Override
     public Subject toSubject(Object o) {
@@ -120,6 +129,15 @@ public class PosixIdentityManager implements IdentityManager {
             return null;
         }
 
+        if (o instanceof String) {
+            // serialized
+            int uid = Integer.parseInt((String) o);
+            o = new PosixPrincipal(uid);
+        } else if (o instanceof Number) {
+            int uid = ((Number) o).intValue();
+            o = new PosixPrincipal(uid);
+        }
+        
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
             Subject so = identityCache.get(p);
@@ -152,7 +170,11 @@ public class PosixIdentityManager implements IdentityManager {
 
     @Override
     public Object toOwner(Subject subject) {
-        return toPosixPrincipal(subject);
+        PosixPrincipal pp = toPosixPrincipal(subject);
+        if (pp == null) {
+            return null;
+        }
+        return pp.getUidNumber();
     }
 
     @Override
