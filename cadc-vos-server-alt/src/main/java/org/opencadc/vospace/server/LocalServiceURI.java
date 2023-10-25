@@ -93,8 +93,8 @@ public class LocalServiceURI {
         if (vosURIBase == null) {
             try {
                 log.debug("VOSpace resourceID: " + resourceID);
-                String name = resourceID.getPath().substring(1);  // remove slash
-                String vosuri = "vos://" + resourceID.getAuthority() + "~" + name;
+                String name = resourceID.getPath().replaceAll("/", "~");
+                String vosuri = "vos://" + resourceID.getAuthority() + name;
                 vosURIBase = new VOSURI(vosuri);
                 log.debug("VOSpace URI base: " + vosURIBase);
             } catch (URISyntaxException e) {
