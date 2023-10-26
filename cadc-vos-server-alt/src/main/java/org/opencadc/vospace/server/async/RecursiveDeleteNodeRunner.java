@@ -69,8 +69,8 @@ package org.opencadc.vospace.server.async;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.SyncOutput;
-import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.ThrowableUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
@@ -81,7 +81,6 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.util.JobLogInfo;
-import java.io.FileNotFoundException;
 import java.net.URI;
 import java.security.AccessControlException;
 import java.util.ArrayList;
@@ -95,7 +94,6 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
@@ -206,13 +204,19 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
             String nodePath = nodeURI.getPath();
             Node serverNode = pathResolver.getNode(nodePath);
             if (serverNode == null) {
-                throw NodeFault.NodeNotFound.getStatus(nodePath);
+                Exception ex = NodeFault.NodeNotFound.getStatus(nodePath);
+                sendError(ex.getMessage());
+                logInfo.setSuccess(true);
+                return;
             }
 
             ContainerNode parent = serverNode.parent;
             Subject caller = AuthenticationUtil.getCurrentSubject();
             if (!vospaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
-                throw NodeFault.PermissionDenied.getStatus(nodePath);
+                Exception ex = NodeFault.PermissionDenied.getStatus(nodePath);
+                sendError(ex.getMessage());
+                logInfo.setSuccess(true);
+                return;
             }
 
             if (serverNode instanceof ContainerNode) {
@@ -251,7 +255,8 @@ public class RecursiveDeleteNodeRunner implements JobRunner {
             if (!endPhase.equals(ep)) {
                 log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase);
             }
-        } catch (FileNotFoundException e) {
+            logInfo.setSuccess(true);
+        } catch (ResourceNotFoundException e) {
             sendError("NotFound");
         } catch (AccessControlException e) {
             sendError("PermissionDenied");

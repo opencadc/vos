@@ -75,6 +75,7 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
@@ -95,6 +96,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -148,6 +150,10 @@ public class NodesTest extends VOSTest {
             ContainerNode testNode = new ContainerNode(name);
 
             // cleanup
+            if (nodelockSupported) {
+                testNode.isLocked = false;
+                post(nodeURL, nodeURI, testNode, false);
+            }
             delete(nodeURL, false);
             
             // not found
@@ -200,6 +206,12 @@ public class NodesTest extends VOSTest {
                 }
             }
 
+            // unlock
+            if (nodelockSupported) {
+                testNode.isLocked = false;
+                post(nodeURL, nodeURI, testNode);
+            }
+            
             if (cleanupOnSuccess) {
                 delete(nodeURL, true);
             }
