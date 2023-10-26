@@ -75,6 +75,7 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
@@ -95,6 +96,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -115,6 +117,8 @@ public class NodesTest extends VOSTest {
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
     protected boolean nodelockSupported = true;
+    
+    protected boolean cleanupOnSuccess = true;
     
     protected NodesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -146,7 +150,14 @@ public class NodesTest extends VOSTest {
             ContainerNode testNode = new ContainerNode(name);
 
             // cleanup
+            if (nodelockSupported) {
+                testNode.isLocked = false;
+                post(nodeURL, nodeURI, testNode, false);
+            }
             delete(nodeURL, false);
+            
+            // not found
+            get(nodeURL, 404, TEXT_CONTENT_TYPE);
             
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
@@ -195,11 +206,15 @@ public class NodesTest extends VOSTest {
                 }
             }
 
-            // DELETE the node
-            delete(nodeURL, true);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            // unlock
+            if (nodelockSupported) {
+                testNode.isLocked = false;
+                post(nodeURL, nodeURI, testNode);
+            }
+            
+            if (cleanupOnSuccess) {
+                delete(nodeURL, true);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -218,6 +233,9 @@ public class NodesTest extends VOSTest {
 
             // cleanup
             delete(nodeURL, false);
+            
+            // not found
+            get(nodeURL, 404, TEXT_CONTENT_TYPE);
             
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
@@ -244,11 +262,9 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
 
-            // DELETE the node
-            delete(nodeURL);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            if (cleanupOnSuccess) {
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -265,8 +281,12 @@ public class NodesTest extends VOSTest {
             VOSURI nodeURI = getVOSURI(name);
             VOSURI targetURI = getVOSURI("target");
             log.info("link node: " + nodeURI + " -> " + targetURI);
+            
             // cleanup
             delete(nodeURL, false);
+            
+            // not found
+            get(nodeURL, 404, TEXT_CONTENT_TYPE);
             
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
@@ -300,11 +320,9 @@ public class NodesTest extends VOSTest {
                 Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
             }
             
-            // DELETE the node
-            delete(nodeURL);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            if (cleanupOnSuccess) {
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -342,6 +360,9 @@ public class NodesTest extends VOSTest {
 
             // cleanup
             delete(nodeURL, false);
+            
+            // not found
+            get(nodeURL, 404, TEXT_CONTENT_TYPE);
 
             log.info("put: " + nodeURI + " -> " + nodeURL);
             put(nodeURL, nodeURI, testNode);
@@ -409,11 +430,9 @@ public class NodesTest extends VOSTest {
 
             // TODO: POST to clear some props
             
-            // DELETE the node
-            delete(nodeURL);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            if (cleanupOnSuccess) {
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -436,24 +455,30 @@ public class NodesTest extends VOSTest {
         testNode.isPublic = false;
         testNode.inheritPermissions = false;
 
-        String subDir = path + "/" + "subdir";
+        String subDir = path + "/subdir";
         ContainerNode subDirNode = new ContainerNode(subDir);
-        subDirNode.inheritPermissions = false;
-        subDirNode.isPublic = null;
-
+        
+        String data = path + "/dataNode";
+        DataNode dataNode = new DataNode("dataNode");
+        
         URL nodeURL = getNodeURL(nodesServiceURL, path);
         URL subDirURL = getNodeURL(nodesServiceURL, subDir);
-
+        URL dataNodeURL = getNodeURL(nodesServiceURL, data);
+        
         // cleanup
+        delete(dataNodeURL, false);
         delete(subDirURL, false);
         delete(nodeURL, false);
 
         VOSURI nodeURI = getVOSURI(path);
         VOSURI subDirURI = getVOSURI(subDir);
+        VOSURI dataNodeURI = getVOSURI(data);
         log.info("put: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
         log.info("put: " + subDirURI + " -> " + subDirURL);
         put(subDirURL, subDirURI, subDirNode);
+        log.info("put: " + dataNodeURI + " -> " + dataNodeURL);
+        put(dataNodeURL, dataNodeURI, dataNode);
 
         // GET the new subDir node
         NodeReader.NodeReaderResult result = get(subDirURL, 200, XML_CONTENT_TYPE);
@@ -461,34 +486,34 @@ public class NodesTest extends VOSTest {
         Assert.assertFalse(persistedNode.isPublic);  // null is saved as false
         Assert.assertTrue(persistedNode.getReadOnlyGroup().isEmpty());
         Assert.assertTrue(persistedNode.getReadWriteGroup().isEmpty());
+        
+        result = get(dataNodeURL, 200, XML_CONTENT_TYPE);
+        DataNode dn = (DataNode) result.node;
+        Assert.assertFalse(dn.isPublic);  // null is saved as false
+        Assert.assertTrue(dn.getReadOnlyGroup().isEmpty());
+        Assert.assertTrue(dn.getReadWriteGroup().isEmpty());
 
         // update the parent node to inherit permissions
-        delete(subDirURL);
         testNode.inheritPermissions = true;
         post(nodeURL, nodeURI, testNode);
-
-        log.info("put: " + subDirURI + " -> " + subDirURL);
-        put(subDirURL, subDirURI, subDirNode);
-
-        // GET the new subDir node
-        result = get(subDirURL, 200, XML_CONTENT_TYPE);
-        persistedNode = (ContainerNode) result.node;
-        Assert.assertFalse(persistedNode.isPublic);
-        Assert.assertEquals(testNode.getReadOnlyGroup().size(), persistedNode.getReadOnlyGroup().size());
-        Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(group1));
-        Assert.assertEquals(testNode.getReadWriteGroup().size(), persistedNode.getReadWriteGroup().size());
-        Assert.assertTrue(persistedNode.getReadWriteGroup().contains(group2));
-
-        // repeat the test but specify permissions on the subdirectory which inherit permissions is not supposed
-        // to override
+        
+        // specify permissions on the children to override inherit
         delete(subDirURL);
         subDirNode.isPublic = true;
         // reverse of the parent props should suffice
         subDirNode.getReadOnlyGroup().add(group2);
         subDirNode.getReadWriteGroup().add(group1);
+        
+        delete(dataNodeURL);
+        dataNode.isPublic = true;
+        dataNode.getReadOnlyGroup().add(group2);
+        dataNode.getReadWriteGroup().add(group1);
 
         log.info("put: " + subDirURI + " -> " + subDirURL);
         put(subDirURL, subDirURI, subDirNode);
+        
+        log.info("put: " + dataNodeURI + " -> " + dataNodeURL);
+        put(dataNodeURL, dataNodeURI, dataNode);
 
         // GET the new subDir node
         result = get(subDirURL, 200, XML_CONTENT_TYPE);
@@ -499,9 +524,53 @@ public class NodesTest extends VOSTest {
         Assert.assertEquals(1, persistedNode.getReadWriteGroup().size());
         Assert.assertTrue(persistedNode.getReadWriteGroup().contains(group1));
 
-        // cleanup
-        delete(subDirURL, false);
-        delete(nodeURL);
+        result = get(dataNodeURL, 200, XML_CONTENT_TYPE);
+        dn = (DataNode) result.node;
+        Assert.assertTrue(dn.isPublic); 
+        Assert.assertEquals(1, dn.getReadOnlyGroup().size());
+        Assert.assertTrue(dn.getReadOnlyGroup().contains(group2));
+        Assert.assertEquals(1, dn.getReadWriteGroup().size());
+        Assert.assertTrue(dn.getReadWriteGroup().contains(group1));
+        
+        // redo test with inherit active
+        delete(dataNodeURL);
+        delete(subDirURL);
+        
+        subDirNode.isPublic = null;
+        subDirNode.getReadOnlyGroup().clear();
+        subDirNode.getReadWriteGroup().clear();
+        dataNode.isPublic = null;
+        dataNode.getReadOnlyGroup().clear();
+        dataNode.getReadWriteGroup().clear();
+
+        log.info("put: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        log.info("put: " + dataNodeURI + " -> " + dataNodeURL);
+        put(dataNodeURL, dataNodeURI, dataNode);
+        
+        // GET the new subDir node
+        result = get(subDirURL, 200, XML_CONTENT_TYPE);
+        persistedNode = (ContainerNode) result.node;
+        Assert.assertFalse(persistedNode.isPublic);
+        Assert.assertEquals(testNode.getReadOnlyGroup().size(), persistedNode.getReadOnlyGroup().size());
+        Assert.assertTrue(persistedNode.getReadOnlyGroup().contains(group1));
+        Assert.assertEquals(testNode.getReadWriteGroup().size(), persistedNode.getReadWriteGroup().size());
+        Assert.assertTrue(persistedNode.getReadWriteGroup().contains(group2));
+        
+        result = get(dataNodeURL, 200, XML_CONTENT_TYPE);
+        dn = (DataNode) result.node;
+        Assert.assertFalse(dn.isPublic);  // null is saved as false
+        Assert.assertEquals(testNode.getReadOnlyGroup().size(), dn.getReadOnlyGroup().size());
+        Assert.assertTrue(dn.getReadOnlyGroup().contains(group1));
+        Assert.assertEquals(testNode.getReadWriteGroup().size(), dn.getReadWriteGroup().size());
+        Assert.assertTrue(dn.getReadWriteGroup().contains(group2));
+
+        if (cleanupOnSuccess) {
+            delete(dataNodeURL);
+            delete(subDirURL);
+            delete(nodeURL);
+        }
     }
 
     @Test
@@ -589,17 +658,15 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(parentNode.getNodes().contains(childNodes[4]));
             Assert.assertTrue(parentNode.getNodes().contains(childNodes[5]));
 
-            // delete children
-            for (String n : childNames) {
-                String child1Path = parentName + "/" + n;
-                URL curl = getNodeURL(nodesServiceURL, child1Path);
-                delete(curl);
+            if (cleanupOnSuccess) {
+                for (String n : childNames) {
+                    String child1Path = parentName + "/" + n;
+                    URL curl = getNodeURL(nodesServiceURL, child1Path);
+                    delete(curl);
+                }
+                // delete the parent node
+                delete(parentURL);
             }
-            // delete the parent node
-            delete(parentURL);
-
-            // GET the deleted node, which should fail
-            get(parentURL, 404, TEXT_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -691,17 +758,15 @@ public class NodesTest extends VOSTest {
             Assert.assertTrue(parentNode.getNodes().contains(childNodes[0]));
             Assert.assertTrue(parentNode.getNodes().contains(childNodes[1]));
 
-            // delete children
-            for (String n : childNames) {
-                String child1Path = parentName + "/" + n;
-                URL curl = getNodeURL(nodesServiceURL, child1Path);
-                delete(curl);
+            if (cleanupOnSuccess) {
+                for (String n : childNames) {
+                    String child1Path = parentName + "/" + n;
+                    URL curl = getNodeURL(nodesServiceURL, child1Path);
+                    delete(curl);
+                }
+                // delete the parent node
+                delete(parentURL);
             }
-            // delete the parent node
-            delete(parentURL);
-
-            // GET the deleted node, which should fail
-            get(parentURL, 404, TEXT_CONTENT_TYPE);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -764,12 +829,10 @@ public class NodesTest extends VOSTest {
             Assert.assertFalse(parentNode.getProperties().isEmpty());
             Assert.assertFalse(parentNode.getNodes().isEmpty());
 
-            // delete the node
-            delete(child1URL);
-            delete(nodeURL);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            if (cleanupOnSuccess) {
+                delete(child1URL);
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -817,11 +880,9 @@ public class NodesTest extends VOSTest {
                 }
             }
 
-            // delete the file
-            delete(nodeURL);
-
-            // GET the deleted node, which should fail
-            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            if (cleanupOnSuccess) {
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -934,14 +995,18 @@ public class NodesTest extends VOSTest {
         testNode.owner = authSubject;
         testNode.isPublic = false;
 
-        URL nodeURL = getNodeURL(nodesServiceURL, parentName);
-        VOSURI nodeURI = getVOSURI(parentName);
+        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+        final VOSURI nodeURI = getVOSURI(parentName);
 
         String childName = "testGroupUser";
         ContainerNode childNode = new ContainerNode(childName);
         childNode.parent = testNode;
-
+        String childPath = parentName + "/" + childName;
+        final VOSURI childURI = getVOSURI(childPath);
+        final URL childURL = getNodeURL(nodesServiceURL, childPath);
+        
         // cleanup
+        delete(childURL, false);
         delete(nodeURL, false);
 
         // PUT the node
@@ -962,9 +1027,6 @@ public class NodesTest extends VOSTest {
         Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
 
         // permission denied to write in the container without write permission
-        String childPath = parentName + "/" + childName;
-        VOSURI childURI = getVOSURI(childPath);
-        URL childURL = getNodeURL(nodesServiceURL, childPath);
         InputStream is = prepareInput(childURI, childNode);
         HttpUpload putAction = new HttpUpload(is, childURL);
         putAction.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
@@ -996,8 +1058,9 @@ public class NodesTest extends VOSTest {
                 200, deleteAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
 
-        // cleanup
-        delete(nodeURL, false);
+        if (cleanupOnSuccess) {
+            delete(nodeURL);
+        }
     }
 
 }

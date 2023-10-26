@@ -67,9 +67,7 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
-import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
@@ -93,13 +91,8 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.security.cert.CertificateException;
 import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -107,14 +100,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixGroup;
-import org.opencadc.auth.PosixMapperClient;
-import org.opencadc.cavern.PosixIdentityManager;
-import org.opencadc.gms.GroupURI;
 import org.opencadc.util.fs.AclCommandExecutor;
 import org.opencadc.util.fs.ExtendedFileAttributes;
 import org.opencadc.vospace.ContainerNode;
@@ -132,138 +121,52 @@ import org.opencadc.vospace.VOSURI;
  *
  * @author pdowler
  */
-public class NodeUtil {
+class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
+    
+    static final Set<URI> ADMIN_PROPS = new TreeSet<>(
+        Arrays.asList(
+            VOS.PROPERTY_URI_CREATOR,
+            VOS.PROPERTY_URI_QUOTA
+        )
+    );
+    
+    static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
+        Arrays.asList(
+            VOS.PROPERTY_URI_AVAILABLESPACE,
+            VOS.PROPERTY_URI_CONTENTLENGTH,
+            VOS.PROPERTY_URI_CREATION_DATE,
+            VOS.PROPERTY_URI_DATE
+        )
+    );
     
     // set of node properties that are stored in some special way 
     // and *not* as extended attributes
     private static final Set<URI> FILESYSTEM_PROPS = new HashSet<>(
-            Arrays.asList(
-                    VOS.PROPERTY_URI_AVAILABLESPACE,
-                    VOS.PROPERTY_URI_CONTENTLENGTH,
-                    VOS.PROPERTY_URI_CREATION_DATE,
-                    VOS.PROPERTY_URI_CREATOR,
-                    VOS.PROPERTY_URI_DATE,
-                    VOS.PROPERTY_URI_GROUPREAD,
-                    VOS.PROPERTY_URI_GROUPWRITE,
-                    VOS.PROPERTY_URI_GROUPMASK,
-                    VOS.PROPERTY_URI_ISLOCKED,
-                    VOS.PROPERTY_URI_ISPUBLIC,
-                    VOS.PROPERTY_URI_QUOTA)
+        Arrays.asList(
+            VOS.PROPERTY_URI_AVAILABLESPACE,
+            VOS.PROPERTY_URI_CONTENTLENGTH,
+            VOS.PROPERTY_URI_CREATION_DATE,
+            VOS.PROPERTY_URI_CREATOR,
+            VOS.PROPERTY_URI_DATE,
+            VOS.PROPERTY_URI_GROUPREAD,
+            VOS.PROPERTY_URI_GROUPWRITE,
+            VOS.PROPERTY_URI_ISLOCKED, // but not supported
+            VOS.PROPERTY_URI_ISPUBLIC
+        )
     );
 
     private final Path root;
     private final VOSURI rootURI;
+    private final GroupCache groupCache;
     
-    private final PosixMapperClient posixMapper;
-    private final Map<GroupURI,PosixGroup> groupCache = new TreeMap<>();
-    private final Map<Integer,PosixGroup> gidCache = new TreeMap<>();
-    
-    
-    private final PosixIdentityManager identityManager = new PosixIdentityManager();
-    private final Map<PosixPrincipal,Subject> identityCache = new TreeMap<>();
-    
-    public NodeUtil(Path root, VOSURI rootURI) {
+    public NodeUtil(Path root, VOSURI rootURI, GroupCache groupCache) {
         this.root = root;
         this.rootURI = rootURI;
-        
-        LocalAuthority loc = new LocalAuthority();
-        // only require a group mapper because IVOA GMS does not include numeric gid
-        // assume user mapper is the same service
-        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new MyPosixMapperClient(posixMapperID);
+        this.groupCache = groupCache;
     }
     
-    // FileSystemNodePersistence can prime the cache with caller
-    public PosixPrincipal addToCache(Subject s) {
-        if (s == null || s.getPrincipals().isEmpty()) {
-            // anon request
-            return null;
-        }
-        identityManager.augment(s);
-        PosixPrincipal pp = identityManager.toPosixPrincipal(s);
-        if (pp == null) {
-            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
-        }
-        identityCache.put(pp, s); // possibly replace old entry
-        return pp;
-    }
-    
-    // FileSystemNodePersistence uses the cache to resolve owner
-    public Subject getFromCache(PosixPrincipal pp) {
-        Subject so = identityCache.get(pp);
-        if (so == null) {
-            log.warn("cache miss: " + pp);
-            so = identityManager.toSubject(pp);
-            addToCache(so);
-        }
-        log.warn("getFromCache: "  + pp);
-        return so;
-    }
-    
-    private List<PosixGroup> getFromGroupCache(Collection<GroupURI> input)
-            throws ResourceNotFoundException, ResourceAlreadyExistsException {
-        List<PosixGroup> ret = new ArrayList<>(input.size());
-        List<GroupURI> cacheMiss = new ArrayList<>();
-        for (GroupURI g : input) {
-            PosixGroup pg = groupCache.get(g);
-            if (pg == null) {
-                cacheMiss.add(g);
-                log.warn("gidCache miss: " + g);
-            } else {
-                log.warn("gidCache hit  : " + g);
-                ret.add(pg);
-            }
-        }
-        if (!cacheMiss.isEmpty()) {
-            try {
-                List<PosixGroup> mpg = posixMapper.getGID(cacheMiss);
-                for (PosixGroup pg : mpg) {
-                    gidCache.put(pg.getGID(), pg);
-                    groupCache.put(pg.getGroupURI(), pg);
-                    ret.add(pg);
-                }
-            } catch (IOException | InterruptedException ex) {
-                throw new RuntimeException("FAIL: ", ex);
-            }
-        }
-        
-        return ret;
-    }
-    
-    // this must return a list created with just the specified gid(s)
-    // and not the whole cache
-    private List<PosixGroup> getFromGidCache(Collection<Integer> input)
-            throws ResourceNotFoundException, ResourceAlreadyExistsException {
-        List<PosixGroup> ret = new ArrayList<>(input.size());
-        List<Integer> cacheMiss = new ArrayList<>();
-        for (Integer g : input) {
-            PosixGroup pg = gidCache.get(g);
-            if (pg == null) {
-                cacheMiss.add(g);
-                log.warn("gidCache miss: " + g);
-            } else {
-                log.warn("gidCache hit  : " + g);
-                ret.add(pg);
-            }
-        }
-        if (!cacheMiss.isEmpty()) {
-            try {
-                List<PosixGroup> mpg = posixMapper.getURI(cacheMiss);
-                for (PosixGroup pg : mpg) {
-                    gidCache.put(pg.getGID(), pg);
-                    groupCache.put(pg.getGroupURI(), pg);
-                    ret.add(pg);
-                }
-            } catch (IOException | InterruptedException ex) {
-                throw new RuntimeException("FAIL: ", ex);
-            }
-        }
-        
-        return ret;
-    }
-
     public static Path nodeToPath(Path root, VOSURI uri) {
         assertNotNull("root", root);
         assertNotNull("uri", uri);
@@ -382,7 +285,7 @@ public class NodeUtil {
                 String val = cn.inheritPermissions.toString();
                 ExtendedFileAttributes.setFileAttribute(path, VOS.PROPERTY_URI_INHERIT_PERMISSIONS.toASCIIString(), val);
                 inherit = cn.inheritPermissions;
-            } else {
+            } else if (cn.clearInheritPermissions) {
                 ExtendedFileAttributes.setFileAttribute(path, VOS.PROPERTY_URI_INHERIT_PERMISSIONS.toASCIIString(), null);
             }
         }
@@ -399,7 +302,7 @@ public class NodeUtil {
 
         final Set<Integer> roGIDs = new TreeSet<>();
         try {
-            List<PosixGroup> pgs = getFromGroupCache(node.getReadOnlyGroup());
+            List<PosixGroup> pgs = groupCache.getFromGroupCache(node.getReadOnlyGroup());
             // TODO: check if any input groups were not resolved/acceptable and do what??
             for (PosixGroup pg : pgs) {
                 roGIDs.add(pg.getGID());
@@ -413,7 +316,7 @@ public class NodeUtil {
 
         final Set<Integer> rwGIDs = new TreeSet<>();
         try {
-            List<PosixGroup> pgs = getFromGroupCache(node.getReadWriteGroup());
+            List<PosixGroup> pgs = groupCache.getFromGroupCache(node.getReadWriteGroup());
             // TODO: check if any input groups were not resolved/acceptable and do what??
             for (PosixGroup pg : pgs) {
                 rwGIDs.add(pg.getGID());
@@ -448,23 +351,19 @@ public class NodeUtil {
             changePublic = false;
         }
 
-        boolean changeDefaultACL = false;
         if (changeRO || changeRW || changePublic) {
             log.debug("set ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
             acl.setACL(worldReadable, roGIDs, rwGIDs);
-            changeDefaultACL = true; // permissions changed: reset defaults as well
         }
 
         if (isDir) {
-            if (inherit || changeDefaultACL) {
+            if (inherit) {
                 log.debug("set default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
                 acl.setACL(worldReadable, roGIDs, rwGIDs, true);
             } else if (!inherit) {
-                roGIDs.clear();
-                rwGIDs.clear();
-                log.debug("clear default ACL: public=" + worldReadable + " ro=" + roGIDs + " rw=" + rwGIDs);
-                acl.setACL(worldReadable, roGIDs, rwGIDs, true);
-            }
+                log.debug("clear default ACL: public=" + worldReadable);
+                acl.clearDefaultACL();
+            } // else: leave it alone
         }
 
         log.debug("final ro: " + acl.getReadOnlyACL());
@@ -588,9 +487,7 @@ public class NodeUtil {
         //    NodeProperty(VOS.PROPERTY_URI_ACCESS_DATE, df.format(accessed)));
         //ret.getProperties().add(new
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
-        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE,
-                df.format(modified)));
-        
+        ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(modified)));
         if (attrs.isRegularFile()) {
             ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
         }
@@ -625,7 +522,7 @@ public class NodeUtil {
             Set<Integer> rogids = acl.getReadOnlyACL();
             if (!rogids.isEmpty()) {
                 try {
-                    List<PosixGroup> pgs = getFromGidCache(rogids);
+                    List<PosixGroup> pgs = groupCache.getFromGidCache(rogids);
                     log.debug("\tmapped ro: " + rogids.size() + " gid -> " + pgs.size() + " PosixGroup");
                     for (PosixGroup pg : pgs) {
                         log.debug("\tro: " + pg.getGID() + " aka " + pg.getGroupURI());
@@ -639,7 +536,7 @@ public class NodeUtil {
             Set<Integer> rwgids = acl.getReadWriteACL();
             if (!rwgids.isEmpty()) {
                 try {
-                    List<PosixGroup> pgs = getFromGidCache(rwgids);
+                    List<PosixGroup> pgs = groupCache.getFromGidCache(rwgids);
                     log.debug("\tmapped rw: " + rwgids.size() + " gid -> " + pgs.size() + " PosixGroup");
                     for (PosixGroup pg : pgs) {
                         log.debug("\trw: " + pg.getGID() + " aka " + pg.getGroupURI());
@@ -649,10 +546,10 @@ public class NodeUtil {
                     throw new RuntimeException("failed to map numeric GID(s) to GroupURI(s): " + ex.toString(), ex);
                 }
             }
-            String mask = acl.getMask();
-            if (mask != null) {
-                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, mask));
-            }
+            //String mask = acl.getMask();
+            //if (mask != null) {
+            //    ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, mask));
+            //}
         }
 
         ret.isPublic = false;
@@ -662,20 +559,25 @@ public class NodeUtil {
                 ret.isPublic = true;
             }
         }
+        
+        // set immutable flags
+        for (NodeProperty np : ret.getProperties()) {
+            if (IMMUTABLE_PROPS.contains(np.getKey())) {
+                np.readOnly = true;
+            } else {
+                np.readOnly = false;
+            }
+        }
         return ret;
     }
 
     public void delete(VOSURI uri) throws IOException {
         Path p = nodeToPath(root, uri);
-        delete(p);
+        Files.delete(p);
     }
     
-    public static void delete(Path root, VOSURI uri) throws IOException {
-        Path np = nodeToPath(root, uri);
-        log.debug("[create] path: " + uri + " -> " + np);
-        delete(np);
-    }
-
+    /* 
+    // magic recursive delete is obsolete
     private static void delete(Path path) throws IOException {
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
             Files.walkFileTree(path, new DeleteVisitor());
@@ -715,7 +617,8 @@ public class NodeUtil {
             return FileVisitResult.CONTINUE;
         }
     }
-
+    */
+    
     private static class CopyVisitor implements FileVisitor<Path> {
 
         PosixPrincipal owner;
@@ -772,9 +675,7 @@ public class NodeUtil {
         }
     }
 
-    
-    public ResourceIterator<Node> list(VOSURI vu) 
-            throws IOException, InterruptedException {
+    public ResourceIterator<Node> list(VOSURI vu) throws IOException {
         Path np = nodeToPath(root, vu);
         log.debug("[list] " + vu.getPath() + " -> " + np);
         return new NodeIterator(np);
@@ -798,7 +699,8 @@ public class NodeUtil {
         public Node next() {
             Path cur = content.next();
             try {
-                return pathToNode(cur);
+                Node ret = pathToNode(cur);
+                return ret;
             } catch (IOException | InterruptedException ex) {
                 throw new RuntimeException("container node listing failed", ex);
             }
@@ -872,123 +774,5 @@ public class NodeUtil {
             return user.defaultGroup;
         }
         throw new RuntimeException("CONFIG or BUG: posix principal default group is null");
-    }
-    
-    // HACK: extension wrapper to figure out how to auth the posix mapper calls used above
-    private class MyPosixMapperClient extends PosixMapperClient {
-
-        private final URI resourceID;
-        
-        public MyPosixMapperClient(URI resourceID) {
-            super(resourceID);
-            this.resourceID = resourceID;
-        }
-
-        private final List<PosixGroup> doURI(List<Integer> groups)
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            return super.getURI(groups);
-        }
-        
-        private final List<PosixGroup> doGID(List<GroupURI> groups)
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            return super.getGID(groups);
-        }
-        
-        @Override
-        public List<PosixGroup> getURI(List<Integer> groups) 
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            Subject s = getUsableSubject();
-            try {
-                return Subject.doAs(s, new PrivilegedExceptionAction<List<PosixGroup>>() {
-                    @Override
-                    public List<PosixGroup> run() throws Exception {
-                        return doURI(groups);
-                    }
-                });
-            } catch (PrivilegedActionException ex) {
-                Exception cause = ex.getException();
-                if (cause instanceof ResourceAlreadyExistsException) {
-                    throw (ResourceAlreadyExistsException) cause;
-                }
-                if (cause instanceof ResourceNotFoundException) {
-                    throw (ResourceNotFoundException) cause;
-                }
-                throw new RuntimeException("failed to call " + resourceID);
-            }
-        }
-
-        @Override
-        public List<PosixGroup> getGID(List<GroupURI> groups) 
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            Subject s = getUsableSubject();
-            try {
-                return Subject.doAs(s, new PrivilegedExceptionAction<List<PosixGroup>>() {
-                    @Override
-                    public List<PosixGroup> run() throws Exception {
-                        return doGID(groups);
-                    }
-                });
-            } catch (PrivilegedActionException ex) {
-                Exception cause = ex.getException();
-                if (cause instanceof ResourceAlreadyExistsException) {
-                    throw (ResourceAlreadyExistsException) cause;
-                }
-                if (cause instanceof ResourceNotFoundException) {
-                    throw (ResourceNotFoundException) cause;
-                }
-                throw new RuntimeException("failed to call " + resourceID);
-            }
-        }
-
-        private Subject doAugment(Subject subject)
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            return super.augment(subject);
-        }
-        
-        @Override
-        public Subject augment(Subject subject) 
-                throws IOException, InterruptedException, ResourceNotFoundException, ResourceAlreadyExistsException {
-            Subject s = getUsableSubject();
-            try {
-                return Subject.doAs(s, new PrivilegedExceptionAction<Subject>() {
-                    @Override
-                    public Subject run() throws Exception {
-                        doAugment(subject);
-                        return null;
-                    }
-                });
-            } catch (PrivilegedActionException ex) {
-                Exception cause = ex.getException();
-                if (cause instanceof ResourceAlreadyExistsException) {
-                    throw (ResourceAlreadyExistsException) cause;
-                }
-                if (cause instanceof ResourceNotFoundException) {
-                    throw (ResourceNotFoundException) cause;
-                }
-                throw new RuntimeException("failed to call " + resourceID);
-            }
-        }
-        
-        private Subject getUsableSubject() {
-            // option 1: use caller
-            Subject cur = AuthenticationUtil.getCurrentSubject();
-            try {
-                if (CredUtil.checkCredentials(cur)) {
-                    return cur;
-                }
-            } catch (CertificateException ex) {
-                log.debug("delegated proxy cert invalid, continuing with backup plan", ex);
-            }
-            
-            // option 2: use A&A ops
-            try {
-                return CredUtil.createOpsSubject();
-            } catch (Exception ex) {
-                log.debug("failed to create ops subject, continuing anonymously", ex);
-            }
-            
-            // option 3: use anon
-            return AuthenticationUtil.getAnonSubject();
-        }
     }
 }

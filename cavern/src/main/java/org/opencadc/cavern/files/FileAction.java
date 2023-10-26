@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -68,28 +68,22 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
-import ca.nrc.cadc.util.StringUtil;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import org.apache.log4j.Logger;
-import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.CavernConfig;
-import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
+import org.opencadc.cavern.nodes.PosixIdentityManager;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
-import org.opencadc.vospace.transfer.Direction;
 
 /**
  *
@@ -107,15 +101,10 @@ public abstract class FileAction extends RestAction {
     protected VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
     protected CavernConfig config;
-    
-    protected final PosixIdentityManager identityManager = new PosixIdentityManager();
-    protected final PosixMapperClient posixMapper;
+    protected PosixIdentityManager identityManager;
     
     protected FileAction() {
         super();
-        LocalAuthority loc = new LocalAuthority();
-        URI posixMapperID = loc.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
-        this.posixMapper = new PosixMapperClient(posixMapperID);
     }
 
     @Override
@@ -139,6 +128,7 @@ public abstract class FileAction extends RestAction {
             this.authorizer = new VOSpaceAuthorizer(nodePersistence);
             this.pathResolver = new PathResolver(nodePersistence, authorizer, true);
             this.config = nodePersistence.getConfig();
+            this.identityManager = nodePersistence.getIdentityManager();
         } catch (NamingException oops) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
         }

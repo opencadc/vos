@@ -65,12 +65,12 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.SyncJobExecutor;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.server.transfers.TransferRunner;
 
@@ -78,20 +78,21 @@ import org.opencadc.vospace.server.transfers.TransferRunner;
  *
  * @author pdowler
  */
-public class SyncTransferManager extends JobManager {
-    private static final Logger log = Logger.getLogger(SyncTransferManager.class);
+public class AsyncTransferManager extends CavernJobManager {
+    private static final Logger log = Logger.getLogger(AsyncTransferManager.class);
 
-    public SyncTransferManager() {
+    public AsyncTransferManager() {
         super();
         JobPersistence jp = createJobPersistence();
         JobUpdater ju = (JobUpdater) jp;
-        JobExecutor jobExec = new SyncJobExecutor(ju, TransferRunner.class);
-        super.setJobPersistence(jp);
-        super.setJobExecutor(jobExec);
 
-        // TODO: would be nice to enable a feature like destroy-on-complete instead of timed destruction
+        JobExecutor je = new ThreadPoolExecutor(ju, TransferRunner.class, 6);
+
+        super.setJobPersistence(jp);
+        super.setJobExecutor(je);
+
         super.setMaxDestruction(60000L);
-        super.setMaxExecDuration(6000L);
-        super.setMaxQuote(60000L);
+        super.setMaxExecDuration(2000L);
+        super.setMaxQuote(40000L);
     }
 }

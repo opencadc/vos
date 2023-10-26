@@ -65,24 +65,29 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
-
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.SimpleJobManager;
+import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
 import org.apache.log4j.Logger;
 
-/**
- *
- * @author pdowler
- */
-public class JobPersistenceImpl extends MemoryJobPersistence {
-    private static final Logger log = Logger.getLogger(JobPersistenceImpl.class);
+abstract class CavernJobManager extends SimpleJobManager {
+    private static final Logger log = Logger.getLogger(CavernJobManager.class);
 
-    private static final long JOB_CLEANER_INTERVAL = 30000L;
-
-    public JobPersistenceImpl() {
-        super(new RandomStringGenerator(16), AuthenticationUtil.getIdentityManager(), JOB_CLEANER_INTERVAL);
+    protected CavernJobManager() {
+        super();
     }
+    
+    protected final JobPersistence createJobPersistence() {
+        return new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    }
+    
+    @Override
+    public void terminate() throws InterruptedException {
+        super.terminate();
+    }
+
+    
 }

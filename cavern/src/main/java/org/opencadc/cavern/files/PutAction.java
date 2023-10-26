@@ -70,26 +70,24 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.io.MultiBufferIO;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.AccessControlException;
-import java.security.DigestInputStream;
+import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.auth.PosixMapperClient;
-import org.opencadc.cavern.PosixIdentityManager;
 import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
@@ -137,17 +135,18 @@ public class PutAction extends FileAction {
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
+            Subject caller = AuthenticationUtil.getCurrentSubject();
             boolean preauthGranted = false;
             if (preauthToken != null) {
                 CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
-                String tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
+                Object tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
                 preauthGranted = true;
                 // reset loggables
                 Subject subject = AuthenticationUtil.getCurrentSubject();
                 subject.getPrincipals().clear();
                 if (tokenUser != null) {
-                    subject.getPrincipals().add(new HttpPrincipal(tokenUser));
-                    identityManager.augment(subject);
+                    subject = identityManager.toSubject(tokenUser);
+                    caller = subject;
                 }
                 logInfo.setSubject(subject);
                 logInfo.setResource(nodeURI.getURI());
@@ -190,10 +189,18 @@ public class PutAction extends FileAction {
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
             MessageDigest md = MessageDigest.getInstance("MD5");
-            DigestInputStream vis = new DigestInputStream(in, md);
             log.debug("copy: start " + target);
             putStarted = true;
-            Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
+            // this method replace sthe existing Node with a new one owned by the tomcat user (root)
+            // and that only gets fixed down at nodePersistence.put(node);
+            //Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
+            
+            // truncate: do not recreate file with wrong owner
+            DigestOutputStream out = new DigestOutputStream(
+                    Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING), md);
+            MultiBufferIO io = new MultiBufferIO();
+            io.copy(in, out);
+            out.flush();
             log.debug("copy: done " + target);
 
             URI expectedMD5 = syncInput.getDigest();
@@ -203,25 +210,36 @@ public class PutAction extends FileAction {
             if (expectedMD5 != null && !expectedMD5.equals(actualMD5)) {
                 // upload failed: do not keep corrupt data
                 log.debug("upload corrupt: " + expectedMD5 + " != " + propValue);
-                //cleanupOnFailure(target); already in finally
-                return;
+                OutputStream trunc = Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                trunc.close();
+                actualMD5 = null;
+                //PosixFileAttributes attrs = Files.readAttributes(target, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+                //log.warn("after truncate, size: " + attrs.size());
             }
             
             // re-read node from filesystem
             node = (DataNode) nodePersistence.get(cn, nodeURI.getName());
             
             // update Node
-            Subject caller = AuthenticationUtil.getCurrentSubject();
             node.owner = caller;
             node.ownerID = identityManager.toPosixPrincipal(caller);
         
             log.debug(nodeURI + " MD5: " + propValue);
             NodeProperty csp = node.getProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            if (csp == null) {
-                csp = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, actualMD5.toASCIIString());
-                node.getProperties().add(csp);
+            if (actualMD5 == null) {
+                // upload failed
+                if (csp != null) {
+                    node.getProperties().remove(csp);
+                }
             } else {
-                csp.setValue(actualMD5.toASCIIString());
+                if (csp == null) {
+                    // add
+                    csp = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, actualMD5.toASCIIString());
+                    node.getProperties().add(csp);
+                } else {
+                    // replace
+                    csp.setValue(actualMD5.toASCIIString());
+                }
             }
 
             nodePersistence.put(node);

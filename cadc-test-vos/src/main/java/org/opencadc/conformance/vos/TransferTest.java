@@ -185,43 +185,48 @@ public class TransferTest extends VOSTest {
             // Source ContainerNode
             String sourceName = "move-source-node";
             URL sourceNodeURL = getNodeURL(nodesServiceURL, sourceName);
-            VOSURI sourceNodeURI = getVOSURI(sourceName);
-            ContainerNode sourceNode = new ContainerNode(sourceName);
+            final VOSURI sourceNodeURI = getVOSURI(sourceName);
+            final ContainerNode sourceNode = new ContainerNode(sourceName);
             log.debug("source URL: " + sourceNodeURL);
 
             // Destination ContainerNode
             String destinationName = "move-destination-node";
             URL destinationNodeURL = getNodeURL(nodesServiceURL, destinationName);
-            VOSURI destinationNodeURI = getVOSURI(destinationName);
-            ContainerNode destinationNode = new ContainerNode(destinationName);
+            final VOSURI destinationNodeURI = getVOSURI(destinationName);
+            final ContainerNode destinationNode = new ContainerNode(destinationName);
             log.debug("destination URL: " + destinationNodeURL);
-
-            // Cleanup old nodes
-            delete(destinationNodeURL, false);
-            delete(destinationNodeURL, false);
-
-            // Put new nodes
-            put(sourceNodeURL, sourceNodeURI, sourceNode);
-            put(destinationNodeURL, destinationNodeURI, destinationNode);
-
+            
             // Source child ContainerNode
             String childContainerName = "move-source-container-child-node";
             String childContainerPath = sourceName + "/" + childContainerName;
             URL childContainerNodeURL = getNodeURL(nodesServiceURL, childContainerPath);
-            VOSURI childContainerNodeURI = getVOSURI(childContainerPath);
-            ContainerNode childContainerNode = new ContainerNode(childContainerName);
-            log.debug("source-container-child URL: " + childContainerNodeURL);
-
-            put(childContainerNodeURL, childContainerNodeURI, childContainerNode);
+            final VOSURI childContainerNodeURI = getVOSURI(childContainerPath);
+            final ContainerNode childContainerNode = new ContainerNode(childContainerName);
 
             // Source child DataNode
             String childDataName = "move-source-data-child-node";
             String childDataPath = sourceName + "/" + childDataName;
             URL childDataNodeURL = getNodeURL(nodesServiceURL, childDataPath);
-            VOSURI childDataNodeURI = getVOSURI(childDataPath);
-            DataNode childDataNode = new DataNode(childDataName);
-            log.debug("source-data-child URL: " + childDataNodeURL);
+            final VOSURI childDataNodeURI = getVOSURI(childDataPath);
+            final DataNode childDataNode = new DataNode(childDataName);
+            
+            // Cleanup old nodes
+            delete(childContainerNodeURL, false);
+            delete(childDataNodeURL, false);
+            delete(sourceNodeURL, false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
+            delete(destinationNodeURL, false);
 
+            // Put new nodes
+            put(sourceNodeURL, sourceNodeURI, sourceNode);
+            put(destinationNodeURL, destinationNodeURI, destinationNode);
+            
+            log.debug("source-container-child URL: " + childContainerNodeURL);
+            put(childContainerNodeURL, childContainerNodeURI, childContainerNode);
+
+            log.debug("source-data-child URL: " + childDataNodeURL);
             put(childDataNodeURL, childDataNodeURI, childDataNode);
 
             // Create a Transfer
@@ -319,8 +324,10 @@ public class TransferTest extends VOSTest {
             Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode));
 
             // Delete nodes
-            delete(sourceNodeURL, false);
-            delete(destinationNodeURL, false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName));
+            delete(destinationNodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);

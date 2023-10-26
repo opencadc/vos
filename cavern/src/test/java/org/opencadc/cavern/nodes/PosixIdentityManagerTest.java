@@ -65,34 +65,101 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+
+import org.opencadc.cavern.nodes.PosixIdentityManager;
+import ca.nrc.cadc.ac.ACIdentityManager;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.NumericPrincipal;
+import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
+
+import java.io.File;
+import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.server.transfers.TransferRunner;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *
  * @author pdowler
  */
-public class AsyncTransferManager extends JobManager {
-    private static final Logger log = Logger.getLogger(AsyncTransferManager.class);
+public class PosixIdentityManagerTest {
+    private static final Logger log = Logger.getLogger(PosixIdentityManagerTest.class);
 
-    public AsyncTransferManager() {
-        super();
-        JobPersistence jp = createJobPersistence();
-        JobUpdater ju = (JobUpdater) jp;
+    static {
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+    }
 
-        JobExecutor je = new ThreadPoolExecutor(ju, TransferRunner.class, 6);
+    Subject subject = AuthenticationUtil.getAnonSubject();
+    
+    public PosixIdentityManagerTest() {
+    }
 
-        super.setJobPersistence(jp);
-        super.setJobExecutor(je);
+    @Test
+    public void testNull() {
+        try {
+            PosixIdentityManager im = new PosixIdentityManager();
 
-        super.setMaxDestruction(60000L);
-        super.setMaxExecDuration(2000L);
-        super.setMaxQuote(40000L);
+            Assert.assertNull("toOwner", im.toOwner(null));
+
+            Assert.assertNull("toSubject", im.toSubject(null));
+
+            Assert.assertNull("toDisplayString", im.toDisplayString(null));
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testRoundTrip() {
+        try {
+            // request subject contains: numeric, http, posix
+            PosixPrincipal orig = new PosixPrincipal(54321);
+            Subject s = AuthenticationUtil.getAnonSubject();
+            s.getPrincipals().add(orig);
+            s.getPrincipals().add(new HttpPrincipal("somebody"));
+            
+            PosixIdentityManager im = new PosixIdentityManager();
+            
+            // the value to "store"
+            log.info("orig: " + s);
+            Object o = im.toOwner(s);
+            Assert.assertNotNull(o);
+            log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
+            
+            Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
+            log.info("restored: " + restored);
+            
+            // default IM to delegate to cannot augment
+            Set<Principal> all = restored.getPrincipals();
+            Assert.assertNotNull(all);
+            Assert.assertEquals(1, all.size());
+            
+            Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
+            Assert.assertNotNull(ps);
+            Assert.assertFalse(ps.isEmpty());
+            PosixPrincipal actual = ps.iterator().next();
+            Assert.assertEquals(orig, actual);
+            
+
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 }

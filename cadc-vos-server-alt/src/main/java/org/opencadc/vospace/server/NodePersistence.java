@@ -109,6 +109,13 @@ public interface NodePersistence {
     ContainerNode getRootNode();
 
     /**
+     * Get the set of properties that are only writable by admins.
+     * 
+     * @return set of admin property keys
+     */
+    public Set<URI> getAdminProps();
+    
+    /**
      * Get the set of property keys that are not writable in this node
      * persistence implementation.
      *
@@ -117,7 +124,7 @@ public interface NodePersistence {
     public Set<URI> getImmutableProps();
 
     /**
-     * Get the views supported by this node peristence implementation.
+     * Get the views supported by this node persistence implementation.
      * 
      * @return a views object, possibly empty
      */

@@ -251,8 +251,11 @@ public abstract class VOSTest {
         }
     }
 
-    public void post(URL nodeURL, VOSURI vosURI, Node node)
-        throws IOException {
+    public void post(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
+        post(nodeURL, vosURI, node, true);
+    }
+    
+    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify) throws IOException {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
@@ -263,7 +266,10 @@ public abstract class VOSTest {
         HttpPost post = new HttpPost(nodeURL, content, true);
         log.debug("POST: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
+        log.debug("POST responseCode: " + post.getResponseCode() + " " + post.getThrowable());
+        if (!verify && post.getResponseCode() == 404) {
+            return;
+        }
         Assert.assertEquals("expected POST response code = 200",
                             200, post.getResponseCode());
         Assert.assertNull("expected POST throwable == null", post.getThrowable());

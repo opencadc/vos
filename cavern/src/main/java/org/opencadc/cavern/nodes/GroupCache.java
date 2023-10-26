@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,31 +65,99 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.SimpleJobManager;
-import ca.nrc.cadc.uws.server.impl.PostgresJobPersistence;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixGroup;
+import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.gms.GroupURI;
 
-abstract class JobManager extends SimpleJobManager {
-    private static final Logger log = Logger.getLogger(JobManager.class);
+/**
+ * Simple read-through cache for group information. There is currently no time-based
+ * eviction of entries from the cache since we assume group name-to-gid mapping is
+ * extremely stable.
+ * 
+ * @author pdowler
+ */
+class GroupCache {
+    private static final Logger log = Logger.getLogger(GroupCache.class);
 
-    private static String jndiKey;
+    private final PosixMapperClient posixMapper;
+    private final Map<GroupURI,PosixGroup> groupCache = new ConcurrentHashMap<>();
+    private final Map<Integer,PosixGroup> gidCache = new ConcurrentHashMap<>();
     
-    protected JobManager() {
-        super();
+    public GroupCache(PosixMapperClient posixMapper) {
+        this.posixMapper = posixMapper;
     }
     
-    protected final JobPersistence createJobPersistence() {
-        return new PostgresJobPersistence(AuthenticationUtil.getIdentityManager());
+    public List<PosixGroup> getFromGroupCache(Collection<GroupURI> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<GroupURI> cacheMiss = new ArrayList<>();
+        for (GroupURI g : input) {
+            PosixGroup pg = groupCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("group cache miss: " + g);
+            } else {
+                log.warn("group cache hit  : " + g);
+                ret.add(pg);
+            }
+        }
+        if (!cacheMiss.isEmpty()) {
+            try {
+                List<PosixGroup> mpg = posixMapper.getGID(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
+        }
+        
+        return ret;
     }
     
-    @Override
-    public void terminate() throws InterruptedException {
-        super.terminate();
+    // this must return a list created with just the specified gid(s)
+    // and not the whole cache
+    public List<PosixGroup> getFromGidCache(Collection<Integer> input)
+            throws ResourceNotFoundException, ResourceAlreadyExistsException {
+        List<PosixGroup> ret = new ArrayList<>(input.size());
+        List<Integer> cacheMiss = new ArrayList<>();
+        for (Integer g : input) {
+            PosixGroup pg = gidCache.get(g);
+            if (pg == null) {
+                cacheMiss.add(g);
+                log.warn("gid cache miss: " + g);
+            } else {
+                log.warn("gid cache hit  : " + g);
+                ret.add(pg);
+            }
+        }
+        if (!cacheMiss.isEmpty()) {
+            try {
+                List<PosixGroup> mpg = posixMapper.getURI(cacheMiss);
+                for (PosixGroup pg : mpg) {
+                    gidCache.put(pg.getGID(), pg);
+                    groupCache.put(pg.getGroupURI(), pg);
+                    ret.add(pg);
+                }
+            } catch (IOException | InterruptedException ex) {
+                throw new RuntimeException("FAIL: ", ex);
+            }
+        }
+        
+        return ret;
     }
 
-    
 }

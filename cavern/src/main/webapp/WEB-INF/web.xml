@@ -27,10 +27,9 @@
             <param-value>
             org.opencadc.cavern
             org.opencadc.vospace
-            ca.nrc.cadc.ac
             ca.nrc.cadc.rest
-            ca.nrc.cadc.vos
             ca.nrc.cadc.vosi
+            ca.nrc.cadc.auth
             </param-value>
         </init-param>
             <init-param>
@@ -92,7 +91,7 @@
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+            <param-value>org.opencadc.cavern.uws.AsyncTransferManager</param-value>
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
@@ -119,11 +118,12 @@
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.RecursiveDeleteJobManager</param-value>
+            <param-value>org.opencadc.cavern.uws.RecursiveDeleteJobManager</param-value>
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
     
+<!--
     <servlet>
         <servlet-name>RecursiveSetNodeServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
@@ -141,15 +141,16 @@
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.RecursiveSetNodeJobManager</param-value>
+            <param-value>org.opencadc.cavern.uws.RecursiveSetNodeJobManager</param-value>
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-            <param-value>ca.nrc.cadc.vos.server.RecursiveSetNodeInlineContentHandler</param-value>
+            <param-value>???</param-value>
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
-
+-->
+    
     <!-- sync transfer servlet-->
     <servlet>
         <servlet-name>SyncTransferServlet</servlet-name>
@@ -172,7 +173,7 @@
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.SyncTransferManager</param-value>
+            <param-value>org.opencadc.cavern.uws.SyncTransferManager</param-value>
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
@@ -187,7 +188,7 @@
         <servlet-class>org.opencadc.vospace.server.transfers.TransferDetailsServlet</servlet-class>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.AsyncTransferManager</param-value>
+            <param-value>org.opencadc.cavern.uws.AsyncTransferManager</param-value>
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
@@ -195,6 +196,10 @@
     <servlet>
         <servlet-name>FilesServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
+        <init-param>
+            <param-name>head</param-name>
+            <param-value>org.opencadc.cavern.files.HeadAction</param-value>
+        </init-param>
         <init-param>
             <param-name>get</param-name>
             <param-value>org.opencadc.cavern.files.GetAction</param-value>
@@ -284,11 +289,12 @@
         <url-pattern>/transfers/*</url-pattern>
     </servlet-mapping>
 
+<!--
     <servlet-mapping>
         <servlet-name>RecursiveSetNodeServlet</servlet-name>
         <url-pattern>/nodeprops/*</url-pattern>
     </servlet-mapping>
-
+-->
     <servlet-mapping>
         <servlet-name>RecursiveDeleteServlet</servlet-name>
         <url-pattern>/async-delete/*</url-pattern>

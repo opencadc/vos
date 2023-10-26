@@ -65,29 +65,39 @@
 ************************************************************************
  */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.LocalAuthority;
+import ca.nrc.cadc.util.InvalidConfigException;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.PosixMapperClient;
+import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.files.CavernURLGenerator;
-import org.opencadc.cavern.nodes.NodeUtil;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -105,6 +115,8 @@ public class FileSystemNodePersistence implements NodePersistence {
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
     
     private final PosixIdentityManager identityManager;
+    private final PosixMapperClient posixMapper;
+    private final GroupCache groupCache;
     
     private final ContainerNode root;
     private final Path rootPath;
@@ -122,21 +134,50 @@ public class FileSystemNodePersistence implements NodePersistence {
         this.identityManager = new PosixIdentityManager();
         
         // root node
-        Subject rawOwner = config.getRootOwner();
-        UUID rootID = new UUID(0L, 0L);
+        UUID rootID = new UUID(0L, 0L); // cosmetic: not used in cavern
         this.root = new ContainerNode(rootID, "");
-        root.owner = identityManager.augment(rawOwner);
+        root.owner = config.getRootOwner();
         root.ownerDisplay = identityManager.toDisplayString(root.owner);
-        log.warn("ROOT owner: " + root.owner);
         root.ownerID = identityManager.toPosixPrincipal(root.owner);
         root.isPublic = true;
         root.inheritPermissions = false;
-        // TODO: create and chown the root directory (idempotent)
+        
+        // create root directories for node/files
+        try {
+            if (!Files.exists(rootPath, LinkOption.NOFOLLOW_LINKS)) {
+                Files.createDirectories(rootPath);
+            }
+            PosixPrincipal admin = identityManager.toPosixPrincipal(root.owner);
+            log.info("root node: " + rootPath + " owner: " + admin.getUidNumber() + "(" + admin.username + ")");
+            NodeUtil.setPosixOwnerGroup(rootPath, admin.getUidNumber(), admin.defaultGroup);
+        } catch (IOException e) {
+            throw new IllegalStateException("Error creating filesystem root directory " + root, e);
+        }
+        
+        LocalAuthority la = new LocalAuthority();
+        // only require a group mapper because IVOA GMS does not include numeric gid
+        // assume user mapper is the same service
+        URI posixMapperID = la.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        if ("https".equals(posixMapperID.getScheme())) {
+            try {
+                URL baseURL = posixMapperID.toURL();
+                this.posixMapper = new MyPosixMapperClient(baseURL);
+            } catch (MalformedURLException ex) {
+                throw new InvalidConfigException("invalid " + Standards.POSIX_GROUPMAP.toASCIIString() + " base URL: " + posixMapperID, ex);
+            }
+        } else {
+            this.posixMapper = new MyPosixMapperClient(posixMapperID);
+        }
+        this.groupCache = new GroupCache(posixMapper);
     }
     
     // support FileAction
     public CavernConfig getConfig() {
         return config;
+    }
+    
+    public PosixIdentityManager getIdentityManager() {
+        return identityManager;
     }
     
     // support FileAction
@@ -155,8 +196,13 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
+    public Set<URI> getAdminProps() {
+        return NodeUtil.ADMIN_PROPS;
+    }
+
+    @Override
     public Set<URI> getImmutableProps() {
-        throw new UnsupportedOperationException();
+        return NodeUtil.IMMUTABLE_PROPS;
     }
 
     @Override
@@ -171,16 +217,16 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Node get(ContainerNode parent, String name) throws TransientException {
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
-        nut.addToCache(AuthenticationUtil.getCurrentSubject());
+        identityManager.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
             Node ret = nut.get(parent, name);
             if (ret == null) {
                 return null;
             }
             
             PosixPrincipal owner = NodeUtil.getOwner(ret);
-            Subject so = nut.getFromCache(owner);
+            Subject so = identityManager.toSubject(owner);
             ret.owner = so;
             ret.ownerID = identityManager.toPosixPrincipal(so);
             ret.ownerDisplay = identityManager.toDisplayString(so);
@@ -200,14 +246,14 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new UnsupportedOperationException("batch options for container node listing");
         }
         
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
         try {
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
             ResourceIterator<Node> ni = nut.list(vu);
             return new IdentWrapper(parent, ni, nut);
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
@@ -251,7 +297,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         public Node next() {
             Node ret = childIter.next();
             PosixPrincipal owner = NodeUtil.getOwner(ret);
-            Subject so = nut.getFromCache(owner);
+            Subject so = identityManager.toSubject(owner);
             ret.owner = so;
             ret.ownerID = identityManager.toPosixPrincipal(so);
             ret.ownerDisplay = identityManager.toDisplayString(so);
@@ -292,7 +338,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         //    throw new NodeNotSupportedException("StructuredDataNode is not supported.");
         //}
 
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
 
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
@@ -324,9 +370,9 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new IllegalArgumentException("args must both be peristent nodes before move");
         }
         
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
+        PosixPrincipal owner = identityManager.addToCache(caller);
         
         LocalServiceURI loc = new LocalServiceURI(getResourceID());
         VOSURI srcURI = loc.getURI(node);
@@ -339,18 +385,18 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
     }
     
-    
-
     @Override
     public void delete(Node node) throws TransientException {
-        NodeUtil nut = new NodeUtil(rootPath, rootURI);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PosixPrincipal owner = nut.addToCache(caller);
+        identityManager.addToCache(caller);
         try {
             // this is a complicated way to get the Path to delete
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(node);
             nut.delete(vu);
+        } catch (DirectoryNotEmptyException ex) {
+            throw new IllegalArgumentException("container node '" + node.getName() + "' is not empty");
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }

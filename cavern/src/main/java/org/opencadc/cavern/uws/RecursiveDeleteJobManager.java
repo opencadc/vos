@@ -65,7 +65,7 @@
 ************************************************************************
 */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
 import ca.nrc.cadc.uws.server.JobPersistence;
@@ -78,7 +78,7 @@ import org.opencadc.vospace.server.async.RecursiveDeleteNodeRunner;
  *
  * @author pdowler
  */
-public class RecursiveDeleteJobManager extends JobManager {
+public class RecursiveDeleteJobManager extends CavernJobManager {
     private static final Logger log = Logger.getLogger(RecursiveDeleteJobManager.class);
 
     private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?

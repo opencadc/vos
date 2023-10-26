@@ -91,6 +91,9 @@ public class UpdateNodeAction extends NodeAction {
     @Override
     public void doAction() throws Exception {
         final Node clientNode = getInputNode();
+        if (clientNode == null) {
+            throw NodeFault.InvalidArgument.getStatus("no node document");
+        }
         final VOSURI clientNodeTarget = getInputURI();
         final VOSURI target = getTargetURI();
         

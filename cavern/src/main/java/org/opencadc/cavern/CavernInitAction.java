@@ -74,12 +74,12 @@ import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.vospace.server.NodePersistence;
 
 /**
@@ -96,28 +96,8 @@ public class CavernInitAction extends InitAction {
 
     @Override
     public void doInit() {
-        initFilesystem();
         initNodePersistence();
         initDatabase();
-    }
-    
-    private void initFilesystem() {
-        try {
-            // Check config file
-            CavernConfig cavernConfig = new CavernConfig();
-            MultiValuedProperties props = cavernConfig.getProperties();
-
-            // create root directories for node/files
-            Path root = cavernConfig.getRoot();
-            try {
-                Files.createDirectories(root);
-            } catch (IOException e) {
-                throw new IllegalStateException("Error creating filesystem root directory " + root, e);
-            }
-            log.info("created root directory: " + root);
-        } catch (Exception ex) {
-            throw new RuntimeException("INIT FAIL", ex);
-        }
     }
     
     private void initDatabase() {

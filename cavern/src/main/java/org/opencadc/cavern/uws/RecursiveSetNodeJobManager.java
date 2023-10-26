@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,104 +62,43 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
-*/
+ */
 
-package org.opencadc.cavern;
+package org.opencadc.cavern.uws;
 
-
-import ca.nrc.cadc.ac.ACIdentityManager;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.auth.NumericPrincipal;
-import ca.nrc.cadc.auth.PosixPrincipal;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-
-import java.io.File;
-import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.security.auth.Subject;
-
-import org.apache.log4j.Level;
+import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.opencadc.cavern.RecursiveSetNodeRunner;
 
 /**
  *
- * @author pdowler
+ * @author pdowler, majorb, yeunga
  */
-public class PosixIdentityManagerTest {
-    private static final Logger log = Logger.getLogger(PosixIdentityManagerTest.class);
+public class RecursiveSetNodeJobManager extends CavernJobManager {
 
-    static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
-    }
+    private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
 
-    Subject subject = AuthenticationUtil.getAnonSubject();
-    
-    public PosixIdentityManagerTest() {
-    }
+    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
+    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
+    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
 
-    @Test
-    public void testNull() {
-        try {
-            PosixIdentityManager im = new PosixIdentityManager();
+    public RecursiveSetNodeJobManager() {
+        super();
+        JobPersistence jp = createJobPersistence();
+        JobUpdater ju = (JobUpdater) jp;
+        super.setJobPersistence(jp);
 
-            Assert.assertNull("toOwner", im.toOwner(null));
+        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
+        super.setJobExecutor(jobExec);
 
-            Assert.assertNull("toSubject", im.toSubject(null));
-
-            Assert.assertNull("toDisplayString", im.toDisplayString(null));
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testRoundTrip() {
-        try {
-            // request subject contains: numeric, http, posix
-            PosixPrincipal orig = new PosixPrincipal(54321);
-            Subject s = AuthenticationUtil.getAnonSubject();
-            s.getPrincipals().add(orig);
-            s.getPrincipals().add(new HttpPrincipal("somebody"));
-            
-            PosixIdentityManager im = new PosixIdentityManager();
-            
-            // the value to "store"
-            log.info("orig: " + s);
-            Object o = im.toOwner(s);
-            Assert.assertNotNull(o);
-            log.info("toOwner: " + o.getClass().getSimpleName() + " " + o);
-            Assert.assertTrue(PosixPrincipal.class.equals(o.getClass()));
-            
-            Subject restored = Subject.doAs(subject, (PrivilegedExceptionAction<Subject>) () -> im.toSubject(o));
-            log.info("restored: " + restored);
-            
-            // default IM to delegate to cannot augment
-            Set<Principal> all = restored.getPrincipals();
-            Assert.assertNotNull(all);
-            Assert.assertEquals(1, all.size());
-            
-            Set<PosixPrincipal> ps = restored.getPrincipals(PosixPrincipal.class);
-            Assert.assertNotNull(ps);
-            Assert.assertFalse(ps.isEmpty());
-            PosixPrincipal actual = ps.iterator().next();
-            Assert.assertEquals(orig, actual);
-            
-
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
+        super.setMaxExecDuration(MAX_EXEC_DURATION);
+        super.setMaxDestruction(MAX_DESTRUCTION);
+        super.setMaxQuote(MAX_QUOTE);
     }
 }

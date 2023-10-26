@@ -87,33 +87,28 @@ public class DeleteNodeAction extends NodeAction {
 
     @Override
     public void doAction() throws Exception {
-        
         VOSURI target = getTargetURI();
-        
-        // TBD: resolveLinks=true?
+        VOSURI parentURI = target.getParentURI();
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
-        Node serverNode = pathResolver.getNode(target.getPath());
+        Node n = pathResolver.getNode(parentURI.getPath());
+        if (n == null) {
+            throw NodeFault.ContainerNotFound.getStatus(target.toString());
+        }
+        if (!(n instanceof ContainerNode)) {
+            throw NodeFault.ContainerNotFound.getStatus(target.toString());
+        }
+        ContainerNode parent = (ContainerNode) n;
+        Node serverNode = nodePersistence.get(parent, target.getName());
         if (serverNode == null) {
             throw NodeFault.NodeNotFound.getStatus(target.toString());
         }
 
-        if (serverNode.parent == null) {
-            // target is root
-            throw NodeFault.PermissionDenied.getStatus(target.toString());
-        }
-        
-        ContainerNode parent = serverNode.parent;
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)
+                || (serverNode.isLocked != null && serverNode.isLocked)) {
             throw NodeFault.PermissionDenied.getStatus(target.toString());
         }
         
-        if (serverNode instanceof ContainerNode) {
-            // TODO: check if caller can remove everything inside container as well?
-            
-            // TODO: check and refuse to delete non-empty container node? aka require async mode
-        }
-
         log.debug("delete node: " + target.getPath());
         nodePersistence.delete(serverNode);
     }

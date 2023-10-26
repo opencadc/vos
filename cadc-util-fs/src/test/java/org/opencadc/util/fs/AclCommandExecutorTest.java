@@ -176,11 +176,11 @@ public class AclCommandExecutorTest {
         final String[] expectedCommand = new String[4];
         expectedCommand[0] = "setfacl";
         expectedCommand[1] = "--physical";
-        expectedCommand[2] = "--set=user::rw-,group::rw-,other::---,mask::rw-,group:" 
+        expectedCommand[2] = "--set=user::rw-,group::rw-,other::---,group:" 
                 + g1 + ":r--,group:" + g2 + ":r--,group:" + g3 + ":rw-";
         expectedCommand[3] = target.toString();
         if (isDir) {
-            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
+            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,group:" 
                     + g1 + ":r-x,group:" + g2 + ":r-x,group:" + g3 + ":rwx";
         }
         
@@ -224,6 +224,7 @@ public class AclCommandExecutorTest {
         if (isDir) {
             // set defaults
             acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+            
             roDefault = acl.getReadOnlyACL(true);
             Assert.assertNotNull(roDefault);
             Assert.assertFalse(roDefault.isEmpty());
@@ -234,6 +235,15 @@ public class AclCommandExecutorTest {
             Assert.assertNotNull(rwDefault);
             Assert.assertFalse(rwDefault.isEmpty());
             Assert.assertTrue(rwDefault.contains(g3));
+            
+            acl.clearDefaultACL();
+            
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertTrue(roDefault.isEmpty());
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            Assert.assertTrue(rwDefault.isEmpty());
         } else {
             try {
                 acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
@@ -299,7 +309,7 @@ public class AclCommandExecutorTest {
 
         boolean worldReadable = false; // other::---
         final String[] expectedCommand = new String[]{
-            "setfacl", "--physical", "--set=user::rw-,group::rw-,other::---,mask::rw-,group:" + g3 + ":rw-", target.toString()
+            "setfacl", "--physical", "--set=user::rw-,group::rw-,other::---,group:" + g3 + ":rw-", target.toString()
         };
 
         AclCommandExecutor acl = new AclCommandExecutor(target, false) {
