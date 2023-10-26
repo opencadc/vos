@@ -67,28 +67,29 @@
 
 package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.AccessControlException;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.JsonNodeWriter;
-import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -194,13 +195,54 @@ public abstract class NodeAction extends RestAction {
     }
 
     protected NodeWriter getNodeWriter() throws Exception {
+        NodeWriter ret;
         String mt = getMediaType();
         if (JSON_FORMAT.equals(mt)) {
-            return new JsonNodeWriter();
+            ret = new JsonNodeWriter();
+        } else {
+            ret = new NodeWriter();
         }
-        return new NodeWriter();
+        ret.setImmutableProperties(nodePersistence.getImmutableProps());
+        //ret.setStylesheetURL(getStylesheetURL());
+        return ret;
     }
 
+    // needed by create and update
+    protected List<NodeProperty> getAdminProps(Node clientNode, Set<URI> adminProps, Subject caller) {
+        List<NodeProperty> aps = new ArrayList<>();
+        // extract admin props
+        for (URI pk : adminProps) {
+            NodeProperty ap = clientNode.getProperty(pk);
+            if (ap != null) {
+                aps.add(ap);
+            }
+        }
+        // clear if not admin
+        if (!aps.isEmpty() && !isAdmin(caller)) {
+            aps.clear();
+        }
+        return aps;
+    }
+    
+    // needed by create
+    protected final boolean isAdmin(Subject caller) {
+        if (caller == null || caller.getPrincipals().isEmpty()) {
+            return false;
+        }
+
+        ContainerNode root = nodePersistence.getRootNode();
+        for (Principal owner : root.owner.getPrincipals()) {
+            for (Principal p : caller.getPrincipals()) {
+                if (AuthenticationUtil.equals(owner, p)) {
+                    return true;
+                }
+            }
+        }
+
+        // TODO: also check admin group(s) aka root.getReadWriteGroup() membership
+        return false;
+    }
+    
     /*
     protected AbstractView getView() throws Exception {
         if (syncInput.getParameter(QUERY_PARAM_VIEW) == null) {

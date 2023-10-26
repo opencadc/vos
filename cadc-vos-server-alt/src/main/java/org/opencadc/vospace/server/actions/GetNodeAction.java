@@ -70,6 +70,7 @@ package org.opencadc.vospace.server.actions;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.io.ResourceIterator;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentHandler;
@@ -220,8 +221,6 @@ public class GetNodeAction extends NodeAction {
         }
 
         final NodeWriter nodeWriter = getNodeWriter();
-        //nodeWriter.setStylesheetURL(getStylesheetURL());
-
         VOS.Detail detail = VOS.Detail.max;
         if (VOS.Detail.min.getValue().equals(detailLevel)) {
             // TODO: what about props that are fields in Node?
@@ -229,7 +228,7 @@ public class GetNodeAction extends NodeAction {
         }
 
         syncOutput.setCode(200);
-        syncOutput.setHeader("Content-Type", getMediaType());
+        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
     }

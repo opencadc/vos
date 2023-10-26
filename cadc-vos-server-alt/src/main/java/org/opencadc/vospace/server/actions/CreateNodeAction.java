@@ -68,10 +68,13 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -126,10 +129,22 @@ public class CreateNodeAction extends NodeAction {
             throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
         }
 
+        // attempt to set owner
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
         clientNode.parent = parent;
-        // TODO: chown: admin (root owner) can assign ownership to someone else
-        clientNode.owner = caller;
-
+        if (clientNode.ownerDisplay != null && isAdmin(caller)) {
+            // admin allowed to assign a different owner
+            try {
+                clientNode.owner = im.toSubject(clientNode.ownerDisplay);
+            } catch (Exception ex) {
+                log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
+                throw ex;
+            }
+        } else {
+            clientNode.owner = caller;
+        }
+        
+        // inherit
         if (parent.inheritPermissions != null && parent.inheritPermissions) {
             // explicit clientNode settings override inherit
             if (clientNode.isPublic == null) {
@@ -160,18 +175,23 @@ public class CreateNodeAction extends NodeAction {
             }
         }
 
-        // sanitize properties
+        // pick out eligible admin-only props (they are immutable to normal users)
+        List<NodeProperty> allowedAdminProps = getAdminProps(clientNode, nodePersistence.getAdminProps(), caller);
+        
+        // sanitize input properties into clean set
         Set<NodeProperty> np = new HashSet<>();
-        Utils.updateNodeProperties(np, clientNode.getProperties());
-        clientNode.getProperties().clear();
+        Utils.updateNodeProperties(np, clientNode.getProperties(), nodePersistence.getImmutableProps());
         clientNode.getProperties().addAll(np);
+        clientNode.getProperties().addAll(allowedAdminProps);
 
         log.debug("Putting node " + target.getName() + " in path " + target.getPath());
         Node storedNode = nodePersistence.put(clientNode);
-
+        storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
+        
         // output modified node
         NodeWriter nodeWriter = getNodeWriter();
-        syncOutput.setHeader("Content-Type", getMediaType());
+        syncOutput.setCode(200); // Created??
+        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
     }

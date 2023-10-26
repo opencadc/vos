@@ -67,6 +67,7 @@
 
 package org.opencadc.vospace.server;
 
+import java.net.URI;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
@@ -144,19 +145,23 @@ public class Utils {
 
     /**
      * Takes a set of old properties and updates it with a new set of properties. Essentially
-     * this means updating values or removing and adding elements. It is not a straight replacement.
+     * this means updating values or removing and adding elements. It is not a straight 
+     * replacement.
      *
      * @param oldProps set of old Node Properties that are being updated
      * @param newProps set of new Node Properties to be used for the update
+     * @param immutable set of immutable property keys to skip
      */
-    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps) {
+    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps, Set<URI> immutable) {
         for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
             NodeProperty newProperty = newIter.next();
-            if (oldProps.contains(newProperty)) {
-                oldProps.remove(newProperty);
-            }
-            if (!newProperty.isMarkedForDeletion()) {
-                oldProps.add(newProperty);
+            if (!immutable.contains(newProperty.getKey())) {
+                if (oldProps.contains(newProperty)) {
+                    oldProps.remove(newProperty);
+                }
+                if (!newProperty.isMarkedForDeletion()) {
+                    oldProps.add(newProperty);
+                }
             }
         }
     }

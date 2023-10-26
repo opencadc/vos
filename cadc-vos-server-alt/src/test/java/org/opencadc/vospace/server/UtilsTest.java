@@ -148,33 +148,34 @@ public class UtilsTest {
     public void testUpdateNodeProperties() throws Exception {
         NodeProperty np1 = new NodeProperty(URI.create("prop1"), "val1");
 
+        Set<URI> immutable = new HashSet<>();
         Set<NodeProperty> oldProps = new HashSet<>();
         Set<NodeProperty> newProps = new HashSet<>();
 
         // no new or old properties
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(0, oldProps.size());
 
         // add property
         newProps.add(np1);
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(1, oldProps.size());
         Assert.assertTrue(oldProps.contains(np1));
 
         // no changes
         newProps.clear();
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(1, oldProps.size());
         Assert.assertTrue(oldProps.contains(np1));
 
         // delete property
         NodeProperty np1Del = new NodeProperty(URI.create("prop1")); // mark for deletion
         newProps.add(np1Del);
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(0, oldProps.size());
 
         // delete non existing property (this is the sanitize scenario in CreateNode action
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(0, oldProps.size());
 
         // add new element and change value of existing
@@ -184,7 +185,7 @@ public class UtilsTest {
         newProps.add(np2);
         NodeProperty np1Update = new NodeProperty(URI.create("prop1"), "val1_updated");
         newProps.add(np1Update);
-        Utils.updateNodeProperties(oldProps, newProps);
+        Utils.updateNodeProperties(oldProps, newProps, immutable);
         Assert.assertEquals(2, oldProps.size());
         Assert.assertTrue(oldProps.contains(np1Update));
         Assert.assertTrue(oldProps.contains(np2));

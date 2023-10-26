@@ -82,6 +82,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -113,6 +114,23 @@ import org.opencadc.vospace.server.transfers.TransferGenerator;
 public class FileSystemNodePersistence implements NodePersistence {
 
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
+    
+    static final Set<URI> ADMIN_PROPS = new TreeSet<>(
+            Arrays.asList(
+                    VOS.PROPERTY_URI_CREATOR, 
+                    VOS.PROPERTY_URI_QUOTA
+            ));
+
+    static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
+            Arrays.asList(
+                    VOS.PROPERTY_URI_AVAILABLESPACE,
+                    VOS.PROPERTY_URI_CONTENTLENGTH,
+                    VOS.PROPERTY_URI_CONTENTMD5,
+                    VOS.PROPERTY_URI_CREATION_DATE,
+                    VOS.PROPERTY_URI_DATE,
+                    VOS.PROPERTY_URI_CREATOR,
+                    VOS.PROPERTY_URI_QUOTA
+            ));
     
     private final PosixIdentityManager identityManager;
     private final PosixMapperClient posixMapper;
@@ -197,12 +215,12 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Set<URI> getAdminProps() {
-        return NodeUtil.ADMIN_PROPS;
+        return ADMIN_PROPS;
     }
 
     @Override
     public Set<URI> getImmutableProps() {
-        return NodeUtil.IMMUTABLE_PROPS;
+        return IMMUTABLE_PROPS;
     }
 
     @Override
