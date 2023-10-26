@@ -75,9 +75,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -204,6 +206,9 @@ public class NodeReaderWriterTest {
         Assert.assertEquals("name", n1.getName(), n2.getName());
         Assert.assertEquals("owner", n1.getPropertyValue(VOS.PROPERTY_URI_CREATOR),
                             n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
+        for (NodeProperty np : n2.getProperties()) {
+            Assert.assertNotNull("readOnly always set", np.readOnly);
+        }
         comparePropertyList(n1.getProperties(), n2.getProperties());
         if (n1 instanceof DataNode) {
             DataNode dn1 = (DataNode) n1;
@@ -222,6 +227,54 @@ public class NodeReaderWriterTest {
         }
     }
 
+    @Test
+    public void testReadOnlyNodeProps() {
+        Set<URI> immutable = new TreeSet<>(
+            Arrays.asList(
+                VOS.PROPERTY_URI_CONTENTLENGTH,
+                VOS.PROPERTY_URI_CONTENTMD5,
+                VOS.PROPERTY_URI_CREATOR,
+                VOS.PROPERTY_URI_QUOTA
+            )
+        );
+        try {
+            log.debug("testNodePropertyReadOnly");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.setImmutableProperties(immutable);
+            
+            DataNode minDataNode = createMinDataNode();
+            minDataNode.ownerDisplay = "somebody";
+            minDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "666"));
+            minDataNode.isPublic = true;
+            NodeProperty title = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
+            title.readOnly = false; // explicit
+            minDataNode.getProperties().add(title);
+            instance.write(dataURI, minDataNode, sb, VOS.Detail.max);
+            log.info(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            NodeReader.NodeReaderResult result = reader.read(sb.toString());
+            Node n2 = result.node;
+            
+            Assert.assertNotNull(n2.ownerDisplay);
+            NodeProperty np = n2.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull(np);
+            Assert.assertNotNull(np.readOnly); // xsd default to false so always passes
+            Assert.assertTrue(np.readOnly);
+
+            // make sure default version is still 2.0
+            //Assert.assertEquals(VOS.VOSPACE_20, n2.version);
+            Assert.assertTrue(n2 instanceof DataNode);
+            Assert.assertEquals(dataURI, result.vosURI);
+            compareNodes(minDataNode, n2);
+        } catch (Exception t) {
+            log.error(t);
+            Assert.fail(t.getMessage());
+        }
+    }
+    
     @Test
     public void writeValidContainerNode() {
         try {
@@ -582,7 +635,6 @@ public class NodeReaderWriterTest {
     // minimum detail DataNode
     private DataNode createMinDataNode() {
         DataNode minDataNode = new DataNode(dataURI.getName());
-        minDataNode.busy = false;
         return minDataNode;
     }
 
