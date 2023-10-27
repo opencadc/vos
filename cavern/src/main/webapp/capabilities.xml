@@ -60,7 +60,6 @@
     </interface>
   </capability>
 
-<!--
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/Pkg-1.0">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.me.com/cavern/pkg</accessURL>
@@ -70,7 +69,7 @@
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
--->
+
   <capability standardID="ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto">
       <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
