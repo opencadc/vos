@@ -111,7 +111,11 @@ public class PosixIdentityManager implements IdentityManager {
         if (pp == null) {
             throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
         }
-        identityCache.put(pp, s); // possibly replace old entry
+        
+        // copy and cache only immutable identities and not credentials
+        Subject tmp = new Subject();
+        tmp.getPrincipals().addAll(s.getPrincipals());
+        identityCache.put(pp, tmp); // possibly replace old entry
         return pp;
     }
 
@@ -122,7 +126,6 @@ public class PosixIdentityManager implements IdentityManager {
         return im.getSecurityMethods();
     }
 
-    
     @Override
     public Subject toSubject(Object o) {
         if (o == null) {
@@ -140,17 +143,9 @@ public class PosixIdentityManager implements IdentityManager {
         
         if (o instanceof PosixPrincipal) {
             PosixPrincipal p = (PosixPrincipal) o;
-            Subject so = identityCache.get(p);
-            if (so == null) {
-                Set<Principal> pset = new HashSet<>();
-                pset.add(p);
-                Subject ret = new Subject(false, pset, new HashSet(), new HashSet());
-                so = augment(ret);
-                addToCache(so);
-            } else {
-                log.warn("cache hit: " + p);
-            }
-            return so;
+            Subject so = new Subject();
+            so.getPrincipals().add(p);
+            return augment(so);
         }
         throw new IllegalArgumentException("invalid owner type: " + o.getClass().getName());
     }
@@ -194,16 +189,28 @@ public class PosixIdentityManager implements IdentityManager {
     @Override
     public Subject augment(Subject subject) {
         PosixPrincipal pp = toPosixPrincipal(subject);
+        if (pp != null) {
+            Subject so = identityCache.get(pp);
+            if (so != null) {
+                log.debug("cache hit: " + pp);
+                return so;
+            }
+        }
+        
+        // these two cases should not happen so warn with stack trace and bail
         if (pp != null && subject.getPrincipals().size() > 1) {
             log.warn("augment: skip " + subject, new RuntimeException());
             return subject;
         }
-        if (pp.getUidNumber() == 0) {
+        if (pp != null && pp.getUidNumber() == 0) {
             log.warn("augment: root", new RuntimeException());
+            return subject;
         }
         
-        log.warn("augment: " + subject);
+        log.debug("augment: " + subject);
         IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.augment(subject);
+        Subject ret = im.augment(subject);
+        addToCache(ret);
+        return ret;
     }
 }
