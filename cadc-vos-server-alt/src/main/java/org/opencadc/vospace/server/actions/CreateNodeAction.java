@@ -68,6 +68,7 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
@@ -135,7 +136,14 @@ public class CreateNodeAction extends NodeAction {
         if (clientNode.ownerDisplay != null && isAdmin(caller)) {
             // admin allowed to assign a different owner
             try {
-                clientNode.owner = im.toSubject(clientNode.ownerDisplay);
+                Subject tmp = new Subject();
+                // HACK: known IdentityManager implementations prefer the HttpPrincipal aka
+                // network username for toDisplayString(Subject) so that's the value that
+                // normally gets put into node.ownerDisplay and rendered in node documents
+                // so chosing HttpPrincipal here makes output and input (set owner) use the
+                // same values... but seems kind of sketchy.
+                tmp.getPrincipals().add(new HttpPrincipal(clientNode.ownerDisplay));
+                clientNode.owner = im.augment(tmp);
             } catch (Exception ex) {
                 log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
                 throw ex;

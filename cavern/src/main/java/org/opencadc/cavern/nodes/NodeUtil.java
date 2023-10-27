@@ -99,6 +99,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
@@ -274,11 +275,7 @@ class NodeUtil {
             }
         }
 
-        // group permissions
-        LocalAuthority loc = new LocalAuthority();
-        URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
-        
-        AclCommandExecutor acl = new AclCommandExecutor(path, isDir);
+        final AclCommandExecutor acl = new AclCommandExecutor(path, isDir);
 
         // important: the calling library is responsible for merging changes into the current
         // state of the node, so this is now just setting what is supplied with minor optimization
