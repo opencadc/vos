@@ -99,6 +99,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
@@ -124,22 +125,6 @@ import org.opencadc.vospace.VOSURI;
 class NodeUtil {
 
     private static final Logger log = Logger.getLogger(NodeUtil.class);
-    
-    static final Set<URI> ADMIN_PROPS = new TreeSet<>(
-        Arrays.asList(
-            VOS.PROPERTY_URI_CREATOR,
-            VOS.PROPERTY_URI_QUOTA
-        )
-    );
-    
-    static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
-        Arrays.asList(
-            VOS.PROPERTY_URI_AVAILABLESPACE,
-            VOS.PROPERTY_URI_CONTENTLENGTH,
-            VOS.PROPERTY_URI_CREATION_DATE,
-            VOS.PROPERTY_URI_DATE
-        )
-    );
     
     // set of node properties that are stored in some special way 
     // and *not* as extended attributes
@@ -290,11 +275,7 @@ class NodeUtil {
             }
         }
 
-        // group permissions
-        LocalAuthority loc = new LocalAuthority();
-        URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
-        
-        AclCommandExecutor acl = new AclCommandExecutor(path, isDir);
+        final AclCommandExecutor acl = new AclCommandExecutor(path, isDir);
 
         // important: the calling library is responsible for merging changes into the current
         // state of the node, so this is now just setting what is supplied with minor optimization
@@ -546,10 +527,6 @@ class NodeUtil {
                     throw new RuntimeException("failed to map numeric GID(s) to GroupURI(s): " + ex.toString(), ex);
                 }
             }
-            //String mask = acl.getMask();
-            //if (mask != null) {
-            //    ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPMASK, mask));
-            //}
         }
 
         ret.isPublic = false;
@@ -560,14 +537,6 @@ class NodeUtil {
             }
         }
         
-        // set immutable flags
-        for (NodeProperty np : ret.getProperties()) {
-            if (IMMUTABLE_PROPS.contains(np.getKey())) {
-                np.readOnly = true;
-            } else {
-                np.readOnly = false;
-            }
-        }
         return ret;
     }
 

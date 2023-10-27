@@ -68,7 +68,6 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.xml.ContentConverter;
 import ca.nrc.cadc.xml.IterableContent;
@@ -80,7 +79,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -122,6 +121,7 @@ public class NodeWriter implements XmlProcessor {
     private String stylesheetURL = null;
     
     private Namespace vosNamespace;
+    private Set<URI> immutableProps;
 
     public NodeWriter() {
         this(VOSPACE_NS_20);
@@ -137,6 +137,10 @@ public class NodeWriter implements XmlProcessor {
     
     public String getStylesheetURL() {
         return stylesheetURL;
+    }
+    
+    public void setImmutableProperties(Set<URI> immutableProps) {
+        this.immutableProps = immutableProps;
     }
 
     /**
@@ -416,8 +420,15 @@ public class NodeWriter implements XmlProcessor {
                 property.setText(nodeProperty.getValue());
             }
             property.setAttribute("uri", nodeProperty.getKey().toASCIIString());
-            if (nodeProperty.readOnly != null) {
-                property.setAttribute("readOnly", Boolean.toString(nodeProperty.readOnly));
+            Boolean readOnly = null;
+            if (immutableProps != null && immutableProps.contains(nodeProperty.getKey())) {
+                readOnly = true;
+            } else if (nodeProperty.readOnly != null) {
+                readOnly = nodeProperty.readOnly;
+            }
+            if (readOnly != null && readOnly) {
+                // note: the && readOnly is an optimization to only add attr when it is true
+                property.setAttribute("readOnly", Boolean.toString(readOnly));
             }
             ret.addContent(property);
         }
