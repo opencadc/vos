@@ -127,6 +127,7 @@ public abstract class VOSTest {
     public final URL synctransServiceURL;
     public final URL transferServiceURL;
     public final URL recursiveDeleteServiceURL;
+    public final URL pkgServiceURL;
     public final Subject authSubject;
 
     protected VOSTest(URI resourceID, File testCert) {
@@ -149,6 +150,9 @@ public abstract class VOSTest {
 
         this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
         log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
+
+        this.pkgServiceURL = regClient.getServiceURL(resourceID, Standards.PKG_10, AuthMethod.CERT);
+        log.info(String.format("%s: %s", Standards.PKG_10, pkgServiceURL));
     }
 
     @Before
