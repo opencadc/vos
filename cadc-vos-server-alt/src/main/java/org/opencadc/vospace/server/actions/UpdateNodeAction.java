@@ -68,10 +68,14 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.net.HttpTransfer;
+import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
@@ -103,8 +107,6 @@ public class UpdateNodeAction extends NodeAction {
                     "invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
         }
 
-        // get parent container node
-        // TBD: resolveLinks=true?
         voSpaceAuthorizer.setDisregardLocks(true); // locks don't apply to properties updates
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getPath());
@@ -124,21 +126,27 @@ public class UpdateNodeAction extends NodeAction {
         }
         
         // merge change request
-        // TODO: add something to Node to differentiate if a Set<URI> property was missing or explicitly nil="true"
-        serverNode.getReadOnlyGroup().clear();
-        serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
-        serverNode.getReadWriteGroup().clear();
-        serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
+        if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
+            serverNode.getReadOnlyGroup().clear();
+            serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
+        } //else: no update
         
-        // for boolean fields, we have to assume null means no update rather than "set to null"
-        // unless we can gain access to the raw NodeProperty.isMarkedForDeletion() flag
-        // but null and false are equivalent so it's confusing but not a missing feature
-        if (clientNode.isPublic != null) {
+        if (clientNode.clearReadWriteGroups || !clientNode.getReadWriteGroup().isEmpty()) {
+            serverNode.getReadWriteGroup().clear();
+            serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
+        } //else: no update
+
+        if (clientNode.clearIsPublic) {
+            serverNode.isPublic = null;
+        } else if (clientNode.isPublic != null) {
             serverNode.isPublic = clientNode.isPublic;
-        }
-        if (clientNode.isLocked != null) {
+        } //else: no update
+        
+        if (clientNode.clearIsLocked) {
+            serverNode.isLocked = null;
+        } else if (clientNode.isLocked != null) {
             serverNode.isLocked = clientNode.isLocked;
-        }
+        } //else: no update
         
         if (serverNode instanceof ContainerNode) {
             ContainerNode scn = (ContainerNode) serverNode;
@@ -148,17 +156,21 @@ public class UpdateNodeAction extends NodeAction {
             }
         }
         
-        // TODO: chown: admin (root owner) can assign ownership to someone else
-        //if (clientNode.ownerID != null) {
-        //    serverNode.owner = ???
-        //}
-
-        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties());
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        // TODO: attempt to set owner if admin
+        
+        // pick out eligible admin-only props (they are immutable to normal users)
+        List<NodeProperty> allowedAdminProps = getAdminProps(clientNode, nodePersistence.getAdminProps(), caller);
+        // filter and merge request into serverNode
+        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties(), nodePersistence.getImmutableProps());
+        serverNode.getProperties().addAll(allowedAdminProps);
         Node storedNode = nodePersistence.put(serverNode);
+        storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
         
         // output modified node
         NodeWriter nodeWriter = getNodeWriter();
-        syncOutput.setHeader("Content-Type", getMediaType());
+        syncOutput.setCode(200); // ??
+        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
     }
