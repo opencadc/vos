@@ -4,8 +4,8 @@ plugins {
 }
 
 repositories {
-    mavenLocal()
     mavenCentral()
+    mavenLocal()
 }
 
 apply from: '../opencadc.gradle'
