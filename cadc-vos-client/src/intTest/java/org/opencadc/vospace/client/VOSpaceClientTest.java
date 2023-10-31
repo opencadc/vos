@@ -72,6 +72,7 @@ package org.opencadc.vospace.client;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
@@ -91,6 +92,9 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
@@ -313,6 +317,70 @@ public class VOSpaceClientTest extends VOSTest {
             } catch (IllegalArgumentException ex) {
                 log.info("caught expected: " + ex);
             }
+            
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
+    }
+    
+    @Test
+    public void fileRountTripTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        final File srcFile = FileUtil.getFileFromResource("round-trip.txt", VOSpaceClientTest.class);
+        DataNode orig = new DataNode(srcFile.getName());
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            Transfer push = new Transfer(Direction.pushToVoSpace);
+            push.getTargets().add(target.getURI());
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            push.getProtocols().add(p);
+            ClientTransfer putTrans = client.createTransfer(push);
+            putTrans.setFile(srcFile);
+            putTrans.run();
+            log.info("upload: " + putTrans.getPhase() + " " + putTrans.getThrowable());
+            Assert.assertNull(putTrans.getThrowable());
+            
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
+
+            // get file
+            File destFile = new File("build/tmp/" + srcFile.getName());
+            if (destFile.exists()) {
+                destFile.delete();
+            }
+            Assert.assertFalse(destFile.exists());
+            
+            Transfer pull = new Transfer(Direction.pullFromVoSpace);
+            pull.getTargets().add(target.getURI());
+            p = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pull.getProtocols().add(p);
+            ClientTransfer getTrans = client.createTransfer(pull);
+            getTrans.setFile(destFile);
+            getTrans.run();
+            log.info("download: " + getTrans.getPhase() + " " + getTrans.getThrowable());
+            Assert.assertNull(getTrans.getThrowable());
+            Assert.assertTrue(destFile.exists());
             
             // delete
             client.deleteNode(target.getPath());
