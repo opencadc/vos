@@ -7,6 +7,9 @@ The UIDs and GIDs come from an external source (TBD).
 Because the source of all data and metadata in `cavern` is the file system, users may interact with that file system 
 directly (through, for example, a volume mount) and `cavern` will reflect any changes that were made. 
 
+IMPORTANT: `cavern` acts as a file server and creates files and directories owned by other users; it _must_
+be run as root rather than the usual unprivileged `tomcat` user.
+
 ## deployment
 The `cavern` war file can be renamed at deployment time in order to support an alternate service name, including 
 introducing additional path elements. 
@@ -42,6 +45,9 @@ The `uws` pool manages (create, alter, drop) uws tables and manages the uws cont
 ### cadc-registry.properties
 See <a href="https://github.com/opencadc/reg/tree/master/cadc-registry">cadc-registry</a>.
 
+`cavern` requires an external service to provide mapping of user and group names to local POSIX uid and gid values
+using the `PosixMapperClient` in the <a href="https://github.com/opencadc/ac/tree/master/cadc-gms">cadc-gms</a> library.
+
 ### cavern.properties
 A `cavern.properties` file in /config is required to run this service.  The following keys are required:
 ```
@@ -51,6 +57,13 @@ org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
 org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content that could be mounted in other containers}
+
+# owner of root node has admin power
+org.opencadc.cavern.filesystem.rootOwner = {username}
+
+# (optional) uid and gid (default) of the root owner
+org.opencadc.cavern.filesystem.rootOwner = {uid}
+org.opencadc.cavern.filesystem.rootOwner = {gid}
 
 # (optional) keys to generate pre-auth URLs to cavern
 org.opencadc.cavern.privateKey = {private key file name}
@@ -66,11 +79,19 @@ The _filesystem.baseDir_ is the path to a base directory containing the `cavern`
 
 The _filesystem.subPath_ is the relative path to the node/file content that could be mounted in other containers.
 
-The optional _privateKey_ and _publicKey_ is used to sign pre-auth URLs (one-time token included in URL) so that 
-a `cavern` service does not have to repeat permission checks. If the not set, cavern cannot generate pre-auth URLs, 
-but it can generate plain URLs.
+The _filesystem.rootOwner_ is the username of the owner of the root container in the VOSpace. The root owner has some admin
+priviledges: can create allocations (create a container node owned by another user) and can set the quota property
+on such containers. Note: quota is not currently implemented in `cavern`.
 
-The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount. 
+The `cavern` service must be able to resolve the root owner username to a POSIX uid and gid pair during startup. If
+the configured IdentityManager does not suport priviledged access to user info, the correct values must be configured 
+using the optional _filesystem.rootOwner.uid_ and _filesystem.rootOwner.gid_ properties.
+
+The optional _privateKey_ and _publicKey_ is used to sign pre-auth URLs (one-time token included in URL) so that 
+a files endpoint does not have to repeat permission checks. If the not set, cavern cannot generate pre-auth URLs, 
+but it can generate plain URLs. TODO: provide info on how to generate a usable key pair.
+
+UNTESTED: The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount. 
 See <a href="https://github.com/opencadc/vos/tree/master/cavern-sshd">cavern-sshd</a> for cavern SSHD support.
 
 ### cadcproxy.pem (optional)
@@ -84,8 +105,10 @@ gradle clean build
 
 docker build -t cavern:latest -f Dockerfile .
 ```
-Then, update VERSION with the appropriate tags and run ./apply-version.sh
-
+## checking it
+```
+docker run --rm -it minoc:latest /bin/bash
+```
 ## running it
 ```
 docker run -d \
