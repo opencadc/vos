@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,79 +67,69 @@
 
 package org.opencadc.cavern.files;
 
-
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Capabilities;
 import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.PropertiesReader;
-import ca.nrc.cadc.util.Base64;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.LinkingException;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.server.PathResolver;
-import ca.nrc.cadc.vos.server.transfers.TransferGenerator;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.attribute.UserPrincipal;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.MissingResourceException;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.FileSystemNodePersistence;
-import org.opencadc.cavern.PosixIdentityManager;
+import org.opencadc.cavern.CavernConfig;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.Grant;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.permissions.TokenTool;
 import org.opencadc.permissions.WriteGrant;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkingException;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
+import org.opencadc.vospace.server.transfers.TransferGenerator;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 public class CavernURLGenerator implements TransferGenerator {
 
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
-    private static final String DEFAULT_CONFIG_DIR = System.getProperty("user.home") + "/config/";
-
-    private final FileSystemNodePersistence nodes;
     private final String sshServerBase;
-
-    public static final String KEY_SIGNATURE = "sig";
-    public static final String KEY_META = "meta";
-    private static final String KEY_META_NODE = "node";
-    private static final String KEY_META_DIRECTION = "dir";
+    private final MultiValuedProperties config;
     
-    private static final String PUB_KEY_FILENAME = "CavernPub.key";
-    private static final String PRIV_KEY_FILENAME = "CavernPriv.key";
-    private static final String ANON_USER = "anon";
+    private final FileSystemNodePersistence nodePersistence;
+    private final VOSpaceAuthorizer authorizer;
+    private Capability filesCap;
 
-
-    public CavernURLGenerator() {
-        this.nodes = new FileSystemNodePersistence();
-        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        String sb = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
+    public CavernURLGenerator(FileSystemNodePersistence nodePersistence) {
+        this.nodePersistence = nodePersistence;
+        this.authorizer = new VOSpaceAuthorizer(nodePersistence);
+        this.config = nodePersistence.getConfig().getProperties();
+        
+        String sb = config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
         // make sure server bas ends with /
         if (sb != null && !sb.endsWith("/")) {
             sb = sb + "/";
@@ -147,191 +137,182 @@ public class CavernURLGenerator implements TransferGenerator {
         this.sshServerBase = sb;
     }
 
-    // for testing
-    public CavernURLGenerator(String root) {
-        this.nodes = new FileSystemNodePersistence(root);
-        PropertiesReader pr = new PropertiesReader(FileSystemNodePersistence.CONFIG_FILE);
-        this.sshServerBase = pr.getFirstPropertyValue("SSHFS_SERVER_BASE");
-    }
-
     @Override
-    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, View view,
-            Job job, List<Parameter> additionalParams)
-            throws FileNotFoundException, TransientException {
+    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams) throws Exception {
+        log.debug("getEndpoints: " + target);
         if (target == null) {
             throw new IllegalArgumentException("target is required");
         }
         if (transfer == null) {
             throw new IllegalArgumentException("transfer is required");
         }
-
+        List<Protocol> ret = null;
         try {
-            // get the node to check the type - consider changing this API
-            // so that the node instead of the URI is passed in so this step
-            // can be avoided.
-            FileSystem fs = FileSystems.getDefault();
-            PathResolver ps = new PathResolver(nodes, true);
-            Node node = ps.resolveWithReadPermissionCheck(target, null, true);
+            Direction dir = transfer.getDirection();
+            PathResolver ps = new PathResolver(nodePersistence, authorizer, true);
+            Node n = ps.getNode(target.getParentURI().getPath());
+            // assume not null and Container already checked by caller (TransferRunner)
+            ContainerNode parent = (ContainerNode) n;
+            Node node = nodePersistence.get(parent, target.getName());
 
-            List<Protocol> ret = new ArrayList<>();
-            List<URI> uris;
-            for (Protocol protocol : transfer.getProtocols()) {
-                log.debug("addressing protocol: " + protocol);
-                Subject currentSubject = AuthenticationUtil.getCurrentSubject();
-                if (node instanceof ContainerNode) {
-                    UserPrincipal caller = nodes.getPosixUser(currentSubject);
-                    uris = handleContainerMount(target, (ContainerNode) node, protocol, caller);
-                } else if (node instanceof DataNode) {
-                    uris = handleDataNode(target, (DataNode) node, protocol, currentSubject);
-                } else {
-                    throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer " 
-                        + node.getUri());
-                }
-                for (URI u : uris) {
-                    Protocol p = new Protocol(protocol.getUri(), u.toASCIIString(), null);
-                    p.setSecurityMethod(protocol.getSecurityMethod());
-                    ret.add(p);
-                }
+            Subject currentSubject = AuthenticationUtil.getCurrentSubject();
+            if (Direction.pushToVoSpace.equals(dir) && node == null) {
+                // create new data node?? this currently does not happen because the library
+                // creates the DataNode
+                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
+            } else if (node instanceof DataNode) {
+                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
+            } else if (node instanceof ContainerNode) {
+                ret = handleContainerMount(target.getPath(), transfer, currentSubject);
+            } else {
+                throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer "
+                    + target.getPath());
             }
-            return ret;
         } catch (NodeNotFoundException ex) {
             throw new FileNotFoundException(target.getPath());
-        } catch (IOException ex) {
-            throw new RuntimeException("OOPS: failed to resolve subject to posix user", ex);
         } catch (LinkingException ex) {
             throw new RuntimeException("OOPS: failed to resolve link?", ex);
-        }
-    }
-
-
-
-    private List<URI> handleDataNode(VOSURI target, DataNode node, Protocol protocol, Subject s) {
-        String scheme = null;
-        Direction dir = null;
-
-        try {
-            // Used in TokenTool.generateToken()
-            Class<? extends Grant> grantClass = null;
-
-            switch (protocol.getUri()) {
-                /**
-                 * HTTP not currently supported
-                case VOS.PROTOCOL_HTTP_GET:
-                    scheme = "http";
-                    dir = Direction.pullFromVoSpace;
-                    break;
-                case VOS.PROTOCOL_HTTP_PUT:
-                    scheme = "http";
-                    dir = Direction.pushToVoSpace;
-                    break;
-                */
-                case VOS.PROTOCOL_HTTPS_GET:
-                    scheme = "https";
-                    dir = Direction.pullFromVoSpace;
-                    grantClass = ReadGrant.class;
-                    break;
-                case VOS.PROTOCOL_HTTPS_PUT:
-                    scheme = "https";
-                    dir = Direction.pushToVoSpace;
-                    grantClass = WriteGrant.class;
-                    break;
-           }
-
-            List<URL> baseURLs = getBaseURLs(target, protocol.getSecurityMethod(), scheme);
-            if (baseURLs == null || baseURLs.isEmpty()) {
-                log.debug("no matching interfaces ");
-                return new ArrayList<URI>(0);
-            }
-
-            if (dir == null) {
-                log.debug("no matching protocols");
-                return new ArrayList<URI>(0);
-            }
-
-            // Use TokenTool to generate a preauth token
-            File privateKeyFile = findFile(PRIV_KEY_FILENAME);
-            File pubKeyFile = findFile(PUB_KEY_FILENAME);
-
-            TokenTool gen = new TokenTool(pubKeyFile, privateKeyFile);
-
-            // Format of token is <base64 url encoded meta>.<base64 url encoded signature>
-            Set<String> authUsers = AuthenticationUtil.getUseridsFromSubject();
-            String callingUser = "";
-            if (authUsers.size() > 0) {
-                callingUser = authUsers.iterator().next();
-            } else {
-                callingUser = ANON_USER;
-            }
-
-            // Use this function in case the incoming URI uses '!' instead of '~'
-            // in the authority.
-            // This will translate the URI to use '~' in it's authority.
-            log.debug("URI passed in :" + target.getURI());
-            VOSURI commonFormURI = target.getCommonFormURI();
-            log.debug("common form URI used to generate token: :" + commonFormURI.getURI());
-            String token = gen.generateToken(commonFormURI.getURI(), grantClass, callingUser);
-            String encodedToken = new String(Base64.encode(token.getBytes()));
-
-            // build the request path
-            StringBuilder path = new StringBuilder();
-            path.append("/");
-            path.append(encodedToken);
-            path.append("/");
-
-            if (Direction.pushToVoSpace.equals(dir)) {
-                // put to resolved path
-                path.append(node.getUri().getPath());
-            } else {
-                // get from unresolved path so filename at end of url is correct
-                path.append(target.getURI().getPath());
-            }
-            log.debug("Created request path: " + path.toString());
-
-            // add the request path to each of the base URLs
-            List<URI> returnList = new ArrayList<URI>(baseURLs.size());
-            for (URL baseURL : baseURLs) {
-                URI next;
-                try {
-                    next = new URI(baseURL.toString() + path.toString());
-                    log.debug("Added url: " + next);
-                    returnList.add(next);
-                } catch (URISyntaxException e) {
-                    throw new IllegalStateException("Could not generate transfer endpoint uri", e);
-                }
-            }
-
-            return returnList;
-        }
-        finally {
-        }
-    }
-    
-    private List<URI> handleContainerMount(VOSURI target, ContainerNode node, Protocol protocol, UserPrincipal caller) {
-        if (sshServerBase == null) {
-            throw new UnsupportedOperationException("CONFIG: sshfs mount not configured in " + FileSystemNodePersistence.CONFIG_FILE);
-        }
-        List<URI> ret = new ArrayList<URI>();
-        StringBuilder sb = new StringBuilder();
-        sb.append("sshfs:");
-        sb.append(caller.getName()).append("@");
-        sb.append(sshServerBase);
-        sb.append(node.getUri().getPath().substring(1)); // sshServerBase includes the initial /
-        try {
-            URI u = new URI(sb.toString());
-            ret.add(u);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
         }
         return ret;
     }
 
-    public VOSURI validateToken(String token, VOSURI targetVOSURI, Direction direction) throws AccessControlException, IOException {
+    private List<Protocol> handleDataNode(ContainerNode parent, String name, Transfer trans, Subject s) {
+        log.debug("handleDataNode: " + parent +  " " + name);
 
+        try {
+            initFilesCap();
+        } catch (IOException | ResourceNotFoundException ex) {
+            throw new RuntimeException("CONFIG: failed to find files endpoint via registry self-lookup (ugh)", ex);
+        }
+        
+        Direction dir = trans.getDirection();
+        final Map<String,String> params = new TreeMap<>(); // empty for now
+
+        // Use TokenTool to generate a preauth token
+        File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
+        File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
+        TokenTool gen = null; 
+        if (pubKeyFile != null && privateKeyFile != null) {
+            log.debug("found keys - creating TokenTool");
+            gen = new TokenTool(pubKeyFile, privateKeyFile);
+        }
+        
+        boolean allowAnon = true;
+        Class<? extends Grant> grantClass = null;
+        if (Direction.pullFromVoSpace.equals(dir)) {
+            grantClass = ReadGrant.class;
+        } else if (Direction.pushToVoSpace.equals(dir)) {
+            grantClass = WriteGrant.class;
+            allowAnon = false; // never really anon write
+        } else {
+            throw new UnsupportedOperationException("unsupported direction: " + dir);
+        }
+
+        IdentityManager im = nodePersistence.getIdentityManager();
+        Set<URI> supportedSecurityMethods = im.getSecurityMethods();
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        Object userObject = im.toOwner(caller); // posix
+        String callingUser = (userObject == null ? null : userObject.toString()); // uid, null for anon is OK
+        
+        LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
+        VOSURI vp = loc.getURI(parent);
+        String parentPath = vp.getPath();
+        // this should be the resolved target URL
+        VOSURI target = new VOSURI(nodePersistence.getResourceID(), parentPath + "/" + name);
+        
+        List<Protocol> returnList = new ArrayList<>();
+        for (Protocol p : trans.getProtocols()) {
+            log.debug("requested protocol: " + p);
+            URI secM = p.getSecurityMethod();
+            if (secM == null) {
+                secM = Standards.SECURITY_METHOD_ANON;
+            }
+            Interface iface = filesCap.findInterface(secM);
+            if (iface != null && supportedSecurityMethods.contains(secM)) {
+                String baseURL = iface.getAccessURL().getURL().toExternalForm();
+                boolean anon = Standards.SECURITY_METHOD_ANON.equals(secM);
+                if (gen != null && anon) {
+                    // create an additional anon with preauth token
+                    StringBuilder sb2 = new StringBuilder(baseURL);
+
+                    // Use CommonFormURI in case the incoming URI uses '!' instead of '~' in the authority.
+                    URI resourceURI = target.getCommonFormURI().getURI();
+                    String token = gen.generateToken(resourceURI, grantClass, callingUser);
+                    sb2.append("/preauth:").append(token);
+                    sb2.append(target.getPath());
+                    Protocol pre = new Protocol(p.getUri(), sb2.toString(), params);
+                    log.debug("added: " + pre);
+                    returnList.add(pre);
+                }
+                if (allowAnon || !anon) {
+                    StringBuilder sb = new StringBuilder(baseURL);
+                    sb.append(target.getPath());
+                    String endpoint = sb.toString();
+                    Protocol pe = new Protocol(p.getUri(), endpoint, params);
+                    pe.setSecurityMethod(p.getSecurityMethod());
+                    log.debug("added: " + pe);
+                    returnList.add(pe);
+                }
+            } else {
+                log.debug("unsupported security method: " + p.getSecurityMethod() + " -- SKIP");
+            }
+        }
+        return returnList;
+    }
+    
+    private List<Protocol> handleContainerMount(String path, Transfer trans, Subject caller) {
+        Direction dir = trans.getDirection();
+        final Map<String,String> params = new TreeMap<>(); // empty for now
+        
+        PosixPrincipal pp = nodePersistence.getIdentityManager().toPosixPrincipal(caller);
+        List<Protocol> ret = new ArrayList<>();
+        for (Protocol p : trans.getProtocols()) {
+            if (VOS.PROTOCOL_SSHFS.equals(p.getUri())) {
+                if (sshServerBase == null) {
+                    throw new UnsupportedOperationException("sshfs mount not configured");
+                }
+                // TODO: should check p.securityMethod vs allowed auth (pubkey? password?)
+                StringBuilder sb = new StringBuilder();
+                sb.append("sshfs:");
+                sb.append(pp.username).append("@");
+                sb.append(sshServerBase);
+                if (sb.charAt(sb.length() - 1) != '/') {
+                    sb.append("/");
+                }
+                if (path.charAt(0) == '/') {
+                    path = path.substring(1);
+                }
+                sb.append(path);
+                try {
+                    URI u = new URI(sb.toString());
+                    Protocol pe = new Protocol(p.getUri(), sb.toString(), params);
+                    pe.setSecurityMethod(p.getSecurityMethod());
+                    ret.add(pe);
+                } catch (URISyntaxException ex) {
+                    throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
+                }
+            } else {
+                log.debug("unsupported container protocol: " + p.getUri());
+            }
+        }
+        return ret;
+    }
+
+    // return the user
+    Object validateToken(String token, VOSURI targetVOSURI, Class grantClass)
+            throws AccessControlException, IOException {
+
+        // Use TokenTool to generate a preauth token
+        File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
+        File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
+        TokenTool gen = null; 
+        if (pubKeyFile != null && privateKeyFile != null) {
+            gen = new TokenTool(pubKeyFile, privateKeyFile);
+        } else {
+            throw new AccessControlException("unable to validate preauth token: no keys configuired");
+        }
+        
         log.debug("url encoded token: " + token);
-        log.debug("direction: " + direction.toString());
-
-        String decodedTokenbytes = new String(Base64.decode(token));
-        log.debug("url decoded token: " + decodedTokenbytes);
 
         // Use this function in case the incoming URI uses '!' instead of '~'
         // in the authority.
@@ -339,73 +320,38 @@ public class CavernURLGenerator implements TransferGenerator {
         VOSURI commonFormURI = targetVOSURI.getCommonFormURI();
         log.debug("targetURI passed in: " + targetVOSURI.toString());
         log.debug("targetURI for validation: " + commonFormURI.toString());
-        if (token != null) {
 
-            File publicKeyFile = findFile(PUB_KEY_FILENAME);
-            TokenTool tk = new TokenTool(publicKeyFile);
+        File publicKeyFile = findFile(CavernConfig.PUBLIC_KEY);
+        TokenTool tk = new TokenTool(publicKeyFile);
 
-            Class<? extends Grant> grantClass = null;
-            if (Direction.pushToVoSpace.equals(direction)) {
-                grantClass = WriteGrant.class;
-            } else if (Direction.pullFromVoSpace.equals(direction)) {
-                grantClass = ReadGrant.class;
-            }
+        log.debug("grant class: " + grantClass);
 
-            log.debug("grant class: " + grantClass);
-
-            // This will throw an AccessControlException if something is wrong with the
-            // grantClass or targetURI. Can return null if user isn't in the meta key=value set
-            String tokenUser = tk.validateToken(decodedTokenbytes, commonFormURI.getURI(), grantClass);
-
-            if (tokenUser == null) {
-                throw new AccessControlException("invalid token");
-            }
-
-            return commonFormURI;
-
-        }
-
-        throw new IllegalArgumentException("Missing node URI");
-    }
-
-    List<URL> getBaseURLs(VOSURI target, URI securityMethod, String scheme) {
-        // find all the base endpoints
+        String tokenUser = tk.validateToken(token, commonFormURI.getURI(), grantClass);
         
-        URI serviceURI = target.getServiceURI();
-        List<URL> baseURLs = new ArrayList<URL>();
-        try {
-            RegistryClient rc = new RegistryClient();
-            Capabilities caps = rc.getCapabilities(serviceURI);
-            Capability cap = caps.findCapability(Standards.DATA_10);
-            List<Interface> interfaces = cap.getInterfaces();
-            for (Interface ifc : interfaces) {
-                log.debug("securityMethod match? " + securityMethod + " vs " + ifc.getSecurityMethods().size());
-                log.debug("scheme match? " + scheme + " vs " + ifc.getAccessURL().getURL().getProtocol());
-                if (securityMethod == null 
-                        && (ifc.getSecurityMethods().isEmpty() || ifc.getSecurityMethods().contains(Standards.SECURITY_METHOD_ANON)
-                        && ifc.getAccessURL().getURL().getProtocol().equals(scheme))) {
-                    baseURLs.add(ifc.getAccessURL().getURL());
-                    log.debug("Added anon interface");
-                } else if (ifc.getSecurityMethods().contains(securityMethod)
-                        && ifc.getAccessURL().getURL().getProtocol().equals(scheme)) {
-                    baseURLs.add(ifc.getAccessURL().getURL());
-                    log.debug("Added auth interface.");
-                }
-            }
-        } catch (IOException | ResourceNotFoundException e) {
-            throw new IllegalStateException("Error creating transfer urls", e);
-        }
-        return baseURLs;
+        return tokenUser;
     }
 
-    protected static final File findFile(String fname) throws MissingResourceException {
-        File ret = new File(DEFAULT_CONFIG_DIR, fname);
+    void initFilesCap() throws IOException, ResourceNotFoundException {
+        if (filesCap == null) {
+            // ugh: self lookup
+            RegistryClient reg = new RegistryClient();
+            Capabilities caps = reg.getCapabilities(nodePersistence.getResourceID());
+            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES_20);
+        }
+    }
+    
+    protected File findFile(String key) {
+        String value = this.config.getFirstPropertyValue(key);
+        if (value == null) {
+            return null;
+        }
+        File ret = new File(CavernConfig.DEFAULT_CONFIG_DIR, value);
         if (!ret.exists()) {
-            ret = FileUtil.getFileFromResource(fname, CavernURLGenerator.class);
+            throw new IllegalStateException(String.format("CONFIG: file %s not found for property %s",
+                    ret.getAbsolutePath(), key));
         }
         return ret;
     }
-
 }
 
 

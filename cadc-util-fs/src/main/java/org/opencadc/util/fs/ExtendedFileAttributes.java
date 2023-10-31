@@ -76,6 +76,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
 
+import java.util.Map;
+import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 /**
@@ -88,11 +90,12 @@ public class ExtendedFileAttributes {
     private static final Logger log = Logger.getLogger(ExtendedFileAttributes.class);
     
     /**
-     * Set the attribute for the current path. If attributeValue is null, the attribute will be deleted. 
+     * Set the attribute for the current path. If attributeValue is null, the attribute will be deleted.
+     * 
      * @param path   The path where the attribute will be set. Must not be null.
      * @param attributeKey  The name of the attribute to be set. Must not be null.
      * @param attributeValue     The value of the attribute to be set. A null value means the attribute is to be deleted.
-     * @throws IOException  If setting failed.
+     * @throws IOException  if setting attribute failed
      */
     public static void setFileAttribute(Path path, String attributeKey, String attributeValue) throws IOException {
         if (path == null || attributeKey == null) {
@@ -118,12 +121,14 @@ public class ExtendedFileAttributes {
     }
     
     /**
-     * Get the value of specified attribute for the current path. 
+     * Get the value of specified attribute for the current path.
+     * 
      * @param path   The path where the attribute resides in. Must not be null.
-     * @param attributeKey  The name of the attribute to get. Must not be null.
-     * @throws IOException  If getting failed.
+     * @param attributeName  The name of the attribute to get. Must not be null.
+     * @return attribute value or null if not set
+     * @throws IOException  if reading attribute failed
      */
-    static String getFileAttribute(Path path, String attributeName) throws IOException {
+    public static String getFileAttribute(Path path, String attributeName) throws IOException {
         if (path == null || attributeName == null) {
             throw new IllegalArgumentException("path or attributeName cannot be null");
         }
@@ -140,5 +145,33 @@ public class ExtendedFileAttributes {
             log.debug("assume no such attr: " + ex);
             return null;
         }
+    }
+    
+    /**
+     * Get all user-defined attributes.
+     * 
+     * @param path the target file
+     * @return map of attribute name:value
+     * @throws IOException if reading attributes failed
+     */
+    public static Map<String,String> getAttributes(Path path) throws IOException {
+        if (path == null) {
+            throw new IllegalArgumentException("path or attributeName cannot be null");
+        }
+        Map<String,String> ret = new TreeMap<>();
+        try {
+            UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
+                UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+            for (String key : udv.list()) {
+                int sz = udv.size(key);
+                ByteBuffer buf = ByteBuffer.allocate(2 * sz);
+                udv.read(key, buf);
+                String val = new String(buf.array(), Charset.forName("UTF-8")).trim();
+                ret.put(key, val);
+            }
+        } catch (FileSystemException ex) {
+            log.debug("assume no such attr: " + ex);
+        }
+        return ret;
     }
 }

@@ -39,6 +39,8 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.rest.SyncOutput;
 import ca.nrc.cadc.util.ThrowableUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -49,19 +51,24 @@ import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.util.JobLogInfo;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-
 import java.io.FileNotFoundException;
 import java.security.AccessControlException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Class to set node properties on the target node and all child
@@ -80,12 +87,28 @@ public class RecursiveSetNodeRunner implements JobRunner {
     private Job job;
     private JobUpdater jobUpdater;
     private long lastPhaseCheck = System.currentTimeMillis();
-    private VOSpaceAuthorizer vospaceAuthorizer;
+    private VOSpaceAuthorizer authorizer;
     private NodePersistence nodePersistence;
     private long updateCount = 0;
     private long errorCount = 0;
     private JobLogInfo logInfo;
 
+    public RecursiveSetNodeRunner() {
+        
+    }
+    
+    @Override
+    public void setAppName(String appName) {
+        String jndiNodePersistence = appName + ".nodePersistence";
+        try {
+            Context ctx = new InitialContext();
+            this.nodePersistence = (NodePersistence) ctx.lookup(jndiNodePersistence);
+            this.authorizer = new VOSpaceAuthorizer(nodePersistence);        
+        } catch (Exception oops) {
+            throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
+        }
+    }
+    
     @Override
     public void setJobUpdater(JobUpdater jobUpdater) {
         this.jobUpdater = jobUpdater;
@@ -133,11 +156,14 @@ public class RecursiveSetNodeRunner implements JobRunner {
 
             JobInfo jobInfo = job.getJobInfo();
             Node node = null;
+            VOSURI target = null;
             if ( jobInfo != null && jobInfo.getContent() != null && !jobInfo.getContent().isEmpty()
                 && jobInfo.getContentType().equalsIgnoreCase("text/xml") ) { 
                 log.debug("recursive set node XML: \n\n" + jobInfo.getContent());
                 NodeReader reader = new NodeReader();
-                node = reader.read(jobInfo.getContent());
+                NodeReader.NodeReaderResult res = reader.read(jobInfo.getContent());
+                node = res.node;
+                target = res.vosURI;
             }
 
             log.debug("node: " + node);
@@ -146,18 +172,14 @@ public class RecursiveSetNodeRunner implements JobRunner {
                 return;
             }
 
-            List<NodeProperty> newProperties = node.getProperties();
-
-            // Create the node persistence and authorizer objects
-            nodePersistence = new FileSystemNodePersistence();
-            vospaceAuthorizer = new VOSpaceAuthorizer();
-            vospaceAuthorizer.setNodePersistence(nodePersistence);
-            vospaceAuthorizer.setDisregardLocks(true);
+            Set<NodeProperty> newProperties = node.getProperties();
 
             // get the persistent version of the node
-            Node persistentNode = (Node) vospaceAuthorizer.getReadPermission(node.getUri().getURI());
+            PathResolver resolver = new PathResolver(nodePersistence, authorizer, true);
+            Node persistentNode = resolver.getNode(target.getPath());
 
-            applyNodeProperties(persistentNode, newProperties);
+            Subject caller = AuthenticationUtil.getCurrentSubject();
+            recursiveUpdateNodeProperties(persistentNode, newProperties, caller);
 
             // set the appropriate end phase and error summary
             ErrorSummary error = null;
@@ -213,16 +235,14 @@ public class RecursiveSetNodeRunner implements JobRunner {
      * @param properties The new properties
      * @throws Exception
      */
-    private void applyNodeProperties(Node node, List<NodeProperty> properties)
+    private void recursiveUpdateNodeProperties(Node node, Set<NodeProperty> properties, Subject subject)
         throws Exception {
-        if ( Thread.currentThread().isInterrupted()) {
-            log.debug("INTERRUPT");
+        if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException();
         }
+        
         // check the write permission
-        try {
-            vospaceAuthorizer.getWritePermission(node);
-        } catch (AccessControlException e) {
+        if (!authorizer.hasSingleNodeWritePermission(node, subject)) {
             // don't apply the update for this node
             errorCount++;
             return;
@@ -233,8 +253,11 @@ public class RecursiveSetNodeRunner implements JobRunner {
 
         // apply the node property changes
         try {
-            log.debug("Applying node properties to: " + node.getUri());
-            nodePersistence.updateProperties(node, properties);
+            log.debug("Applying node properties to: " + node);
+            //nodePersistence.updateProperties(node, properties);
+            if (true) {
+                throw new UnsupportedOperationException("TODO: merge props using common code from UpdateNodeAction");
+            }
             updateCount++;
         } catch (Exception e) {
             // unexepected error, abort updates for this node
@@ -243,34 +266,27 @@ public class RecursiveSetNodeRunner implements JobRunner {
             return;
         }
 
-        // apply updates to the children
+        // apply updates to the children recursively
         if (node instanceof ContainerNode) {
             ContainerNode container = (ContainerNode) node;
 
-            // loop through the batches of children
-            boolean firstBatch = true;
-            VOSURI lastChildURI = null;
-            while (firstBatch || lastChildURI != null) {
-                firstBatch = false;
-                log.debug("getChildren of " + container.getUri() + " from " + lastChildURI);
-                nodePersistence.getChildren(container, lastChildURI, CHILD_BATCH_SIZE);
-
-                for (Node child : container.getNodes()) {
-                    // don't update the first child if this is not the
-                    // first batch request - it's been done already.
-                    if (lastChildURI == null || !child.getUri().equals(lastChildURI)) {
-                        this.applyNodeProperties(child, properties);
+            // collect child containers for later
+            List<ContainerNode> childContainers = new ArrayList<>();
+            
+            try (ResourceIterator<Node> iter = nodePersistence.iterator(container, null, null)) {
+                while (iter.hasNext()) {
+                    Node n = iter.next();
+                    if (n instanceof ContainerNode) {
+                        ContainerNode cn = (ContainerNode) n;
+                        childContainers.add(cn);
+                    } else {
+                        recursiveUpdateNodeProperties(n, properties, subject);
                     }
                 }
-
-                if (container.getNodes().size() == CHILD_BATCH_SIZE) {
-                    lastChildURI = container.getNodes().get(CHILD_BATCH_SIZE - 1).getUri();
-                } else {
-                    lastChildURI = null;
-                }
-
-                // remove already completed children
-                container.getNodes().clear();
+            }
+            // now recurse so we only have one open iterator at a time
+            for (ContainerNode cn : childContainers) {
+                recursiveUpdateNodeProperties(cn, properties, subject);
             }
         }
     }
@@ -297,8 +313,8 @@ public class RecursiveSetNodeRunner implements JobRunner {
             }
 
             if (!ExecutionPhase.EXECUTING.equals(ep)) {
-                throw new IllegalStateException("Job should be in phase " +
-                    ExecutionPhase.EXECUTING + " but is in phase " + ep);
+                throw new IllegalStateException("Job should be in phase " + ExecutionPhase.EXECUTING 
+                    + " but is in phase " + ep);
             }
         }
     }

@@ -69,9 +69,18 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.rest.InitAction;
+import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
+import org.opencadc.vospace.server.NodePersistence;
 
 /**
  * Based on similar files from storage-inventory (luskan, by example)
@@ -80,19 +89,54 @@ import org.apache.log4j.Logger;
 public class CavernInitAction extends InitAction {
     private static final Logger log = Logger.getLogger(CavernInitAction.class);
 
+    private String jndiNodePersistence;
+    
     public CavernInitAction() {
     }
 
     @Override
     public void doInit() {
+        initNodePersistence();
+        initDatabase();
+    }
+    
+    private void initDatabase() {
         try {
             // Init UWS database
             DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
             InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");
             uwsi.doInit();
-
-        } catch (Exception ex) {
+        }  catch (Exception ex) {
             throw new RuntimeException("INIT FAIL", ex);
+        }
+    }
+    
+    private void initNodePersistence() {
+        this.jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
+        try {
+            Context ctx = new InitialContext();
+            try {
+                ctx.unbind(jndiNodePersistence);
+            } catch (NamingException ignore) {
+                log.debug("unbind previous JNDI key (" + jndiNodePersistence + ") failed... ignoring");
+            }
+            NodePersistence npi = new FileSystemNodePersistence();
+            ctx.bind(jndiNodePersistence, npi);
+
+            log.info("created JNDI key: " + jndiNodePersistence + " impl: " + npi.getClass().getName());
+        } catch (NamingException ex) {
+            log.error("Failed to create JNDI Key " + jndiNodePersistence, ex);
+        }
+    }
+
+    @Override
+    public void doShutdown() {
+        try {
+            Context ctx = new InitialContext();
+            ctx.unbind(jndiNodePersistence);
+            jndiNodePersistence = null;
+        } catch (NamingException oops) {
+            log.error("unbind failed during destroy", oops);
         }
     }
 }

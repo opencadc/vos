@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -63,18 +63,19 @@
 *                                       <http://www.gnu.org/licenses/>.
 *
 ************************************************************************
-*/
+ */
 
 package org.opencadc.util.fs;
-
 
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -93,15 +94,18 @@ import org.junit.Test;
  * @author pdowler
  */
 public class AclCommandExecutorTest {
+
     private static final Logger log = Logger.getLogger(AclCommandExecutorTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.util.fs", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.exec", Level.DEBUG);
     }
 
-    static final String ROOT = System.getProperty("java.io.tmpdir") + "/cavern-tests";
+    static final String ROOT = "build/tmp/acl-tests";
 
-    static final String GROUP = System.getProperty("user.name");
+    static final String RESOLVABLE_RO_GROUP = "users";
+    static final String RESOLVABLE_RW_GROUP = "adm";
 
     static {
         try {
@@ -113,145 +117,74 @@ public class AclCommandExecutorTest {
             throw new RuntimeException("TEST SETUP: failed to create test dir: " + ROOT, ex);
         }
     }
-    
-    public AclCommandExecutorTest() { 
-    }
-    
-    // TODO: acl specific codes will be moved to a library, enable the test after
-    //@Ignore
-    @Test
-    public void testFileACL() {
-        try {
-            String name = "testFileACL-" + UUID.randomUUID().toString();
 
-            FileSystem fs = FileSystems.getDefault();
-            Path target = fs.getPath(ROOT, name);
-            
-            Set<PosixFilePermission> perms = new HashSet<>();
-            perms.add(PosixFilePermission.OWNER_READ);
-            perms.add(PosixFilePermission.OWNER_WRITE);
-            
-            Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
-            
-            UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
-            AclCommandExecutor acl = new AclCommandExecutor(target, users);
-            GroupPrincipal group = users.lookupPrincipalByGroupName(GROUP);
-            
-            // RO
-            acl.setReadOnlyACL(group, false);
-            
-            List<GroupPrincipal> roActual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("read-only", roActual);
-            Assert.assertTrue("read-only", roActual.contains(group));
-
-            List<GroupPrincipal> rwActual = acl.getReadWriteACL(false);
-            Assert.assertNotNull("null read-write", rwActual);
-            Assert.assertTrue(rwActual.isEmpty());
-            
-            acl.clearACL();
-            roActual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("clear read-only", roActual);
-            Assert.assertTrue(roActual.isEmpty());
-            
-            // RW
-            acl.setReadWriteACL(group, false);
-            
-            rwActual = acl.getReadWriteACL(false);
-            Assert.assertNotNull("read-write", rwActual);
-            Assert.assertTrue("read-write", rwActual.contains(group));
-            
-            roActual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("null read-only", roActual);
-            Assert.assertTrue(roActual.isEmpty());
-            
-            acl.clearACL();
-            rwActual = acl.getReadWriteACL(false);
-            Assert.assertNotNull("clear read-write", rwActual);
-            Assert.assertTrue(rwActual.isEmpty());
-            
-            // 
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
-    
-    // TODO: acl specific codes will be moved to a library, enable the test after
-    //@Ignore
-    @Test
-    public void testDirectoryACL() {
-        try {
-            String name = "testDirectoryACL-" + UUID.randomUUID().toString();
-
-            FileSystem fs = FileSystems.getDefault();
-            Path target = fs.getPath(ROOT, name);
-            
-            Set<PosixFilePermission> perms = new HashSet<>();
-            perms.add(PosixFilePermission.OWNER_READ);
-            perms.add(PosixFilePermission.OWNER_WRITE);
-            
-            Files.createDirectory(target, PosixFilePermissions.asFileAttribute(perms));
-            
-            UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
-            AclCommandExecutor acl = new AclCommandExecutor(target, users);
-            GroupPrincipal group = users.lookupPrincipalByGroupName(GROUP);
-            acl.setReadOnlyACL(group, false);
-
-            List<GroupPrincipal> actual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("read-only", actual);
-            Assert.assertTrue("read-only", actual.contains(group));
-            
-            acl.clearACL();
-            actual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("clear read-only", actual);
-            Assert.assertTrue(actual.isEmpty());
-            
-            acl.setReadWriteACL(group, false);
-            
-            actual = acl.getReadWriteACL(false);
-            Assert.assertNotNull("read-write", actual);
-            Assert.assertTrue("read-write", actual.contains(group));
-            
-            acl.clearACL();
-            actual = acl.getReadOnlyACL(false);
-            Assert.assertNotNull("clear read-write", actual);
-            Assert.assertTrue(actual.isEmpty());
-            
-        } catch (Exception unexpected) {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
+    public AclCommandExecutorTest() {
     }
 
     @Test
-    public void testSetFileACL() throws Exception {
-        String name = "testSetFileACL-" + UUID.randomUUID();
-
-        FileSystem fs = FileSystems.getDefault();
-        Path target = fs.getPath(ROOT, name);
-
+    public void testRawFileACL() throws Exception {
         Set<PosixFilePermission> perms = new HashSet<>();
         perms.add(PosixFilePermission.OWNER_READ);
         perms.add(PosixFilePermission.OWNER_WRITE);
+        // typical on linux systems when uid==gid: the expectedCommand expects it
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_WRITE);
 
+        String name = "testRawFileACL-" + UUID.randomUUID();
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name).toAbsolutePath();
+        
         Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
+        
+        testRawACL(target, false);
+    }
+    
+    @Test
+    public void testRawDirACL() throws Exception {
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        // typical on linux systems when uid==gid: the expectedCommand expects it
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_WRITE);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+
+        String name = "testRawDirACL-" + UUID.randomUUID();
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name).toAbsolutePath();
+        
+        Files.createDirectory(target, PosixFilePermissions.asFileAttribute(perms));
+        
+        testRawACL(target, true);
+    }
+    
+    private void testRawACL(Path target, boolean isDir) throws Exception {
+        Integer g1 = 123456;
+        Integer g2 = 234567;
+        Integer g3 = 654321;
 
         // Use LinkedHashSet to have a predictable order.
-        final Set<GroupPrincipal> readGroupPrincipals = new LinkedHashSet<>();
-        readGroupPrincipals.add(() -> "GROUPA");
-        readGroupPrincipals.add(() -> "GROUPB");
-        final Set<GroupPrincipal> writeGroupPrincipals = new LinkedHashSet<>();
-        writeGroupPrincipals.add(() -> "GROUPW");
-        UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
-        final boolean[] commandChecked = new boolean[] {false};
+        final Set<Integer> readGroupPrincipals = new LinkedHashSet<>();
+        readGroupPrincipals.add(g1);
+        readGroupPrincipals.add(g2);
+        final Set<Integer> writeGroupPrincipals = new LinkedHashSet<>();
+        writeGroupPrincipals.add(g3);
+        final boolean[] commandChecked = new boolean[]{false};
 
-        final String[] expectedCommand = new String[] {
-            "setfacl", "--set=user::rwx,group::rw-,other::---,mask::rw-,group:GROUPA:r--,group:GROUPB:r--,group:GROUPW:rw-",
-            target.toString()
-        };
-
-        AclCommandExecutor acl = new AclCommandExecutor(target, users) {
+        final boolean worldReadable = false; // other::---
+        final String[] expectedCommand = new String[4];
+        expectedCommand[0] = "setfacl";
+        expectedCommand[1] = "--physical";
+        expectedCommand[2] = "--set=user::rw-,group::rw-,other::---,group:" 
+                + g1 + ":r--,group:" + g2 + ":r--,group:" + g3 + ":rw-";
+        expectedCommand[3] = target.toString();
+        if (isDir) {
+            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,group:" 
+                    + g1 + ":r-x,group:" + g2 + ":r-x,group:" + g3 + ":rwx";
+        }
+        
+        AclCommandExecutor acl = new AclCommandExecutor(target, isDir) {
             @Override
             void executeCommand(final String[] command) throws IOException {
                 Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
@@ -259,16 +192,107 @@ public class AclCommandExecutorTest {
             }
         };
 
-        acl.setACL(readGroupPrincipals, writeGroupPrincipals, false);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
         Assert.assertTrue("Command not checked", commandChecked[0]);
+
+        // now actually run it for real
+        acl = new AclCommandExecutor(target, isDir);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
+
+        // get ACLs and verify correct state
+        Set<Integer> roActual = acl.getReadOnlyACL();
+        Assert.assertNotNull(roActual);
+        Assert.assertEquals(2, roActual.size());
+        Assert.assertTrue(roActual.contains(g1));
+        Assert.assertTrue(roActual.contains(g2));
+
+        Set<Integer> rwActual = acl.getReadWriteACL();
+        Assert.assertNotNull(rwActual);
+        Assert.assertEquals(1, rwActual.size());
+        Assert.assertTrue(rwActual.contains(g3));
+        
+        
+        // get defaults
+        Set<Integer> roDefault = acl.getReadOnlyACL(true);
+        Assert.assertNotNull(roDefault);
+        Assert.assertTrue(roDefault.isEmpty());
+
+        Set<Integer> rwDefault = acl.getReadWriteACL(true);
+        Assert.assertNotNull(rwDefault);
+        Assert.assertTrue(rwDefault.isEmpty());
+
+        if (isDir) {
+            // set defaults
+            acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+            
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertFalse(roDefault.isEmpty());
+            Assert.assertTrue(roDefault.contains(g1));
+            Assert.assertTrue(roDefault.contains(g2));
+
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            Assert.assertFalse(rwDefault.isEmpty());
+            Assert.assertTrue(rwDefault.contains(g3));
+            
+            acl.clearDefaultACL();
+            
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertTrue(roDefault.isEmpty());
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            Assert.assertTrue(rwDefault.isEmpty());
+        } else {
+            try {
+                acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
+                Assert.fail("expected IllegalArgumentException for setACL on file");
+            } catch (IllegalArgumentException ex) {
+                log.info("caught expected: " + ex);
+            }
+        }
+        
+        // manually set execute bit(s) on file
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+        perms.add(PosixFilePermission.OTHERS_EXECUTE);
+        
+        PosixFileAttributeView pv = Files.getFileAttributeView(target, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        pv.setPermissions(perms);
+        
+        Set<PosixFilePermission> curp = pv.readAttributes().permissions();
+        Assert.assertTrue(curp.contains(PosixFilePermission.OWNER_EXECUTE));
+        Assert.assertTrue(curp.contains(PosixFilePermission.GROUP_EXECUTE));
+        Assert.assertTrue(curp.contains(PosixFilePermission.OTHERS_EXECUTE));
+        
+        // verify that applying ACLs preserves execute bit(s)
+        acl.setACL(true, readGroupPrincipals, writeGroupPrincipals);
+        roActual = acl.getReadOnlyACL();
+        Assert.assertNotNull(roActual);
+        Assert.assertEquals(2, roActual.size());
+        Assert.assertTrue(roActual.contains(g1));
+        Assert.assertTrue(roActual.contains(g2));
+
+        rwActual = acl.getReadWriteACL();
+        Assert.assertNotNull(rwActual);
+        Assert.assertEquals(1, rwActual.size());
+        Assert.assertTrue(rwActual.contains(g3));
+        
+        // check execute bit
+        Set<PosixFilePermission> actual = pv.readAttributes().permissions();
+        Assert.assertTrue(actual.contains(PosixFilePermission.OWNER_EXECUTE));
+        Assert.assertTrue(actual.contains(PosixFilePermission.GROUP_EXECUTE));
+        Assert.assertTrue(actual.contains(PosixFilePermission.OTHERS_EXECUTE));
     }
 
     @Test
-    public void testSetFileACLNoRead() throws Exception {
-        String name = "testSetFileACLNoRead-" + UUID.randomUUID();
+    public void testRawFileACLNoRead() throws Exception {
+        String name = "testRawFileACLNoRead-" + UUID.randomUUID();
 
         FileSystem fs = FileSystems.getDefault();
-        Path target = fs.getPath(ROOT, name);
+        Path target = fs.getPath(ROOT, name).toAbsolutePath();
 
         Set<PosixFilePermission> perms = new HashSet<>();
         perms.add(PosixFilePermission.OWNER_READ);
@@ -276,17 +300,19 @@ public class AclCommandExecutorTest {
 
         Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
 
-        final Set<GroupPrincipal> readGroupPrincipals = new LinkedHashSet<>();
-        final Set<GroupPrincipal> writeGroupPrincipals = new LinkedHashSet<>();
-        writeGroupPrincipals.add(() -> "GROUPW2");
-        UserPrincipalLookupService users = target.getFileSystem().getUserPrincipalLookupService();
-        final boolean[] commandChecked = new boolean[] {false};
+        Integer g3 = 654321;
 
-        final String[] expectedCommand = new String[] {
-                "setfacl", "--set=user::rwx,group::rw-,other::---,mask::rw-,group:GROUPW2:rw-", target.toString()
+        final Set<Integer> readGroupPrincipals = new LinkedHashSet<>();
+        final Set<Integer> writeGroupPrincipals = new LinkedHashSet<>();
+        writeGroupPrincipals.add(g3);
+        final boolean[] commandChecked = new boolean[]{false};
+
+        boolean worldReadable = false; // other::---
+        final String[] expectedCommand = new String[]{
+            "setfacl", "--physical", "--set=user::rw-,group::rw-,other::---,group:" + g3 + ":rw-", target.toString()
         };
 
-        AclCommandExecutor acl = new AclCommandExecutor(target, users) {
+        AclCommandExecutor acl = new AclCommandExecutor(target, false) {
             @Override
             void executeCommand(final String[] command) {
                 Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
@@ -294,7 +320,95 @@ public class AclCommandExecutorTest {
             }
         };
 
-        acl.setACL(readGroupPrincipals, writeGroupPrincipals, false);
+        acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals);
         Assert.assertTrue("Command not checked", commandChecked[0]);
+
+        // TODO: get ACLs and verify correct state
+    }
+    
+    @Test
+    public void testResolvedFileACL() throws Exception {
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        // typical on linux systems when uid==gid: the expectedCommand expects it
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_WRITE);
+
+        String name = "testResolvedFileACL-" + UUID.randomUUID();
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name).toAbsolutePath();
+        
+        Files.createFile(target, PosixFilePermissions.asFileAttribute(perms));
+        
+        testResolvedACL(target, false);
+    }
+    
+    @Test
+    public void testResolvedDirACL() throws Exception {
+        Set<PosixFilePermission> perms = new HashSet<>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        // typical on linux systems when uid==gid: the expectedCommand expects it
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_WRITE);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+
+        String name = "testRawDirACL-" + UUID.randomUUID();
+        FileSystem fs = FileSystems.getDefault();
+        Path target = fs.getPath(ROOT, name).toAbsolutePath();
+        
+        Files.createDirectory(target, PosixFilePermissions.asFileAttribute(perms));
+        
+        testResolvedACL(target, true);
+    }
+    
+    private void testResolvedACL(Path target, boolean isDir) throws Exception {
+        Set<String> readOnlyGroups = new HashSet<>();
+        Set<String> readWriteGroups = new HashSet<>();
+
+        // Use LinkedHashSet to have a predictable order.
+        readOnlyGroups.add(RESOLVABLE_RO_GROUP);
+        final Set<GroupPrincipal> writeGroupPrincipals = new LinkedHashSet<>();
+        readWriteGroups.add(RESOLVABLE_RW_GROUP);
+        final boolean[] commandChecked = new boolean[]{false};
+
+        final String[] expectedCommand = new String[4];
+        expectedCommand[0] = "setfacl";
+        expectedCommand[1] = "--physical";
+        expectedCommand[2] = "--set=user::rwx,group::rw-,other::---,mask::rw-,group:" 
+                + RESOLVABLE_RO_GROUP + ":r--,group:" + RESOLVABLE_RW_GROUP + ":rw-";
+        expectedCommand[3] = target.toString();
+        if (isDir) {
+            expectedCommand[2] = "--set=user::rwx,group::rwx,other::---,mask::rwx,group:" 
+                    + RESOLVABLE_RO_GROUP + ":r-x,group:" + RESOLVABLE_RW_GROUP + ":rwx";
+        }
+        
+        AclCommandExecutor acl = new AclCommandExecutor(target, isDir) {
+            @Override
+            void executeCommand(final String[] command) throws IOException {
+                Assert.assertArrayEquals("Wrong command.", expectedCommand, command);
+                commandChecked[0] = true;
+            }
+        };
+
+        acl.setResolvedACL(readOnlyGroups, readWriteGroups);
+        Assert.assertTrue("Command not checked", commandChecked[0]);
+
+        // now actually run it for real
+        acl = new AclCommandExecutor(target, isDir);
+        acl.setResolvedACL(readOnlyGroups, readWriteGroups);
+
+        // get ACLs and verify correct state
+        Set<String> roActual = acl.getResolvedReadOnlyACL();
+        Assert.assertNotNull(roActual);
+        Assert.assertEquals(1, roActual.size());
+        Assert.assertTrue(roActual.contains(RESOLVABLE_RO_GROUP));
+
+        Set<String> rwActual = acl.getResolvedReadWriteACL();
+        Assert.assertNotNull(rwActual);
+        Assert.assertEquals(1, rwActual.size());
+        Assert.assertTrue(rwActual.contains(RESOLVABLE_RW_GROUP));
     }
 }
