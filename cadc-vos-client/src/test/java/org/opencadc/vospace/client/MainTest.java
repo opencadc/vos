@@ -107,32 +107,32 @@ public class MainTest {
         validateCommandArguments.setAccessible(true);
 
         // test --create --inheritPermissions=false --target=vos://cadc.nrc.ca~vospace/foo/bar (default: ContainerNode)
-        String[] args1 = { "--create", "--inheritPermissions=false", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        String[] args1 = { "--create", "--inheritPermissions=false", "vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap1 = new ArgumentMap(args1);
         validateCommand.invoke(command, argMap1);
         validateCommandArguments.invoke(command, argMap1);
 
         // test --create=ContainerNode --inheritPermissions=false --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args2 = { "--create=ContainerNode", "--inheritPermissions=false", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        String[] args2 = { "--create=ContainerNode", "--inheritPermissions=false", "vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap2 = new ArgumentMap(args2);
         validateCommand.invoke(command, argMap2);
         validateCommandArguments.invoke(command, argMap2);
 
         // test --create=DataNode --target=vos://cadc.nrc.ca~vospace/foo/bar --storageID=cadc:TEST/file.fits
-        String[] args3 = { "--create=DataNode", "--storageID=cadc:TEST/file.fits", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        String[] args3 = { "--create=DataNode", "--storageID=cadc:TEST/file.fits", "vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap3 = new ArgumentMap(args3);
         validateCommand.invoke(command, argMap3);
         validateCommandArguments.invoke(command, argMap3);
 
         // test --create=LinkNode --target=vos://cadc.nrc.ca~vospace/foo/bar --link=http://www.google.com
-        String[] args6 = { "--create=LinkNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar",
+        String[] args6 = { "--create=LinkNode", "vos://cadc.nrc.ca~vospace/foo/bar",
             "--link=http://www.google.com" };
         ArgumentMap argMap6 = new ArgumentMap(args6);
         validateCommand.invoke(command, argMap6);
         validateCommandArguments.invoke(command, argMap6);
 
         // test missing uri argument --create=LinkNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args7 = { "--create=LinkNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        String[] args7 = { "--create=LinkNode", "vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap7 = new ArgumentMap(args7);
         validateCommand.invoke(command, argMap7);
         try {
@@ -147,7 +147,7 @@ public class MainTest {
         }
 
         // test unsupported node type --create=LinkDataNode --target=vos://cadc.nrc.ca~vospace/foo/bar
-        String[] args8 = { "--create=LinkDataNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar" };
+        String[] args8 = { "--create=LinkDataNode", "vos://cadc.nrc.ca~vospace/foo/bar" };
         ArgumentMap argMap8 = new ArgumentMap(args8);
         validateCommand.invoke(command, argMap8);
         try {
@@ -161,7 +161,7 @@ public class MainTest {
         }
 
         // test --set --target=vos://cadc.nrc.ca~vospace/foo/bar --group-read="test:g1 test:g2" --group-write="test:g3 test:g4"
-        String[] args9 = { "--set", "--target=vos://cadc.nrc.ca~vospace/foo/bar", "--group-read=\"test:g1 test:g2\"",
+        String[] args9 = { "--set", "vos://cadc.nrc.ca~vospace/foo/bar", "--group-read=\"test:g1 test:g2\"",
             "--group-write=\"test:g3 test:g4\"" };
         ArgumentMap argMap9 = new ArgumentMap(args9);
         validateCommand.invoke(command, argMap9);
