@@ -128,20 +128,4 @@ public class LinkNodeTest {
             Assert.assertTrue(actualProperties.contains(property));
         }
     }
-
-    @Test
-    public void testSetTarget() throws Exception {
-        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        final String slashPath2 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        final String slashPath3 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
-        URI target = new URI(VOS_URI + slashPath2);
-        URI newTarget = new URI(VOS_URI + slashPath3);
-        LinkNode node = new LinkNode(uri.getName(), target);
-        Assert.assertEquals(target, node.getTarget());
-
-        node.setTarget(newTarget);
-        Assert.assertEquals(newTarget, node.getTarget());
-    }
-
 }

@@ -82,7 +82,7 @@ public class LinkNode extends Node {
     private static Logger log = Logger.getLogger(LinkNode.class);
     
     // A URI that points to any type of resource.
-    private URI target;
+    private final URI target;
 
     /**
      * LinkNode constructor.
@@ -114,15 +114,4 @@ public class LinkNode extends Node {
     public URI getTarget() {
         return this.target;
     }
-
-    /**
-     * Sets the target URI of this LinkNode instance.
-     *
-     * @param target The URI to the node resource.
-     */
-    public void setTarget(URI target) {
-        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
-        this.target = target;
-    }
-
 }
