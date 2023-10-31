@@ -119,7 +119,6 @@ public abstract class VOSTest {
     
     public static final String XML_CONTENT_TYPE = "text/xml";
     public static final String TEXT_CONTENT_TYPE = "text/plain";
-    public static final String ROOT_TEST_FOLDER = "/int-tests";
     
     public final URI resourceID;
     public final URL nodesServiceURL;
@@ -128,6 +127,8 @@ public abstract class VOSTest {
     public final URL transferServiceURL;
     public final URL recursiveDeleteServiceURL;
     public final Subject authSubject;
+    
+    protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
 
     protected VOSTest(URI resourceID, File testCert) {
         this.resourceID = resourceID;
@@ -153,7 +154,7 @@ public abstract class VOSTest {
 
     @Before
     public void initTestContainer() throws Exception {
-        String name = VOSTest.ROOT_TEST_FOLDER;
+        String name = rootTestFolderName;
         URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
         VOSURI nodeURI = getVOSURI(null);
         ContainerNode testNode = new ContainerNode(name);
@@ -171,16 +172,16 @@ public abstract class VOSTest {
     public URL getNodeURL(URL serviceURL, String path)
         throws MalformedURLException {
         if (path == null) {
-            return new URL(String.format("%s%s", serviceURL, ROOT_TEST_FOLDER));
+            return new URL(String.format("%s/%s", serviceURL, rootTestFolderName));
         }
-        return new URL(String.format("%s%s/%s", serviceURL, ROOT_TEST_FOLDER, path));
+        return new URL(String.format("%s/%s/%s", serviceURL, rootTestFolderName, path));
     }
 
     public VOSURI getVOSURI(String path) {
         if (path == null) {
-            return new VOSURI(resourceID, ROOT_TEST_FOLDER);
+            return new VOSURI(resourceID, rootTestFolderName);
         }
-        return new VOSURI(resourceID, ROOT_TEST_FOLDER + "/" + path);
+        return new VOSURI(resourceID, rootTestFolderName + "/" + path);
     }
 
     public InputStream prepareInput(VOSURI vosURI, Node node) throws IOException {
