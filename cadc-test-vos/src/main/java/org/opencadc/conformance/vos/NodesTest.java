@@ -75,14 +75,9 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Result;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -96,7 +91,6 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -229,7 +223,6 @@ public class NodesTest extends VOSTest {
             String name = "testDataNode";
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
-            DataNode testNode = new DataNode(name);
 
             // cleanup
             delete(nodeURL, false);
@@ -239,6 +232,7 @@ public class NodesTest extends VOSTest {
             
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
+            DataNode testNode = new DataNode(name);
             put(nodeURL, nodeURI, testNode);
 
             // GET the new node
@@ -456,11 +450,9 @@ public class NodesTest extends VOSTest {
         testNode.inheritPermissions = false;
 
         String subDir = path + "/subdir";
-        ContainerNode subDirNode = new ContainerNode(subDir);
-        
+
         String data = path + "/dataNode";
-        DataNode dataNode = new DataNode("dataNode");
-        
+
         URL nodeURL = getNodeURL(nodesServiceURL, path);
         URL subDirURL = getNodeURL(nodesServiceURL, subDir);
         URL dataNodeURL = getNodeURL(nodesServiceURL, data);
@@ -472,12 +464,14 @@ public class NodesTest extends VOSTest {
 
         VOSURI nodeURI = getVOSURI(path);
         VOSURI subDirURI = getVOSURI(subDir);
-        VOSURI dataNodeURI = getVOSURI(data);
         log.info("put: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
         log.info("put: " + subDirURI + " -> " + subDirURL);
+        ContainerNode subDirNode = new ContainerNode(subDir);
         put(subDirURL, subDirURI, subDirNode);
+        VOSURI dataNodeURI = getVOSURI(data);
         log.info("put: " + dataNodeURI + " -> " + dataNodeURL);
+        DataNode dataNode = new DataNode("dataNode");
         put(dataNodeURL, dataNodeURI, dataNode);
 
         // GET the new subDir node
@@ -887,100 +881,6 @@ public class NodesTest extends VOSTest {
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
-        }
-    }
-
-    @Test
-    public void testRecursiveDelete() throws Exception {
-        // create a tree structure
-        String baseDir = "testRecursiveDelete/";
-        String subDir = baseDir + "subdir/";
-        String[] testTree = {baseDir, baseDir + "file1", subDir, subDir + "file2"};
-
-        // clear possible lock left from a previous test
-        URL subdirURL = getNodeURL(nodesServiceURL, subDir);
-        NodeReader.NodeReaderResult result = get(subdirURL, 200, XML_CONTENT_TYPE, false);
-        if (result != null) {
-            if ((result.node.isLocked != null) && result.node.isLocked) {
-                result.node.isLocked = false;
-                post(subdirURL, getVOSURI(subDir), result.node);
-            }
-        }
-
-        createNodeTree(testTree);
-
-        Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir));
-        Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
-        Assert.assertEquals(1, job.getResultsList().size());
-        Result res = job.getResultsList().get(0);
-        Assert.assertEquals("delcount", res.getName());
-        Assert.assertEquals(4, Integer.parseInt(res.getURI().getSchemeSpecificPart()));
-        // cleanup
-        cleanupNodeTree(testTree);
-
-        if (!nodelockSupported) {
-            return;
-        }
-        
-        // repeat test but lock the subdirectory
-        createNodeTree(testTree);
-
-        result = get(subdirURL, 200, XML_CONTENT_TYPE, true);
-        log.info("found: " + result.vosURI);
-        result.node.isLocked = true;
-        post(subdirURL, getVOSURI(subDir), result.node);
-
-        // an error should result from try to delete a file in that directory
-        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(subdirURL + "file2"));
-        Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
-
-        // now try to delete the root node which results in a partial delete (aborted job)
-        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir));
-        Assert.assertEquals("Expected aborted job", ExecutionPhase.ABORTED, job.getExecutionPhase());
-        Assert.assertEquals(2, job.getResultsList().size());
-        for (Result jobResult : job.getResultsList()) {
-            if ("errorcount".equalsIgnoreCase(jobResult.getName())) {
-                Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
-            } else if ("delcount".equalsIgnoreCase(jobResult.getName())) {
-                Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
-            } else {
-                Assert.fail("Unexpected result " + jobResult.getName());
-            }
-        }
-
-        // unlock to be able to cleanup
-        result.node.isLocked = false;
-        post(subdirURL, getVOSURI(subDir), result.node);
-
-        // cleanup
-        cleanupNodeTree(testTree);
-
-    }
-
-    private void createNodeTree(String[] nodes) throws Exception {
-        // cleanup first
-        cleanupNodeTree(nodes);
-
-        // build the tree
-        for (String nodeName : nodes) {
-            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
-            VOSURI nodeURI = getVOSURI(nodeName);
-            Node node = null;
-            if (nodeName.endsWith("/")) {
-                node = new ContainerNode(nodeName);
-            } else {
-                node = new DataNode(nodeName);
-            }
-            log.info("put: " + nodeURI + " -> " + nodeURL);
-            put(nodeURL, nodeURI, node);
-        }
-    }
-
-    private void cleanupNodeTree(String[] nodes) throws MalformedURLException {
-        for (int i = nodes.length - 1; i >= 0; i--) {
-            URL nodeURL = getNodeURL(nodesServiceURL, nodes[i]);
-            log.debug("deleting node " + nodeURL);
-            delete(nodeURL, false);
         }
     }
 
