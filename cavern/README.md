@@ -61,9 +61,10 @@ org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content
 # owner of root node has admin power
 org.opencadc.cavern.filesystem.rootOwner = {username}
 
-# (optional) uid and gid (default) of the root owner
-org.opencadc.cavern.filesystem.rootOwner = {uid}
-org.opencadc.cavern.filesystem.rootOwner = {gid}
+# (optional) username, uid, and gid (default) of the root owner
+org.opencadc.cavern.filesystem.rootOwner.username = {username}
+org.opencadc.cavern.filesystem.rootOwner.uid = {uid}
+org.opencadc.cavern.filesystem.rootOwner.gid = {gid}
 
 # (optional) keys to generate pre-auth URLs to cavern
 org.opencadc.cavern.privateKey = {private key file name}
