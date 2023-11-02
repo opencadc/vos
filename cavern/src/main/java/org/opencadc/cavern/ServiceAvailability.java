@@ -74,14 +74,17 @@ import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vosi.Availability;
 import ca.nrc.cadc.vosi.AvailabilityPlugin;
+import ca.nrc.cadc.vosi.avail.CheckCertificate;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
+import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
+import java.util.NoSuchElementException;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
@@ -94,13 +97,8 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
     private static final Logger log = Logger.getLogger(ServiceAvailability.class);
 
-    private static String CRED_AVAIL = "ivo://cadc.nrc.ca/cred";
-    private static String AC_AVAIL = "ivo://cadc.nrc.ca/gms";
-
-    // identity of caller who is allowed to change service state remotely
-    // TODO: this should be configured someplace
-    private static final Principal TRUSTED = new X500Principal("cn=servops_4a2,ou=cadc,o=hia,c=ca");
-
+    private static final File AAI_PEM_FILE = new File(System.getProperty("user.home") + "/.ssl/cadcproxy.pem");
+    
     public ServiceAvailability() {
     }
 
@@ -148,28 +146,89 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
             // check other services we depend on
             RegistryClient reg = new RegistryClient();
-            URL url;
-            CheckResource checkResource;
-            
             LocalAuthority localAuthority = new LocalAuthority();
             
-            // TODO: oh the assumptions....
+            URI credURI = null;
+            try {
+                credURI = localAuthority.getServiceURI(Standards.CRED_PROXY_10.toString());
+                URL url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                if (url != null) {
+                    CheckResource checkResource = new CheckWebService(url);
+                    checkResource.check();
+                } else {
+                    log.debug("check skipped: " + credURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                }
+            } catch (NoSuchElementException ex) {
+                log.debug("not configured: " + Standards.CRED_PROXY_10);
+            }
 
-            URI credURI = localAuthority.getServiceURI(Standards.CRED_PROXY_10.toString());
-            url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
-            checkResource = new CheckWebService(url);
-            checkResource.check();
+            URI usersURI = null;
+            try {
+                usersURI = localAuthority.getServiceURI(Standards.UMS_USERS_01.toString());
+                URL url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                if (url != null) {
+                    CheckResource checkResource = new CheckWebService(url);
+                    checkResource.check();
+                } else {
+                    log.debug("check skipped: " + usersURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                }
+            } catch (NoSuchElementException ex) {
+                log.debug("not configured: " + Standards.UMS_USERS_01);
+            }
 
-            URI usersURI = localAuthority.getServiceURI(Standards.UMS_USERS_01.toString());
-            url = reg.getServiceURL(usersURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
-            checkResource = new CheckWebService(url);
-            checkResource.check();
+            URI groupsURI = null;
+            try {
+                groupsURI = localAuthority.getServiceURI(Standards.GMS_SEARCH_10.toString());
+                if (!groupsURI.equals(usersURI)) {
+                    URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                    if (url != null) {
+                        CheckResource checkResource = new CheckWebService(url);
+                        checkResource.check();
+                    } else {
+                        log.debug("check skipped: " + groupsURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                    }
+                }
+            } catch (NoSuchElementException ex) {
+                log.debug("not configured: " + Standards.GMS_SEARCH_10);
+            }
+
+            URI posixUserMapURI = null;
+            try {
+                posixUserMapURI = localAuthority.getServiceURI(Standards.POSIX_USERMAP.toASCIIString());
+                URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                if (url != null) {
+                    CheckResource checkResource = new CheckWebService(url);
+                    checkResource.check();
+                } else {
+                    log.debug("check skipped: " + posixUserMapURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                }
+            } catch (NoSuchElementException ex) {
+                log.debug("not configured: " + Standards.POSIX_USERMAP);
+            }
+            URI posixGroupMapURI = null;
+            try {
+                posixGroupMapURI = localAuthority.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+                if (!posixGroupMapURI.equals(posixUserMapURI)) {
+                    URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                    if (url != null) {
+                        CheckResource checkResource = new CheckWebService(url);
+                        checkResource.check();
+                    } else {
+                        log.debug("check skipped: " + posixGroupMapURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                    }
+                }
+            } catch (NoSuchElementException ex) {
+                log.debug("not configured: " + Standards.POSIX_GROUPMAP);
+            }
             
-            URI groupsURI = localAuthority.getServiceURI(Standards.GMS_SEARCH_01.toString());
-            if (!groupsURI.equals(usersURI)) {
-                url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
-                checkResource = new CheckWebService(url);
-                checkResource.check();
+            if (credURI != null || usersURI != null) {
+                if (AAI_PEM_FILE.exists() && AAI_PEM_FILE.canRead()) {
+                    // check for a certificate needed to perform network A&A ops
+                    CheckCertificate checkCert = new CheckCertificate(AAI_PEM_FILE);
+                    checkCert.check();
+                } else {
+                    log.debug("AAI cert not found or unreadable");
+                }
             }
             
         } catch (CheckException ce) {
