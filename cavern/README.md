@@ -92,8 +92,12 @@ The optional _privateKey_ and _publicKey_ is used to sign pre-auth URLs (one-tim
 a files endpoint does not have to repeat permission checks. If the not set, cavern cannot generate pre-auth URLs, 
 but it can generate plain URLs. TODO: provide info on how to generate a usable key pair.
 
-UNTESTED: The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount. 
-See <a href="https://github.com/opencadc/vos/tree/master/cavern-sshd">cavern-sshd</a> for cavern SSHD support.
+NOT FUNCTIONAL: The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount of the `cavern` content. Clients
+can negotiate the mount of a specific container node in the VOSpace and be given back a connection string suitable for
+use with the `sshfs` command. This requires a separate sshd running with the same A&A system and mounting the same
+underlying filesystem. See <a href="https://github.com/opencadc/vos/tree/master/cavern-sshd">cavern-sshd</a> for an
+example of the legacy cavern SSHD support, but note that this won't work out of the box due to the use of `sssd` for
+for auth.
 
 ### cadcproxy.pem (optional)
 This client certificate may be required to make authenticated server-to-server calls for system-level A&A purposes.

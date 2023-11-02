@@ -69,338 +69,328 @@
 
 package org.opencadc.vospace.client;
 
-import ca.nrc.cadc.auth.BasicX509TrustManager;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ExecutionPhase;
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
+import java.security.AccessControlException;
+import java.security.PrivilegedExceptionAction;
+import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.Test;
+import org.opencadc.conformance.vos.VOSTest;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.View;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
- * and (probably) valid X509 proxy certificates. TODO: provide this as an integration
- * test  or rewrite it using a mock http layer (sounds hard).
+ * and (probably) valid X509 proxy certificates.
  *
- * @author zhangsa
+ * @author pdowler
  */
-//@Ignore("Broken - Please fix soon.\n" +
-//        "jenkinsd 2011.01.17")
-public class VOSpaceClientTest {
+public class VOSpaceClientTest extends VOSTest {
     private static Logger log = Logger.getLogger(VOSpaceClientTest.class);
-    private static String ROOT_NODE;
-    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/vospace"); //??
-    private static String VOS_URI = "vos://opencadc.org~vospace";
+    
 
     static {
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
-        ROOT_NODE = System.getProperty("user.name") + "/";
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
     }
     
-    String endpoint;
-    VOSpaceClient client = new VOSpaceClient(RESOURCE_ID);
-
-    // TODO: fix/rewrite these tests and document how to run them against a vospace service
+    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
     
-    //@Test
-    public void testSetNode() throws Exception {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
-
-        Node nodeRtn = client.createNode(cnode);
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-
-        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
-        log.debug("GetNode: " + nodeRtn2);
-        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
-
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-
-        String newUniqueValue = TestUtil.uniqueStringOnTime();
-        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, newUniqueValue);
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        String newUniqueValue2 = TestUtil.uniqueStringOnTime();
-        NodeProperty nodeProperty2 = new NodeProperty(VOS.PROPERTY_URI_COVERAGE, newUniqueValue2);
-        nodeProperty2.setReadOnly(true);
-        properties.add(nodeProperty2);
-
-        nodeRtn2.setProperties(properties);
-
-        Node nodeRtn3 = client.setNode(nodeRtn2);
-        String propValue = nodeRtn3.findProperty(VOS.PROPERTY_URI_CONTRIBUTOR).getPropertyValue();
-        String propValue2 = nodeRtn3.findProperty(VOS.PROPERTY_URI_COVERAGE).getPropertyValue();
-        log.debug("XML of SetNode: " + VOSClientUtil.xmlString(nodeRtn3));
-        Assert.assertEquals(newUniqueValue, propValue);
-        Assert.assertEquals(newUniqueValue2, propValue2);
+    private static File CERT = FileUtil.getFileFromResource(
+            System.getProperty("user.name") + ".pem", VOSpaceClientTest.class);
+    
+    private String baseURI = "vos://opencadc.org~cavern/client-int-tests";
+    
+    
+    public VOSpaceClientTest() {
+        super(RESOURCE_ID, CERT);
+        super.rootTestFolderName = "client-int-tests";
     }
 
-    //@Test
-    public void testDeleteNode() throws Exception {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
+    @Test
+    public void duplicateNodeFailTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        ContainerNode orig = new ContainerNode("duplicateNodeFailTest");
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
 
-        Node nodeRtn = client.createNode(cnode);
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
+            // create again
+            try {
+                created = client.createNode(target, orig);
+                Assert.fail("expected ResourceAlreadyExistsException but created: " + created);
+            } catch (ResourceAlreadyExistsException expected) {
+                log.info("caught expected: " + expected);
+            }
 
-        log.debug("getPath(): " + nodeRtn.getUri().getPath());
-        client.deleteNode(nodeRtn.getUri().getPath());
-
-        boolean exceptionThrown = false;
-        try {
-            client.getNode(nodeRtn.getUri().getPath());
-        } catch (IllegalArgumentException ex) {
-            exceptionThrown = true;
-        }
-        Assert.assertEquals(exceptionThrown, true);
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
     }
+    
+    @Test
+    public void containerNodeTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        ContainerNode orig = new ContainerNode("containerNodeTest");
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
 
-    //@Test
-    public void testGetNode() throws Exception {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        //        String slashPath1 = "/" + ROOT_NODE;
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
+            
+            // update
+            orig.isPublic = true;
+            orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "my stuff"));
+            client.setNode(target, orig);
+            
+            // get
+            Node n2 = client.getNode(target.getPath());
+            log.info("found: " + n2);
+            Assert.assertNotNull(n2);
+            Assert.assertEquals(orig.getName(), n2.getName());
+            Assert.assertEquals(orig.getClass(), n2.getClass());
+            Assert.assertEquals(orig.isPublic, n2.isPublic);
+            Assert.assertEquals(orig.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION),
+                    n2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
 
-        Node nodeRtn = client.createNode(cnode);
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-
-        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
-        log.debug("GetNode: " + nodeRtn2);
-        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
     }
+    
+    @Test
+    public void dataNodeTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        DataNode orig = new DataNode("dataNodeTest");
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
 
-    //@Test
-    public void testGetRootNode() throws Exception {
-        String slashPath1 = "/" + ROOT_NODE;
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
 
-        Node nodeRtn2 = client.getNode(cnode.getUri().getPath());
-        log.debug("GetNode: " + nodeRtn2);
-        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        //Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
+            // update
+            orig.isPublic = true;
+            orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "my stuff"));
+            client.setNode(target, orig);
+            
+            // get
+            Node n2 = client.getNode(target.getPath());
+            log.info("found: " + n2);
+            Assert.assertNotNull(n2);
+            Assert.assertEquals(orig.getName(), n2.getName());
+            Assert.assertEquals(orig.getClass(), n2.getClass());
+            Assert.assertEquals(orig.isPublic, n2.isPublic);
+            Assert.assertEquals(orig.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION),
+                    n2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
     }
+    
+    @Test
+    public void linkNodeTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        LinkNode orig = new LinkNode("linkNodeTest", URI.create(baseURI + "/linkTarget"));
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
 
-    //@Test
-    public void testCreateContainerNode() throws Exception {
-        final String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        final ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
+            LinkNode actual = (LinkNode) n1;
+            Assert.assertEquals(orig.getTarget(), actual.getTarget());
 
-        final Node nodeRtn = client.createNode(cnode);
-
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-        Assert.assertEquals(nodeRtn.getUri().getPath(), slashPath1);
+            // update
+            orig.isPublic = true;
+            Node mod = client.setNode(target, orig);
+            log.info("modified: " + mod);
+            
+            // get
+            Node n2 = client.getNode(target.getPath());
+            log.info("found: " + n2);
+            Assert.assertNotNull(n2);
+            Assert.assertEquals(orig.getName(), n2.getName());
+            Assert.assertEquals(orig.getClass(), n2.getClass());
+            Assert.assertEquals(orig.isPublic, n2.isPublic);
+            actual = (LinkNode) n2;
+            Assert.assertEquals(orig.getTarget(), actual.getTarget());
+            
+            // failed update
+            orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "the missing link"));
+            try {
+                mod = client.setNode(target, orig);
+                Assert.fail("expected IllegalArgumentException but got: " + mod);
+            } catch (IllegalArgumentException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
     }
+    
+    @Test
+    public void fileRountTripTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        final File srcFile = FileUtil.getFileFromResource("round-trip.txt", VOSpaceClientTest.class);
+        DataNode orig = new DataNode(srcFile.getName());
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            Transfer push = new Transfer(Direction.pushToVoSpace);
+            push.getTargets().add(target.getURI());
+            Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            push.getProtocols().add(p);
+            ClientTransfer putTrans = client.createTransfer(push);
+            putTrans.setFile(srcFile);
+            putTrans.run();
+            log.info("upload: " + putTrans.getPhase() + " " + putTrans.getThrowable());
+            Assert.assertNull(putTrans.getThrowable());
+            
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
 
-    //@Test
-    public void testCreateSemanticContainerNode() throws Exception {
-        String dir1 = TestUtil.uniqueStringOnTime();
-        String slashPath1 = "/" + ROOT_NODE + dir1;
-        String slashPath1a = slashPath1 + "/" + TestUtil.uniqueStringOnTime();
-        String slashPath1b = slashPath1 + "/" + TestUtil.uniqueStringOnTime();
-
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(new VOSURI(VOS_URI + slashPath1a)));
-        nodes.add(new DataNode(new VOSURI(VOS_URI + slashPath1b)));
-
-        // ContainerNode
-        ContainerNode cnode;
-        cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
-        cnode.setProperties(properties);
-        cnode.setNodes(nodes);
-
-        Node nodeRtn = client.createNode(cnode);
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-        ContainerNode cnode2 = (ContainerNode) nodeRtn;
-        List<Node> nodes2 = cnode2.getNodes();
-        Assert.assertEquals(nodes2.size(), 2);
-    }
-
-    //@Test
-    public void testCreateDataNode() throws Exception {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
-
-        Node nodeRtn = client.createNode(dnode);
-        log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-        Assert.assertEquals(nodeRtn.getUri().getPath(), slashPath1);
-    }
-
-    //@Test
-    public void testCreateDataNodeWithProperties() throws Exception {
-        //        String slashPath1 = "/" + ROOT_NODE + "nodeWithPropertiesA";
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
-
-        Node nodeRtn = client.createNode(dnode);
-        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
-        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
-
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_SUBJECT, "sz_subject"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "sz_description"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_PUBLISHER, "sz_publisher"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, "sz_contributor"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, "sz_date"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "sz_type"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_FORMAT, "sz_format"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_IDENTIFIER, "sz_identifier"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_SOURCE, "sz_source"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "sz_language"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_RELATION, "sz_relation"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_COVERAGE, "sz_coverage"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_RIGHTS, "sz_rights"));
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "sz_availableSpace"));
-
-        nodeRtn2.setProperties(properties);
-
-        Node nodeRtn3 = client.setNode(nodeRtn2);
-        log.debug("After setNode: " + nodeRtn3);
-        for (NodeProperty np : nodeRtn3.getProperties()) {
-            Assert.assertEquals(np.getPropertyValue().startsWith("sz"), true);
-        }
-    }
-
-    //@Test
-    public void testPushPull() throws Exception {
-        File testFile = TestUtil.getTestFile();
-        Assert.assertNotNull(testFile);
-        log.debug("testfile exists? " + testFile.exists());
-        log.debug("testfile absolutePath: " + testFile.getAbsolutePath());
-        log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
-
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        URI vosURI = new URI(VOS_URI + slashPath1);
-        View dview = new View(new URI(VOS.VIEW_DEFAULT));
-
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-
-        // upload
-        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace);
-        transfer.setView(dview);
-        transfer.setProtocols(protocols);
-
-        ClientTransfer clientTransfer = client.createTransfer(transfer);
-        clientTransfer.setFile(testFile);
-        clientTransfer.run();
-        Assert.assertEquals("final upload phase", ExecutionPhase.COMPLETED, clientTransfer.getPhase());
-
-        File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
-        log.debug(file.getAbsolutePath());
-        log.debug(file.getCanonicalPath());
-
-        // download
-        Transfer trans2 = new Transfer(targetList, Direction.pullFromVoSpace, dview, protocols);
-        ClientTransfer txRtn = client.createTransfer(trans2);
-        txRtn.setFile(file);
-        txRtn.run();
-        Assert.assertEquals("final download phase", ExecutionPhase.COMPLETED, txRtn.getPhase());
-
-        File origFile = TestUtil.getTestFile();
-        Assert.assertNotNull(origFile);
-        log.debug(origFile.getAbsolutePath());
-        log.debug(origFile.getCanonicalPath());
-
-        Assert.assertEquals(FileUtil.compare(origFile, file), true);
-        // file.delete();
-    }
-
-    //@Test
-    public void testQuickPushPull() throws Exception {
-        File testFile = TestUtil.getTestFile();
-        Assert.assertNotNull(testFile);
-        log.debug("testfile exists? " + testFile.exists());
-        log.debug("testfile absolutePath: " + testFile.getAbsolutePath());
-        log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
-
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        URI vosURI = new URI(VOS_URI + slashPath1);
-        List<URI> targetList = new ArrayList<URI>();
-        targetList.add(vosURI);
-        View dview = new View(new URI(VOS.VIEW_DEFAULT));
-
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-
-        // upload
-        Transfer transfer = new Transfer(targetList, Direction.pushToVoSpace, dview, protocols);
-        transfer.setQuickTransfer(true);
-        ClientTransfer clientTransfer = client.createTransfer(transfer);
-        clientTransfer.setFile(testFile);
-        clientTransfer.run();
-        boolean noJobInfo = false;
-        try {
-            clientTransfer.getPhase();
-        } catch (IllegalArgumentException ex) {
-            noJobInfo = true;
-        }
-        Assert.assertTrue("No job information for quick transfers", noJobInfo);
-
-        File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
-        log.debug(file.getAbsolutePath());
-        log.debug(file.getCanonicalPath());
-
-        // download
-        Transfer trans2 = new Transfer(vosURI, Direction.pullFromVoSpace, dview, protocols);
-        ClientTransfer txRtn = client.createTransfer(trans2);
-        txRtn.setFile(file);
-        txRtn.run();
-        noJobInfo = false;
-        try {
-            clientTransfer.getPhase();
-        } catch (IllegalArgumentException ex) {
-            noJobInfo = true;
-        }
-        Assert.assertTrue("No job information for quick transfers", noJobInfo);
-
-        File origFile = TestUtil.getTestFile();
-        Assert.assertNotNull(origFile);
-        log.debug(origFile.getAbsolutePath());
-        log.debug(origFile.getCanonicalPath());
-
-        Assert.assertEquals(FileUtil.compare(origFile, file), true);
-        // file.delete();
-    }
-
-    @Override
-    public String toString() {
-        return "VOSpaceClientTest [client=" + client + ", getClass()=" + getClass() + ", hashCode()=" + hashCode()
-            + ", toString()=" + super.toString() + "]";
+            // get file
+            File destFile = new File("build/tmp/" + srcFile.getName());
+            if (destFile.exists()) {
+                destFile.delete();
+            }
+            Assert.assertFalse(destFile.exists());
+            
+            Transfer pull = new Transfer(Direction.pullFromVoSpace);
+            pull.getTargets().add(target.getURI());
+            p = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pull.getProtocols().add(p);
+            ClientTransfer getTrans = client.createTransfer(pull);
+            getTrans.setFile(destFile);
+            getTrans.run();
+            log.info("download: " + getTrans.getPhase() + " " + getTrans.getThrowable());
+            Assert.assertNull(getTrans.getThrowable());
+            Assert.assertTrue(destFile.exists());
+            
+            // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
     }
 }
