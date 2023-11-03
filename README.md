@@ -1,10 +1,22 @@
 # vos
 client and server implementation of VOSpace 2.1 specification
 
-# plugin: TransferGenerator API change in cadc-vos-server-1.1
+## version 2.x API
 
-The method signature for this plugin interface has changed, moving more logic into the implementation.
-This means the implementation is now responsible for converting the complete transfer request into a
-list of protocols with endpoints, including setting preferred order and filtering out unsupported 
-protocol+securityMethod combinations (possibly dependent on transfer.version).
+The main branch now contains version 2.0 or later of the main vos libraries. There are
+many source-incompatible changes from the 1.x versions. The 2.x series includes code
+in the `org.opencadc.vospace` package (and sub packages).
 
+
+## version 1.x API
+
+The `vos1` branch contains the latest 1.x libray code; it will be maintained until the
+last applications using it are ported to 2.x version.
+
+## VOSpace services
+
+`cavern` is a POSIX filesystem based VOSpace service updated to the 2.x API (this repo).
+
+`vault` is an object-store based VOSpace service based on the 2.x APIs and designed to
+work with OpenCADC Storage Inventory as the back end storage system 
+(<a href="https://github.com/opencadc/storage-inventory">storage-inventory</a> repo).

@@ -272,25 +272,26 @@ public class CavernURLGenerator implements TransferGenerator {
                 if (sshServerBase == null) {
                     throw new UnsupportedOperationException("sshfs mount not configured");
                 }
-                // TODO: should check p.securityMethod vs allowed auth (pubkey? password?)
-                StringBuilder sb = new StringBuilder();
-                sb.append("sshfs:");
-                sb.append(pp.username).append("@");
-                sb.append(sshServerBase);
-                if (sb.charAt(sb.length() - 1) != '/') {
-                    sb.append("/");
-                }
-                if (path.charAt(0) == '/') {
-                    path = path.substring(1);
-                }
-                sb.append(path);
-                try {
-                    URI u = new URI(sb.toString());
-                    Protocol pe = new Protocol(p.getUri(), sb.toString(), params);
-                    pe.setSecurityMethod(p.getSecurityMethod());
-                    ret.add(pe);
-                } catch (URISyntaxException ex) {
-                    throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
+                // TODO: chose the right standardID for sshfs auth: pubkey? password?
+                if (p.getSecurityMethod() == null || Standards.SECURITY_METHOD_ANON.equals(p.getSecurityMethod())) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("sshfs:");
+                    sb.append(pp.username).append("@");
+                    sb.append(sshServerBase);
+                    if (sb.charAt(sb.length() - 1) != '/') {
+                        sb.append("/");
+                    }
+                    if (path.charAt(0) == '/') {
+                        path = path.substring(1);
+                    }
+                    sb.append(path);
+                    try {
+                        URI u = new URI(sb.toString());
+                        Protocol pe = new Protocol(p.getUri(), sb.toString(), params);
+                        ret.add(pe);
+                    } catch (URISyntaxException ex) {
+                        throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
+                    }
                 }
             } else {
                 log.debug("unsupported container protocol: " + p.getUri());

@@ -65,53 +65,104 @@
  ************************************************************************
  */
 
-package org.opencadc.vospace;
+package org.opencadc.vospace.server;
 
 import java.net.URI;
-
-import java.util.UUID;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Set;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
 
 /**
- * A VOSpace node that points to a resource of any type.
- * 
- * @author yeunga
+ * Utility methods
+ *
+ * @author adriand
  */
-public class LinkNode extends Node {
-    
-    private static Logger log = Logger.getLogger(LinkNode.class);
-    
-    // A URI that points to any type of resource.
-    private final URI target;
+public class Utils {
+    final Logger log = Logger.getLogger(Utils.class);
 
     /**
-     * LinkNode constructor.
-     * @param name The name of the node.
-     * @param target The URI to the node resource.
+     * Returns the path of the parent with no leading or trailing backslashes
+     *
+     * @param nodePath the path of the node
+     * @return the path of the parent
      */
-    public LinkNode(String name, URI target) {
-        super(name);
-        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
-        this.target = target;
+    public static String getParentPath(final String nodePath) {
+        if (isRoot(nodePath)) {
+            return null; // there is no parent of the root
+        }
+        String np = nodePath;
+        if (np.endsWith("/")) {
+            np = np.substring(0, np.length() - 1);
+        }
+        if (nodePath.startsWith("/")) {
+            np = np.substring(1, np.length());
+        }
+        int index = np.lastIndexOf("/");
+        if (index > 0) {
+            return np.substring(0, index);
+        } else {
+            return null;
+        }
     }
-    
-    /**
-     * Reconstruct persistent node.
-     * 
-     * @param id Entity.id
-     * @param name Node.name
-     * @param target target resource for this link
-     */
-    public LinkNode(UUID id, String name, URI target) {
-        super(id, name);
-        NodeUtil.assertNotNull(LinkNode.class, "target", "target");
-        this.target = target;
+
+    public static boolean isRoot(String nodePath) {
+        if (nodePath == null || nodePath.length() == 0 || nodePath.equals("/")) {
+            return true;
+        }
+        return false;
     }
 
     /**
-     * @return Target URI of this LinkNode instance.
-     */    
-    public URI getTarget() {
-        return this.target;
+     * Get a linked list of nodes from leaf to root.
+     *
+     * @param leaf leaf node
+     * @return list of nodes, with leaf first and root last
+     */
+    public static LinkedList<Node> getNodeList(Node leaf) {
+        LinkedList<Node> nodes = new LinkedList<Node>();
+        Node cur = leaf;
+        while (cur != null) {
+            nodes.add(cur);
+            cur = cur.parent;
+        }
+        return nodes;
+    }
+
+
+    public static String getPath(Node node) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(node.getName());
+        Node tmp = node.parent;
+        while (tmp != null) {
+            sb.insert(0, tmp.getName() + "/");
+            tmp = tmp.parent;
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Takes a set of old properties and updates it with a new set of properties. Essentially
+     * this means updating values or removing and adding elements. It is not a straight 
+     * replacement.
+     *
+     * @param oldProps set of old Node Properties that are being updated
+     * @param newProps set of new Node Properties to be used for the update
+     * @param immutable set of immutable property keys to skip
+     */
+    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps, Set<URI> immutable) {
+        for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
+            NodeProperty newProperty = newIter.next();
+            if (!immutable.contains(newProperty.getKey())) {
+                if (oldProps.contains(newProperty)) {
+                    oldProps.remove(newProperty);
+                }
+                if (!newProperty.isMarkedForDeletion()) {
+                    oldProps.add(newProperty);
+                }
+            }
+        }
     }
 }

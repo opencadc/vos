@@ -75,6 +75,7 @@ import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.NetrcAuthenticator;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -136,14 +137,14 @@ public class Main implements Runnable {
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
     public static final String ARG_MOVE = "move";
-    public static final String ARG_TARGET = "target";
+    //public static final String ARG_TARGET = "target";
     public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
     public static final String ARG_GROUP_WRITE = "group-write";
     public static final String ARG_PROP = "prop";
-    public static final String ARG_SRC = "src";
+    //public static final String ARG_SRC = "src";
     public static final String ARG_LINK = "link";
-    public static final String ARG_DEST = "dest";
+    //public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
     public static final String ARG_CONTENT_MD5 = "content-md5";
@@ -158,7 +159,7 @@ public class Main implements Runnable {
     private static final int INIT_STATUS = 1; // exit code for initialisation failure
     private static final int NET_STATUS = 2;  // exit code for client-server failures
 
-    private static final int MAX_CHILD_SIZE = 1000;
+    //private static final int MAX_CHILD_SIZE = 1000;
 
     /**
      * Supported node type
@@ -295,7 +296,7 @@ public class Main implements Runnable {
 
             this.client.setNode(this.target, up);
             log.info("updated properties: " + this.target);
-        } catch (NodeNotFoundException ex) {
+        } catch (ResourceNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
         } catch (Throwable t) {
@@ -461,29 +462,9 @@ public class Main implements Runnable {
     }
 
     private void doView() {
-        // if the user isn't controlling paging, add a child
-        // limit of MAX_CHILD_SIZE (1000)
-        boolean explicitPaging = false;
-        String queryString = target.getQuery();
-        if (StringUtil.hasText(queryString)) {
-            String[] queries = queryString.split("&");
-            for (String query : queries) {
-                if (query.startsWith("limit=") || query.startsWith("uri=")) {
-                    explicitPaging = true;
-                    break;
-                }
-            }
-            if (!explicitPaging) {
-                queryString += "&limit=" + MAX_CHILD_SIZE;
-            }
-        } else {
-            queryString = "limit=" + MAX_CHILD_SIZE;
-        }
-        log.debug("explicit paging control: " + explicitPaging);
-        log.debug("view query string: " + queryString);
-
+        
         try {
-            Node n = client.getNode(target.getPath(), queryString);
+            Node n = client.getNode(target.getPath());
 
             msg(getType(n) + ": " + target);
             msg("owner: " + n.ownerDisplay);
@@ -509,50 +490,19 @@ public class Main implements Runnable {
                 }
 
                 ContainerNode cn = (ContainerNode) n;
-                if (cn.getNodes().size() > 0) {
+                if (!cn.getNodes().isEmpty()) {
                     StringBuilder sb = new StringBuilder();
                     sb.append(pad("child nodes: ", 32));
                     sb.append(pad("size",12));
                     sb.append(pad("public",8));
                     sb.append(pad("owner",12));
                     sb.append(pad("last modified",26));
-                    sb.append("URI");
                     msg(sb.toString());
                 }
 
                 log.debug("get container node returned : " + cn.getNodes().size() + " children.");
                 printChildList(target, cn.getNodes());
 
-                // get remaining children if the user isn't explicitly controlling paging
-                if (!explicitPaging) {
-                    VOSURI uriQueryObj = null;
-                    String uriQueryParam = null;
-                    while (cn.getNodes().size() > 0) {
-                        log.debug("Getting next set of children.");
-                        Node child = cn.getNodes().get(cn.getNodes().size() - 1);
-                        uriQueryObj = NodeUtil.getChildURI(target, child.getName());
-                        uriQueryParam = "uri=" + NetUtil.encode(uriQueryObj.toString());
-                        cn = null;
-
-                        if (StringUtil.hasText(queryString)) {
-                            n = client.getNode(target.getPath(), queryString + "&" + uriQueryParam);
-                        } else {
-                            n = client.getNode(target.getPath(), uriQueryParam);
-                        }
-                        if (!(n instanceof ContainerNode)) {
-                            throw new IllegalStateException("inconsistent node state.");
-                        }
-                        cn = (ContainerNode) n;
-
-                        log.debug("next set has : " + cn.getNodes().size() + " children.");
-
-                        // remove the first child if it is the one matching the uri parameter
-                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getName().equals(uriQueryObj.getName())) {
-                            cn.getNodes().remove(0);
-                        }
-                        printChildList(target, cn.getNodes());
-                    }
-                }
             } else if (n instanceof DataNode) {
                 msg("type: " + safePropertyRef(n, VOS.PROPERTY_URI_TYPE));
                 msg("encoding: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTENCODING));
@@ -565,8 +515,19 @@ public class Main implements Runnable {
         } catch (AccessControlException ex) {
             msg("permission denied: " + target);
             System.exit(NET_STATUS);
-        } catch (NodeNotFoundException ex) {
+        } catch (ResourceNotFoundException ex) {
             msg("not found: " + target);
+            System.exit(NET_STATUS);
+        } catch (Throwable t) {
+            msg("failed to view: " + target);
+            if (t.getMessage() != null) {
+                msg("          reason: " + t.getMessage());
+            } else {
+                msg("          reason: " + t);
+            }
+            if (t.getCause() != null) {
+                msg("          reason: " + t.getCause());
+            }
             System.exit(NET_STATUS);
         }
     }
@@ -586,7 +547,6 @@ public class Main implements Runnable {
             sb.append(pad(pub,8));
             sb.append(pad(child.ownerDisplay,12));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26));
-            sb.append(childURI);
             msg(sb.toString());
         }
     }
@@ -835,7 +795,7 @@ public class Main implements Runnable {
             checkPhase(recSetNode);
 
             log.info("updated properties recursively: " + this.target);
-        } catch (NodeNotFoundException ex) {
+        } catch (ResourceNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
         } catch (Throwable t) {
@@ -1059,12 +1019,17 @@ public class Main implements Runnable {
 
 
         try {
+            List<String> args = argMap.getPositionalArgs();
             if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
                 if (this.operation.equals(Operation.COPY) && argMap.isSet(ARG_QUICK)) {
                     this.quickTransfer = true;
                 }
-                String strSrc = argMap.getValue(ARG_SRC);
-                String strDest = argMap.getValue(ARG_DEST);
+                
+                if (args.size() != 2) {
+                    throw new IllegalArgumentException(operation + " requires 2 positional args, found: " + args.size());
+                }
+                String strSrc = args.get(0);
+                String strDest = args.get(1);
                 if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX)) {
                     this.transferDirection = Direction.pushToVoSpace;
                     try {
@@ -1142,7 +1107,10 @@ public class Main implements Runnable {
                     }
                 }
             } else {
-                String strTarget = argMap.getValue(ARG_TARGET);
+                if (args.size() != 1) {
+                    throw new IllegalArgumentException(operation + " requires 1 positional arg, found: " + args.size());
+                }
+                String strTarget = args.get(0);
                 try {
                     this.target = new VOSURI(strTarget);
                     serverUri = this.target.getServiceURI();
@@ -1219,22 +1187,17 @@ public class Main implements Runnable {
      */
     private void validateCommandArguments(ArgumentMap argMap)
         throws IllegalArgumentException {
+        List<String> args = argMap.getPositionalArgs();
         if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
-            String strSrc = argMap.getValue(ARG_SRC);
-            if (strSrc == null) {
-                throw new IllegalArgumentException("Argument --src is required for " + this.operation);
-            }
-
-            String strDest = argMap.getValue(ARG_DEST);
-            if (strDest == null) {
-                throw new IllegalArgumentException("Argument --dest is required for " + this.operation);
+            if (args.size() != 2) {
+                throw new IllegalArgumentException(operation + " requires 2 positional args, found: " + args.size());
             }
         } else {
-            String strTarget = argMap.getValue(ARG_TARGET);
-            if (strTarget == null) {
-                throw new IllegalArgumentException("Argument --target is required for " + this.operation);
+            if (args.size() != 1) {
+                throw new IllegalArgumentException(operation + " requires 1 positional arg, found: " + args.size());
             }
-
+            
+            String strTarget = args.get(0);
             if (this.operation.equals(Operation.CREATE)) {
                 // create default (true) is a ContainerNode
                 String strNodeType = argMap.getValue(ARG_CREATE);
@@ -1383,47 +1346,31 @@ public class Main implements Runnable {
          */
         String[] um = {
             "",
-            "Usage: java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
+            "Usage: cadc-vos-client [-v|--verbose|-d|--debug] [--xsv=off] <operation> ...",
+            "    <-h | --help>       : view command line help",
+            "",
+            "authentication options:",
             CertCmdArgUtil.getCertArgUsage(),
+            // TODO: token usage
             "",
-            "  Note: --xsv=off disables XML schema validation; use at your own risk                            ",
+            "advanced/sketchy options:",
+            "    --xsv=off     : disables XML schema validation; use at your own risk",
             "",
-            "Help:                                                                                             ",
-            "    <-h | --help>                                                                                 ",
+            "operations:",
+            "    --view <target URI>",
+            "    --create[=<ContainerNode|LinkNode|DataNode>] <node URI>  : default: ContainerNode",
+            "    --delete <target URI>",
+            "    --set <target URI>",
+            "    --copy <source URI> <destination URI>",
+            "    --move <source URI> <destination URI>",
             "",
-            "Create node:                                                                                      ",
+            "create and set options:",
             "",
-            "    --create[=<ContainerNode|LinkNode|DataNode>]                                                  ",
-            "    --target=<node URI>                                                                           ",
             "    [--inheritPermissions=<true|false>}                                                           ",
-            "    [--link=<link URI>]                                                                           ",
-            "    [--storageID=<storageID URI>]                                                                 ",
+            "    [--link=<link URI>]      : the URI to which the LinkNode is pointing",
             "    [--prop=<properties file>]                                                                    ",
-            "",
-            "  Note: --create defaults to creating a ContainerNode (directory).                                ",
-            "",
-            "  Note: --inheritPermissions is only required when creating a ContainerNode. If true,             ",
-            "          child nodes inherit the parent ContainerNode's permissions.                             ",
-            "",
-            "  Note: --link is only required when creating a LinkNode.  It is the URI to which                 ",
-            "          the LinkNode is pointing.                                                               ",
-            "",
-            "  Note: --storageID is only required when creating a DataNode.  It is the URI to                  ",
-            "          the DataNode resource.                                                                  ",
-            "",
-            "View node:                                                                                        ",
-            "",
-            "    --view --target=<target URI>                                                                  ",
-            "",
-            "Delete node:                                                                                      ",
-            "",
-            "    --delete --target=<target URI>                                                                ",
-            "",
-            "Set node:                                                                                         ",
-            "",
-            "    --set --target=<target URI>                                                                   ",
-            "    [--content-type=<mimetype of source>]                                                         ",
-            "    [--content-encoding=<encoding of source>]                                                     ",
+            "    [--content-type=<mimetype of source>]       : DataNode only",
+            "    [--content-encoding=<encoding of source>]   : DataNode only",
             "    [--group-read=<group URIs (in double quotes, space separated, 4 maximum)>]                    ",
             "    [--group-write=<group URIs (in double quotes, space separated, 4 maximum)>]                   ",
             "    [--lock]                                                                                      ",
@@ -1431,44 +1378,20 @@ public class Main implements Runnable {
             "    [--prop=<properties file>]                                                                    ",
             "    [--recursive]                                                                                 ",
             "",
-            "Copy file:                                                                                        ",
+            "copy:",
             "",
-            "    --copy --src=<source URI> --dest=<destination URI>                                            ",
-            "    [--content-type=<mimetype of source>]                                                         ",
-            "    [--content-encoding=<encoding of source>]                                                     ",
-            "    [--prop=<properties file>]                                                                    ",
-            "    [--noretry]                                                                                   ",
-            "    [--quick]                                                                                     ",
-            "",
-            "  Note: --noretry disables the retry of failed transfers (when the server indicates it was        ",
-            "  temporary)                                                                                      ",
-            "",
-            "  Note: One of --src and --target may be a \"vos\" URI and the other may be an                    ",
+            "  One of source and destination may be a VOSpace node URI ('vos' URI scheme) and the other may be an",
             "  absolute or relative path to a file.  If the target node does not exist, a                      ",
             "  DataNode is created and data copied.  If it does exist, the data and                            ",
-            "  properties are overwritten.                                                                     ",
+            "  properties are overwritten.",
             "",
-            "  Note: Source and destination URIs may include HTTP-like query parameters, some of which will    ",
-            "  result in additional operations being performed.                                                ",
+            "move:                                                                                   ",
             "",
-            "  Note: If the --quick options is supplied, and a download is being performed, transfer           ",
-            "  negotiation will be replaced with an optimized download process.                                ",
-            "",
-            "Move file/node:                                                                                   ",
-            "",
-            "    --move --src=<source URI> --dest=<destination URI>                                            ",
-            "",
-            "  Note: If the source URI refers to a VOSpace node, then move is a recursive operation:  the      ",
-            "  source nodes, and all subnodes, are moved.                                                      ",
-            "",
-            "  Note: Only files can be moved from the local file system to VOSpace.  Similarly, only files     ",
-            "  can be moved from VOSpace to the local file system.                                             ",
-            "",
-            "  Note: If the destination URI refers to a VOSpace node, that node must be a directory.  If the  ",
-            "  directory exists, the source URI will be moved into that directory.  If the directory doesn't   ",
-            "  exist, the source URI will be moved into the parent directory and will be renamed to the name   ",
-            "  specified in destination URI.                                                                   "
-
+            "  Both the source and destination must be VOSpace nodes in the same VOSpace service. If the",
+            "  source is a ContainerNode, then move is a recursive operation:  the source node and all child",
+            "  nodes are moved to the new location. If the destination node is an existing ContainerNode, the",
+            "  source node it moved into the destination and retains the same name; otherwise, the source node",
+            "  is also renamed by the move."
         };
         for (String line : um) {
             msg(line);

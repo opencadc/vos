@@ -106,9 +106,9 @@ class GroupCache {
             PosixGroup pg = groupCache.get(g);
             if (pg == null) {
                 cacheMiss.add(g);
-                log.warn("group cache miss: " + g);
+                log.debug("group cache miss: " + g);
             } else {
-                log.warn("group cache hit  : " + g);
+                log.debug("group cache hit  : " + g);
                 ret.add(pg);
             }
         }
@@ -138,9 +138,9 @@ class GroupCache {
             PosixGroup pg = gidCache.get(g);
             if (pg == null) {
                 cacheMiss.add(g);
-                log.warn("gid cache miss: " + g);
+                log.debug("gid cache miss: " + g);
             } else {
-                log.warn("gid cache hit  : " + g);
+                log.debug("gid cache hit  : " + g);
                 ret.add(pg);
             }
         }

@@ -82,6 +82,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -91,6 +92,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.auth.PosixMapperClient;
 import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.files.CavernURLGenerator;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
@@ -98,6 +100,7 @@ import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -114,6 +117,23 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     private static final Logger log = Logger.getLogger(FileSystemNodePersistence.class);
     
+    static final Set<URI> ADMIN_PROPS = new TreeSet<>(
+            Arrays.asList(
+                    VOS.PROPERTY_URI_CREATOR, 
+                    VOS.PROPERTY_URI_QUOTA
+            ));
+
+    static final Set<URI> IMMUTABLE_PROPS = new TreeSet<>(
+            Arrays.asList(
+                    VOS.PROPERTY_URI_AVAILABLESPACE,
+                    VOS.PROPERTY_URI_CONTENTLENGTH,
+                    VOS.PROPERTY_URI_CONTENTMD5,
+                    VOS.PROPERTY_URI_CREATION_DATE,
+                    VOS.PROPERTY_URI_DATE,
+                    VOS.PROPERTY_URI_CREATOR,
+                    VOS.PROPERTY_URI_QUOTA
+            ));
+    
     private final PosixIdentityManager identityManager;
     private final PosixMapperClient posixMapper;
     private final GroupCache groupCache;
@@ -122,6 +142,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     private final Path rootPath;
     private final VOSURI rootURI;
     private final CavernConfig config;
+    private final boolean localGroupsOnly;
 
     public FileSystemNodePersistence() {
         this.config = new CavernConfig();
@@ -169,6 +190,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             this.posixMapper = new MyPosixMapperClient(posixMapperID);
         }
         this.groupCache = new GroupCache(posixMapper);
+        this.localGroupsOnly = true;
     }
     
     // support FileAction
@@ -197,12 +219,12 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public Set<URI> getAdminProps() {
-        return NodeUtil.ADMIN_PROPS;
+        return ADMIN_PROPS;
     }
 
     @Override
     public Set<URI> getImmutableProps() {
-        return NodeUtil.IMMUTABLE_PROPS;
+        return IMMUTABLE_PROPS;
     }
 
     @Override
@@ -337,6 +359,32 @@ public class FileSystemNodePersistence implements NodePersistence {
         //if (node.isStructured()) {
         //    throw new NodeNotSupportedException("StructuredDataNode is not supported.");
         //}
+        if (localGroupsOnly) {
+            if (!node.getReadOnlyGroup().isEmpty() || !node.getReadWriteGroup().isEmpty()) {
+                LocalAuthority loc = new LocalAuthority();
+                try {
+                    URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
+                    StringBuilder serr = new StringBuilder("non-local groups:");
+                    int len = serr.length();
+                    for (GroupURI g : node.getReadOnlyGroup()) {
+                        if (!localGMS.equals(g.getServiceID())) {
+                            serr.append(" ").append(g.getURI().toASCIIString());
+                        }
+                    }
+                    for (GroupURI g : node.getReadWriteGroup()) {
+                        if (!localGMS.equals(g.getServiceID())) {
+                            serr.append(" ").append(g.getURI().toASCIIString());
+                        }
+                    }
+                    String err = serr.toString();
+                    if (err.length() > len) {
+                        throw new IllegalArgumentException(err);
+                    }
+                } catch (NoSuchElementException ex) {
+                    throw new RuntimeException("CONFIG: localGroupOnly policy && local GMS service not configured");
+                }
+            }
+        }
 
         NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
 
