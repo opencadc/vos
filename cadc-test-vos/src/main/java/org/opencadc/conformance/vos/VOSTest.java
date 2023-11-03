@@ -276,14 +276,14 @@ public abstract class VOSTest {
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
     }
 
-    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI)
+    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI, Subject actor)
             throws Exception {
         log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
         Map<String, Object> val = new HashMap<>();
         val.put("target", vosURI.getURI());
         HttpPost post = new HttpPost(asyncURL, val, false);
         log.debug("POST: " + asyncURL);
-        Subject.doAs(authSubject, new RunnableAction(post));
+        Subject.doAs(actor, new RunnableAction(post));
         log.debug("POST responseCode: " + post.getResponseCode());
         Assert.assertEquals("expected POST response code = 303",
                 303, post.getResponseCode());
@@ -295,23 +295,36 @@ public abstract class VOSTest {
         val.put("phase", "RUN");
         post = new HttpPost(jobPhaseURL , val, false);
         log.debug("POST: " + jobPhaseURL);
-        Subject.doAs(authSubject, new RunnableAction(post));
+        Subject.doAs(actor, new RunnableAction(post));
         log.debug("POST responseCode: " + post.getResponseCode());
         Assert.assertEquals("expected POST response code = 303",
                 303, post.getResponseCode());
-        Assert.assertNull("expected POST throwable == null", post.getThrowable());
-        Thread.sleep(3000); // wait for job to finish
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet get = new HttpGet(jobURL, out);
-        log.debug("GET: " + jobURL);
-        Subject.doAs(authSubject, new RunnableAction(get));
-        Assert.assertEquals("expected GET response code = 200",
-                200, get.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", get.getThrowable());
 
-        log.debug("Job XML: \n" + out);
-        JobReader jr = new JobReader();
-        return jr.read(new StringReader(out.toString()));
+        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        // a terminal phase
+        URL jobPoll = new URL(jobURL + "?WAIT=6");
+        int count = 0;
+        boolean done = false;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JobReader reader = new JobReader();
+        while (!done && count < 10) { // max 10*6 = 60 sec polling
+            out = new ByteArrayOutputStream();
+            log.debug("poll: " + jobPoll);
+            HttpGet get = new HttpGet(jobPoll, out);
+            Subject.doAs(actor, new RunnableAction(get));
+            Assert.assertNull(get.getThrowable());
+            Job job = reader.read(new StringReader(out.toString()));
+            log.debug("current phase: " + job.getExecutionPhase());
+            switch (job.getExecutionPhase()) {
+                case QUEUED:
+                case EXECUTING:
+                    count++;
+                    break;
+                default:
+                    done = true;
+            }
+        }
+        return reader.read(new StringReader(out.toString()));
     }
 
     public void delete(URL nodeURL) {

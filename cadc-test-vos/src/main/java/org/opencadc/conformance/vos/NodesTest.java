@@ -937,7 +937,6 @@ public class NodesTest extends VOSTest {
                 403, putAction.getResponseCode());
 
         // same test after permission granted
-
         testNode.getReadWriteGroup().add(accessGroup);
         log.debug("Node update " + testNode.getReadWriteGroup());
         post(nodeURL, nodeURI, testNode);

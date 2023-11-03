@@ -150,7 +150,7 @@ public class AsyncTest extends VOSTest {
 
         createNodeTree(testTree);
 
-        Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir));
+        Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir), authSubject);
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
         Assert.assertEquals(1, job.getResultsList().size());
         Result res = job.getResultsList().get(0);
@@ -172,11 +172,12 @@ public class AsyncTest extends VOSTest {
         post(subdirURL, getVOSURI(subDir), result.node);
 
         // an error should result from try to delete a file in that directory
-        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(subdirURL + "file2"));
+        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(subdirURL + "file2"), authSubject);
+
         Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
 
         // now try to delete the root node which results in a partial delete (aborted job)
-        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir));
+        job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir), authSubject);
         Assert.assertEquals("Expected aborted job", ExecutionPhase.ABORTED, job.getExecutionPhase());
         Assert.assertEquals(2, job.getResultsList().size());
         for (Result jobResult : job.getResultsList()) {
@@ -192,6 +193,85 @@ public class AsyncTest extends VOSTest {
         // unlock to be able to cleanup
         result.node.isLocked = false;
         post(subdirURL, getVOSURI(subDir), result.node);
+
+        // cleanup
+        cleanupNodeTree(testTree);
+
+    }
+
+    @Test
+    public void testRecursiveDeletePermissions() throws Exception {
+        // create a tree structure
+        String baseDir = "testRecursiveDelPerm/";
+        String testDir = baseDir + "testDir/";
+        String subDir = testDir + "subdir/";
+        String[] testTree = {baseDir, testDir, testDir + "file1", subDir, subDir + "file2"};
+
+        createNodeTree(testTree);
+
+        // grant write permission to baseDir
+        URL baseDirURL = getNodeURL(nodesServiceURL, baseDir);
+        NodeReader.NodeReaderResult result = get(baseDirURL, 200, XML_CONTENT_TYPE);
+        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+        Assert.assertTrue(result.node instanceof ContainerNode);
+        ContainerNode baseDirNode = (ContainerNode) result.node;
+        baseDirNode.getReadWriteGroup().add(accessGroup);
+        log.debug("Node update " + baseDirNode.getReadWriteGroup());
+        VOSURI baseDirURI = getVOSURI(baseDir);
+        post(baseDirURL, baseDirURI, baseDirNode);
+        log.info("Added group permissions to " + baseDir);
+
+        // user without write permission on testDir or below, it cannot be removed
+        Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(testDir), groupMember);
+        Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
+
+        // grant write permission to testDir
+        URL testDirURL = getNodeURL(nodesServiceURL, testDir);
+        result = get(testDirURL, 200, XML_CONTENT_TYPE);
+        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+        Assert.assertTrue(result.node instanceof ContainerNode);
+        ContainerNode testDirNode = (ContainerNode) result.node;
+        testDirNode.getReadWriteGroup().add(accessGroup);
+        log.debug("Node update " + testDirNode.getReadWriteGroup());
+        VOSURI testDirURI = getVOSURI(testDir);
+        post(testDirURL, testDirURI, testDirNode);
+        log.info("Added group permissions to " + testDir);
+
+        // can only delete the one file in the testDir
+        job = postRecursiveDelete(recursiveDeleteServiceURL, testDirURI, groupMember);
+        Assert.assertEquals("Expected aborted job", ExecutionPhase.ABORTED, job.getExecutionPhase());
+        Assert.assertEquals(2, job.getResultsList().size());
+        for (Result jobResult : job.getResultsList()) {
+            if ("errorcount".equalsIgnoreCase(jobResult.getName())) {
+                // subdir cannot be deleted
+                Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
+            } else if ("delcount".equalsIgnoreCase(jobResult.getName())) {
+                // file1 successfully deleted
+                Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
+            } else {
+                Assert.fail("Unexpected result " + jobResult.getName());
+            }
+        }
+
+        // grant write permission to testDir/subdir to delete all the nodes
+        URL subDirURL = getNodeURL(nodesServiceURL, subDir);
+        result = get(testDirURL, 200, XML_CONTENT_TYPE);
+        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+        Assert.assertTrue(result.node instanceof ContainerNode);
+        ContainerNode subDirNode = (ContainerNode) result.node;
+        subDirNode.getReadWriteGroup().add(accessGroup);
+        log.debug("Node update " + subDirNode.getReadWriteGroup());
+        VOSURI subDirURI = getVOSURI(subDir);
+        post(subDirURL, subDirURI, subDirNode);
+        log.info("Added group permissions to " + subDir);
+
+        // all deleted
+        job = postRecursiveDelete(recursiveDeleteServiceURL, testDirURI, groupMember);
+        Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
+        Assert.assertEquals(1, job.getResultsList().size());
+        Result res = job.getResultsList().get(0);
+        Assert.assertEquals("delcount", res.getName());
+        Assert.assertEquals(3, Integer.parseInt(res.getURI().getSchemeSpecificPart()));
 
         // cleanup
         cleanupNodeTree(testTree);
@@ -225,83 +305,5 @@ public class AsyncTest extends VOSTest {
         }
     }
 
-    @Test
-    public void testPermissions() throws Exception {
-
-        Assume.assumeTrue("enablePermissionTest not called", accessGroup != null);
-        
-        // create a directory
-        String parentName = "testPermissions";
-        ContainerNode testNode = new ContainerNode(parentName);
-        testNode.owner = authSubject;
-        testNode.isPublic = false;
-
-        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
-        final VOSURI nodeURI = getVOSURI(parentName);
-
-        String childName = "testGroupUser";
-        ContainerNode childNode = new ContainerNode(childName);
-        childNode.parent = testNode;
-        String childPath = parentName + "/" + childName;
-        final VOSURI childURI = getVOSURI(childPath);
-        final URL childURL = getNodeURL(nodesServiceURL, childPath);
-        
-        // cleanup
-        delete(childURL, false);
-        delete(nodeURL, false);
-
-        // PUT the node
-        log.info("putAction: " + nodeURI + " -> " + nodeURL);
-        put(nodeURL, nodeURI, testNode);
-
-        // try to access it as a different user (memberUser) - it should fail
-        HttpGet getAction = new HttpGet(nodeURL, true);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
-
-        // give groupMember read access through the group
-        getAction = new HttpGet(nodeURL, true);
-        testNode.getReadOnlyGroup().add(accessGroup);
-        post(nodeURL, nodeURI, testNode);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals("expected GET response code = 200", 200, getAction.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
-
-        // permission denied to write in the container without write permission
-        InputStream is = prepareInput(childURI, childNode);
-        HttpUpload putAction = new HttpUpload(is, childURL);
-        putAction.setRequestProperty("Content-Type", XML_CONTENT_TYPE);
-        log.debug("PUT rejected " + childURL);
-        Subject.doAs(groupMember, new RunnableAction(putAction));
-        log.debug("PUT responseCode: " + putAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 403",
-                403, putAction.getResponseCode());
-
-        // same test after permission granted
-
-        testNode.getReadWriteGroup().add(accessGroup);
-        log.debug("Node update " + testNode.getReadWriteGroup());
-        post(nodeURL, nodeURI, testNode);
-        log.debug("PUT succeed " + childURL);
-        is.reset();
-        putAction = new HttpUpload(is, childURL);
-        Subject.doAs(groupMember, new RunnableAction(putAction));
-        log.debug("PUT responseCode: " + putAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, putAction.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
-
-        log.debug("Delete node " + childURL);
-        HttpDelete deleteAction = new HttpDelete(childURL, true);
-        Subject.doAs(groupMember, new RunnableAction(deleteAction));
-        log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, deleteAction.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
-
-        if (cleanupOnSuccess) {
-            delete(nodeURL);
-        }
-    }
 
 }
