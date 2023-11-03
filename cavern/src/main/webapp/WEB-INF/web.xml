@@ -20,7 +20,7 @@
         <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
         <init-param>
             <param-name>logLevel</param-name>
-            <param-value>info</param-value>
+            <param-value>debug</param-value>
         </init-param>
         <init-param>
             <param-name>logLevelPackages</param-name>
@@ -30,6 +30,11 @@
             ca.nrc.cadc.rest
             ca.nrc.cadc.vosi
             ca.nrc.cadc.auth
+
+            org.opencadc.cavern.files
+            org.opencadc.pkg.server
+            org.opencadc.vospace.server.pkg
+            org.opencadc.conformance.vos
             </param-value>
         </init-param>
             <init-param>
