@@ -35,8 +35,7 @@
       <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
-      <!-- bearer tokens do not work with cadc-vos-server-1.x because restlet -->
-      <!-- <securityMethod standardID="ivo://ivoa.net/sso#token"/> -->
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
 
