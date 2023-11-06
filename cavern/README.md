@@ -112,7 +112,7 @@ docker build -t cavern:latest -f Dockerfile .
 ```
 ## checking it
 ```
-docker run --rm -it minoc:latest /bin/bash
+docker run --rm -it cavern:latest /bin/bash
 ```
 ## running it
 ```
