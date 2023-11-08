@@ -77,6 +77,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -205,34 +206,20 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         createNodeTree(testTree);
 
         // grant write permission to baseDir
-        URL baseDirURL = getNodeURL(nodesServiceURL, baseDir);
-        NodeReader.NodeReaderResult result = get(baseDirURL, 200, XML_CONTENT_TYPE);
-        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
-        Assert.assertTrue(result.node instanceof ContainerNode);
-        ContainerNode baseDirNode = (ContainerNode) result.node;
-        baseDirNode.getReadWriteGroup().add(accessGroup);
-        log.debug("Node update " + baseDirNode.getReadWriteGroup());
-        VOSURI baseDirURI = getVOSURI(baseDir);
-        post(baseDirURL, baseDirURI, baseDirNode);
-        log.info("Added group permissions to " + baseDir);
+
+        String[] writableBaseDir = {baseDir};
+        makeWritable(writableBaseDir, accessGroup);
 
         // user without write permission on testDir or below, it cannot be removed
         Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(testDir), groupMember);
         Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
 
         // grant write permission to testDir
-        URL testDirURL = getNodeURL(nodesServiceURL, testDir);
-        result = get(testDirURL, 200, XML_CONTENT_TYPE);
-        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
-        Assert.assertTrue(result.node instanceof ContainerNode);
-        ContainerNode testDirNode = (ContainerNode) result.node;
-        testDirNode.getReadWriteGroup().add(accessGroup);
-        log.debug("Node update " + testDirNode.getReadWriteGroup());
-        VOSURI testDirURI = getVOSURI(testDir);
-        post(testDirURL, testDirURI, testDirNode);
-        log.info("Added group permissions to " + testDir);
+        String[] writableTestDir = {testDir};
+        makeWritable(writableTestDir, accessGroup);
 
         // can only delete the one file in the testDir
+        VOSURI testDirURI = getVOSURI(testDir);
         job = postRecursiveDelete(recursiveDeleteServiceURL, testDirURI, groupMember);
         Assert.assertEquals("Expected aborted job", ExecutionPhase.ABORTED, job.getExecutionPhase());
         Assert.assertEquals(2, job.getResultsList().size());
@@ -248,17 +235,8 @@ public class RecursiveNodeDeleteTest extends VOSTest {
             }
         }
 
-        // grant write permission to testDir/subdir to delete all the nodes
-        result = get(testDirURL, 200, XML_CONTENT_TYPE);
-        log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
-        Assert.assertTrue(result.node instanceof ContainerNode);
-        ContainerNode subDirNode = (ContainerNode) result.node;
-        subDirNode.getReadWriteGroup().add(accessGroup);
-        log.debug("Node update " + subDirNode.getReadWriteGroup());
-        VOSURI subDirURI = getVOSURI(subDir);
-        URL subDirURL = getNodeURL(nodesServiceURL, subDir);
-        post(subDirURL, subDirURI, subDirNode);
-        log.info("Added group permissions to " + subDir);
+        String[] testBottomTree = Arrays.copyOfRange(testTree, 3, 5);
+        makeWritable(testBottomTree, accessGroup);
 
         // all deleted
         job = postRecursiveDelete(recursiveDeleteServiceURL, testDirURI, groupMember);
