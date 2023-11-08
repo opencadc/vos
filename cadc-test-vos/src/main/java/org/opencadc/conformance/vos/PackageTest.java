@@ -71,33 +71,25 @@ package org.opencadc.conformance.vos;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.RunnableAction;
-import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
-import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessControlException;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -112,12 +104,10 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
-import org.opencadc.vospace.client.ClientTransfer;
-import org.opencadc.vospace.client.VOSpaceClient;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -130,18 +120,76 @@ public class PackageTest extends VOSTest {
 
     private static final String ZIP_CONTENT_TYPE = "application/zip";
     private static final String TAR_CONTENT_TYPE = "application/x-tar";
-//    private static Subject s;
-
-//    private static VOSURI nodeURI;
 
     protected PackageTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
     }
 
+
+    /**
+     * returns empty archive file, should return archive with empty directory?
+     */
     @Test
-    public void tarPermissionDeniedTest () {
+    public void permissionDeniedTest() {
         try {
-            permissionDeniedTest(TAR_CONTENT_TYPE);
+            // Root container node
+            String root = "permission-denied-root";
+            String file = "permission-denied-file.txt";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL fileURL = getNodeURL(nodesServiceURL, file);
+
+            // cleanup
+            delete(fileURL, false);
+            delete(rootURL, false);
+
+            // upload the folders and files as auth subject
+            String content = "permission-denied-file-content";
+            VOSURI nodeURI = putContainerNode(root, rootURL);
+            VOSURI fileURI = putDataNode(file, content);
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(nodeURI.getURI());
+
+            List<String> expected = new ArrayList<>();
+
+            Subject anonSubject = AuthenticationUtil.getAnonSubject();
+            File archive = downloadPackage(targets, TAR_CONTENT_TYPE, anonSubject);
+            File extracted = extractPackage(archive, TAR_CONTENT_TYPE);
+            verifyPackage(expected, extracted);
+
+            // cleanup
+            delete(fileURL, false);
+            delete(rootURL, false);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    /**
+     * returns empty archive file, should throw 404 instead?
+     */
+    @Test
+    public void targetNotFoundTest() {
+        try {
+            String name = "target-not-found-node";
+            VOSURI nodeURI = getVOSURI(name);
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(nodeURI.getURI());
+
+            // download and extract the package
+            try {
+                File archive = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
+                Assert.fail("should have thrown exception for target not found");
+            } catch (AccessControlException e) {
+                log.debug("expected exception: " + e.getMessage());
+            }
+
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
@@ -149,9 +197,30 @@ public class PackageTest extends VOSTest {
     }
 
     @Test
-    public void zipPermissionDeniedTest () {
+    public void emptyTargetTest() {
         try {
-            permissionDeniedTest(ZIP_CONTENT_TYPE);
+            String name = "empty-target-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+
+            // cleanup
+            delete(nodeURL, false);
+
+            // upload the folders and files
+            VOSURI nodeURI = putContainerNode(name, nodeURL);
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(nodeURI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodeURL, false);
+
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
@@ -159,69 +228,32 @@ public class PackageTest extends VOSTest {
     }
 
     @Test
-    public void tarNodeNotFoundTest () {
+    public void singleFileTargetTest() {
         try {
-            targetNotFoundTest(TAR_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            String name = "single-target-node.txt";
+            String content = "single-target-node-content";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
 
-    @Test
-    public void zipNodeNotFoundTest () {
-        try {
-            targetNotFoundTest(ZIP_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            // cleanup
+            delete(nodeURL, false);
 
-    @Test
-    public void tarEmptyNodeTest() {
-        try {
-            emptyTargetTest(TAR_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            // upload the folders and files
+            VOSURI nodeURI = putDataNode(name, content);
 
-    @Test
-    public void zipEmptyNodeTest() {
-        try {
-            emptyTargetTest(ZIP_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(nodeURI.getURI());
 
-    @Test
-    public void tarSingleNodeTest() {
-        try {
-            singleTargetTest(TAR_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(name);
 
-    @Test
-    public void zipSingleNodeTest() {
-        try {
-            singleTargetTest(ZIP_CONTENT_TYPE);
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
-    @Test
-    public void tarParentChildTest() {
-        try {
-            parentChildTest(TAR_CONTENT_TYPE);
+            // cleanup
+            delete(nodeURL, false);
+
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
@@ -231,6 +263,54 @@ public class PackageTest extends VOSTest {
     @Test
     public void multipleTargetTest() {
         try {
+            //  /root/
+            //  /root/target-1/
+            //  /root/target-1/file1
+            //  /root/target-2/
+            //  /root/target-2/file2
+
+            String root = "multi-target-root-node";
+            String target1 = root + "/target-1";
+            String file1 = target1 + "/target-1-file.txt";
+            String target2 = root + "/target-2";
+            String file2 = target2 + "/target-2-file.txt";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL target1URL = getNodeURL(nodesServiceURL, target1);
+            URL file1URL = getNodeURL(nodesServiceURL, file1);
+            URL target2URL = getNodeURL(nodesServiceURL, target2);
+            URL file2URL = getNodeURL(nodesServiceURL, file2);
+
+            URL[] nodes = new URL[] {file2URL, target2URL, file1URL, target1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String content1 = "target-1-file-content";
+            String content2 = "target-2-file-content";
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI target1URI = putContainerNode(target1, target1URL);
+            VOSURI file1URI = putDataNode(file1, content1, authSubject);
+            VOSURI target2URI = putContainerNode(target2, target2URL);
+            VOSURI file2URI = putDataNode(file2, content2, authSubject);
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(target1URI.getURI());
+            targets.add(target2URI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(file1);
+            expected.add(file2);
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -238,168 +318,130 @@ public class PackageTest extends VOSTest {
         }
     }
 
-
-    public void permissionDeniedTest(String contentType) throws Exception {
-        // Root container node created by auth subject
-        String name = "permission-denied-node";
-        URL nodeURL = getNodeURL(nodesServiceURL, name);
-
-        // cleanup
-        delete(nodeURL, false);
-
-        VOSURI nodeURI = getVOSURI(name);
-        ContainerNode node = new ContainerNode(name);
-        put(nodeURL, nodeURI, node);
-        log.debug(String.format("PUT %s URL: %s", name, nodeURL));
-
-        List<URI> targets = new ArrayList<>();
-        targets.add(nodeURI.getURI());
-
-        // Package request using anon subject
-        Subject anonSubject = AuthenticationUtil.getAnonSubject();
-
-        // download and extract the package
+    @Test
+    public void fullTest() {
         try {
-            File archive = downloadPackage(targets, contentType, authSubject);
-            Assert.fail("should have thrown exception for permission denied");
-        } catch (AccessControlException e) {
-            log.debug("expected exception: " + e.getMessage());
+             //   /root-folder/
+             //   /root-folder/file-1.txt
+             //   /root-folder/folder-1/
+             //   /root-folder/folder-2/
+             //   /root-folder/folder-2/file-2.txt
+             //   /root-folder/folder-2/file-3.txt
+             //   /root-folder/folder-2/folder-3/
+             //   /root-folder/folder-2/folder-3/link-1.txt
+
+            // nodes paths
+            String root = "full-root-folder";
+            String file1 = root + "/file-1.txt";
+            String folder1 = root + "/folder-1";
+            String folder2 = root + "/folder-2";
+            String file2 = folder2 + "/file-2.txt";
+            String file3 = folder2 + "/file-3.txt";
+            String folder3 = folder2 + "/folder-3";
+            String link1 = folder3 + "/link-1.txt";
+
+            // node URL's
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL file1URL = getNodeURL(nodesServiceURL, file1);
+            URL folder1URL = getNodeURL(nodesServiceURL, folder1);
+            URL folder2URL = getNodeURL(nodesServiceURL, folder2);
+            URL file2URL = getNodeURL(nodesServiceURL, file2);
+            URL file3URL = getNodeURL(nodesServiceURL, file3);
+            URL folder3URL = getNodeURL(nodesServiceURL, folder3);
+            URL link1URL = getNodeURL(nodesServiceURL, link1);
+
+            URL[] nodes = new URL[] {link1URL, folder3URL, file3URL, file2URL, folder2URL, folder1URL, file1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String file1Content = "file-1-content";
+            String file2Content = "file-2-content";
+            String file3Content = "file-3-content";
+            URI linkTarget = URI.create("vos://opencadc.org~cavern/link-node");
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI file1URI = putDataNode(file1, file1Content);
+            VOSURI folder1URI = putContainerNode(folder1, folder1URL);
+            VOSURI folder2URI = putContainerNode(folder2, folder2URL);
+            VOSURI file2URI = putDataNode(file2, file2Content);
+            VOSURI file3URI = putDataNode(file3, file3Content);
+            VOSURI folder3URI = putContainerNode(folder3, folder3URL);
+            VOSURI link1URI = putLinkNode(link1, link1URL, linkTarget);
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(rootURI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(file1);
+            expected.add(file2);
+            expected.add(file3);
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
         }
-
-        // cleanup
-        delete(nodeURL, false);
     }
 
-    public void targetNotFoundTest(String contentType) throws Exception {
-        String name = "target-not-found-node";
-        VOSURI nodeURI = getVOSURI(name);
-
-        List<URI> targets = new ArrayList<>();
-        targets.add(nodeURI.getURI());
-
-        // download and extract the package
-        try {
-            File archive = downloadPackage(targets, contentType, authSubject);
-            Assert.fail("should have thrown exception for target not found");
-        } catch (AccessControlException e) {
-            log.debug("expected exception: " + e.getMessage());
-        }
+    private VOSURI putContainerNode(String path, URL url) throws IOException {
+        ContainerNode node = new ContainerNode(path);
+        VOSURI uri = getVOSURI(path);
+        put(url, uri, node);
+        return uri;
     }
 
-    public void emptyTargetTest(String contentType) throws Exception {
-
-        String name = "empty-target-node";
-        URL nodeURL = getNodeURL(nodesServiceURL, name);
-
-        // cleanup
-        delete(nodeURL, false);
-
-        VOSURI nodeURI = getVOSURI(name);
-        ContainerNode node = new ContainerNode(name);
-        put(nodeURL, nodeURI, node);
-        log.debug(String.format("PUT %s URL: %s", name, nodeURL));
-
-        List<URI> targets = new ArrayList<>();
-        targets.add(nodeURI.getURI());
-
-        // download and extract the package
-        File archive = downloadPackage(targets, contentType, authSubject);
-
-//        File[] files = packageRoot.toFile().listFiles();
-//        Assert.assertNotNull(files);
-//        Assert.assertEquals("expected single file", 1, files.length);
-//        Assert.assertTrue("expected directory", files[0].isDirectory());
-//        Assert.assertEquals("", name, files[0].getName());
-
-        // cleanup
-        delete(nodeURL, false);
+    private VOSURI putDataNode(String path, String content)
+            throws IOException, TransferParsingException {
+        return uploadFile(path, content, authSubject);
+    }
+    private VOSURI putDataNode(String path, String content, Subject testSubject)
+            throws IOException, TransferParsingException {
+        return uploadFile(path, content, testSubject);
     }
 
-    public void singleTargetTest(String contentType) throws Exception {
-
-        String name = "single-target-node.txt";
-        String content = "single-target-node.txt content";
-        URL nodeURL = getNodeURL(nodesServiceURL, name);
-        VOSURI nodeURI = getVOSURI(name);
-
-        // cleanup
-//        delete(nodeURL, false);
-
-        // Upload
-//        uploadFile(name, content, authSubject);
-
-        List<URI> targets = new ArrayList<>();
-        targets.add(nodeURI.getURI());
-
-        // download and extract the package
-        File archive = downloadPackage(targets, contentType, authSubject);
-
-//        File[] files = packageRoot.toFile().listFiles();
-//        Assert.assertNotNull(files);
-//        Assert.assertEquals("expected single file", 1, files.length);
-//        Assert.assertTrue("expected directory", files[0].isDirectory());
-//        Assert.assertEquals("", name, files[0].getName());
-
-        // cleanup
-//        delete(nodeURL, false);
+    private VOSURI putLinkNode(String path, URL url, URI target)
+            throws IOException {
+        LinkNode node = new LinkNode(path, target);
+        VOSURI uri = getVOSURI(path);
+        put(url, uri, node);
+        return uri;
     }
 
-    public void parentChildTest(String contentType) throws Exception {
-
-        // parent ContainerNode
-        String parent = "foo-parent-node";
-        URL parentNodeURL = getNodeURL(nodesServiceURL, parent);
-
-        // child DataNode
-        String child = "foo-child-node.txt";
-        URL childNodeURL = getNodeURL(nodesServiceURL, parent + "/" + child);
-
-        // cleanup
-//        delete(childNodeURL, false);
-//        delete(parentNodeURL, false);
-
-        // PUT parent node
-        VOSURI parentNodeURI = getVOSURI(parent);
-        ContainerNode node = new ContainerNode(parent);
-//        put(parentNodeURL, parentNodeURI, node);
-        log.debug(String.format("PUT %s URL: %s", parent, parentNodeURL));
-
-        // Upload child node
-        String content = "foo-child-node content";
-//        uploadFile(parent + "/" + child, content, authSubject);
+    private void doTest(List<URI> targets, List<String> expected, String contentType)
+            throws Exception {
 
         // download the package
-        List<URI> targets = new ArrayList<>();
-        targets.add(parentNodeURI.getURI());
         File pkg = downloadPackage(targets, contentType, authSubject);
         Assert.assertNotNull(pkg);
         log.debug("archive file: " + pkg.getAbsolutePath());
 
-        // extract the archive
+        // extract the package
         File extracted = extractPackage(pkg, contentType);
         Assert.assertNotNull(extracted);
         log.debug("extracted file: " + extracted.getAbsolutePath());
 
         // verify package files
-        List<String> expected = new ArrayList<>();
-        expected.add(child);
-        verifyPackage(expected, extracted.getAbsolutePath());
+        verifyPackage(expected, extracted);
 
-        // cleanup
-        delete(childNodeURL, false);
-        delete(parentNodeURL, false);
-        deleteFile(pkg);
-        deleteFile(extracted);
+        // file cleanup
+//        deleteFile(pkg);
+//        deleteFile(extracted);
     }
 
-    private void uploadFile(String filename, String content, Subject caller)
-            throws MalformedURLException, IOException, TransferParsingException {
-        // Put a file (DataNode)
-        URL nodeURL = getNodeURL(nodesServiceURL, filename);
-        VOSURI nodeURI = getVOSURI(filename);
-        log.debug("upload node URL: " + nodeURL);
+    private VOSURI uploadFile(String filename, String content, Subject testSubject)
+            throws IOException, TransferParsingException {
 
         // Create a Transfer
+        VOSURI nodeURI = getVOSURI(filename);
         Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
         transfer.version = VOS.VOSPACE_21;
         Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
@@ -417,7 +459,7 @@ public class PackageTest extends VOSTest {
         URL transferURL = getNodeURL(synctransServiceURL, filename);
         log.debug("transfer URL: " + transferURL);
         HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-        Subject.doAs(caller, new RunnableAction(post));
+        Subject.doAs(testSubject, new RunnableAction(post));
         Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", post.getThrowable());
 
@@ -425,7 +467,7 @@ public class PackageTest extends VOSTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         HttpGet get = new HttpGet(post.getRedirectURL(), out);
         log.debug("GET: " + post.getRedirectURL());
-        Subject.doAs(caller, new RunnableAction(get));
+        Subject.doAs(testSubject, new RunnableAction(get));
         log.debug("GET responseCode: " + get.getResponseCode());
         Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
         Assert.assertNull("expected GET throwable == null", get.getThrowable());
@@ -445,6 +487,8 @@ public class PackageTest extends VOSTest {
         log.info("PUT: " + endpoint);
         ByteArrayInputStream is = new ByteArrayInputStream(content.getBytes());
         put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
+
+        return nodeURI;
     }
 
 //    private void uploadFile(VOSURI target, File uploadFile)
@@ -504,7 +548,10 @@ public class PackageTest extends VOSTest {
         URL redirctURL = post.getRedirectURL();
 
         // Download the package
-        File tmp = new File(System.getProperty("java.io.tmpdir"));
+        File tmp = new File(System.getProperty("java.io.tmpdir"), "package-test-" + UUID.randomUUID());
+        if (!tmp.mkdirs()) {
+            throw new IOException("unable to create tmp directory: " + tmp.getAbsolutePath());
+        }
         HttpDownload download = new HttpDownload(redirctURL, tmp);
         download.setOverwrite(true);
         log.debug("GET: " + redirctURL);
@@ -531,7 +578,7 @@ public class PackageTest extends VOSTest {
         String archiveType = contentType.equals(ZIP_CONTENT_TYPE) ? ArchiveStreamFactory.ZIP : ArchiveStreamFactory.TAR;
         log.debug("archive type: " + archiveType);
 
-        String packageDir = packageFile.getName().replace("." + archiveType, "");
+        String packageDir = packageFile.getName().replace(".", "-");
         File extractDir = new File(packageFile.getParent(), packageDir);
 
         ArchiveStreamFactory archiveStreamFactory = new ArchiveStreamFactory();
@@ -562,17 +609,13 @@ public class PackageTest extends VOSTest {
                 }
             }
         }
-
-//        int index = archiveFile.getName().indexOf(".");
-//        String filename = archiveFile.getName().substring(0, index);
-//        return new File(archiveFile.getParent(), filename);
         return extractDir;
     }
 
-    private void verifyPackage(List<String> expectedFiles, String packageDir) throws IOException {
+    private void verifyPackage(List<String> expectedFiles, File packageDir) throws IOException {
 
         // List of extracted files with path
-        List<Path> extractedFiles = listFiles(packageDir);
+        List<Path> extractedFiles = listFiles(packageDir.getAbsolutePath());
 
         // compare expected to extracted
         int count = 0;
@@ -593,6 +636,12 @@ public class PackageTest extends VOSTest {
     private List<Path> listFiles(String rootDir) throws IOException {
         try (Stream<Path> paths = Files.walk(Paths.get(rootDir))) {
             return paths.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+    }
+
+    private void delete(URL[] nodes) {
+        for (URL node : nodes) {
+            delete(node, false);
         }
     }
 
