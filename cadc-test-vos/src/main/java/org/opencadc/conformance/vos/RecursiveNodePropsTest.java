@@ -150,9 +150,7 @@ public class RecursiveNodePropsTest extends VOSTest {
         }
 
         createNodeTree(testTree);
-
         ContainerNode testNode = new ContainerNode(baseDir);
-
         NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
         NodeProperty descriptionProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "description");
         NodeProperty customProperty = new NodeProperty(URI.create("custom:secret-meaning"), "my secret info");
@@ -238,7 +236,6 @@ public class RecursiveNodePropsTest extends VOSTest {
         }
 
         // try to set and admin prop -> fail
-
         testNode.getProperties().clear();
         NodeProperty quotaProperty = new NodeProperty(VOS.PROPERTY_URI_QUOTA, "100000");
         testNode.getProperties().add(quotaProperty);
@@ -265,7 +262,7 @@ public class RecursiveNodePropsTest extends VOSTest {
 
         createNodeTree(testTree);
 
-        // user without write permission on testDir or below, it cannot be updated
+        // user without write permission on testDir or below => it cannot be updated
         ContainerNode testNode = new ContainerNode(baseDir);
 
         NodeProperty titleProperty = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
@@ -274,7 +271,7 @@ public class RecursiveNodePropsTest extends VOSTest {
         Job job = postRecursiveNodeProps(recursiveNodePropsServiceURL, testNode, groupMember);
         Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
 
-        // grant write permission to basedir and testdir which will be updated.
+        // grant write permission to basedir and testdir => partial update:
         // file1 and subDir will not be updated and file2 will not be visited
         String[] testTopTree = Arrays.copyOfRange(testTree, 0, 2);
         makeWritable(testTopTree, accessGroup);
@@ -284,10 +281,8 @@ public class RecursiveNodePropsTest extends VOSTest {
         Assert.assertEquals(2, job.getResultsList().size());
         for (Result jobResult : job.getResultsList()) {
             if ("errorcount".equalsIgnoreCase(jobResult.getName())) {
-                // subdir cannot be updated
                 Assert.assertEquals(2, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
             } else if ("successcount".equalsIgnoreCase(jobResult.getName())) {
-                // file1 successfully updated
                 Assert.assertEquals(2, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
             } else {
                 Assert.fail("Unexpected result " + jobResult.getName());
@@ -301,10 +296,8 @@ public class RecursiveNodePropsTest extends VOSTest {
             Assert.assertFalse(nodeName, checkProp(nodeName, titleProperty));
         }
 
-        // grant write permission to the remaining nodes
+        // grant write permission to the remaining nodes => full update
         makeWritable(testBottomTree, accessGroup);
-
-        // all updated
         testNode.getProperties().clear();
         titleProperty.setValue("better title");
         testNode.getProperties().add(titleProperty);
@@ -320,7 +313,6 @@ public class RecursiveNodePropsTest extends VOSTest {
 
         // cleanup
         cleanupNodeTree(testTree);
-
     }
 
     private boolean checkProp(String nodeName, NodeProperty prop) throws NodeParsingException,

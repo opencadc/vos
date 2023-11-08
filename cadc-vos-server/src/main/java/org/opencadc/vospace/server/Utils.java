@@ -172,7 +172,6 @@ public class Utils {
         }
     }
 
-
     // needed by create and update
     public static List<NodeProperty> getAdminProps(Node clientNode, Set<URI> adminProps, Subject caller,
                                                    NodePersistence nodePersistence) {
@@ -194,7 +193,7 @@ public class Utils {
     }
 
     // needed by create
-    public static final boolean isAdmin(Subject caller, NodePersistence nodePersistence) {
+    public static boolean isAdmin(Subject caller, NodePersistence nodePersistence) {
         if (caller == null || caller.getPrincipals().isEmpty()) {
             return false;
         }

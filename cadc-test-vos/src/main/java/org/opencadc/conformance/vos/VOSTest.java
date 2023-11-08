@@ -342,7 +342,6 @@ public abstract class VOSTest {
         NodeWriter writer = new NodeWriter();
         writer.write(getVOSURI(propsNode.getName()), propsNode, sb, VOS.Detail.max);
         log.debug("post content: " + sb.toString());
-
         FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
 
         HttpPost post = new HttpPost(asyncURL, content, false);
@@ -413,7 +412,6 @@ public abstract class VOSTest {
     protected void createNodeTree(String[] nodes) throws Exception {
         // cleanup first
         cleanupNodeTree(nodes);
-
         // build the tree
         for (String nodeName : nodes) {
             URL nodeURL = getNodeURL(nodesServiceURL, nodeName);

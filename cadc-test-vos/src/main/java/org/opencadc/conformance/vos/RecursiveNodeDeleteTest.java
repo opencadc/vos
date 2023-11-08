@@ -145,7 +145,6 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         }
 
         createNodeTree(testTree);
-
         Job job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir), authSubject);
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
         Assert.assertEquals(1, job.getResultsList().size());
@@ -161,7 +160,6 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         
         // repeat test but lock the subdirectory
         createNodeTree(testTree);
-
         result = get(subdirURL, 200, XML_CONTENT_TYPE, true);
         log.info("found: " + result.vosURI);
         result.node.isLocked = true;
@@ -171,7 +169,6 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(subdirURL + "file2"), authSubject);
 
         Assert.assertEquals("Expected error job", ExecutionPhase.ERROR, job.getExecutionPhase());
-
         // now try to delete the root node which results in a partial delete (aborted job)
         job = postRecursiveDelete(recursiveDeleteServiceURL, getVOSURI(baseDir), authSubject);
         Assert.assertEquals("Expected aborted job", ExecutionPhase.ABORTED, job.getExecutionPhase());
@@ -192,7 +189,6 @@ public class RecursiveNodeDeleteTest extends VOSTest {
 
         // cleanup
         cleanupNodeTree(testTree);
-
     }
 
     @Test
@@ -206,7 +202,6 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         createNodeTree(testTree);
 
         // grant write permission to baseDir
-
         String[] writableBaseDir = {baseDir};
         makeWritable(writableBaseDir, accessGroup);
 
@@ -235,10 +230,10 @@ public class RecursiveNodeDeleteTest extends VOSTest {
             }
         }
 
+        // grant all write permission
         String[] testBottomTree = Arrays.copyOfRange(testTree, 3, 5);
         makeWritable(testBottomTree, accessGroup);
 
-        // all deleted
         job = postRecursiveDelete(recursiveDeleteServiceURL, testDirURI, groupMember);
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
         Assert.assertEquals(1, job.getResultsList().size());
@@ -262,9 +257,4 @@ public class RecursiveNodeDeleteTest extends VOSTest {
         }
         return false;
     }
-
-
-
-
-
 }

@@ -194,7 +194,6 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             }
 
             log.debug("node: " + target);
-
             PathResolver pathResolver = new PathResolver(nodePersistence, authorizer, true);
             String nodePath = target.getPath();
             Node serverNode = pathResolver.getNode(nodePath);
@@ -247,7 +246,6 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                     log.error("Could not check job phase: ", e);
                 }
             }
-
             sendError("Unexpected Exception: " + t.getMessage());
         }
     }

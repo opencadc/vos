@@ -129,16 +129,20 @@ public class RecursiveDeleteNodeRunner extends AbstractRecursiveRunner {
 
     @Override
     protected boolean performAction(Node node) throws Exception {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedException();
+        }
+
         List<ContainerNode> childContainers = new ArrayList<>();
         Subject subject = AuthenticationUtil.getCurrentSubject(); // TODO create this once?
         log.debug("Deleting node " + Utils.getPath(node));
-        boolean writableParent = authorizer.hasSingleNodeWritePermission(node, subject);
+        // check the job phase for abort or illegal state
+        checkJobPhase();
         boolean success = true;
         if (node instanceof ContainerNode) {
             try (ResourceIterator<Node> iterator =
                          nodePersistence.iterator((ContainerNode) node, null, null)) {
                 while (iterator.hasNext()) {
-                    checkJobPhase();
                     Node child = iterator.next();
                     if (child instanceof ContainerNode) {
                         childContainers.add((ContainerNode) child);
@@ -176,5 +180,4 @@ public class RecursiveDeleteNodeRunner extends AbstractRecursiveRunner {
         }
         return success;
     }
-
 }
