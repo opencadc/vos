@@ -132,7 +132,7 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
     /**
      * Method that performs an action recursively on an existing (server) node
      *
-     * @returns true if successful or false otherwise
+     * @return true if successful or false otherwise
      */
     protected abstract boolean performAction(Node node) throws Exception;
 
