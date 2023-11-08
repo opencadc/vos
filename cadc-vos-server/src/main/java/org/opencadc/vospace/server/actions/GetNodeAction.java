@@ -68,24 +68,14 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.StringUtil;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.AccessControlContext;
-import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Iterator;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;

@@ -69,32 +69,19 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotFoundException;
-import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  * @author pdowler

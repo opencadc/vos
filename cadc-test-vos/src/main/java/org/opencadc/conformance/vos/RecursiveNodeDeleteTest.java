@@ -69,33 +69,28 @@
 
 package org.opencadc.conformance.vos;
 
-import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.HttpDelete;
-import ca.nrc.cadc.net.HttpGet;
-import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
 import java.io.File;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 
-public class AsyncTest extends VOSTest {
-    private static final Logger log = Logger.getLogger(AsyncTest.class);
+public class RecursiveNodeDeleteTest extends VOSTest {
+    private static final Logger log = Logger.getLogger(RecursiveNodeDeleteTest.class);
 
     // permissions tests
     private GroupURI accessGroup;
@@ -105,13 +100,13 @@ public class AsyncTest extends VOSTest {
     private GroupURI group1;
     private GroupURI group2;
 
+    protected boolean nodelockSupported = true;
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
-    protected boolean nodelockSupported = true;
 
     protected boolean cleanupOnSuccess = true;
 
-    protected AsyncTest(URI resourceID, File testCert) {
+    protected RecursiveNodeDeleteTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
     }
 
@@ -154,7 +149,7 @@ public class AsyncTest extends VOSTest {
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
         Assert.assertEquals(1, job.getResultsList().size());
         Result res = job.getResultsList().get(0);
-        Assert.assertEquals("delcount", res.getName());
+        Assert.assertEquals("successcount", res.getName());
         Assert.assertEquals(4, Integer.parseInt(res.getURI().getSchemeSpecificPart()));
         // cleanup
         cleanupNodeTree(testTree);
@@ -183,7 +178,7 @@ public class AsyncTest extends VOSTest {
         for (Result jobResult : job.getResultsList()) {
             if ("errorcount".equalsIgnoreCase(jobResult.getName())) {
                 Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
-            } else if ("delcount".equalsIgnoreCase(jobResult.getName())) {
+            } else if ("successcount".equalsIgnoreCase(jobResult.getName())) {
                 Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
             } else {
                 Assert.fail("Unexpected result " + jobResult.getName());
@@ -245,7 +240,7 @@ public class AsyncTest extends VOSTest {
             if ("errorcount".equalsIgnoreCase(jobResult.getName())) {
                 // subdir cannot be deleted
                 Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
-            } else if ("delcount".equalsIgnoreCase(jobResult.getName())) {
+            } else if ("successcount".equalsIgnoreCase(jobResult.getName())) {
                 // file1 successfully deleted
                 Assert.assertEquals(1, Integer.parseInt(jobResult.getURI().getSchemeSpecificPart()));
             } else {
@@ -254,7 +249,6 @@ public class AsyncTest extends VOSTest {
         }
 
         // grant write permission to testDir/subdir to delete all the nodes
-        URL subDirURL = getNodeURL(nodesServiceURL, subDir);
         result = get(testDirURL, 200, XML_CONTENT_TYPE);
         log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
         Assert.assertTrue(result.node instanceof ContainerNode);
@@ -262,6 +256,7 @@ public class AsyncTest extends VOSTest {
         subDirNode.getReadWriteGroup().add(accessGroup);
         log.debug("Node update " + subDirNode.getReadWriteGroup());
         VOSURI subDirURI = getVOSURI(subDir);
+        URL subDirURL = getNodeURL(nodesServiceURL, subDir);
         post(subDirURL, subDirURI, subDirNode);
         log.info("Added group permissions to " + subDir);
 
@@ -270,7 +265,7 @@ public class AsyncTest extends VOSTest {
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
         Assert.assertEquals(1, job.getResultsList().size());
         Result res = job.getResultsList().get(0);
-        Assert.assertEquals("delcount", res.getName());
+        Assert.assertEquals("successcount", res.getName());
         Assert.assertEquals(3, Integer.parseInt(res.getURI().getSchemeSpecificPart()));
 
         // cleanup
@@ -278,32 +273,20 @@ public class AsyncTest extends VOSTest {
 
     }
 
-    private void createNodeTree(String[] nodes) throws Exception {
-        // cleanup first
-        cleanupNodeTree(nodes);
-
-        // build the tree
-        for (String nodeName : nodes) {
-            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
-            VOSURI nodeURI = getVOSURI(nodeName);
-            Node node = null;
-            if (nodeName.endsWith("/")) {
-                node = new ContainerNode(nodeName);
-            } else {
-                node = new DataNode(nodeName);
+    private boolean checkProp(String nodeName, NodeProperty prop) throws NodeParsingException, NodeNotSupportedException, MalformedURLException {
+        URL fileURL = getNodeURL(nodesServiceURL, nodeName);
+        NodeReader.NodeReaderResult result = get(fileURL, 200, XML_CONTENT_TYPE, false);
+        Assert.assertNotNull(result.node);
+        for (NodeProperty pp : result.node.getProperties()) {
+            if (pp.getKey().equals(prop.getKey())) {
+                return pp.getKey().equals(prop.getKey());
             }
-            log.info("put: " + nodeURI + " -> " + nodeURL);
-            put(nodeURL, nodeURI, node);
         }
+        return false;
     }
 
-    private void cleanupNodeTree(String[] nodes) throws MalformedURLException {
-        for (int i = nodes.length - 1; i >= 0; i--) {
-            URL nodeURL = getNodeURL(nodesServiceURL, nodes[i]);
-            log.debug("deleting node " + nodeURL);
-            delete(nodeURL, false);
-        }
-    }
+
+
 
 
 }

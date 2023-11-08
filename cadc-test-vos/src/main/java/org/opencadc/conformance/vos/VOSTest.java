@@ -92,6 +92,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.acl.Group;
 import java.util.HashMap;
 import java.util.Map;
 import javax.security.auth.Subject;
@@ -99,9 +100,12 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.NodeUtil;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
@@ -126,6 +130,7 @@ public abstract class VOSTest {
     public final URL synctransServiceURL;
     public final URL transferServiceURL;
     public final URL recursiveDeleteServiceURL;
+    public final URL recursiveNodePropsServiceURL;
     public final Subject authSubject;
     
     protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
@@ -150,6 +155,9 @@ public abstract class VOSTest {
 
         this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
         log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
+
+        this.recursiveNodePropsServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_NODEPROPS, AuthMethod.CERT);
+        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_NODEPROPS, recursiveNodePropsServiceURL));
     }
 
     @Before
@@ -327,6 +335,62 @@ public abstract class VOSTest {
         return reader.read(new StringReader(out.toString()));
     }
 
+    public Job postRecursiveNodeProps(URL asyncURL, Node propsNode, Subject actor)
+            throws Exception {
+        log.info("postRecursiveNodeProps: " + asyncURL + " " + getVOSURI(propsNode.getName()));
+        StringBuilder sb = new StringBuilder();
+        NodeWriter writer = new NodeWriter();
+        writer.write(getVOSURI(propsNode.getName()), propsNode, sb, VOS.Detail.max);
+        log.debug("post content: " + sb.toString());
+
+        FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
+
+        HttpPost post = new HttpPost(asyncURL, content, false);
+        log.debug("POST: " + asyncURL);
+        Subject.doAs(actor, new RunnableAction(post));
+        log.debug("POST responseCode: " + post.getResponseCode());
+        Assert.assertEquals("expected POST response code = 303",
+                303, post.getResponseCode());
+        URL jobURL = post.getRedirectURL();
+        URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
+
+        // start the job
+        Map<String, Object> val = new HashMap<>();
+        val.put("phase", "RUN");
+        post = new HttpPost(jobPhaseURL , val, false);
+        log.debug("POST: " + jobPhaseURL);
+        Subject.doAs(actor, new RunnableAction(post));
+        log.debug("POST responseCode: " + post.getResponseCode());
+        Assert.assertEquals("expected POST response code = 303",
+                303, post.getResponseCode());
+
+        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        // a terminal phase
+        URL jobPoll = new URL(jobURL + "?WAIT=6");
+        int count = 0;
+        boolean done = false;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JobReader reader = new JobReader();
+        while (!done && count < 10) { // max 10*6 = 60 sec polling
+            out = new ByteArrayOutputStream();
+            log.debug("poll: " + jobPoll);
+            HttpGet get = new HttpGet(jobPoll, out);
+            Subject.doAs(actor, new RunnableAction(get));
+            Assert.assertNull(get.getThrowable());
+            Job job = reader.read(new StringReader(out.toString()));
+            log.debug("current phase: " + job.getExecutionPhase());
+            switch (job.getExecutionPhase()) {
+                case QUEUED:
+                case EXECUTING:
+                    count++;
+                    break;
+                default:
+                    done = true;
+            }
+        }
+        return reader.read(new StringReader(out.toString()));
+    }
+
     public void delete(URL nodeURL) {
         delete(nodeURL, true);
     }
@@ -344,6 +408,47 @@ public abstract class VOSTest {
         Assert.assertEquals("expected DELETE response code = 200",
                             200, delete.getResponseCode());
         Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
+    }
+
+    protected void createNodeTree(String[] nodes) throws Exception {
+        // cleanup first
+        cleanupNodeTree(nodes);
+
+        // build the tree
+        for (String nodeName : nodes) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            VOSURI nodeURI = getVOSURI(nodeName);
+            Node node = null;
+            if (nodeName.endsWith("/")) {
+                node = new ContainerNode(nodeName);
+            } else {
+                node = new DataNode(nodeName);
+            }
+            log.info("put: " + nodeURI + " -> " + nodeURL);
+            put(nodeURL, nodeURI, node);
+        }
+    }
+
+    protected void cleanupNodeTree(String[] nodes) throws MalformedURLException {
+        for (int i = nodes.length - 1; i >= 0; i--) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodes[i]);
+            log.debug("deleting node " + nodeURL);
+            delete(nodeURL, false);
+        }
+    }
+
+    protected void makeWritable(String[] subdirNames, GroupURI accessGroup)
+            throws NodeParsingException, NodeNotSupportedException, IOException {
+        for (String nodeName : subdirNames) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
+            log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+            result.node.getReadWriteGroup().add(accessGroup);
+            log.debug("Node update " + result.node.getReadWriteGroup());
+            VOSURI nodeURI = getVOSURI(nodeName);
+            post(nodeURL, nodeURI, result.node);
+            log.info("Added group permissions to " + nodeName);
+        }
     }
 
 }

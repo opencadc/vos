@@ -70,11 +70,13 @@ package org.opencadc.vospace.server.actions;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.NodeFault;
+import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Class to perform the deletion of a Node.
@@ -88,28 +90,25 @@ public class DeleteNodeAction extends NodeAction {
     @Override
     public void doAction() throws Exception {
         VOSURI target = getTargetURI();
-        VOSURI parentURI = target.getParentURI();
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
-        Node n = pathResolver.getNode(parentURI.getPath());
-        if (n == null) {
-            throw NodeFault.ContainerNotFound.getStatus(target.toString());
-        }
-        if (!(n instanceof ContainerNode)) {
-            throw NodeFault.ContainerNotFound.getStatus(target.toString());
-        }
-        ContainerNode parent = (ContainerNode) n;
-        Node serverNode = nodePersistence.get(parent, target.getName());
+        Node serverNode = pathResolver.getNode(getTargetURI().getPath());
+
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus(target.toString());
+            throw NodeFault.NodeNotFound.getStatus("Target " + target.toString());
+        }
+        delete(serverNode, voSpaceAuthorizer, nodePersistence);
+    }
+
+    // Note: called from RecursiveDeleteNodeRunner too
+    public static void delete(Node node, VOSpaceAuthorizer voSpaceAuthorizer,
+                                  NodePersistence nodePersistence) throws Exception {
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)
+                || (node.isLocked != null && node.isLocked)) {
+            throw NodeFault.PermissionDenied.getStatus(Utils.getPath(node));
         }
 
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)
-                || (serverNode.isLocked != null && serverNode.isLocked)) {
-            throw NodeFault.PermissionDenied.getStatus(target.toString());
-        }
-        
-        log.debug("delete node: " + target.getPath());
-        nodePersistence.delete(serverNode);
+        log.debug("delete node: " + Utils.getPath(node));
+        nodePersistence.delete(node);
     }
 }

@@ -69,10 +69,8 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import java.io.FileNotFoundException;
 import java.util.List;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.transfer.Protocol;
