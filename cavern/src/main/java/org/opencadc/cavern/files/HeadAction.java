@@ -110,7 +110,7 @@ public class HeadAction extends FileAction {
     Path resolveAndSetMetadata() throws Exception {
         try {
             VOSURI nodeURI = getNodeURI();
-            log.warn("target: " + nodeURI);
+            log.debug("target: " + nodeURI);
             
             boolean preauthGranted = false;
             if (preauthToken != null) {
