@@ -16,16 +16,13 @@ sourceCompatibility = 1.8
 
 group = 'org.opencadc'
 
-version = '2.0.0'
+version = '2.0.1'
 
 description = 'OpenCADC VOSpace client library'
 def git_url = 'https://github.com/opencadc/vos'
 
 dependencies {
-    compile 'org.jdom:jdom2:[2.0.6,3.0)'
-    compile 'xerces:xercesImpl:[2.12,3.0)'
-    compile 'org.json:json:20220924'
-
+    // xml and jxon dependencies controlled by cadc-util
     compile 'org.opencadc:cadc-util:[1.9.10,2.0)'
     compile 'org.opencadc:cadc-uws:[1.0,2.0)'
     compile 'org.opencadc:cadc-registry:[1.7,2.0)'

@@ -16,12 +16,13 @@ sourceCompatibility = 1.8
 
 group = 'org.opencadc'
 
-version = '2.0.0'
+version = '2.0.1'
 
 description = 'OpenCADC VOSpace server'
 def git_url = 'https://github.com/opencadc/vos'
 
 dependencies {
+    // xml and jxon dependencies controlled by cadc-util
     compile 'javax.servlet:javax.servlet-api:[3.1,4.0)'
 
     compile 'org.opencadc:cadc-util:[1.9.5,2.0)'
