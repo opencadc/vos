@@ -121,7 +121,8 @@ public class HeadAction extends FileAction {
                 Subject subject = AuthenticationUtil.getCurrentSubject();
                 subject.getPrincipals().clear();
                 if (tokenUser != null) {
-                    subject = identityManager.toSubject(tokenUser);
+                    Subject s = identityManager.toSubject(tokenUser);
+                    subject.getPrincipals().addAll(s.getPrincipals());
                 }
                 logInfo.setSubject(subject);
                 logInfo.setResource(nodeURI.getURI());
