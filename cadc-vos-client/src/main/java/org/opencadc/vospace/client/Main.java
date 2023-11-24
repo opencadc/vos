@@ -834,8 +834,8 @@ public class Main implements Runnable {
             throw new RuntimeException(es.getSummaryMessage());
         } else if (ExecutionPhase.ABORTED.equals(ep)) {
             throw new RuntimeException("transfer aborted by service");
-        } else if (!ExecutionPhase.COMPLETED.equals(ep)) {
-            log.warn("unexpected job state: " + ep.name());
+        } else {
+            log.info("final transfer job state: " + ep.name());
         }
     }
 
