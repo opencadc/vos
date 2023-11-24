@@ -135,7 +135,6 @@ public abstract class FileAction extends RestAction {
     }
 
     private VOSURI parsePath(String path, boolean hasToken) {
-        log.warn("parsePath: '" + path + "'");
         int start = 0;
         String[] pathcomps = path.split("/");
         if (pathcomps.length > 0) {

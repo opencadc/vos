@@ -110,7 +110,7 @@ public class HeadAction extends FileAction {
     Path resolveAndSetMetadata() throws Exception {
         try {
             VOSURI nodeURI = getNodeURI();
-            log.warn("target: " + nodeURI);
+            log.debug("target: " + nodeURI);
             
             boolean preauthGranted = false;
             if (preauthToken != null) {
@@ -121,7 +121,8 @@ public class HeadAction extends FileAction {
                 Subject subject = AuthenticationUtil.getCurrentSubject();
                 subject.getPrincipals().clear();
                 if (tokenUser != null) {
-                    subject = identityManager.toSubject(tokenUser);
+                    Subject s = identityManager.toSubject(tokenUser);
+                    subject.getPrincipals().addAll(s.getPrincipals());
                 }
                 logInfo.setSubject(subject);
                 logInfo.setResource(nodeURI.getURI());
