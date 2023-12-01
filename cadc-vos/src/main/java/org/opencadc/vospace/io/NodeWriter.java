@@ -258,10 +258,10 @@ public class NodeWriter implements XmlProcessor {
 
                 // add node properties to node field properties
                 properties.addAll(node.getProperties());
-
-                // add all properties to the document
-                nodeElement.addContent(getPropertiesElement(properties));
             }
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
 
             // add child node to the document
             nodeElement.addContent(getNodesElement(vosURI, cn, detail));
@@ -278,10 +278,10 @@ public class NodeWriter implements XmlProcessor {
 
                 // add node properties to node field properties
                 properties.addAll(node.getProperties());
-
-                // add all properties to the document
-                nodeElement.addContent(getPropertiesElement(properties));
             }
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
 
             // add views to the DataNode in the document
             nodeElement.addContent(getAcceptsElement(dn));
@@ -298,10 +298,10 @@ public class NodeWriter implements XmlProcessor {
 
                 // add node properties to node field properties
                 properties.addAll(node.getProperties());
-
-                // add all properties to the document
-                nodeElement.addContent(getPropertiesElement(properties));
             }
+
+            // add all properties to the document
+            nodeElement.addContent(getPropertiesElement(properties));
 
             // add target element
             Element targetEl = new Element("target", vosNamespace);
