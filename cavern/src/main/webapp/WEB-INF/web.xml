@@ -30,6 +30,7 @@
             ca.nrc.cadc.rest
             ca.nrc.cadc.vosi
             ca.nrc.cadc.auth
+            ca.nrc.cadc.uws
             </param-value>
         </init-param>
             <init-param>

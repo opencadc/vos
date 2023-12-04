@@ -80,32 +80,26 @@ import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.acl.Group;
-import java.util.HashMap;
-import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Test;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.NodeUtil;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
@@ -175,6 +169,11 @@ public abstract class VOSTest {
         } else {
             post(nodeURL, nodeURI, testNode);
         }
+    }
+    
+    @Test
+    public void noop() {
+        log.info("no-op test");
     }
     
     public URL getNodeURL(URL serviceURL, String path)
@@ -282,112 +281,6 @@ public abstract class VOSTest {
         Assert.assertEquals("expected POST response code = 200",
                             200, post.getResponseCode());
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
-    }
-
-    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI, Subject actor)
-            throws Exception {
-        log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
-        Map<String, Object> val = new HashMap<>();
-        val.put("target", vosURI.getURI());
-        HttpPost post = new HttpPost(asyncURL, val, false);
-        log.debug("POST: " + asyncURL);
-        Subject.doAs(actor, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-        URL jobURL = post.getRedirectURL();
-        URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
-
-        // start the job
-        val.clear();
-        val.put("phase", "RUN");
-        post = new HttpPost(jobPhaseURL , val, false);
-        log.debug("POST: " + jobPhaseURL);
-        Subject.doAs(actor, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-
-        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
-        // a terminal phase
-        URL jobPoll = new URL(jobURL + "?WAIT=6");
-        int count = 0;
-        boolean done = false;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        JobReader reader = new JobReader();
-        while (!done && count < 10) { // max 10*6 = 60 sec polling
-            out = new ByteArrayOutputStream();
-            log.debug("poll: " + jobPoll);
-            HttpGet get = new HttpGet(jobPoll, out);
-            Subject.doAs(actor, new RunnableAction(get));
-            Assert.assertNull(get.getThrowable());
-            Job job = reader.read(new StringReader(out.toString()));
-            log.debug("current phase: " + job.getExecutionPhase());
-            switch (job.getExecutionPhase()) {
-                case QUEUED:
-                case EXECUTING:
-                    count++;
-                    break;
-                default:
-                    done = true;
-            }
-        }
-        return reader.read(new StringReader(out.toString()));
-    }
-
-    public Job postRecursiveNodeProps(URL asyncURL, Node propsNode, Subject actor)
-            throws Exception {
-        log.info("postRecursiveNodeProps: " + asyncURL + " " + getVOSURI(propsNode.getName()));
-        StringBuilder sb = new StringBuilder();
-        NodeWriter writer = new NodeWriter();
-        writer.write(getVOSURI(propsNode.getName()), propsNode, sb, VOS.Detail.max);
-        log.debug("post content: " + sb.toString());
-        FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
-
-        HttpPost post = new HttpPost(asyncURL, content, false);
-        log.debug("POST: " + asyncURL);
-        Subject.doAs(actor, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-        URL jobURL = post.getRedirectURL();
-        URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
-
-        // start the job
-        Map<String, Object> val = new HashMap<>();
-        val.put("phase", "RUN");
-        post = new HttpPost(jobPhaseURL , val, false);
-        log.debug("POST: " + jobPhaseURL);
-        Subject.doAs(actor, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-
-        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
-        // a terminal phase
-        URL jobPoll = new URL(jobURL + "?WAIT=6");
-        int count = 0;
-        boolean done = false;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        JobReader reader = new JobReader();
-        while (!done && count < 10) { // max 10*6 = 60 sec polling
-            out = new ByteArrayOutputStream();
-            log.debug("poll: " + jobPoll);
-            HttpGet get = new HttpGet(jobPoll, out);
-            Subject.doAs(actor, new RunnableAction(get));
-            Assert.assertNull(get.getThrowable());
-            Job job = reader.read(new StringReader(out.toString()));
-            log.debug("current phase: " + job.getExecutionPhase());
-            switch (job.getExecutionPhase()) {
-                case QUEUED:
-                case EXECUTING:
-                    count++;
-                    break;
-                default:
-                    done = true;
-            }
-        }
-        return reader.read(new StringReader(out.toString()));
     }
 
     public void delete(URL nodeURL) {

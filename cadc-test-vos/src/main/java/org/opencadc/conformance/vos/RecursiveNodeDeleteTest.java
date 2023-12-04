@@ -69,15 +69,23 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.HttpGet;
+import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.Result;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -106,7 +114,7 @@ public class RecursiveNodeDeleteTest extends VOSTest {
     protected boolean paginationSupported = true;
 
     protected boolean cleanupOnSuccess = true;
-
+    
     protected RecursiveNodeDeleteTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
     }
@@ -256,5 +264,56 @@ public class RecursiveNodeDeleteTest extends VOSTest {
             }
         }
         return false;
+    }
+    
+    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI, Subject actor)
+            throws Exception {
+        log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
+        Map<String, Object> val = new HashMap<>();
+        val.put("target", vosURI.getURI());
+        HttpPost post = new HttpPost(asyncURL, val, false);
+        log.debug("POST: " + asyncURL);
+        Subject.doAs(actor, new RunnableAction(post));
+        log.debug("POST responseCode: " + post.getResponseCode());
+        Assert.assertEquals("expected POST response code = 303",
+                303, post.getResponseCode());
+        URL jobURL = post.getRedirectURL();
+        URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
+
+        // start the job
+        val.clear();
+        val.put("phase", "RUN");
+        post = new HttpPost(jobPhaseURL , val, false);
+        log.debug("POST: " + jobPhaseURL);
+        Subject.doAs(actor, new RunnableAction(post));
+        log.debug("POST responseCode: " + post.getResponseCode());
+        Assert.assertEquals("expected POST response code = 303",
+                303, post.getResponseCode());
+
+        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        // a terminal phase
+        URL jobPoll = new URL(jobURL + "?WAIT=6");
+        int count = 0;
+        boolean done = false;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JobReader reader = new JobReader();
+        while (!done && count < 10) { // max 10*6 = 60 sec polling
+            out = new ByteArrayOutputStream();
+            log.debug("poll: " + jobPoll);
+            HttpGet get = new HttpGet(jobPoll, out);
+            Subject.doAs(actor, new RunnableAction(get));
+            Assert.assertNull(get.getThrowable());
+            Job job = reader.read(new StringReader(out.toString()));
+            log.debug("current phase: " + job.getExecutionPhase());
+            switch (job.getExecutionPhase()) {
+                case QUEUED:
+                case EXECUTING:
+                    count++;
+                    break;
+                default:
+                    done = true;
+            }
+        }
+        return reader.read(new StringReader(out.toString()));
     }
 }
