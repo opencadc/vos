@@ -68,11 +68,10 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.util.StringUtil;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.util.Iterator;
+import java.io.IOException;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
@@ -83,7 +82,6 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
 
 /**
  * Class to perform the retrieval of a Node.
