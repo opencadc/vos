@@ -35,8 +35,7 @@
       <securityMethod/>
       <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
       <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
-      <!-- bearer tokens do not work with cadc-vos-server-1.x because restlet -->
-      <!-- <securityMethod standardID="ivo://ivoa.net/sso#token"/> -->
+      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
 
@@ -71,6 +70,8 @@
     </interface>
   </capability>
 -->
+
+<!--
   <capability standardID="ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto">
       <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/async-setprops</accessURL>
@@ -79,6 +80,9 @@
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
+-->
+
+<!-- the old nodeprops standardID
   <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="full">https://replace.com/cavern/nodeprops</accessURL>
@@ -87,6 +91,7 @@
       <securityMethod standardID="ivo://ivoa.net/sso#token"/>
     </interface>
   </capability>
+-->
 
   <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
     <interface xsi:type="vs:ParamHTTP" role="std">

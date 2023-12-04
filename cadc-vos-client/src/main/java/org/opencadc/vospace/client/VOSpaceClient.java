@@ -69,6 +69,9 @@ package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ExpectationFailedException;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
@@ -81,7 +84,6 @@ import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -97,9 +99,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeNotSupportedException;
@@ -151,125 +151,84 @@ public class VOSpaceClient {
     }
     
     /**
-     * Create the specified node.If the parent (container) nodes do not exist, they
- will also be created.
+     * Create the specified node.
      *
-     * @param vosURI
-     * @param node
+     * @param vosURI destination URI
+     * @param node   the node to create
      * @return the created node
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public Node createNode(VOSURI vosURI, Node node) {
-        return this.createNode(vosURI, node, true);
+    public Node createNode(VOSURI vosURI, Node node)  
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
+        return this.createNode(vosURI, node, false);
     }
 
     /**
-     * Create the specified node.If the parent (container) nodes do not exist, 
-     * they will also be created.
+     * Create the specified node.
      *
-     * @param vosURI
-     * @param node
-     * @param checkForDuplicate If true, throw duplicate node exception if node already exists.
+     * @param vosURI destination URI
+     * @param node   the node to create
+     * @param checkForDuplicate ignored - the method always tries to create
      * @return the created node
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public Node createNode(VOSURI vosURI, Node node, boolean checkForDuplicate) {
-        Node rtnNode = null;
-        log.debug("createNode(), node=" + vosURI + ", checkForDuplicate=" + checkForDuplicate);
+    public Node createNode(VOSURI vosURI, Node node, boolean checkForDuplicate) 
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
         try {
-            VOSURI parentURI = vosURI.getParentURI();
-            if (parentURI == null) {
-                throw new RuntimeException("parent (root node) not found and cannot create: " + vosURI);
-            }
-
-            ContainerNode parent;
-            try {
-                // check for existence --get the node with minimal content.  Get the target child
-                // if we need to check for duplicates.
-                Node parentNode;
-                if (checkForDuplicate) {
-                    parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri="
-                        + NetUtil.encode(vosURI.toString()));
-                } else {
-                    //parentNode = this.getNode(parentURI.getPath(), "detail=min&limit=0");
-                    parentNode = this.getNode(parentURI.getPath(), "detail=min");
-                }
-
-                log.debug("found parent: " + parentURI);
-                if (parentNode instanceof ContainerNode) {
-                    parent = (ContainerNode) parentNode;
-                } else {
-                    throw new IllegalArgumentException("cannot create a child, parent is a "
-                                                           + parentNode.getClass().getSimpleName());
-                }
-            } catch (NodeNotFoundException ex) {
-                // if parent does not exist, just create it!!
-                log.info("creating parent: " + parentURI);
-                ContainerNode cn = new ContainerNode(parentURI.getName());
-                parent = (ContainerNode) createNode(parentURI, cn, false);
-            }
-
-            // check if target already exists: also could fail like this below due to race condition
-            if (checkForDuplicate) {
-                for (Node n : parent.getNodes()) {
-                    if (n.getName().equals(node.getName())) {
-                        throw new IllegalArgumentException("DuplicateNode: " + vosURI);
-                    }
-                }
-            }
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
-
             URL url = new URL(vospaceURL.toExternalForm() + vosURI.getPath());
-            log.debug("createNode(), URL=" + url);
+            log.debug("createNode(): " + vosURI + " at " + url);
 
-            NodeOutputStream out = new NodeOutputStream(vosURI, node);
+            NodeOutputStreamWrapper out = new NodeOutputStreamWrapper(vosURI, node);
             HttpUpload put = new HttpUpload(out, url);
             put.setRequestProperty(HttpTransfer.CONTENT_TYPE, "text/xml");
 
-            try {
-                put.prepare();
-            } catch (Exception ex) {
-                VOSClientUtil.checkFailure(ex);
-            }
-
-            if (put.failure != null) {
-                // Errors not blurted as exceptions by
-                // HttpUpload will be stored in 'failure.'
-                // These need to be reported as well
-                log.debug("HttpUpload failure for createNode: ", put.failure);
-                VOSClientUtil.checkFailure(put.failure);
-            }
+            put.prepare();
+            log.warn("put response code: " + put.getResponseCode());
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
             NodeReader.NodeReaderResult result = nodeReader.read(put.getInputStream());
-            rtnNode = result.node;
-            log.debug("createNode, created node: " + rtnNode);
-        } catch (IOException e) {
-            log.debug("failed to create node", e);
-            throw new IllegalStateException("failed to create node", e);
-        } catch (NodeParsingException e) {
-            log.debug("failed to create node", e);
-            throw new IllegalStateException("failed to create node", e);
-        } catch (NodeNotSupportedException e) {
-            log.debug("failed to create node", e);
-            throw new IllegalStateException("failed to create node", e);
-        } catch (NodeNotFoundException e) {
-            log.debug("failed to create node", e);
-            throw new IllegalStateException("Node not found", e);
-        } catch (ResourceAlreadyExistsException e) {
-            log.debug("failed to create node", e);
-            throw new IllegalStateException("Node already exists", e);
+            log.debug("createNode, created: " + result);
+            return result.node;
+            
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("BUG: unexpected " + ex, ex);
         }
-        return rtnNode;
     }
 
     /**
      * Get Node.
      *
      * @param path      The path to the Node.
-     * @return          The Node instance.
-     * @throws NodeNotFoundException when the requested node does not exist on the server
+     * @return the target node
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public Node getNode(String path)
-        throws NodeNotFoundException {
+    public Node getNode(String path) 
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
         return getNode(path, null);
     }
 
@@ -277,20 +236,24 @@ public class VOSpaceClient {
      * Get Node.
      *
      * @param path      The path to the Node.
-     * @param query     Optional query string
-     * @return          The Node instance.
-     * @throws NodeNotFoundException when the requested node does not exist on the server
+     * @param query     ignored - optional query string
+     * @return the target node
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public Node getNode(String path, String query)
-        throws NodeNotFoundException {
+    public Node getNode(String path, String query) 
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
         if (path.length() > 0 && !path.startsWith("/")) { // length 0 is root: no /
             path = "/" + path; // must be absolute
         }
-        if (query != null) {
-            path += "?" + query;
-        }
-
-        Node rtnNode = null;
+        
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             URL url = new URL(vospaceURL.toExternalForm() + path);
@@ -298,32 +261,16 @@ public class VOSpaceClient {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpGet get = new HttpGet(url, out);
-
-            get.run();
-
-            VOSClientUtil.checkFailure(get.getThrowable());
-
-            String xml = new String(out.toByteArray(), "UTF-8");
-            log.debug("node xml:\n" + xml);
-                    
+            get.prepare();
+            
             NodeReader nodeReader = new NodeReader(schemaValidation);
-            NodeReader.NodeReaderResult result = nodeReader.read(xml);
-            rtnNode = result.node;
-            log.debug("getNode, returned node: " + rtnNode);
-        } catch (IOException ex) {
-            log.debug("failed to get node", ex);
-            throw new IllegalStateException("failed to get node", ex);
-        } catch (NodeParsingException e) {
-            log.debug("failed to get node", e);
-            throw new IllegalStateException("failed to get node", e);
-        } catch (NodeNotSupportedException e) {
-            log.debug("failed to get node", e);
-            throw new IllegalStateException("failed to create node", e);
-        } catch (ResourceAlreadyExistsException e) {
-            log.debug("failed to get node", e);
-            throw new IllegalStateException("failed to get node", e);
+            NodeReader.NodeReaderResult result = nodeReader.read(get.getInputStream());
+            log.debug("getNode returned: " + result);
+            return result.node;
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("BUG: unexpected " + ex, ex);
         }
-        return rtnNode;
+        
     }
 
     /**
@@ -331,10 +278,19 @@ public class VOSpaceClient {
      * 
      * @param vosURI
      * @param node
-     * @return modified node
+     * @return the target node
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public Node setNode(VOSURI vosURI, Node node) {
-        Node rtnNode = null;
+    public Node setNode(VOSURI vosURI, Node node) 
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
             URL url = new URL(vospaceURL.toExternalForm() + vosURI.getPath());
@@ -348,28 +304,14 @@ public class VOSpaceClient {
             FileContent nodeContent = new FileContent(nodeXML.toString(), "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(url, nodeContent, false);
 
-            try {
-                httpPost.prepare();
-            } catch (Exception ex) {
-                VOSClientUtil.checkFailure(ex);
-            }
+            httpPost.prepare();
 
             NodeReader nodeReader = new NodeReader();
             NodeReader.NodeReaderResult result = nodeReader.read(httpPost.getInputStream());
-            rtnNode =  result.node;
-        } catch (IOException e) {
-            throw new IllegalStateException("failed to set node", e);
-        } catch (NodeParsingException e) {
-            throw new IllegalStateException("failed to set node", e);
-        } catch (NodeNotFoundException e) {
-            throw new IllegalStateException("Node not found", e);
-        } catch (NodeNotSupportedException e) {
-            throw new IllegalStateException("Node not supported", e);
-        } catch (ResourceAlreadyExistsException e) {
-            log.debug("failed to set node", e);
-            throw new IllegalStateException("failed to set node", e);
+            return result.node;
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("BUG: unexpected " + ex, ex);
         }
-        return rtnNode;
     }
 
     // create an async transfer job
@@ -449,8 +391,18 @@ public class VOSpaceClient {
     /**
      * Remove the Node associated with the given Path.
      * @param path      The path of the Node to delete.
+     * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
+     * @throws org.opencadc.vospace.io.NodeParsingException
+     * @throws org.opencadc.vospace.NodeNotSupportedException
+     * @throws ca.nrc.cadc.io.ByteLimitExceededException
+     * @throws ca.nrc.cadc.net.ResourceAlreadyExistsException
+     * @throws ca.nrc.cadc.net.ResourceNotFoundException
      */
-    public void deleteNode(final String path) {
+    public void deleteNode(final String path) 
+        throws AccessControlException, NotAuthenticatedException, IOException, InterruptedException,
+            NodeParsingException, NodeNotSupportedException, 
+            ByteLimitExceededException, ResourceAlreadyExistsException, ResourceNotFoundException {
         // length 0 is root: no
         // Path must be absolute
         final String nodePath = (path.length() > 0 && !path.startsWith("/"))
@@ -460,19 +412,11 @@ public class VOSpaceClient {
             final URL url = new URL(vospaceURL.toExternalForm() + nodePath);
             final HttpDelete httpDelete = new HttpDelete(url, false);
 
-            httpDelete.run();
-            VOSClientUtil.checkFailure(httpDelete.getThrowable());
+            httpDelete.prepare();
         } catch (MalformedURLException e) {
             log.debug(String.format("Error creating URL from %s", nodePath));
             throw new RuntimeException(e);
-        } catch (NodeNotFoundException e) {
-            log.debug("Node not found", e);
-            throw new RuntimeException(e);
-        } catch (ResourceAlreadyExistsException e) {
-            log.debug("failed to delete node", e);
-            throw new IllegalStateException("failed to delete node", e);
         }
-
     }
 
     protected URL getServiceURL(URI serviceID, URI standard, AuthMethod authMethod) {
@@ -658,11 +602,11 @@ public class VOSpaceClient {
         return returnURL;
     }
 
-    private class NodeOutputStream implements OutputStreamWrapper {
+    private class NodeOutputStreamWrapper implements OutputStreamWrapper {
         private VOSURI vosURI;
         private Node node;
 
-        public NodeOutputStream(VOSURI vosURI, Node node) {
+        public NodeOutputStreamWrapper(VOSURI vosURI, Node node) {
             this.vosURI = vosURI;
             this.node = node;
         }

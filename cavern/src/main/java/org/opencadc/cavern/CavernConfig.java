@@ -128,11 +128,12 @@ public class CavernConfig {
         boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
         boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
+        
         boolean privateKeyProp = checkProperty(mvp, sb, PRIVATE_KEY, false);
         boolean publicKeyProp = checkProperty(mvp, sb, PUBLIC_KEY, false);
         boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
 
-        if (!resourceProp || !baseDirProp || !subPathProp) {
+        if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
             throw new IllegalStateException(sb.toString());
         }
 
