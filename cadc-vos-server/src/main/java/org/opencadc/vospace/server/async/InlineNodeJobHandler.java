@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,43 +62,64 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
- */
+*/
 
-package org.opencadc.cavern.uws;
+package org.opencadc.vospace.server.async;
 
-import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.rest.InlineContentException;
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.RecursiveSetNodeRunner;
+import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
- *
- * @author pdowler, majorb, yeunga
+ * Inline content handler for transfer jobs.
+ * 
+ * @author adriand
  */
-public class RecursiveSetNodeJobManager extends CavernJobManager {
+public class InlineNodeJobHandler implements UWSInlineContentHandler {
+    private static final Logger log = Logger.getLogger(InlineNodeJobHandler.class);
 
-    private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
+    private static final String KB_LIMIT = "32KiB";
+    public static final long INPUT_LIMIT = 32 * 1024L;
 
-    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
-    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
-    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
+    public InlineNodeJobHandler() {
+    }
 
-    public RecursiveSetNodeJobManager() {
-        super();
-        JobPersistence jp = createJobPersistence();
-        JobUpdater ju = (JobUpdater) jp;
-        super.setJobPersistence(jp);
+    @Override
+    public Content accept(String name, String contentType, InputStream inputStream) 
+            throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
+        try {
+            ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
+            NodeReader r = new NodeReader();
+            NodeReader.NodeReaderResult result = r.read(bs);
 
-        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
-        super.setJobExecutor(jobExec);
-
-        super.setMaxExecDuration(MAX_EXEC_DURATION);
-        super.setMaxDestruction(MAX_DESTRUCTION);
-        super.setMaxQuote(MAX_QUOTE);
+            NodeWriter nw = new NodeWriter();
+            StringWriter sw = new StringWriter();
+            nw.write(result.vosURI, result.node, sw, VOS.Detail.raw);
+            
+            Content content = new Content();
+            content.name = UWSInlineContentHandler.CONTENT_JOBINFO;
+            content.value = new JobInfo(sw.toString(), contentType, true);
+            return content;
+        } catch (NodeParsingException | NodeNotSupportedException ex) {
+            throw (IllegalArgumentException) NodeFault.InvalidArgument.getStatus(ex.getMessage());
+        } catch (ByteLimitExceededException ex) {
+            throw (InlineContentException)
+                    NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
+        }
     }
 }

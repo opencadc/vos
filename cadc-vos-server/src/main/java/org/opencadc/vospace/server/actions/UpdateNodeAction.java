@@ -75,11 +75,13 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
+import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
 
@@ -119,18 +121,19 @@ public class UpdateNodeAction extends NodeAction {
             throw NodeFault.InvalidArgument.getStatus("invalid input: cannot change type of node " + target.getPath()
                     + " from " + serverNode.getClass().getSimpleName() + " to " + clientNode.getClass().getSimpleName());
         }
-        
+
+
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
-            throw NodeFault.PermissionDenied.getStatus(clientNodeTarget.toString());
+            throw NodeFault.PermissionDenied.getStatus(Utils.getPath(serverNode));
         }
-        
+
         // merge change request
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();
             serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
         } //else: no update
-        
+
         if (clientNode.clearReadWriteGroups || !clientNode.getReadWriteGroup().isEmpty()) {
             serverNode.getReadWriteGroup().clear();
             serverNode.getReadWriteGroup().addAll(clientNode.getReadWriteGroup());
@@ -141,13 +144,13 @@ public class UpdateNodeAction extends NodeAction {
         } else if (clientNode.isPublic != null) {
             serverNode.isPublic = clientNode.isPublic;
         } //else: no update
-        
+
         if (clientNode.clearIsLocked) {
             serverNode.isLocked = null;
         } else if (clientNode.isLocked != null) {
             serverNode.isLocked = clientNode.isLocked;
         } //else: no update
-        
+
         if (serverNode instanceof ContainerNode) {
             ContainerNode scn = (ContainerNode) serverNode;
             ContainerNode ccn = (ContainerNode) clientNode;
@@ -155,16 +158,10 @@ public class UpdateNodeAction extends NodeAction {
                 scn.inheritPermissions = ccn.inheritPermissions;
             }
         }
-        
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
+
         // TODO: attempt to set owner if admin
-        
-        // pick out eligible admin-only props (they are immutable to normal users)
-        List<NodeProperty> allowedAdminProps = getAdminProps(clientNode, nodePersistence.getAdminProps(), caller);
-        // filter and merge request into serverNode
-        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties(), nodePersistence.getImmutableProps());
-        serverNode.getProperties().addAll(allowedAdminProps);
-        Node storedNode = nodePersistence.put(serverNode);
+        Node storedNode = updateProperties(serverNode, clientNode, nodePersistence, caller);
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
         storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
         
         // output modified node
@@ -173,5 +170,17 @@ public class UpdateNodeAction extends NodeAction {
         syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
+    }
+
+    public static Node updateProperties(Node node, Node newPropsNode, NodePersistence nodePersistence, Subject caller)
+            throws NodeNotSupportedException {
+        // pick out eligible admin-only props (they are immutable to normal users)
+        List<NodeProperty> allowedAdminProps = Utils.getAdminProps(newPropsNode, nodePersistence.getAdminProps(),
+                caller, nodePersistence);
+        // filter and merge request into serverNode
+        Utils.updateNodeProperties(node.getProperties(), newPropsNode.getProperties(),
+                nodePersistence.getImmutableProps());
+        node.getProperties().addAll(allowedAdminProps);
+        return nodePersistence.put(node);
     }
 }
