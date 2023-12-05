@@ -317,7 +317,7 @@ public class VOSpaceClient {
     // create an async transfer job
     public ClientRecursiveSetNode setNodeRecursive(VOSURI vosURI, Node node) {
         try {
-            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODEPROPS_20);
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_RECURSIVE_NODEPROPS);
 
             //String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -325,7 +325,9 @@ public class VOSpaceClient {
             nodeWriter.write(vosURI, node, stringWriter, VOS.Detail.max);
             //URL postUrl = new URL(asyncNodePropsUrl);
 
-            FileContent nodeContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
+            String xml = stringWriter.toString();
+            log.warn("recursive node props: " + xml);
+            FileContent nodeContent = new FileContent(xml, "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(vospaceURL, nodeContent, false);
 
             httpPost.run();
