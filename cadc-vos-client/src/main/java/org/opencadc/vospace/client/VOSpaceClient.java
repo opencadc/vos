@@ -236,7 +236,7 @@ public class VOSpaceClient {
      * Get Node.
      *
      * @param path      The path to the Node.
-     * @param query     ignored - optional query string
+     * @param query     optional query string
      * @return the target node
      * @throws java.io.IOException
      * @throws java.lang.InterruptedException
@@ -256,7 +256,12 @@ public class VOSpaceClient {
         
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
-            URL url = new URL(vospaceURL.toExternalForm() + path);
+            StringBuilder sb = new StringBuilder(vospaceURL.toExternalForm());
+            sb.append(path);
+            if (query != null) {
+                sb.append("?").append(query);
+            }
+            URL url = new URL(sb.toString());
             log.debug("getNode(), URL=" + url);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();

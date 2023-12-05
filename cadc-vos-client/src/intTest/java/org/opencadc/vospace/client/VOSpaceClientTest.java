@@ -202,7 +202,17 @@ public class VOSpaceClientTest extends VOSTest {
             Assert.assertEquals(orig.isPublic, n2.isPublic);
             Assert.assertEquals(orig.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION),
                     n2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            // make sure detail was not max
+            Assert.assertNull(n2.getPropertyValue(VOS.PROPERTY_URI_READABLE));
+            Assert.assertNull(n2.getPropertyValue(VOS.PROPERTY_URI_WRITABLE));
 
+            // optional query string
+            Node n3 = client.getNode(target.getPath(), "detail=max&limit=0");
+            log.info("found: " + n3);
+            Assert.assertNotNull(n3);
+            Assert.assertEquals("true", n3.getPropertyValue(VOS.PROPERTY_URI_READABLE));
+            Assert.assertEquals("true", n3.getPropertyValue(VOS.PROPERTY_URI_WRITABLE));
+            
             // delete
             client.deleteNode(target.getPath());
             try {
