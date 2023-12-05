@@ -122,12 +122,26 @@ public class UpdateNodeAction extends NodeAction {
                     + " from " + serverNode.getClass().getSimpleName() + " to " + clientNode.getClass().getSimpleName());
         }
 
-
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
             throw NodeFault.PermissionDenied.getStatus(Utils.getPath(serverNode));
         }
 
+        // TODO: attempt to set owner if admin
+        Node storedNode = updateProperties(serverNode, clientNode, nodePersistence, caller);
+        IdentityManager im = AuthenticationUtil.getIdentityManager();
+        storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
+        
+        // output modified node
+        NodeWriter nodeWriter = getNodeWriter();
+        syncOutput.setCode(200); // ??
+        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
+        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
+        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
+    }
+
+    public static Node updateProperties(Node serverNode, Node clientNode, NodePersistence nodePersistence, Subject caller)
+            throws NodeNotSupportedException {
         // merge change request
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();
@@ -158,29 +172,14 @@ public class UpdateNodeAction extends NodeAction {
                 scn.inheritPermissions = ccn.inheritPermissions;
             }
         }
-
-        // TODO: attempt to set owner if admin
-        Node storedNode = updateProperties(serverNode, clientNode, nodePersistence, caller);
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
         
-        // output modified node
-        NodeWriter nodeWriter = getNodeWriter();
-        syncOutput.setCode(200); // ??
-        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
-        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
-        nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
-    }
-
-    public static Node updateProperties(Node node, Node newPropsNode, NodePersistence nodePersistence, Subject caller)
-            throws NodeNotSupportedException {
         // pick out eligible admin-only props (they are immutable to normal users)
-        List<NodeProperty> allowedAdminProps = Utils.getAdminProps(newPropsNode, nodePersistence.getAdminProps(),
+        List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(),
                 caller, nodePersistence);
         // filter and merge request into serverNode
-        Utils.updateNodeProperties(node.getProperties(), newPropsNode.getProperties(),
+        Utils.updateNodeProperties(serverNode.getProperties(), clientNode.getProperties(),
                 nodePersistence.getImmutableProps());
-        node.getProperties().addAll(allowedAdminProps);
-        return nodePersistence.put(node);
+        serverNode.getProperties().addAll(allowedAdminProps);
+        return nodePersistence.put(serverNode);
     }
 }
