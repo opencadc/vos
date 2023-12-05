@@ -66,9 +66,8 @@ org.opencadc.cavern.filesystem.rootOwner.username = {username}
 org.opencadc.cavern.filesystem.rootOwner.uid = {uid}
 org.opencadc.cavern.filesystem.rootOwner.gid = {gid}
 
-# (optional) keys to generate pre-auth URLs to cavern
-org.opencadc.cavern.privateKey = {private key file name}
-org.opencadc.cavern.publicKey = {public key file name}
+# (optional) keys to generate pre-auth URLs to cavern: now generated internally
+
 
 # (optional) base directory exposed for sshfs mounts
 org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
@@ -87,10 +86,6 @@ on such containers. Note: quota is not currently implemented in `cavern`.
 The `cavern` service must be able to resolve the root owner username to a POSIX uid and gid pair during startup. If
 the configured IdentityManager does not suport priviledged access to user info, the correct values must be configured 
 using the optional _filesystem.rootOwner.uid_ and _filesystem.rootOwner.gid_ properties.
-
-The optional _privateKey_ and _publicKey_ is used to sign pre-auth URLs (one-time token included in URL) so that 
-a files endpoint does not have to repeat permission checks. If the not set, cavern cannot generate pre-auth URLs, 
-but it can generate plain URLs. TODO: provide info on how to generate a usable key pair.
 
 NOT FUNCTIONAL: The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount of the `cavern` content. Clients
 can negotiate the mount of a specific container node in the VOSpace and be given back a connection string suitable for

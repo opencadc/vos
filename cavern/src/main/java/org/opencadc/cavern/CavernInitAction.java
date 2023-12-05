@@ -69,11 +69,18 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.rest.InitAction;
-import ca.nrc.cadc.util.MultiValuedProperties;
+import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.HashSet;
+import java.util.Set;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -120,12 +127,52 @@ public class CavernInitAction extends InitAction {
             } catch (NamingException ignore) {
                 log.debug("unbind previous JNDI key (" + jndiNodePersistence + ") failed... ignoring");
             }
-            NodePersistence npi = new FileSystemNodePersistence();
+            FileSystemNodePersistence npi = new FileSystemNodePersistence();
             ctx.bind(jndiNodePersistence, npi);
 
             log.info("created JNDI key: " + jndiNodePersistence + " impl: " + npi.getClass().getName());
+            
+            initSecrets(npi.getConfig());
         } catch (NamingException ex) {
             log.error("Failed to create JNDI Key " + jndiNodePersistence, ex);
+        }
+    }
+    
+    // generate key pair for preauth URL generation
+    private void initSecrets(CavernConfig conf) {
+        Path secrets = conf.getSecrets();
+        try {
+            if (!Files.exists(secrets, LinkOption.NOFOLLOW_LINKS)) {
+                Set<PosixFilePermission> perms = new HashSet<>();
+                perms.add(PosixFilePermission.OWNER_READ);
+                perms.add(PosixFilePermission.OWNER_WRITE);
+                perms.add(PosixFilePermission.OWNER_EXECUTE);
+                Files.createDirectories(secrets, PosixFilePermissions.asFileAttribute(perms)); // private: 700
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("INIT secrets FAIL", ex);
+        }
+        
+        try {
+            File sdir = secrets.toFile();
+            File pubKey = new File(sdir, "public-preauth.key");
+            File privKey = new File(sdir, "private-preauth.key");
+            if (pubKey.exists() && privKey.exists()) {
+                log.info("found existing preauth keys: " + pubKey.getAbsolutePath() + " " + privKey.getAbsolutePath());
+            } else {
+                log.info("generating preauth keys: " + pubKey.getAbsolutePath() + " " + privKey.getAbsolutePath());
+                RsaSignatureGenerator.genKeyPair(pubKey, privKey, 2048);
+            }
+            // private: 600
+            Set<PosixFilePermission> perms = new HashSet<>();
+            perms.add(PosixFilePermission.OWNER_READ);
+            perms.add(PosixFilePermission.OWNER_WRITE);
+            Files.setPosixFilePermissions(pubKey.toPath(), perms);
+            Files.setPosixFilePermissions(privKey.toPath(), perms);
+            conf.publicKey = pubKey;
+            conf.privateKey = privKey;
+        } catch (IOException ex) {
+            throw new RuntimeException("INIT secrets FAIL", ex);
         }
     }
 
