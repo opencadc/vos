@@ -10,6 +10,6 @@ named `{username}.pem` and it is assumed by the test setup that this identity ca
 a container node in the root named `client-int-tests` - normally it is easiest if that identity
 is also the cavern root owner.
 
-It is very dangerous and not supported to run integrtation tests against a real VOSpace service
+It is very dangerous and not supported to run integration tests against a real VOSpace service
 where you care about the content because tests are free to perform cleanup and code can have bugs.
 
