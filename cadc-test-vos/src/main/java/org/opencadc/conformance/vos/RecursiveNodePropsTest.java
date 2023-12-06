@@ -169,6 +169,13 @@ public class RecursiveNodePropsTest extends VOSTest {
         testNode.getProperties().add(titleProperty);
         testNode.getProperties().add(descriptionProperty);
         testNode.getProperties().add(customProperty);
+        testNode.isPublic = true;
+        if (group1 != null) {
+            testNode.getReadOnlyGroup().add(group1);
+        }
+        if (group2 != null) {
+            testNode.getReadWriteGroup().add(group2);
+        }
 
         Job job = postRecursiveNodeProps(recursiveNodePropsServiceURL, testNode, authSubject);
         Assert.assertEquals("Expected completed job", ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -195,6 +202,13 @@ public class RecursiveNodePropsTest extends VOSTest {
                 }
             }
             Assert.assertEquals(3, found);
+            Assert.assertTrue(result.node.isPublic);
+            if (group1 != null) {
+                Assert.assertTrue(result.node.getReadOnlyGroup().contains(group1));
+            }
+            if (group2 != null) {
+                Assert.assertTrue(result.node.getReadWriteGroup().contains(group2));
+            }
         }
 
         // repeat with other updates

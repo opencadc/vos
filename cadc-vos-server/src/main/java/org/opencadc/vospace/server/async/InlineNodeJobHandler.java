@@ -109,7 +109,7 @@ public class InlineNodeJobHandler implements UWSInlineContentHandler {
 
             NodeWriter nw = new NodeWriter();
             StringWriter sw = new StringWriter();
-            nw.write(result.vosURI, result.node, sw, VOS.Detail.raw);
+            nw.write(result.vosURI, result.node, sw, VOS.Detail.max);
             
             Content content = new Content();
             content.name = UWSInlineContentHandler.CONTENT_JOBINFO;

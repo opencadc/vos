@@ -73,18 +73,13 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
-import ca.nrc.cadc.auth.PrincipalExtractor;
-import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.util.InvalidConfigException;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
+import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.Principal;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeSet;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
@@ -99,8 +94,6 @@ public class CavernConfig {
     public static final String FILESYSTEM_BASE_DIR = CAVERN_KEY + ".filesystem.baseDir";
     public static final String FILESYSTEM_SUB_PATH = CAVERN_KEY + ".filesystem.subPath";
     public static final String ROOT_OWNER = CAVERN_KEY + ".filesystem.rootOwner";
-    public static final String PRIVATE_KEY = CAVERN_KEY + ".privateKey";
-    public static final String PUBLIC_KEY = CAVERN_KEY + ".publicKey";
     public static final String SSHFS_SERVER_BASE = CAVERN_KEY + ".sshfs.serverBase";
     
     // HACK (temporary?): provide complete matching PosixPrincipal for root owner
@@ -110,6 +103,11 @@ public class CavernConfig {
     
     private final URI resourceID;
     private final Path root;
+    private final Path secrets;
+    
+    // generated and assigned by CavernInitAction
+    File privateKey;
+    File publicKey;
     
     private final MultiValuedProperties mvp;
 
@@ -129,8 +127,8 @@ public class CavernConfig {
         boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
         
-        boolean privateKeyProp = checkProperty(mvp, sb, PRIVATE_KEY, false);
-        boolean publicKeyProp = checkProperty(mvp, sb, PUBLIC_KEY, false);
+        //boolean privateKeyProp = checkProperty(mvp, sb, PRIVATE_KEY, false);
+        //boolean publicKeyProp = checkProperty(mvp, sb, PUBLIC_KEY, false);
         boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
 
         if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
@@ -147,6 +145,12 @@ public class CavernConfig {
             sep = "";
         }
         this.root = Paths.get(baseDir + sep + subPath);
+        
+        sep = "/";
+        if (baseDir.endsWith("/")) {
+            sep = "";
+        }
+        this.secrets = Paths.get(baseDir + sep + "secrets");
     }
 
     public URI getResourceID() {
@@ -155,6 +159,18 @@ public class CavernConfig {
     
     public Path getRoot() {
         return root;
+    }
+    
+    public Path getSecrets() {
+        return secrets;
+    }
+
+    public File getPrivateKey() {
+        return privateKey;
+    }
+
+    public File getPublicKey() {
+        return publicKey;
     }
     
     public Subject getRootOwner() {

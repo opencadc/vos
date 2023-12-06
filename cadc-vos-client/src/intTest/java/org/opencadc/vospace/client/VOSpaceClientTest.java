@@ -202,7 +202,17 @@ public class VOSpaceClientTest extends VOSTest {
             Assert.assertEquals(orig.isPublic, n2.isPublic);
             Assert.assertEquals(orig.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION),
                     n2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            // make sure detail was not max
+            Assert.assertNull(n2.getPropertyValue(VOS.PROPERTY_URI_READABLE));
+            Assert.assertNull(n2.getPropertyValue(VOS.PROPERTY_URI_WRITABLE));
 
+            // optional query string
+            Node n3 = client.getNode(target.getPath(), "detail=max&limit=0");
+            log.info("found: " + n3);
+            Assert.assertNotNull(n3);
+            Assert.assertEquals("true", n3.getPropertyValue(VOS.PROPERTY_URI_READABLE));
+            Assert.assertEquals("true", n3.getPropertyValue(VOS.PROPERTY_URI_WRITABLE));
+            
             // delete
             client.deleteNode(target.getPath());
             try {
@@ -383,6 +393,85 @@ public class VOSpaceClientTest extends VOSTest {
             Assert.assertTrue(destFile.exists());
             
             // delete
+            client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
+    }
+    
+    @Test
+    public void recursiveSetPropsTest() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        ContainerNode orig = new ContainerNode("recursiveSetPropsTest");
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        ContainerNode c1 = new ContainerNode("c1");
+        VOSURI t1 = new VOSURI(baseURI + "/" + orig.getName() + "/" + c1.getName());
+        ContainerNode c2 = new ContainerNode("c2");
+        VOSURI t2 = new VOSURI(baseURI + "/" + orig.getName() + "/" + c2.getName());
+            
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(t1.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+            try {
+                client.deleteNode(t2.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
+
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
+            
+            // create children
+            client.createNode(t1, c1);
+            client.createNode(t2, c2);
+            
+            // update
+            orig.isPublic = true;
+            orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "my stuff"));
+            ClientRecursiveSetNode rec = client.setNodeRecursive(target, orig);
+            rec.setMonitor(true);
+            rec.run();
+            log.info("job result: " + rec.getPhase() + " " + rec.getThrowable());
+            
+            // get
+            Node cn1 = client.getNode(t1.getPath());
+            log.info("found: " + cn1 + " with public=" + cn1.isPublic);
+            Assert.assertNotNull(cn1);
+            Assert.assertEquals(true, cn1.isPublic);
+            Assert.assertEquals("my stuff", cn1.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+
+            Node cn2 = client.getNode(t1.getPath());
+            log.info("found: " + cn2 + " with public=" + cn2.isPublic);
+            Assert.assertNotNull(cn2);
+            Assert.assertEquals(true, cn2.isPublic);
+            Assert.assertEquals("my stuff", cn2.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            
+            // delete
+            client.deleteNode(t1.getPath());
+            client.deleteNode(t2.getPath());
             client.deleteNode(target.getPath());
             try {
                 client.getNode(target.getPath());

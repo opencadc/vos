@@ -236,7 +236,7 @@ public class VOSpaceClient {
      * Get Node.
      *
      * @param path      The path to the Node.
-     * @param query     ignored - optional query string
+     * @param query     optional query string
      * @return the target node
      * @throws java.io.IOException
      * @throws java.lang.InterruptedException
@@ -256,7 +256,12 @@ public class VOSpaceClient {
         
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODES_20);
-            URL url = new URL(vospaceURL.toExternalForm() + path);
+            StringBuilder sb = new StringBuilder(vospaceURL.toExternalForm());
+            sb.append(path);
+            if (query != null) {
+                sb.append("?").append(query);
+            }
+            URL url = new URL(sb.toString());
             log.debug("getNode(), URL=" + url);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -317,7 +322,7 @@ public class VOSpaceClient {
     // create an async transfer job
     public ClientRecursiveSetNode setNodeRecursive(VOSURI vosURI, Node node) {
         try {
-            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_NODEPROPS_20);
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_RECURSIVE_NODEPROPS);
 
             //String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
@@ -325,7 +330,9 @@ public class VOSpaceClient {
             nodeWriter.write(vosURI, node, stringWriter, VOS.Detail.max);
             //URL postUrl = new URL(asyncNodePropsUrl);
 
-            FileContent nodeContent = new FileContent(stringWriter.toString(), "text/xml", Charset.forName("UTF-8"));
+            String xml = stringWriter.toString();
+            log.warn("recursive node props: " + xml);
+            FileContent nodeContent = new FileContent(xml, "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(vospaceURL, nodeContent, false);
 
             httpPost.run();
