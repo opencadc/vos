@@ -67,9 +67,24 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.net.FileContent;
+import ca.nrc.cadc.net.HttpGet;
+import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
+import java.net.URL;
+import java.nio.charset.Charset;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  *
@@ -87,5 +102,75 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
     
     public TransferTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+    }
+    
+    @Test
+    public void testPreauthToken() {
+        try {
+            // Create a DataNode.
+            String path = "sync-push-pull-preauth";
+            URL nodeURL = getNodeURL(nodesServiceURL, path);
+            VOSURI nodeURI = getVOSURI(path);
+            log.debug("nodeURL: " + nodeURL);
+
+            // Cleanup leftover node
+            delete(nodeURL, false);
+
+            // Create a push-to-vospace Transfer for the node
+            Transfer pushTransfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
+            pushTransfer.version = VOS.VOSPACE_21;
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            // anon only to get preauth
+            pushTransfer.getProtocols().add(protocol);
+
+            // Do the transfer
+            Transfer details = doTransfer(pushTransfer);
+            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
+                    Direction.pushToVoSpace, details.getDirection());
+            Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
+            Assert.assertEquals(1, details.getProtocols().size());
+            Protocol p = details.getProtocols().get(0);
+            Assert.assertNull(p.getSecurityMethod());
+            URL putURL = new URL(p.getEndpoint());
+            log.info("put URL: " + putURL);
+            
+            // try to put the bytes
+            String msg = "cavern testPreauthToken";
+            FileContent content = new FileContent(msg, "text/plain", Charset.forName("UTF-8"));
+            HttpUpload put = new HttpUpload(content, putURL);
+            put.prepare(); // throws
+            // no response body
+            
+            // Create a pull-from-vospace Transfer for the node
+            Transfer pullTransfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            pullTransfer.version = VOS.VOSPACE_21;
+            // anon only to get preauth
+            pullTransfer.getProtocols().add(protocol);
+
+            // Do the transfer
+            details = doTransfer(pullTransfer);
+            Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
+                    Direction.pullFromVoSpace, details.getDirection());
+            Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
+            Assert.assertEquals(2, details.getProtocols().size());
+            p = details.getProtocols().get(0);
+            Assert.assertNull(p.getSecurityMethod());
+            URL getURL = new URL(p.getEndpoint());
+            log.info("get URL: " + getURL);
+            
+            HttpGet get = new HttpGet(getURL, true);
+            get.prepare(); // throws
+            InputStream istream = get.getInputStream();
+            LineNumberReader r = new LineNumberReader(new InputStreamReader(istream));
+            String actual = r.readLine();
+            Assert.assertEquals(msg, actual);
+            
+            // Delete the node
+            delete(nodeURL, false);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
     }
 }
