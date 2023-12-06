@@ -112,19 +112,19 @@ public class HeadAction extends FileAction {
             VOSURI nodeURI = getNodeURI();
             log.debug("target: " + nodeURI);
             
+            Subject caller = AuthenticationUtil.getCurrentSubject();
             boolean preauthGranted = false;
             if (preauthToken != null) {
                 CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
                 Object tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
                 preauthGranted = true;
-                // reset loggables
-                Subject subject = AuthenticationUtil.getCurrentSubject();
-                subject.getPrincipals().clear();
+                caller.getPrincipals().clear();
                 if (tokenUser != null) {
                     Subject s = identityManager.toSubject(tokenUser);
-                    subject.getPrincipals().addAll(s.getPrincipals());
+                    caller.getPrincipals().addAll(s.getPrincipals());
                 }
-                logInfo.setSubject(subject);
+                // reset loggables
+                logInfo.setSubject(caller);
                 logInfo.setResource(nodeURI.getURI());
                 logInfo.setPath(syncInput.getContextPath() + syncInput.getComponentPath());
                 logInfo.setGrant("read: preauth-token");
