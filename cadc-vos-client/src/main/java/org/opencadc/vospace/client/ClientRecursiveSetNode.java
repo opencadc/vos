@@ -169,12 +169,12 @@ public class ClientRecursiveSetNode implements Runnable {
             return phase;
         }
 
-        String urlStr = jobURL.toExternalForm() + "/phase";
+        String urlStr = jobURL.toExternalForm() + "/phase?WAIT=" + waitForSec;
         try {
             URL phaseURL = new URL(urlStr);
             HttpGet get = new HttpGet(phaseURL, true);
             get.setConnectionTimeout(6000);
-            get.setReadTimeout(12000);
+            get.setReadTimeout(24000);
             get.prepare();
             InputStream istream = get.getInputStream();
             InputStreamReader isr = new InputStreamReader(istream);
