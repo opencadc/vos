@@ -335,7 +335,7 @@ public class TransferTest extends VOSTest {
         }
     }
 
-    private Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
+    protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
         // Write a transfer document
         TransferWriter transferWriter = new TransferWriter();
         StringWriter sw = new StringWriter();
