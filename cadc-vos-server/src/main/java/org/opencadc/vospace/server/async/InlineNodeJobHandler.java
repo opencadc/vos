@@ -65,38 +65,38 @@
 ************************************************************************
 */
 
-package org.opencadc.vospace.server.transfers;
+package org.opencadc.vospace.server.async;
 
 import ca.nrc.cadc.io.ByteCountInputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentException;
-import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.io.NodeParsingException;
+import org.opencadc.vospace.io.NodeReader;
+import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
-import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
-import org.opencadc.vospace.transfer.TransferReader;
-import org.opencadc.vospace.transfer.TransferWriter;
 
 /**
  * Inline content handler for transfer jobs.
  * 
- * @author pdowler
+ * @author adriand
  */
-public class InlineTransferHandler implements UWSInlineContentHandler {
-    private static final Logger log = Logger.getLogger(InlineTransferHandler.class);
+public class InlineNodeJobHandler implements UWSInlineContentHandler {
+    private static final Logger log = Logger.getLogger(InlineNodeJobHandler.class);
 
     private static final String KB_LIMIT = "32KiB";
     public static final long INPUT_LIMIT = 32 * 1024L;
-    
-    public InlineTransferHandler() {
+
+    public InlineNodeJobHandler() {
     }
 
     @Override
@@ -104,19 +104,18 @@ public class InlineTransferHandler implements UWSInlineContentHandler {
             throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
         try {
             ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
-            TransferReader r = new TransferReader();
-            Transfer trans = r.read(inputStream, null);
-            // validated
-            
-            TransferWriter tw = new TransferWriter();
+            NodeReader r = new NodeReader();
+            NodeReader.NodeReaderResult result = r.read(bs);
+
+            NodeWriter nw = new NodeWriter();
             StringWriter sw = new StringWriter();
-            tw.write(trans, sw);
+            nw.write(result.vosURI, result.node, sw, VOS.Detail.max);
             
-            InlineContentHandler.Content content = new InlineContentHandler.Content();
+            Content content = new Content();
             content.name = UWSInlineContentHandler.CONTENT_JOBINFO;
             content.value = new JobInfo(sw.toString(), contentType, true);
             return content;
-        } catch (TransferParsingException ex) {
+        } catch (NodeParsingException | NodeNotSupportedException ex) {
             throw (IllegalArgumentException) NodeFault.InvalidArgument.getStatus(ex.getMessage());
         } catch (ByteLimitExceededException ex) {
             throw (InlineContentException)

@@ -20,7 +20,7 @@
         <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
         <init-param>
             <param-name>logLevel</param-name>
-            <param-value>debug</param-value>
+            <param-value>info</param-value>
         </init-param>
         <init-param>
             <param-name>logLevelPackages</param-name>
@@ -30,11 +30,7 @@
             ca.nrc.cadc.rest
             ca.nrc.cadc.vosi
             ca.nrc.cadc.auth
-
-            org.opencadc.cavern.files
-            org.opencadc.pkg.server
-            org.opencadc.vospace.server.pkg
-            org.opencadc.conformance.vos
+            ca.nrc.cadc.uws
             </param-value>
         </init-param>
             <init-param>
@@ -127,10 +123,10 @@
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
-    
-<!--
+
+    <!-- async recursive node property setting servlet-->
     <servlet>
-        <servlet-name>RecursiveSetNodeServlet</servlet-name>
+        <servlet-name>RecursiveNodePropsServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.uws.server.JobServlet</servlet-class>
         <init-param>
             <param-name>get</param-name>
@@ -146,15 +142,14 @@
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>org.opencadc.cavern.uws.RecursiveSetNodeJobManager</param-value>
+            <param-value>org.opencadc.cavern.uws.RecursiveNodePropsJobManager</param-value>
         </init-param>
         <init-param>
             <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-            <param-value>???</param-value>
+            <param-value>org.opencadc.vospace.server.async.InlineNodeJobHandler</param-value>
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
--->
     
     <!-- sync transfer servlet-->
     <servlet>
@@ -317,12 +312,11 @@
         <url-pattern>/transfers/*</url-pattern>
     </servlet-mapping>
 
-<!--
     <servlet-mapping>
-        <servlet-name>RecursiveSetNodeServlet</servlet-name>
-        <url-pattern>/nodeprops/*</url-pattern>
+        <servlet-name>RecursiveNodePropsServlet</servlet-name>
+        <url-pattern>/async-setprops/*</url-pattern>
     </servlet-mapping>
--->
+
     <servlet-mapping>
         <servlet-name>RecursiveDeleteServlet</servlet-name>
         <url-pattern>/async-delete/*</url-pattern>

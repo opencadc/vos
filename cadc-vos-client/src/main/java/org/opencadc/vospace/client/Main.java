@@ -211,11 +211,9 @@ public class Main implements Runnable {
         if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D)) {
             Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
-            //Log4jInit.setLevel("ca.nrc.cadc.reg", Level.DEBUG);
         } else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V)) {
             Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
-            //Log4jInit.setLevel("ca.nrc.cadc.reg", Level.INFO);
         } else {
             Log4jInit.setLevel("ca", Level.WARN);
         }
@@ -464,7 +462,7 @@ public class Main implements Runnable {
     private void doView() {
         
         try {
-            Node n = client.getNode(target.getPath());
+            Node n = client.getNode(target.getPath(), target.getQuery());
 
             msg(getType(n) + ": " + target);
             msg("owner: " + n.ownerDisplay);
@@ -834,8 +832,8 @@ public class Main implements Runnable {
             throw new RuntimeException(es.getSummaryMessage());
         } else if (ExecutionPhase.ABORTED.equals(ep)) {
             throw new RuntimeException("transfer aborted by service");
-        } else if (!ExecutionPhase.COMPLETED.equals(ep)) {
-            log.warn("unexpected job state: " + ep.name());
+        } else {
+            log.info("final transfer job state: " + ep.name());
         }
     }
 
@@ -1357,7 +1355,7 @@ public class Main implements Runnable {
             "    --xsv=off     : disables XML schema validation; use at your own risk",
             "",
             "operations:",
-            "    --view <target URI>",
+            "    --view <target URI> : allows optional query string (e.g. limit=0, detail=max, etc)",
             "    --create[=<ContainerNode|LinkNode|DataNode>] <node URI>  : default: ContainerNode",
             "    --delete <target URI>",
             "    --set <target URI>",

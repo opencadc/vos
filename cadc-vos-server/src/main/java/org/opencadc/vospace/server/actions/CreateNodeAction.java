@@ -71,9 +71,6 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.ResourceAlreadyExistsException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -84,7 +81,6 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
@@ -103,6 +99,9 @@ public class CreateNodeAction extends NodeAction {
     @Override
     public void doAction() throws Exception {
         final Node clientNode = getInputNode();
+        if (clientNode == null) {
+            throw NodeFault.InvalidArgument.getStatus("no node document");
+        }
         final VOSURI clientNodeURI = getInputURI();
         final VOSURI target = getTargetURI();
         
@@ -115,7 +114,7 @@ public class CreateNodeAction extends NodeAction {
         // TBD: resolveLinks=true?
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
         Node serverNode = pathResolver.getNode(target.getParentURI().getPath());
-        if (serverNode == null || !(serverNode instanceof ContainerNode)) {
+        if (!(serverNode instanceof ContainerNode)) {
             throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
         }
 
@@ -133,7 +132,7 @@ public class CreateNodeAction extends NodeAction {
         // attempt to set owner
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         clientNode.parent = parent;
-        if (clientNode.ownerDisplay != null && isAdmin(caller)) {
+        if (clientNode.ownerDisplay != null && Utils.isAdmin(caller, nodePersistence)) {
             // admin allowed to assign a different owner
             try {
                 Subject tmp = new Subject();
@@ -184,7 +183,8 @@ public class CreateNodeAction extends NodeAction {
         }
 
         // pick out eligible admin-only props (they are immutable to normal users)
-        List<NodeProperty> allowedAdminProps = getAdminProps(clientNode, nodePersistence.getAdminProps(), caller);
+        List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller,
+                nodePersistence);
         
         // sanitize input properties into clean set
         Set<NodeProperty> np = new HashSet<>();

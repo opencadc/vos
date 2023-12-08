@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2022.                            (c) 2022.
+*  (c) 2023.                            (c) 2023.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -65,62 +65,37 @@
 ************************************************************************
 */
 
-package org.opencadc.vospace.server.transfers;
+package org.opencadc.cavern.uws;
 
-import ca.nrc.cadc.io.ByteCountInputStream;
-import ca.nrc.cadc.io.ByteLimitExceededException;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentException;
-import ca.nrc.cadc.rest.InlineContentHandler;
-import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.web.UWSInlineContentHandler;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
+import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.server.NodeFault;
-import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
-import org.opencadc.vospace.transfer.TransferReader;
-import org.opencadc.vospace.transfer.TransferWriter;
+import org.opencadc.vospace.server.async.RecursiveNodePropsRunner;
 
 /**
- * Inline content handler for transfer jobs.
- * 
+ *
  * @author pdowler
  */
-public class InlineTransferHandler implements UWSInlineContentHandler {
-    private static final Logger log = Logger.getLogger(InlineTransferHandler.class);
+public class RecursiveNodePropsJobManager extends CavernJobManager {
+    private static final Logger log = Logger.getLogger(RecursiveNodePropsJobManager.class);
 
-    private static final String KB_LIMIT = "32KiB";
-    public static final long INPUT_LIMIT = 32 * 1024L;
-    
-    public InlineTransferHandler() {
-    }
+    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
+    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
+    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
 
-    @Override
-    public Content accept(String name, String contentType, InputStream inputStream) 
-            throws InlineContentException, IOException, ResourceNotFoundException, TransientException {
-        try {
-            ByteCountInputStream bs = new ByteCountInputStream(inputStream, INPUT_LIMIT);
-            TransferReader r = new TransferReader();
-            Transfer trans = r.read(inputStream, null);
-            // validated
-            
-            TransferWriter tw = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            tw.write(trans, sw);
-            
-            InlineContentHandler.Content content = new InlineContentHandler.Content();
-            content.name = UWSInlineContentHandler.CONTENT_JOBINFO;
-            content.value = new JobInfo(sw.toString(), contentType, true);
-            return content;
-        } catch (TransferParsingException ex) {
-            throw (IllegalArgumentException) NodeFault.InvalidArgument.getStatus(ex.getMessage());
-        } catch (ByteLimitExceededException ex) {
-            throw (InlineContentException)
-                    NodeFault.RequestEntityTooLarge.getStatus("invalid document too large (max: " + KB_LIMIT + ")");
-        }
+    public RecursiveNodePropsJobManager() {
+        super();
+        JobPersistence jp = createJobPersistence();
+        JobUpdater ju = (JobUpdater) jp;
+        super.setJobPersistence(jp);
+
+        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveNodePropsRunner.class, 6);
+        super.setJobExecutor(jobExec);
+
+        super.setMaxExecDuration(MAX_EXEC_DURATION);
+        super.setMaxDestruction(MAX_DESTRUCTION);
+        super.setMaxQuote(MAX_QUOTE);
     }
 }

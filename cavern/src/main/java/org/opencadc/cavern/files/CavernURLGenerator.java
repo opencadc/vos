@@ -118,7 +118,7 @@ public class CavernURLGenerator implements TransferGenerator {
     private static final Logger log = Logger.getLogger(CavernURLGenerator.class);
 
     private final String sshServerBase;
-    private final MultiValuedProperties config;
+    private final CavernConfig config;
     
     private final FileSystemNodePersistence nodePersistence;
     private final VOSpaceAuthorizer authorizer;
@@ -127,9 +127,9 @@ public class CavernURLGenerator implements TransferGenerator {
     public CavernURLGenerator(FileSystemNodePersistence nodePersistence) {
         this.nodePersistence = nodePersistence;
         this.authorizer = new VOSpaceAuthorizer(nodePersistence);
-        this.config = nodePersistence.getConfig().getProperties();
+        this.config = nodePersistence.getConfig();
         
-        String sb = config.getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
+        String sb = config.getProperties().getFirstPropertyValue(CavernConfig.SSHFS_SERVER_BASE);
         // make sure server bas ends with /
         if (sb != null && !sb.endsWith("/")) {
             sb = sb + "/";
@@ -189,8 +189,8 @@ public class CavernURLGenerator implements TransferGenerator {
         final Map<String,String> params = new TreeMap<>(); // empty for now
 
         // Use TokenTool to generate a preauth token
-        File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
-        File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
+        File privateKeyFile = config.getPrivateKey();
+        File pubKeyFile = config.getPublicKey();
         TokenTool gen = null; 
         if (pubKeyFile != null && privateKeyFile != null) {
             log.debug("found keys - creating TokenTool");
@@ -305,16 +305,12 @@ public class CavernURLGenerator implements TransferGenerator {
             throws AccessControlException, IOException {
 
         // Use TokenTool to generate a preauth token
-        File privateKeyFile = findFile(CavernConfig.PRIVATE_KEY);
-        File pubKeyFile = findFile(CavernConfig.PUBLIC_KEY);
-        TokenTool gen = null; 
-        if (pubKeyFile != null && privateKeyFile != null) {
-            gen = new TokenTool(pubKeyFile, privateKeyFile);
-        } else {
-            throw new AccessControlException("unable to validate preauth token: no keys configuired");
+        File pubKeyFile = config.getPublicKey();
+        if (pubKeyFile == null || !pubKeyFile.exists()) {
+            throw new AccessControlException("unable to validate preauth token: key not found");
         }
         
-        log.debug("url encoded token: " + token);
+        TokenTool tk = new TokenTool(pubKeyFile);
 
         // Use this function in case the incoming URI uses '!' instead of '~'
         // in the authority.
@@ -322,14 +318,9 @@ public class CavernURLGenerator implements TransferGenerator {
         VOSURI commonFormURI = targetVOSURI.getCommonFormURI();
         log.debug("targetURI passed in: " + targetVOSURI.toString());
         log.debug("targetURI for validation: " + commonFormURI.toString());
-
-        File publicKeyFile = findFile(CavernConfig.PUBLIC_KEY);
-        TokenTool tk = new TokenTool(publicKeyFile);
-
         log.debug("grant class: " + grantClass);
 
         String tokenUser = tk.validateToken(token, commonFormURI.getURI(), grantClass);
-        
         return tokenUser;
     }
 
@@ -340,19 +331,6 @@ public class CavernURLGenerator implements TransferGenerator {
             Capabilities caps = reg.getCapabilities(nodePersistence.getResourceID());
             this.filesCap = caps.findCapability(Standards.VOSPACE_FILES_20);
         }
-    }
-    
-    protected File findFile(String key) {
-        String value = this.config.getFirstPropertyValue(key);
-        if (value == null) {
-            return null;
-        }
-        File ret = new File(CavernConfig.DEFAULT_CONFIG_DIR, value);
-        if (!ret.exists()) {
-            throw new IllegalStateException(String.format("CONFIG: file %s not found for property %s",
-                    ret.getAbsolutePath(), key));
-        }
-        return ret;
     }
 }
 

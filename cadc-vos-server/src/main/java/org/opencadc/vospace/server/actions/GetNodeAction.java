@@ -68,24 +68,13 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.util.Iterator;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
@@ -93,7 +82,6 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -187,9 +175,14 @@ public class GetNodeAction extends NodeAction {
             }
 
             long start = System.currentTimeMillis();
-            log.debug(String.format("get children of %s: start=[%s] limit=[%s]", target.getPath(), startURI, pageLimit));
+            log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
             try {
-                node.childIterator = nodePersistence.iterator(node, pageLimit, pageStart);
+                ResourceIterator<Node> ci = nodePersistence.iterator(node, pageLimit, pageStart);
+                if (VOS.Detail.max.getValue().equals(detailLevel)) {
+                    node.childIterator = new TagChildAccessRightsWrapper(ci, AuthenticationUtil.getCurrentSubject());
+                } else {
+                    node.childIterator = ci;
+                }
             } catch (UnsupportedOperationException ex) {
                 throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
             }
@@ -197,12 +190,6 @@ public class GetNodeAction extends NodeAction {
             long end = System.currentTimeMillis();
             long dt = (end - start);
             log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
-
-            if (VOS.Detail.max.getValue().equals(detailLevel)) {
-                // add a property to child nodes if they are visible to
-                // this request
-                doTagChildrenAccessRights(node);
-            }
         }
 
         // get the properties if no detail level is specified (null) or if the
@@ -211,9 +198,10 @@ public class GetNodeAction extends NodeAction {
             nodePersistence.getProperties(serverNode);
 
             if (VOS.Detail.max.getValue().equals(detailLevel)) {
-                Subject subject = AuthenticationUtil.getCurrentSubject();
                 // to get here the node must have been readable so tag it as such
                 serverNode.getProperties().add(PROP_READABLE);
+                
+                Subject subject = AuthenticationUtil.getCurrentSubject();
                 if (voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, subject)) {
                     serverNode.getProperties().add(PROP_WRITABLE);
                 }
@@ -233,31 +221,35 @@ public class GetNodeAction extends NodeAction {
         nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
     }
     
-    private void doTagChildrenAccessRights(ContainerNode cn) {
-        for (final Node n : cn.getNodes()) {
-            // to get to this point, the parent node must have been readable.
-            // Need to check only the child node
-            Subject subject = AuthenticationUtil.getCurrentSubject();
-            if (voSpaceAuthorizer.hasSingleNodeReadPermission(n, subject)) {
-                n.getProperties().add(PROP_READABLE);
-            }
-            if (voSpaceAuthorizer.hasSingleNodeWritePermission(n, subject)) {
-                n.getProperties().add(PROP_WRITABLE);
-            }
-        }
-    }
+    private class TagChildAccessRightsWrapper implements ResourceIterator<Node> {
+        private final ResourceIterator<Node> inner;
+        private final Subject caller;
 
-    // why separate method and why checking the whole path here in GET?
-    private boolean isWritable(Node node) {
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        Iterator<Node> nodes = Utils.getNodeList(node).descendingIterator();
-        while (nodes.hasNext()) {
-            if (!voSpaceAuthorizer.hasSingleNodeWritePermission(nodes.next(), subject)) {
-                return false;
-            }
+        public TagChildAccessRightsWrapper(ResourceIterator<Node> inner, Subject caller) {
+            this.inner = inner;
+            this.caller = caller;
         }
-        return true;
+        
+        @Override
+        public boolean hasNext() {
+            return inner.hasNext();
+        }
+
+        @Override
+        public Node next() {
+            Node ret = inner.next();
+            if (voSpaceAuthorizer.hasSingleNodeReadPermission(ret, caller)) {
+                ret.getProperties().add(PROP_READABLE);
+            }
+            if (voSpaceAuthorizer.hasSingleNodeWritePermission(ret, caller)) {
+                ret.getProperties().add(PROP_WRITABLE);
+            }
+            return ret;
+        }
+
+        @Override
+        public void close() throws IOException {
+            inner.close();
+        }
     }
 }

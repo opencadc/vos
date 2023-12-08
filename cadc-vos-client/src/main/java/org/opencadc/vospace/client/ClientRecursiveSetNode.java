@@ -67,10 +67,18 @@
 
 package org.opencadc.vospace.client;
 
+import ca.nrc.cadc.auth.NotAuthenticatedException;
+import ca.nrc.cadc.net.ExpectationFailedException;
 import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.net.PreconditionFailedException;
+import ca.nrc.cadc.net.RangeNotSatisfiableException;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -78,9 +86,13 @@ import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.AccessControlException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,7 +108,7 @@ import org.opencadc.vospace.io.XmlProcessor;
  */
 public class ClientRecursiveSetNode implements Runnable {
     private static Logger log = Logger.getLogger(ClientRecursiveSetNode.class);
-    private static final long POLL_INTERVAL = 100L;
+    private static final int UWS_WAIT = 6; // sec
     
     private URL jobURL;
     private Node node;
@@ -149,24 +161,38 @@ public class ClientRecursiveSetNode implements Runnable {
     /**
      * Get the UWS execution phase of the job.
      *
+     * @param waitForSec amount of time to wait for phase
      * @return the current phase
      */
-    public ExecutionPhase getPhase() throws IOException {
+    public ExecutionPhase getPhase(int waitForSec) {
         if (phase != null) {
             return phase;
         }
 
-        // TODO: read just the phase in text/plain from the phaseURL
-        //URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
-
-        Job job = getJob();
-        log.debug("Job: " + job);
-        ExecutionPhase ep = job.getExecutionPhase();
-        if (ExecutionPhase.ABORTED.equals(ep) || ExecutionPhase.COMPLETED.equals(ep)
-            || ExecutionPhase.ERROR.equals(ep)) {
-            this.phase = ep; // only set when final phase
+        String urlStr = jobURL.toExternalForm() + "/phase?WAIT=" + waitForSec;
+        try {
+            URL phaseURL = new URL(urlStr);
+            HttpGet get = new HttpGet(phaseURL, true);
+            get.setConnectionTimeout(6000);
+            get.setReadTimeout(24000);
+            get.prepare();
+            InputStream istream = get.getInputStream();
+            InputStreamReader isr = new InputStreamReader(istream);
+            LineNumberReader r = new LineNumberReader(isr);
+            String str = r.readLine();
+            ExecutionPhase ep = ExecutionPhase.toValue(str);
+            if (ExecutionPhase.ABORTED.equals(ep) || ExecutionPhase.COMPLETED.equals(ep)
+                || ExecutionPhase.ERROR.equals(ep)) {
+                this.phase = ep; // only set when final phase
+            }
+            return ep;
+        } catch (Exception ex) {
+            throw new RuntimeException("failed to get job phase from " + urlStr, ex);
         }
-        return ep;
+    }
+    
+    public ExecutionPhase getPhase() {
+        return phase;
     }
 
     public ErrorSummary getServerError() throws IOException {
@@ -182,9 +208,8 @@ public class ClientRecursiveSetNode implements Runnable {
     private Job getJob() throws IOException {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpDownload get = new HttpDownload(jobURL, out);
-            
-            runHttpTransfer(get);
+            HttpGet get = new HttpGet(jobURL, out);
+            get.run();
 
             if (get.getThrowable() != null) {
                 throw new RuntimeException("Unable to get job because " + get.getThrowable().getLocalizedMessage());
@@ -266,8 +291,7 @@ public class ClientRecursiveSetNode implements Runnable {
             boolean followRedirects = false;
 
             HttpPost post = new HttpPost(url, content, contentType, followRedirects);
-            
-            runHttpTransfer(post);
+            post.run();
 
             if (post.getThrowable() != null) {
                 throw new RuntimeException("Unable to run job because " + post.getThrowable().getLocalizedMessage());
@@ -275,8 +299,7 @@ public class ClientRecursiveSetNode implements Runnable {
 
             if (monitorAsync) {
                 while (phase == null) {
-                    Thread.sleep(POLL_INTERVAL);
-                    getPhase();
+                    ExecutionPhase ep = getPhase(UWS_WAIT);
                 }
             }
         } catch (MalformedURLException bug) {
@@ -284,8 +307,4 @@ public class ClientRecursiveSetNode implements Runnable {
         }
     }
     
-    private void runHttpTransfer(HttpTransfer transfer) {
-        transfer.run();
-    }
-
 }

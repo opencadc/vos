@@ -69,7 +69,6 @@ package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.io.ByteCountInputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
-import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
@@ -77,7 +76,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.server.NodeFault;

@@ -62,43 +62,48 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
- */
+*/
 
-package org.opencadc.cavern.uws;
+package org.opencadc.cavern;
 
-import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.JobUpdater;
-import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import java.io.File;
+import java.net.URI;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.RecursiveSetNodeRunner;
+import org.opencadc.gms.GroupURI;
 
 /**
- *
- * @author pdowler, majorb, yeunga
+ * Test the async endpoints.
+ * 
+ * @author adriand
  */
-public class RecursiveSetNodeJobManager extends CavernJobManager {
+public class RecursiveNodePropsTest extends org.opencadc.conformance.vos.RecursiveNodePropsTest {
+    private static final Logger log = Logger.getLogger(RecursiveNodePropsTest.class);
 
-    private static final Logger log = Logger.getLogger(RecursiveSetNodeJobManager.class);
+    static {
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.DEBUG);
 
-    private static final Long MAX_EXEC_DURATION = Long.valueOf(12 * 7200L); // 24 hours?
-    private static final Long MAX_DESTRUCTION = Long.valueOf(7 * 24 * 3600L); // 1 week
-    private static final Long MAX_QUOTE = Long.valueOf(12 * 7200L); // same as exec
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+    }
 
-    public RecursiveSetNodeJobManager() {
-        super();
-        JobPersistence jp = createJobPersistence();
-        JobUpdater ju = (JobUpdater) jp;
-        super.setJobPersistence(jp);
+    private File testCert = FileUtil.getFileFromResource("cavern-test.pem", RecursiveNodePropsTest.class);
 
-        JobExecutor jobExec = new ThreadPoolExecutor(ju, RecursiveSetNodeRunner.class, 3);
-        super.setJobExecutor(jobExec);
+    public RecursiveNodePropsTest() {
+        super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+        super.paginationSupported = false; // not implemented because it is not scalable
+        super.nodelockSupported = false;   // not implemented, maybe never
 
-        super.setMaxExecDuration(MAX_EXEC_DURATION);
-        super.setMaxDestruction(MAX_DESTRUCTION);
-        super.setMaxQuote(MAX_QUOTE);
+        GroupURI group1 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?CADC"));
+        GroupURI group2 = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
+        super.enablePermissionPropsTest(group1, group2);
+
+        File groupMemberCert = FileUtil.getFileFromResource("cavern-auth-test.pem", RecursiveNodePropsTest.class);
+        super.enablePermissionTests(group2, groupMemberCert);
+
+        super.cleanupOnSuccess = false;
     }
 }

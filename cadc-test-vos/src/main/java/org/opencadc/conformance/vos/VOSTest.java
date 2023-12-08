@@ -80,26 +80,24 @@ import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
@@ -127,6 +125,7 @@ public abstract class VOSTest {
     public final URL transferServiceURL;
     public final URL recursiveDeleteServiceURL;
     public final URL pkgServiceURL;
+    public final URL recursiveNodePropsServiceURL;
     public final Subject authSubject;
     
     protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
@@ -154,6 +153,9 @@ public abstract class VOSTest {
 
         this.pkgServiceURL = regClient.getServiceURL(resourceID, Standards.PKG_10, AuthMethod.CERT);
         log.info(String.format("%s: %s", Standards.PKG_10, pkgServiceURL));
+
+        this.recursiveNodePropsServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_NODEPROPS, AuthMethod.CERT);
+        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_NODEPROPS, recursiveNodePropsServiceURL));
     }
 
     @Before
@@ -173,6 +175,11 @@ public abstract class VOSTest {
         }
     }
     
+    @Test
+    public void noop() {
+        log.info("no-op test");
+    }
+
     public URL getNodeURL(URL serviceURL, String path)
         throws MalformedURLException {
         if (path == null) {
@@ -280,44 +287,6 @@ public abstract class VOSTest {
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
     }
 
-    public Job postRecursiveDelete(URL asyncURL, VOSURI vosURI)
-            throws Exception {
-        log.info("postRecursiveDelete: " + asyncURL + " " + vosURI);
-        Map<String, Object> val = new HashMap<>();
-        val.put("target", vosURI.getURI());
-        HttpPost post = new HttpPost(asyncURL, val, false);
-        log.debug("POST: " + asyncURL);
-        Subject.doAs(authSubject, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-        URL jobURL = post.getRedirectURL();
-        URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
-
-        // start the job
-        val.clear();
-        val.put("phase", "RUN");
-        post = new HttpPost(jobPhaseURL , val, false);
-        log.debug("POST: " + jobPhaseURL);
-        Subject.doAs(authSubject, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode());
-        Assert.assertEquals("expected POST response code = 303",
-                303, post.getResponseCode());
-        Assert.assertNull("expected POST throwable == null", post.getThrowable());
-        Thread.sleep(3000); // wait for job to finish
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet get = new HttpGet(jobURL, out);
-        log.debug("GET: " + jobURL);
-        Subject.doAs(authSubject, new RunnableAction(get));
-        Assert.assertEquals("expected GET response code = 200",
-                200, get.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", get.getThrowable());
-
-        log.debug("Job XML: \n" + out);
-        JobReader jr = new JobReader();
-        return jr.read(new StringReader(out.toString()));
-    }
-
     public void delete(URL nodeURL) {
         delete(nodeURL, true);
     }
@@ -335,6 +304,46 @@ public abstract class VOSTest {
         Assert.assertEquals("expected DELETE response code = 200",
                             200, delete.getResponseCode());
         Assert.assertNull("expected DELETE throwable == null", delete.getThrowable());
+    }
+
+    protected void createNodeTree(String[] nodes) throws Exception {
+        // cleanup first
+        cleanupNodeTree(nodes);
+        // build the tree
+        for (String nodeName : nodes) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            VOSURI nodeURI = getVOSURI(nodeName);
+            Node node = null;
+            if (nodeName.endsWith("/")) {
+                node = new ContainerNode(nodeName);
+            } else {
+                node = new DataNode(nodeName);
+            }
+            log.info("put: " + nodeURI + " -> " + nodeURL);
+            put(nodeURL, nodeURI, node);
+        }
+    }
+
+    protected void cleanupNodeTree(String[] nodes) throws MalformedURLException {
+        for (int i = nodes.length - 1; i >= 0; i--) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodes[i]);
+            log.debug("deleting node " + nodeURL);
+            delete(nodeURL, false);
+        }
+    }
+
+    protected void makeWritable(String[] subdirNames, GroupURI accessGroup)
+            throws NodeParsingException, NodeNotSupportedException, IOException {
+        for (String nodeName : subdirNames) {
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
+            log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+            result.node.getReadWriteGroup().add(accessGroup);
+            log.debug("Node update " + result.node.getReadWriteGroup());
+            VOSURI nodeURI = getVOSURI(nodeName);
+            post(nodeURL, nodeURI, result.node);
+            log.info("Added group permissions to " + nodeName);
+        }
     }
 
 }
