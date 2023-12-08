@@ -72,6 +72,7 @@ package org.opencadc.vospace.server.pkg;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import java.io.FileNotFoundException;
@@ -80,9 +81,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlException;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import javax.naming.Context;
@@ -94,9 +95,11 @@ import org.opencadc.pkg.server.PackageItem;
 import org.opencadc.pkg.server.PackageRunner;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
@@ -155,11 +158,6 @@ public class VospacePackageRunner extends PackageRunner {
             TransferReader tr = new TransferReader();
             this.packageTransfer = tr.read(jobInfo.getContent(), VOSURI.SCHEME);
             List<URI> targetList = packageTransfer.getTargets();
-            log.debug("packageTransfer protocols: " + packageTransfer.getProtocols().size());
-            for (Protocol p : packageTransfer.getProtocols()) {
-                log.debug("packageTransfer protocols: " + p.getUri());
-            }
-
             if (targetList.size() > 1) {
                 this.packageName = "cadc-download-" + job.getID();
             } else {
@@ -175,10 +173,9 @@ public class VospacePackageRunner extends PackageRunner {
     /**
      *
      * @return
-     * @throws IOException
      */
     @Override
-    protected Iterator<PackageItem> getItems() throws IOException {
+    protected Iterator<PackageItem> getItems() {
         // packageTransfer is populated in initPackage
         List<URI> targetList = packageTransfer.getTargets();
         log.debug("target list: " + targetList.toString());
@@ -186,7 +183,7 @@ public class VospacePackageRunner extends PackageRunner {
         List<PackageItem> packageItems = new ArrayList<>();
         for (URI targetURI : targetList) {
             VOSURI nodeURI = new VOSURI(targetURI);
-            log.debug("node: " + nodeURI);
+            log.debug("target nodeURI: " + nodeURI);
 
             addPackageItem(nodeURI, packageItems);
         }
@@ -200,10 +197,7 @@ public class VospacePackageRunner extends PackageRunner {
      */
     private void addPackageItem(VOSURI nodeURI, List<PackageItem> packageItems) {
         String nodePath = nodeURI.getPath();
-        log.debug("node path: " + nodePath);
-
-//        Subject caller = AuthenticationUtil.getCurrentSubject();
-        log.debug("calling subject: " + AuthenticationUtil.getCurrentSubject());
+        log.debug("add node path: " + nodePath);
 
         try {
             // PathResolver checks read permission for the root node path
@@ -211,10 +205,7 @@ public class VospacePackageRunner extends PackageRunner {
             try {
                 node = pathResolver.getNode(nodePath);
             } catch (AccessControlException e) {
-                // add empty container to package
-                log.debug("read permission denied to root node: " + nodePath);
-//                packageItems.add(new PackageItem(endpoint, nodePath));
-                log.debug("??? add empty root node to packages: " + nodePath);
+                log.debug("read permission denied to node path: " + nodePath);
                 return;
             }
 
@@ -222,12 +213,12 @@ public class VospacePackageRunner extends PackageRunner {
                 throw NodeFault.NodeNotFound.getStatus(nodePath);
             }
 
-            if (node instanceof DataNode) {
-                log.debug("data node, add to packages: " + nodePath);
-                packageItems.add(getPackageItem(node));
-            } else if (node instanceof ContainerNode) {
-                log.debug("container node, add to packages: " + nodePath);
+            if (node instanceof ContainerNode) {
                 addContainerNode((ContainerNode) node, packageItems);
+            } else if (node instanceof DataNode) {
+                packageItems.add(getFilePackageItem((DataNode) node));
+            } else if (node instanceof LinkNode) {
+                packageItems.add(getSymbolicLinkPackageItem((LinkNode) node));
             } else {
                 log.info("unrecognized or unsupported node type " + nodeURI + CONTINUING_PROCESSING);
             }
@@ -241,46 +232,55 @@ public class VospacePackageRunner extends PackageRunner {
             log.info("linking exception: " + nodeURI + CONTINUING_PROCESSING);
         } catch (MalformedURLException e) {
             log.info("malformed URL: " + nodeURI + CONTINUING_PROCESSING);
-            e.printStackTrace();
         } catch (TransientException e) {
             log.info("transientException: " + nodeURI + CONTINUING_PROCESSING);
         } catch (Exception e) {
             log.info(String.format("%s: %s%s", e.getClass().getName(), nodeURI, CONTINUING_PROCESSING));
-            e.printStackTrace();
         }
     }
 
     private void addContainerNode(ContainerNode node, List<PackageItem> packageItems)
-            throws Exception {
+            throws IOException, NodeNotFoundException, PrivilegedActionException {
 
-        // check the job phase for abort or illegal state
-//        checkJobPhase();
-
-        log.debug("process container node: " + node);
+        log.debug("add ContainerNode: " + node);
         List<ContainerNode> childContainers = new ArrayList<>();
         Subject caller = AuthenticationUtil.getCurrentSubject();
 
         try (ResourceIterator<Node> iterator = nodePersistence.iterator(node, null, null)) {
             while (iterator.hasNext()) {
                 Node child = iterator.next();
-                log.debug("process child node: " + child);
                 boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(child, caller);
 
                 if (child instanceof ContainerNode) {
+                    log.debug(String.format("child ContainerNode: %s canRead: %s", child, canRead));
                     if (canRead) {
-                        log.debug("add child container node to queue");
+                        // add container to queue to be processed after data and link nodes
+                        // to use a single iterator
                         childContainers.add((ContainerNode) child);
+                        log.debug("add ContainerNode to queue");
                     } else {
-                        // add empty container node to the package
-//                        PackageItem packageItem = getPackageItem(node);
-//                        log.debug("add child container node packageItem: " + packageItem.getRelativePath());
-//                        packageItems.add(packageItem);
+                        // for containers that can't be read, add empty container to the package
+                        PackageItem packageItem = getDirectoryPackageItem((ContainerNode) child);
+                        packageItems.add(packageItem);
+                        log.debug("add empty ContainerNode");
                     }
                 } else if (child instanceof DataNode) {
+                    log.debug(String.format("child DataNode: %s canRead: %s", child, canRead));
                     if (canRead) {
-                        PackageItem packageItem = getPackageItem(child);
-                        log.debug("add child data node packageItem: " + packageItem.getRelativePath());
+                        PackageItem packageItem = getFilePackageItem((DataNode) child);
                         packageItems.add(packageItem);
+                        log.debug("add DataNode to packages");
+                    } else {
+                        log.debug("skip DataNode");
+                    }
+                } else if (child instanceof LinkNode) {
+                    log.debug(String.format("child LinkNode: %s canRead: %s", child, canRead));
+                    if (canRead) {
+                        PackageItem packageItem = getSymbolicLinkPackageItem((LinkNode) child);
+                        packageItems.add(packageItem);
+                        log.debug("add LinkNode to packages");
+                    } else {
+                        log.debug("skip LinkNode");
                     }
                 } else {
                     log.info("unrecognized or unsupported node type " + Utils.getPath(child) + CONTINUING_PROCESSING);
@@ -298,6 +298,80 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     /**
+     *
+     * @param node
+     * @return
+     */
+    protected PackageItem getDirectoryPackageItem(ContainerNode node) {
+        String nodePath = Utils.getPath(node);
+        log.debug("ContainerNode path: " + nodePath);
+
+        return new PackageItem(nodePath);
+    }
+
+    /**
+     *
+     * @param node
+     * @return
+     * @throws PrivilegedActionException
+     */
+    protected PackageItem getFilePackageItem(DataNode node)
+            throws PrivilegedActionException, NodeNotFoundException {
+        String nodePath = Utils.getPath(node);
+        log.debug("DataNode path: " + nodePath);
+
+        VOSURI nodeURI = new VOSURI(this.resourceID, nodePath);
+        URL endpointURL = getURL(nodeURI);
+        log.debug("DataNode URL:" + endpointURL);
+
+        return new PackageItem(nodePath, endpointURL);
+    }
+
+    /**
+     *
+     * @param node
+     * @return
+     */
+    protected PackageItem getSymbolicLinkPackageItem(LinkNode node) {
+        String nodePath = Utils.getPath(node);
+        log.debug("LinkNode path: " + nodePath);
+
+        URI targetURI = node.getTarget();
+        VOSURI nodeURI = new VOSURI(this.resourceID, nodePath);
+        String linkPath = nodeURI.getPath();
+        log.debug("LinkNode target path: " + linkPath);
+
+        return new PackageItem(nodePath, linkPath);
+    }
+
+    private URL getURL(VOSURI nodeURI)
+            throws PrivilegedActionException, NodeNotFoundException {
+
+        String remoteIP = this.job.getRemoteIP();
+        return Subject.doAs(AuthenticationUtil.getCurrentSubject(), (PrivilegedExceptionAction<URL>) () -> {
+            // request anonymous https urls
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
+            packageTransfer.getProtocols().clear();
+            packageTransfer.getProtocols().add(protocol);
+
+            // Use a temporary Job with just the remote IP to avoid the original Job in
+            // a transfer URL which may close the Job.
+            Job pkgJob = new Job();
+            pkgJob.setRemoteIP(remoteIP);
+            TransferGenerator transferGenerator = nodePersistence.getTransferGenerator();
+            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, pkgJob, null);
+            log.debug("num transfer protocols: " + protocols.size());
+
+            // Get the node endpoint from the first protocol
+            if (protocols.size() == 0) {
+                throw new NodeNotFoundException("endpoint not found for: " + nodeURI);
+            }
+            return new URL(protocols.get(0).getEndpoint());
+        });
+    }
+
+    /**
      * Build a filename from the URI provided
      * @return - name of last element in URI path.
      */
@@ -308,38 +382,6 @@ public class VospacePackageRunner extends PackageRunner {
             path = path.substring(i + 1);
         }
         return path;
-    }
-
-    private URL getEndpointURL(VOSURI nodeURI)
-            throws Exception {
-
-        String remoteIP = this.job.getRemoteIP();
-        return Subject.doAs(AuthenticationUtil.getCurrentSubject(), (PrivilegedExceptionAction<URL>) () -> {
-            // Use a temporary Job with just the remote IP to avoid the original Job in
-            // a transfer URL which may close the Job.
-            Job pkgJob = new Job();
-            pkgJob.setRemoteIP(remoteIP);
-            TransferGenerator transferGenerator = nodePersistence.getTransferGenerator();
-            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, pkgJob, null);
-            log.debug("num transfer protocols: " + protocols.size());
-
-            // Get the node endpoint from the first protocol
-            Protocol protocol = protocols.get(0);
-            String endpoint = protocol.getEndpoint();
-            return new URL(endpoint);
-        });
-    }
-
-    private PackageItem getPackageItem(Node node)
-            throws Exception {
-        log.debug("getPackageItem node type is container?: " + (node instanceof ContainerNode));
-        String nodePath = Utils.getPath(node);
-        VOSURI nodeURI = new VOSURI(this.resourceID, nodePath);
-        log.debug("Node uri: " + nodeURI);
-
-        URL endpoint = getEndpointURL(nodeURI);
-        log.debug("Node endpoint:" + endpoint);
-        return new PackageItem(endpoint, nodePath);
     }
 
 }
