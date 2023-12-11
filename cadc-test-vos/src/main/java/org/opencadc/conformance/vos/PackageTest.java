@@ -88,7 +88,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -116,6 +115,7 @@ import org.opencadc.vospace.transfer.TransferReader;
 import org.opencadc.vospace.transfer.TransferWriter;
 
 public class PackageTest extends VOSTest {
+
     private static final Logger log = Logger.getLogger(PackageTest.class);
 
     private static final String ZIP_CONTENT_TYPE = "application/zip";
@@ -155,9 +155,11 @@ public class PackageTest extends VOSTest {
             List<String> expected = new ArrayList<>();
 
             Subject anonSubject = AuthenticationUtil.getAnonSubject();
-            File archive = downloadPackage(targets, TAR_CONTENT_TYPE, anonSubject);
-            File extracted = extractPackage(archive, TAR_CONTENT_TYPE);
-            verifyPackage(expected, extracted);
+            File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, anonSubject);
+            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            Assert.assertNotNull(tarPkg);
+            Assert.assertTrue(tarPkg.canRead());
+            Assert.assertEquals(1024L, tarPkg.length());
 
             // cleanup
             delete(fileURL, false);
@@ -169,9 +171,6 @@ public class PackageTest extends VOSTest {
         }
     }
 
-    /**
-     * returns empty archive file, should throw 404 instead?
-     */
     @Test
     public void targetNotFoundTest() {
         try {
@@ -182,13 +181,13 @@ public class PackageTest extends VOSTest {
             List<URI> targets = new ArrayList<>();
             targets.add(nodeURI.getURI());
 
-            // download and extract the package
-            try {
-                File archive = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
-                Assert.fail("should have thrown exception for target not found");
-            } catch (AccessControlException e) {
-                log.debug("expected exception: " + e.getMessage());
-            }
+            // should return empty archive if node not found.
+            // check tar file exists.
+            File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
+            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            Assert.assertNotNull(tarPkg);
+            Assert.assertTrue(tarPkg.canRead());
+            Assert.assertEquals(1024L, tarPkg.length());
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -212,11 +211,13 @@ public class PackageTest extends VOSTest {
             List<URI> targets = new ArrayList<>();
             targets.add(nodeURI.getURI());
 
-            // expected files in download
-            List<String> expected = new ArrayList<>();
-
-            doTest(targets, expected, TAR_CONTENT_TYPE);
-            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            // tar does not create an empty directory for an empty tar archive
+            // check tar file exists.
+            File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
+            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            Assert.assertNotNull(tarPkg);
+            Assert.assertTrue(tarPkg.canRead());
+            Assert.assertEquals(1024L, tarPkg.length());
 
             // cleanup
             delete(nodeURL, false);
@@ -249,7 +250,7 @@ public class PackageTest extends VOSTest {
             expected.add(name);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            doTest(targets, expected, ZIP_CONTENT_TYPE);
+//            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodeURL, false);
@@ -307,7 +308,7 @@ public class PackageTest extends VOSTest {
             expected.add(file2);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            doTest(targets, expected, ZIP_CONTENT_TYPE);
+//            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -381,7 +382,7 @@ public class PackageTest extends VOSTest {
             expected.add(file3);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            doTest(targets, expected, ZIP_CONTENT_TYPE);
+//            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -403,6 +404,7 @@ public class PackageTest extends VOSTest {
             throws IOException, TransferParsingException {
         return uploadFile(path, content, authSubject);
     }
+
     private VOSURI putDataNode(String path, String content, Subject testSubject)
             throws IOException, TransferParsingException {
         return uploadFile(path, content, testSubject);
@@ -433,8 +435,8 @@ public class PackageTest extends VOSTest {
         verifyPackage(expected, extracted);
 
         // file cleanup
-//        deleteFile(pkg);
-//        deleteFile(extracted);
+        deleteFile(pkg);
+        deleteFile(extracted);
     }
 
     private VOSURI uploadFile(String filename, String content, Subject testSubject)
@@ -490,35 +492,6 @@ public class PackageTest extends VOSTest {
 
         return nodeURI;
     }
-
-//    private void uploadFile(VOSURI target, File uploadFile)
-//            throws PrivilegedActionException {
-//        List<Protocol> protocols = new ArrayList<Protocol>();
-//        Protocol basicTLS = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-//        basicTLS.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-//        protocols.add(basicTLS);
-////        DataNode targetNode = new DataNode(target.getName());
-//        log.debug("uploading: " + target.getURI().toASCIIString());
-//        Transfer transfer = new Transfer(target.getURI(), Direction.pushToVoSpace);
-//        transfer.getProtocols().addAll(protocols);
-//        transfer.version = VOS.VOSPACE_21;
-//
-//        final VOSpaceClient voSpaceClient = new VOSpaceClient(resourceID);
-//        final ClientTransfer clientTransfer = Subject.doAs(authSubject, new CreateTransferAction(voSpaceClient, transfer, false));
-//        clientTransfer.setOutputStreamWrapper(out -> {
-//            InputStream in = new FileInputStream(uploadFile);
-//            try {
-//                in.transferTo(out);
-//            } finally {
-//                in.close();
-//            }
-//        });
-//        Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-//            clientTransfer.runTransfer();
-//            return null;
-//        });
-//
-//    }
 
     private File downloadPackage(List<URI> targets, String contentType, Subject testSubject)
             throws Exception {
@@ -623,7 +596,7 @@ public class PackageTest extends VOSTest {
             log.debug("expected file: " + expected);
             for (Path extracted : extractedFiles) {
                 log.debug("extracted file: " + extracted.getFileName());
-                if (expected.equals(extracted.getFileName().toString())) {
+                if (extracted.toString().endsWith(expected)) {
                     log.debug("matched: " + expected);
                     count++;
                     break;

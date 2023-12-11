@@ -125,8 +125,10 @@ public class VospacePackageRunner extends PackageRunner {
     public VospacePackageRunner() {}
 
     /**
+     * Sets the name of this instance which is used to generate the JNDI key to the NodePersistence,
+     * and initialize other resources used by this class.
      *
-     * @param appName
+     * @param appName the name of the instance.
      */
     @Override
     public void setAppName(String appName) {
@@ -143,11 +145,10 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     /**
-     *
-     * @throws IllegalArgumentException
+     * Get the list of targets for the package and the package name.
      */
     @Override
-    protected void initPackage() throws IllegalArgumentException {
+    protected void initPackage() {
         log.debug("initPackage start");
         try {
             // check job is valid
@@ -171,8 +172,9 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     /**
+     * Get the list of PackageItem's to be included in this package.
      *
-     * @return
+     * @return List of PackageItem's.
      */
     @Override
     protected Iterator<PackageItem> getItems() {
@@ -191,10 +193,41 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     /**
+     * Get the URL to the given node VOSURI.
      *
-     * @param nodeURI
-     * @param packageItems
+     * @param nodeURI VOSURI to the node.
+     * @return URL to the node in VOSpace.
+     * @throws PrivilegedActionException for an error creating a transfer to get a URL to pull the node from VOSpace.
+     * @throws NodeNotFoundException if the node is not found.
      */
+    protected URL getURL(VOSURI nodeURI)
+            throws PrivilegedActionException, NodeNotFoundException {
+
+        String remoteIP = this.job.getRemoteIP();
+        return Subject.doAs(AuthenticationUtil.getCurrentSubject(), (PrivilegedExceptionAction<URL>) () -> {
+            // request anonymous https urls
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
+            packageTransfer.getProtocols().clear();
+            packageTransfer.getProtocols().add(protocol);
+
+            // Use a temporary Job with just the remote IP to avoid the original Job in
+            // a transfer URL which may close the Job.
+            Job pkgJob = new Job();
+            pkgJob.setRemoteIP(remoteIP);
+            TransferGenerator transferGenerator = nodePersistence.getTransferGenerator();
+            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, pkgJob, null);
+            log.debug("num transfer protocols: " + protocols.size());
+
+            // Get the node endpoint from the first protocol
+            if (protocols.size() == 0) {
+                throw new NodeNotFoundException("endpoint not found for: " + nodeURI);
+            }
+            return new URL(protocols.get(0).getEndpoint());
+        });
+    }
+
+    // Add a PackageItem for the given VOSURI to the list of PackageItems's.
     private void addPackageItem(VOSURI nodeURI, List<PackageItem> packageItems) {
         String nodePath = nodeURI.getPath();
         log.debug("add node path: " + nodePath);
@@ -239,6 +272,7 @@ public class VospacePackageRunner extends PackageRunner {
         }
     }
 
+    // Add a ContainerNode and any child nodes to the list of PackageItem's.
     private void addContainerNode(ContainerNode node, List<PackageItem> packageItems)
             throws IOException, NodeNotFoundException, PrivilegedActionException {
 
@@ -297,11 +331,7 @@ public class VospacePackageRunner extends PackageRunner {
         }
     }
 
-    /**
-     *
-     * @param node
-     * @return
-     */
+    // Get a PackageItem for a directory from the given ContainerNode.
     protected PackageItem getDirectoryPackageItem(ContainerNode node) {
         String nodePath = Utils.getPath(node);
         log.debug("ContainerNode path: " + nodePath);
@@ -309,12 +339,7 @@ public class VospacePackageRunner extends PackageRunner {
         return new PackageItem(nodePath);
     }
 
-    /**
-     *
-     * @param node
-     * @return
-     * @throws PrivilegedActionException
-     */
+    // Get a PackageItem for a file from the given DataNode.
     protected PackageItem getFilePackageItem(DataNode node)
             throws PrivilegedActionException, NodeNotFoundException {
         String nodePath = Utils.getPath(node);
@@ -327,11 +352,7 @@ public class VospacePackageRunner extends PackageRunner {
         return new PackageItem(nodePath, endpointURL);
     }
 
-    /**
-     *
-     * @param node
-     * @return
-     */
+    // Get a PackageItem for a symbolic link from the given LinkNode.
     protected PackageItem getSymbolicLinkPackageItem(LinkNode node) {
         String nodePath = Utils.getPath(node);
         log.debug("LinkNode path: " + nodePath);
@@ -344,37 +365,8 @@ public class VospacePackageRunner extends PackageRunner {
         return new PackageItem(nodePath, linkPath);
     }
 
-    private URL getURL(VOSURI nodeURI)
-            throws PrivilegedActionException, NodeNotFoundException {
-
-        String remoteIP = this.job.getRemoteIP();
-        return Subject.doAs(AuthenticationUtil.getCurrentSubject(), (PrivilegedExceptionAction<URL>) () -> {
-            // request anonymous https urls
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
-            packageTransfer.getProtocols().clear();
-            packageTransfer.getProtocols().add(protocol);
-
-            // Use a temporary Job with just the remote IP to avoid the original Job in
-            // a transfer URL which may close the Job.
-            Job pkgJob = new Job();
-            pkgJob.setRemoteIP(remoteIP);
-            TransferGenerator transferGenerator = nodePersistence.getTransferGenerator();
-            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, pkgJob, null);
-            log.debug("num transfer protocols: " + protocols.size());
-
-            // Get the node endpoint from the first protocol
-            if (protocols.size() == 0) {
-                throw new NodeNotFoundException("endpoint not found for: " + nodeURI);
-            }
-            return new URL(protocols.get(0).getEndpoint());
-        });
-    }
-
-    /**
-     * Build a filename from the URI provided
-     * @return - name of last element in URI path.
-     */
+    // Build a filename from the provided URI.
+    // The filename is the last element in the path for the URI.
     private static String getFilenameFromURI(URI uri) {
         String path = uri.getPath();
         int i = path.lastIndexOf("/");
