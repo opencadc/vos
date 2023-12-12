@@ -386,12 +386,15 @@ public class TransferRunner implements JobRunner {
 
             // standard redirect
             StringBuilder sb = new StringBuilder();
-            sb.append("/").append(job.getID()).append("/results/transferDetails");
+            //sb.append("/").append(job.getID()).append("/results/transferDetails");
+            sb.append("/").append(job.getID());
 
             try {
                 AuthMethod authMethod = AuthenticationUtil.getAuthMethod(AuthenticationUtil.getCurrentSubject());
                 // HACK: self lookup
-                URL serviceURL = regClient.getServiceURL(localServiceURI.getURI(), Standards.VOSPACE_TRANSFERS_20, authMethod);
+                //URL serviceURL = regClient.getServiceURL(localServiceURI.getURI(), Standards.VOSPACE_TRANSFERS_20, authMethod);
+                // but directly to details
+                URL serviceURL = regClient.getServiceURL(localServiceURI.getURI(), Standards.VOSPACE_XFER_20, authMethod);
                 URL location = new URL(serviceURL.toExternalForm() + sb.toString());
                 String loc = location.toExternalForm();
                 log.debug("Location: " + loc);
