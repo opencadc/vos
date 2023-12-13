@@ -69,6 +69,7 @@ package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.io.MultiBufferIO;
 import ca.nrc.cadc.net.ResourceNotFoundException;
@@ -132,6 +133,7 @@ public class PutAction extends FileAction {
         boolean putStarted = false;
         boolean successful = false;
         
+        long bytesWritten = 0L;
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
@@ -197,10 +199,12 @@ public class PutAction extends FileAction {
             // truncate: do not recreate file with wrong owner
             DigestOutputStream out = new DigestOutputStream(
                     Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING), md);
+            ByteCountOutputStream bcos = new ByteCountOutputStream(out);
             MultiBufferIO io = new MultiBufferIO();
-            io.copy(in, out);
-            out.flush();
+            io.copy(in, bcos);
+            bcos.flush();
             log.debug("copy: done " + target);
+            bytesWritten = bcos.getByteCount();
 
             URI expectedMD5 = syncInput.getDigest();
             byte[] md5 = md.digest();
@@ -212,8 +216,6 @@ public class PutAction extends FileAction {
                 OutputStream trunc = Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 trunc.close();
                 actualMD5 = null;
-                //PosixFileAttributes attrs = Files.readAttributes(target, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-                //log.warn("after truncate, size: " + attrs.size());
             }
             
             // re-read node from filesystem
@@ -279,6 +281,9 @@ public class PutAction extends FileAction {
             
             throw ex;
         } finally {
+            if (bytesWritten > 0L) {
+                logInfo.setBytes(bytesWritten);
+            }
             if (successful) {
                 log.debug("put: done " + nodeURI.getURI().toASCIIString());
             } else if (putStarted) {
