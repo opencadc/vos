@@ -127,20 +127,20 @@ public class TransferTest extends VOSTest {
             // Create a push-to-vospace Transfer for the node
             Transfer pushTransfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
             pushTransfer.version = VOS.VOSPACE_21;
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pushTransfer.getProtocols().add(protocol);
+            pushTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
+            Protocol putWithCert = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            putWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pushTransfer.getProtocols().add(putWithCert);
 
             // Do the transfer
             Transfer details = doTransfer(pushTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
                     Direction.pushToVoSpace, details.getDirection());
             Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
-            String endpoint = null;
             for (Protocol p : details.getProtocols()) {
+                String endpoint = p.getEndpoint();
+                log.info("put endpoint: " + endpoint);
                 try {
-                    endpoint = p.getEndpoint();
-                    log.debug("endpoint: " + endpoint);
                     new URL(endpoint);
                 } catch (MalformedURLException e) {
                     Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
@@ -150,20 +150,21 @@ public class TransferTest extends VOSTest {
             // Create a pull-from-vospace Transfer for the node
             Transfer pullTransfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
             pullTransfer.version = VOS.VOSPACE_21;
-            protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pullTransfer.getProtocols().add(protocol);
+            pullTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET)); // anon, preauth
+            Protocol getWithCert = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            getWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pullTransfer.getProtocols().add(getWithCert);
+            
 
             // Do the transfer
             details = doTransfer(pullTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
                     Direction.pullFromVoSpace, details.getDirection());
             Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
-            endpoint = null;
             for (Protocol p : details.getProtocols()) {
+                String endpoint = p.getEndpoint();
+                log.info("get endpoint: " + endpoint);
                 try {
-                    endpoint = p.getEndpoint();
-                    log.debug("endpoint: " + endpoint);
                     new URL(endpoint);
                 } catch (MalformedURLException e) {
                     Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
