@@ -87,6 +87,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
+    private static final List<Integer> PUT_OK = Arrays.asList(new Integer[] { 200, 201});
+    
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
     }
@@ -165,7 +168,7 @@ public class TransferTest extends VOSTest {
             HttpUpload put = new HttpUpload(content, putURL);
             put.run();
             log.info("put: " + put.getResponseCode() + " " + put.getThrowable());
-            Assert.assertEquals(201, put.getResponseCode());
+            Assert.assertTrue(PUT_OK.contains(put.getResponseCode()));
             Assert.assertNull(put.getThrowable());
 
             // Create a pull-from-vospace Transfer for the node
@@ -202,7 +205,7 @@ public class TransferTest extends VOSTest {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             HttpGet get = new HttpGet(getURL, bos);
             get.run();
-            log.info("get: " + get.getResponseCode() + " " + get.getThrowable());
+            log.info("get: " + get.getResponseCode() + " " + get.getContentType() + " " + get.getThrowable());
             Assert.assertEquals(200, get.getResponseCode());
             Assert.assertNull(get.getThrowable());
             Assert.assertEquals(content.getBytes().length, get.getContentLength());

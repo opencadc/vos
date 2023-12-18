@@ -242,6 +242,17 @@ public class PutAction extends FileAction {
                     csp.setValue(actualMD5.toASCIIString());
                 }
             }
+            // set/update content-type attr
+            String contentType = syncInput.getHeader("content-type");
+            if (contentType != null) {
+                NodeProperty ctp = node.getProperty(VOS.PROPERTY_URI_TYPE);
+                if (ctp == null) {
+                    ctp = new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType);
+                    node.getProperties().add(ctp);
+                } else {
+                    ctp.setValue(contentType);
+                }
+            }
 
             nodePersistence.put(node);
             successful = true;
