@@ -320,6 +320,7 @@ public class VospacePackageRunner extends PackageRunner {
         }
 
         /**
+         * Find the PackageItem to return as next().
          *
          */
         private void advance() {
@@ -349,9 +350,12 @@ public class VospacePackageRunner extends PackageRunner {
                 boolean hasNext = false;
                 while(!hasNext) {
                     log.debug("get childNodeIterator start");
+
+                    // if the currentNodeIterator is null or empty, move the deferred nodes into currentNodes
+                    // a refresh to iterator to the currentNodes.
                     if ((currentNodeIterator == null || !currentNodeIterator.hasNext())
                             && !deferredNodes.isEmpty()) {
-                        // copy deferredNodes into currentNodes
+                        // copy deferredNodes into currentNodes for processing
                         currentNodes.addAll(deferredNodes);
                         deferredNodes.clear();
                         log.debug(String.format("copied %s from deferred to current", currentNodes.size()));
@@ -361,6 +365,8 @@ public class VospacePackageRunner extends PackageRunner {
                         log.debug("refreshed currentNodeIterator");
                     }
 
+                    // if the childNodeIterator is null, get an iterator to the child nodes
+                    // for the next currentNode
                     if (childNodeIterator == null && currentNodeIterator != null && currentNodeIterator.hasNext()) {
                         ContainerNode node = currentNodeIterator.next();
                         currentNodeIterator.remove();
@@ -368,6 +374,8 @@ public class VospacePackageRunner extends PackageRunner {
                         log.debug("null childNodeIterator, refreshed for "  + node.getName());
                     }
 
+                    // if the childNodeIterator is empty, get an iterator to the child nodes
+                    // for the next currentNode
                     if (childNodeIterator != null && !childNodeIterator.hasNext()
                             && currentNodeIterator != null && currentNodeIterator.hasNext()) {
                         ContainerNode node = currentNodeIterator.next();
@@ -377,11 +385,13 @@ public class VospacePackageRunner extends PackageRunner {
                     }
                     log.debug("get childNodeIterator end");
 
+                    // if the childNodeIterator is empty, done.
                     if (childNodeIterator == null || !childNodeIterator.hasNext()) {
-                        log.debug("childNodeIterator expired");
+                        log.debug("childNodeIterator exhausted");
                         break;
                     }
 
+                    // loop through the child nodes for the next PackageItem.
                     log.debug("process childNodeIterator start");
                     while (childNodeIterator.hasNext()) {
                         Node child = childNodeIterator.next();
