@@ -75,9 +75,7 @@ import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.AccessControlException;
@@ -86,6 +84,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -96,12 +96,10 @@ import org.opencadc.pkg.server.PackageRunner;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
@@ -121,6 +119,8 @@ public class VospacePackageRunner extends PackageRunner {
     private NodePersistence nodePersistence;
     private VOSpaceAuthorizer vospaceAuthorizer;
     private PathResolver pathResolver;
+    private List<URI> targetList;
+    private String appName;
 
     public VospacePackageRunner() {}
 
@@ -132,6 +132,7 @@ public class VospacePackageRunner extends PackageRunner {
      */
     @Override
     public void setAppName(String appName) {
+        this.appName = appName;
         String jndiKey = appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
@@ -158,17 +159,21 @@ public class VospacePackageRunner extends PackageRunner {
             // Get the target list from the job
             TransferReader tr = new TransferReader();
             this.packageTransfer = tr.read(jobInfo.getContent(), VOSURI.SCHEME);
-            List<URI> targetList = packageTransfer.getTargets();
+            this.targetList = packageTransfer.getTargets();
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(appName).append("-download-");
             if (targetList.size() > 1) {
-                this.packageName = "cadc-download-" + job.getID();
+                sb.append(job.getID());
             } else {
-                this.packageName = getFilenameFromURI(targetList.get(0));
+                sb.append(getFilenameFromURI(targetList.get(0)));
             }
+            this.packageName = sb.toString();
             log.debug("package name: " + this.packageName);
         } catch (IOException | TransferParsingException e) {
-            throw new RuntimeException("ERROR reading jobInfo: ", e);
+            throw new RuntimeException("ERROR parsing transfer document: ", e);
         }
-        log.debug("initPackage done");
+        log.debug("initPackage end");
     }
 
     /**
@@ -178,18 +183,7 @@ public class VospacePackageRunner extends PackageRunner {
      */
     @Override
     protected Iterator<PackageItem> getItems() {
-        // packageTransfer is populated in initPackage
-        List<URI> targetList = packageTransfer.getTargets();
-        log.debug("target list: " + targetList.toString());
-
-        List<PackageItem> packageItems = new ArrayList<>();
-        for (URI targetURI : targetList) {
-            VOSURI nodeURI = new VOSURI(targetURI);
-            log.debug("target nodeURI: " + nodeURI);
-
-            addPackageItem(nodeURI, packageItems);
-        }
-        return packageItems.iterator();
+        return new PackageItemIterator(targetList);
     }
 
     /**
@@ -202,7 +196,7 @@ public class VospacePackageRunner extends PackageRunner {
      */
     protected URL getURL(VOSURI nodeURI)
             throws PrivilegedActionException, NodeNotFoundException {
-
+        log.debug("get node URL for: " + nodeURI.getURI().toASCIIString());
         String remoteIP = this.job.getRemoteIP();
         return Subject.doAs(AuthenticationUtil.getCurrentSubject(), (PrivilegedExceptionAction<URL>) () -> {
             // request anonymous https urls
@@ -220,115 +214,13 @@ public class VospacePackageRunner extends PackageRunner {
             log.debug("num transfer protocols: " + protocols.size());
 
             // Get the node endpoint from the first protocol
-            if (protocols.size() == 0) {
+            if (protocols.isEmpty()) {
                 throw new NodeNotFoundException("endpoint not found for: " + nodeURI);
             }
-            return new URL(protocols.get(0).getEndpoint());
+            URL nodeURL = new URL(protocols.get(0).getEndpoint());
+            log.debug("found node URL: " + nodeURL.getFile());
+            return nodeURL;
         });
-    }
-
-    // Add a PackageItem for the given VOSURI to the list of PackageItems's.
-    private void addPackageItem(VOSURI nodeURI, List<PackageItem> packageItems) {
-        String nodePath = nodeURI.getPath();
-        log.debug("add node path: " + nodePath);
-
-        try {
-            // PathResolver checks read permission for the root node path
-            Node node;
-            try {
-                node = pathResolver.getNode(nodePath);
-            } catch (AccessControlException e) {
-                log.debug("read permission denied to node path: " + nodePath);
-                return;
-            }
-
-            if (node == null) {
-                throw NodeFault.NodeNotFound.getStatus(nodePath);
-            }
-
-            if (node instanceof ContainerNode) {
-                addContainerNode((ContainerNode) node, packageItems);
-            } else if (node instanceof DataNode) {
-                packageItems.add(getFilePackageItem((DataNode) node));
-            } else if (node instanceof LinkNode) {
-                packageItems.add(getSymbolicLinkPackageItem((LinkNode) node));
-            } else {
-                log.info("unrecognized or unsupported node type " + nodeURI + CONTINUING_PROCESSING);
-            }
-        } catch (AccessControlException e) {
-            log.info("permission denied: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (NodeNotFoundException e) {
-            log.info("node not found: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (FileNotFoundException e) {
-            log.info("couldn't generate endpoints: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (LinkingException e) {
-            log.info("linking exception: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (MalformedURLException e) {
-            log.info("malformed URL: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (TransientException e) {
-            log.info("transientException: " + nodeURI + CONTINUING_PROCESSING);
-        } catch (Exception e) {
-            log.info(String.format("%s: %s%s", e.getClass().getName(), nodeURI, CONTINUING_PROCESSING));
-        }
-    }
-
-    // Add a ContainerNode and any child nodes to the list of PackageItem's.
-    private void addContainerNode(ContainerNode node, List<PackageItem> packageItems)
-            throws IOException, NodeNotFoundException, PrivilegedActionException {
-
-        log.debug("add ContainerNode: " + node);
-        List<ContainerNode> childContainers = new ArrayList<>();
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-
-        try (ResourceIterator<Node> iterator = nodePersistence.iterator(node, null, null)) {
-            while (iterator.hasNext()) {
-                Node child = iterator.next();
-                boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(child, caller);
-
-                if (child instanceof ContainerNode) {
-                    log.debug(String.format("child ContainerNode: %s canRead: %s", child, canRead));
-                    if (canRead) {
-                        // add container to queue to be processed after data and link nodes
-                        // to use a single iterator
-                        childContainers.add((ContainerNode) child);
-                        log.debug("add ContainerNode to queue");
-                    } else {
-                        // for containers that can't be read, add empty container to the package
-                        PackageItem packageItem = getDirectoryPackageItem((ContainerNode) child);
-                        packageItems.add(packageItem);
-                        log.debug("add empty ContainerNode");
-                    }
-                } else if (child instanceof DataNode) {
-                    log.debug(String.format("child DataNode: %s canRead: %s", child, canRead));
-                    if (canRead) {
-                        PackageItem packageItem = getFilePackageItem((DataNode) child);
-                        packageItems.add(packageItem);
-                        log.debug("add DataNode to packages");
-                    } else {
-                        log.debug("skip DataNode");
-                    }
-                } else if (child instanceof LinkNode) {
-                    log.debug(String.format("child LinkNode: %s canRead: %s", child, canRead));
-                    if (canRead) {
-                        PackageItem packageItem = getSymbolicLinkPackageItem((LinkNode) child);
-                        packageItems.add(packageItem);
-                        log.debug("add LinkNode to packages");
-                    } else {
-                        log.debug("skip LinkNode");
-                    }
-                } else {
-                    log.info("unrecognized or unsupported node type " + Utils.getPath(child) + CONTINUING_PROCESSING);
-                }
-            }
-        }
-
-        if (!childContainers.isEmpty()) {
-            log.debug("process container nodes");
-            for (ContainerNode child : childContainers) {
-                log.debug("process: " + child);
-                addContainerNode(child, packageItems);
-            }
-        }
     }
 
     // Get a PackageItem for a directory from the given ContainerNode.
@@ -341,14 +233,12 @@ public class VospacePackageRunner extends PackageRunner {
 
     // Get a PackageItem for a file from the given DataNode.
     protected PackageItem getFilePackageItem(DataNode node)
-            throws PrivilegedActionException, NodeNotFoundException {
+            throws NodeNotFoundException, PrivilegedActionException {
         String nodePath = Utils.getPath(node);
         log.debug("DataNode path: " + nodePath);
 
-        VOSURI nodeURI = new VOSURI(this.resourceID, nodePath);
+        VOSURI nodeURI = new VOSURI(resourceID, nodePath);
         URL endpointURL = getURL(nodeURI);
-        log.debug("DataNode URL:" + endpointURL);
-
         return new PackageItem(nodePath, endpointURL);
     }
 
@@ -374,6 +264,221 @@ public class VospacePackageRunner extends PackageRunner {
             path = path.substring(i + 1);
         }
         return path;
+    }
+
+
+    class PackageItemIterator implements Iterator<PackageItem> {
+
+        private final Subject caller;
+        private final List<ContainerNode> deferredNodes;
+        private final List<ContainerNode> currentNodes;
+        private ListIterator<ContainerNode> currentNodeIterator;
+        private final Iterator<Node> nodeIterator;
+        private ResourceIterator<Node> childNodeIterator;
+        private PackageItem next = null;
+
+        public PackageItemIterator(List<URI> targets) {
+            if (targets == null) {
+                throw new IllegalArgumentException("list of targets is null");
+            }
+            this.nodeIterator = getNodeIterator(targets);
+            this.deferredNodes = new ArrayList<>();
+            this.currentNodes = new ArrayList<>();
+            this.caller = AuthenticationUtil.getCurrentSubject();
+            advance();
+        }
+
+        /**
+         * Returns {@code true} if the iteration has more elements.
+         * (In other words, returns {@code true} if {@link #next} would
+         * return an element rather than throwing an exception.)
+         *
+         * @return {@code true} if the iteration has more elements
+         */
+        @Override
+        public boolean hasNext() {
+            log.debug("hasNext(): " + (next != null));
+            return next != null;
+        }
+
+        /**
+         * Returns the next element in the iteration.
+         *
+         * @return the next element in the iteration
+         * @throws NoSuchElementException if the iteration has no more elements
+         */
+        @Override
+        public PackageItem next() {
+            if (next == null) {
+                throw new NoSuchElementException("no more PackageItem's");
+            }
+            PackageItem current = next;
+            log.debug("next() advance start");
+            advance();
+            log.debug(String.format("next() advance end: next: %s ondeck: %s", current, next));
+            return current;
+        }
+
+        /**
+         *
+         */
+        private void advance() {
+            log.debug("advance(): start");
+            next = null;
+
+            // process list of given target nodes, returning a PackageItem for a DataNode
+            // or a LinkNode, and adding ContainerNodes to deferred list of nodes.
+            log.debug("nodeIterator start");
+            while (nodeIterator.hasNext()) {
+                Node node = nodeIterator.next();
+                if (node == null) {
+                    log.debug("null target node");
+                    break;
+                }
+                nodeIterator.remove();
+                next = doChildNode(node);
+                if (next != null) {
+                    break;
+                }
+            }
+            log.debug("nodeIterator end, next: " + next);
+
+            // process deferred container nodes;
+            if (next == null) {
+                log.debug("childNodeIterator start");
+                boolean hasNext = false;
+                while(!hasNext) {
+                    log.debug("get childNodeIterator start");
+                    if ((currentNodeIterator == null || !currentNodeIterator.hasNext())
+                            && !deferredNodes.isEmpty()) {
+                        // copy deferredNodes into currentNodes
+                        currentNodes.addAll(deferredNodes);
+                        deferredNodes.clear();
+                        log.debug(String.format("copied %s from deferred to current", currentNodes.size()));
+
+                        // refresh currentNodesIterator
+                        currentNodeIterator = currentNodes.listIterator();
+                        log.debug("refreshed currentNodeIterator");
+                    }
+
+                    if (childNodeIterator == null && currentNodeIterator != null && currentNodeIterator.hasNext()) {
+                        ContainerNode node = currentNodeIterator.next();
+                        currentNodeIterator.remove();
+                        childNodeIterator = nodePersistence.iterator(node, null, null);
+                        log.debug("null childNodeIterator, refreshed for "  + node.getName());
+                    }
+
+                    if (childNodeIterator != null && !childNodeIterator.hasNext()
+                            && currentNodeIterator != null && currentNodeIterator.hasNext()) {
+                        ContainerNode node = currentNodeIterator.next();
+                        currentNodeIterator.remove();
+                        childNodeIterator = nodePersistence.iterator(node, null, null);
+                        log.debug("empty childNodeIterator, refreshed for "  + node.getName());
+                    }
+                    log.debug("get childNodeIterator end");
+
+                    if (childNodeIterator == null || !childNodeIterator.hasNext()) {
+                        log.debug("childNodeIterator expired");
+                        break;
+                    }
+
+                    log.debug("process childNodeIterator start");
+                    while (childNodeIterator.hasNext()) {
+                        Node child = childNodeIterator.next();
+                        next = doChildNode(child);
+                        log.debug("childNodeIterator next: " + next);
+                        if (next != null) {
+                            hasNext = true;
+                            break;
+                        }
+                    }
+                    log.debug("process childNodeIterator end");
+                }
+
+            }
+            log.debug("advance() end, next: " + next);
+        }
+
+        //
+
+        /**
+         * Get the list of nodes for the given list of target URI.
+         *
+         * @param targets list of target URI.
+         * @return Iterator for the target Node's.
+         */
+        private Iterator<Node> getNodeIterator(List<URI> targets) {
+            log.debug("getNodeIterator.start");
+            List<Node> targetNodes = new ArrayList<>();
+            for (URI target : targets) {
+                VOSURI vosURI = new VOSURI(target);
+                String nodePath = vosURI.getPath();
+                try {
+                    Node node = pathResolver.getNode(nodePath);
+                    targetNodes.add(node);
+                    log.debug(String.format("target %s -> node %s", target.toASCIIString(), node.getName()));
+                } catch (Exception e) {
+                    log.debug("skipping target, read permission denied: " + nodePath);
+                }
+            }
+            log.debug(String.format("getNodeIterator() - nodes: %s", targetNodes.size()));
+            log.debug("getNodeIterator.end");
+            return targetNodes.iterator();
+        }
+
+        /**
+         * Process the child nodes of a container.
+         * If the node is a ContainerNode, add the node to the list of container nodes for deferred processing.
+         * if the node is a DataNode or LinkNode, create a PackageItem for the node,
+         * returning null if unable to create the PackageItem for the node.
+         *
+         * @param child child Node.
+         * @return a PackageItem, or null if the node is a ContainerNode, or error creating the PackageItem.
+         */
+        private PackageItem doChildNode(Node child) {
+            log.debug("doChildNode start: " + child.getName());
+            PackageItem packageItem = null;
+            try {
+                boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(child, caller);
+                log.debug("canRead child: " + canRead);
+
+                if (child instanceof ContainerNode) {
+                    deferredNodes.add((ContainerNode) child);
+                    log.debug(String.format("added child to ContainerNode list: %s", child.getName()));
+                } else if (child instanceof DataNode) {
+                    if (canRead) {
+                        packageItem = getFilePackageItem((DataNode) child);
+                        if (packageItem == null) {
+                            log.debug(String.format("skipped child DataNode: %s canRead: %s", child.getName(), canRead));
+                        } else {
+                            log.debug(String.format("added child DataNode: %s canRead: %s", child.getName(), canRead));
+                        }
+                    } else {
+                        log.debug(String.format("skipped child DataNode: %s canRead: %s", child.getName(), canRead));
+                    }
+                } else if (child instanceof LinkNode) {
+                    if (canRead) {
+                        packageItem = getSymbolicLinkPackageItem((LinkNode) child);
+                        log.debug(String.format("added child LinkNode: %s canRead: %s", child.getName(), canRead));
+                    } else {
+                        log.debug(String.format("skipped child LinkNode: %s canRead: %s", child.getName(), canRead));
+                    }
+                } else {
+                    log.info("unrecognized or unsupported node type " + Utils.getPath(child) + CONTINUING_PROCESSING);
+                }
+            } catch (AccessControlException e) {
+                log.info(String.format("permission denied: %s %s", child.getName(), CONTINUING_PROCESSING));
+            } catch (NodeNotFoundException e) {
+                log.info(String.format("node not found: %s %s", child.getName(), CONTINUING_PROCESSING));
+            } catch (TransientException e) {
+                log.info(String.format("transientException: %s %s", child.getName(), CONTINUING_PROCESSING));
+            } catch (Exception e) {
+                log.info(String.format("%s: %s%s", e.getClass().getName(), child.getName(), CONTINUING_PROCESSING));
+            }
+            log.debug("doChildNode end: return " + packageItem);
+            return packageItem;
+        }
+
     }
 
 }

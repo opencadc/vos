@@ -78,11 +78,11 @@ public class PackageTest extends org.opencadc.conformance.vos.PackageTest {
     private static final Logger log = Logger.getLogger(PackageTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.vospace", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.vospace.server.pkg", Level.DEBUG);
-        Log4jInit.setLevel("org.opencadc.cavern", Level.DEBUG);
-        Log4jInit.setLevel("ca.nrc.cadc.uws", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace.server.pkg", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.uws", Level.INFO);
     }
 
     public PackageTest() {
