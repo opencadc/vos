@@ -110,15 +110,5 @@
     </interface>
   </capability>
   
-  <capability standardID="vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#xfer">
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/xfer</accessURL>
-      <securityMethod/>
-      <securityMethod standardID="ivo://ivoa.net/sso#cookie"/>
-      <securityMethod standardID="ivo://ivoa.net/sso#tls-with-certificate"/>
-      <securityMethod standardID="ivo://ivoa.net/sso#token"/>
-    </interface>
-  </capability>
-
 </vosi:capabilities>
 
