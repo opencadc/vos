@@ -73,6 +73,7 @@ import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -85,9 +86,12 @@ import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -108,6 +112,8 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
+    private static final List<Integer> PUT_OK = Arrays.asList(new Integer[] { 200, 201});
+    
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
     }
@@ -127,49 +133,86 @@ public class TransferTest extends VOSTest {
             // Create a push-to-vospace Transfer for the node
             Transfer pushTransfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
             pushTransfer.version = VOS.VOSPACE_21;
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pushTransfer.getProtocols().add(protocol);
+            pushTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
+            Protocol putWithCert = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            putWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pushTransfer.getProtocols().add(putWithCert);
 
-            // Do the transfer
+            // negotiate the transfer
             Transfer details = doTransfer(pushTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
                     Direction.pushToVoSpace, details.getDirection());
-            Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
-            String endpoint = null;
+            Assert.assertNotNull(details.getProtocols());
+            log.info(pushTransfer.getDirection() + " results: " + details.getProtocols().size());
+            URL putURL = null;
             for (Protocol p : details.getProtocols()) {
+                String endpoint = p.getEndpoint();
+                log.info("PUT endpoint: " + endpoint);
                 try {
-                    endpoint = p.getEndpoint();
-                    log.debug("endpoint: " + endpoint);
-                    new URL(endpoint);
+                    
+                    URL u = new URL(endpoint);
+                    if (putURL == null) {
+                        putURL = u; // first
+                    }
                 } catch (MalformedURLException e) {
                     Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
                 }
             }
+            Assert.assertNotNull(putURL);
+            
+            // put the bytes
+            Random rnd = new Random();
+            byte[] data = new byte[1024];
+            rnd.nextBytes(data);
+            FileContent content = new FileContent(data, "application/octet-stream");
+            HttpUpload put = new HttpUpload(content, putURL);
+            put.run();
+            log.info("put: " + put.getResponseCode() + " " + put.getThrowable());
+            Assert.assertTrue(PUT_OK.contains(put.getResponseCode()));
+            Assert.assertNull(put.getThrowable());
 
             // Create a pull-from-vospace Transfer for the node
             Transfer pullTransfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
             pullTransfer.version = VOS.VOSPACE_21;
-            protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pullTransfer.getProtocols().add(protocol);
+            pullTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET)); // anon, preauth
+            Protocol getWithCert = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            getWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pullTransfer.getProtocols().add(getWithCert);
+            
 
             // Do the transfer
             details = doTransfer(pullTransfer);
             Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
                     Direction.pullFromVoSpace, details.getDirection());
-            Assert.assertNotNull("expected > 0 protocols", details.getProtocols());
-            endpoint = null;
+            Assert.assertNotNull(details.getProtocols());
+            log.info(pullTransfer.getDirection() + " results: " + details.getProtocols().size());
+            URL getURL = null;
             for (Protocol p : details.getProtocols()) {
+                String endpoint = p.getEndpoint();
+                log.info("GET endpoint: " + endpoint);
                 try {
-                    endpoint = p.getEndpoint();
-                    log.debug("endpoint: " + endpoint);
-                    new URL(endpoint);
+                    URL u = new URL(endpoint);
+                    if (getURL == null) {
+                        getURL = u; // first
+                    }
                 } catch (MalformedURLException e) {
                     Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
                 }
             }
-
+            Assert.assertNotNull(getURL);
+            
+            // get the bytes
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            HttpGet get = new HttpGet(getURL, bos);
+            get.run();
+            log.info("get: " + get.getResponseCode() + " " + get.getContentType() + " " + get.getThrowable());
+            Assert.assertEquals(200, get.getResponseCode());
+            Assert.assertNull(get.getThrowable());
+            Assert.assertEquals(content.getBytes().length, get.getContentLength());
+            Assert.assertEquals(content.getContentType(), get.getContentType());
+            byte[] actual = bos.toByteArray();
+            Assert.assertArrayEquals(content.getBytes(), actual);
+            
             // Delete the node
             delete(nodeURL, false);
 

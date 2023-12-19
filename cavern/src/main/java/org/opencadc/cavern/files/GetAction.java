@@ -67,9 +67,9 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.FileNotFoundException;
-import java.io.OutputStream;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -94,10 +94,11 @@ public class GetAction extends HeadAction {
 
     @Override
     public void doAction()  throws Exception {
+        ByteCountOutputStream out = null;
         try {
             Path source = resolveAndSetMetadata();
             
-            OutputStream out = syncOutput.getOutputStream();
+            out = new ByteCountOutputStream(syncOutput.getOutputStream());
             log.debug("Starting copy of file " + source);
             Files.copy(source, out);
             log.debug("Completed copy of file " + source);
@@ -112,6 +113,10 @@ public class GetAction extends HeadAction {
         } catch (AccessControlException | AccessDeniedException e) {
             log.debug(e);
             throw new AccessControlException(e.getMessage());
+        } finally {
+            if (out != null && out.getByteCount() > 0L) {
+                logInfo.setBytes(out.getByteCount());
+            }
         }
     }
 }
