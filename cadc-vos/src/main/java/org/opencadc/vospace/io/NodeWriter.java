@@ -319,6 +319,13 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addNodeVariablesToProperties(Node node, Set<NodeProperty> properties) {
+        NodeProperty dateProp = node.getProperty(VOS.PROPERTY_URI_DATE);
+        if (dateProp == null && node.getLastModified() != null) {
+            // default to metadata date
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
+        }
+        
         if (node.ownerDisplay != null) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, node.ownerDisplay));
         }
@@ -373,10 +380,6 @@ public class NodeWriter implements XmlProcessor {
         } else if (node.clearInheritPermissions) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS));
         }
-        if (node.getLastModified() != null) {
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
-        }
     }
 
     /**
@@ -386,10 +389,7 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addLinkNodeVariablesToProperties(LinkNode node, Set<NodeProperty> properties) {
-        if (node.getLastModified() != null) {
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
-        }
+        // placeholder: nothing extra
     }
 
     /**
@@ -399,9 +399,8 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addDataNodeVariablesToProperties(DataNode node, Set<NodeProperty> properties) {
-        // currently none since busy is an attribute handled elsewhere
-        // TODO for date for DataNode it's not clear which of the Node.lastModified, Artifact.lastModified,
-        //  Artifact.contentLastModified is appropriate here
+        // placeholder: nothing extra
+        // note: DataNode.busy is an attribute handled elsewhere
     }
 
     /**
