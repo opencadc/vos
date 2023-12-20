@@ -105,6 +105,15 @@ import org.opencadc.vospace.transfer.Transfer;
 import org.opencadc.vospace.transfer.TransferReader;
 import org.opencadc.vospace.transfer.TransferWriter;
 
+/**
+ * Servlet to support output of a transfer result from 
+ * /transfers/{jobID}/results/transferDetails. Implementation
+ * detail/requirement: This servlet MUST be deployed as a 
+ * sibling of the /nodes endpoint and MUST be named /xfer 
+ * in the servlet mapping.
+ * 
+ * @author pdowler
+ */
 public class TransferDetailsServlet extends HttpServlet {
 
     private static final long serialVersionUID = 2022026164700L;

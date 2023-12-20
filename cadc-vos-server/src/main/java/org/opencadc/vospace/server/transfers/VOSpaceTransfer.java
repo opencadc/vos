@@ -165,9 +165,10 @@ public abstract class VOSpaceTransfer {
             Subject s = AuthenticationUtil.getCurrentSubject();
             AuthMethod authMethod = AuthenticationUtil.getAuthMethod(s);
             // HACK: self-lookup
-            URL serviceURL = regClient.getServiceURL(locService.getURI(), Standards.VOSPACE_XFER_20, authMethod);
-            String path = "/" + job.getID();
-            URL url = new URL(serviceURL.toExternalForm() + path);
+            URL nodesURL = regClient.getServiceURL(locService.getURI(), Standards.VOSPACE_NODES_20, authMethod);
+            String xferURL = nodesURL.toExternalForm().replace("/nodes", "/xfer"); // hard coded ugh
+            String surl = xferURL + "/" + job.getID();
+            URL url = new URL(surl);
             log.debug("transfer URL: " + url);
 
             uri = url.toURI();

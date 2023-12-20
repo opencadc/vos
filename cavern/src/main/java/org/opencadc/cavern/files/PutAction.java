@@ -69,6 +69,7 @@ package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.io.MultiBufferIO;
 import ca.nrc.cadc.net.ResourceNotFoundException;
@@ -97,7 +98,7 @@ import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 
 /**
- *
+ * @author pdowler
  * @author majorb
  * @author jeevesh
  */
@@ -132,6 +133,7 @@ public class PutAction extends FileAction {
         boolean putStarted = false;
         boolean successful = false;
         
+        long bytesWritten = 0L;
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
@@ -172,6 +174,13 @@ public class PutAction extends FileAction {
                 throw new IllegalArgumentException("not a data node");
             }
             node = (DataNode) n;
+            if (node == null) {
+                log.warn("target node: " + node + ": creating");
+                node = new DataNode(nodeURI.getName());
+                node.owner = caller;
+                node.parent = cn;
+                nodePersistence.put(node);
+            }
             
             // check write permission
             if (!preauthGranted) {
@@ -195,12 +204,15 @@ public class PutAction extends FileAction {
             //Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
             
             // truncate: do not recreate file with wrong owner
+            StandardOpenOption openOption = StandardOpenOption.TRUNCATE_EXISTING;
             DigestOutputStream out = new DigestOutputStream(
-                    Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING), md);
+                    Files.newOutputStream(target, StandardOpenOption.WRITE, openOption), md);
+            ByteCountOutputStream bcos = new ByteCountOutputStream(out);
             MultiBufferIO io = new MultiBufferIO();
-            io.copy(in, out);
-            out.flush();
+            io.copy(in, bcos);
+            bcos.flush();
             log.debug("copy: done " + target);
+            bytesWritten = bcos.getByteCount();
 
             URI expectedMD5 = syncInput.getDigest();
             byte[] md5 = md.digest();
@@ -212,8 +224,6 @@ public class PutAction extends FileAction {
                 OutputStream trunc = Files.newOutputStream(target, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 trunc.close();
                 actualMD5 = null;
-                //PosixFileAttributes attrs = Files.readAttributes(target, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-                //log.warn("after truncate, size: " + attrs.size());
             }
             
             // re-read node from filesystem
@@ -221,7 +231,7 @@ public class PutAction extends FileAction {
             
             // update Node
             node.owner = caller;
-            node.ownerID = identityManager.toPosixPrincipal(caller);
+            node.ownerID = null; // just in case
         
             log.debug(nodeURI + " MD5: " + propValue);
             NodeProperty csp = node.getProperty(VOS.PROPERTY_URI_CONTENTMD5);
@@ -238,6 +248,17 @@ public class PutAction extends FileAction {
                 } else {
                     // replace
                     csp.setValue(actualMD5.toASCIIString());
+                }
+            }
+            // set/update content-type attr
+            String contentType = syncInput.getHeader("content-type");
+            if (contentType != null) {
+                NodeProperty ctp = node.getProperty(VOS.PROPERTY_URI_TYPE);
+                if (ctp == null) {
+                    ctp = new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType);
+                    node.getProperties().add(ctp);
+                } else {
+                    ctp.setValue(contentType);
                 }
             }
 
@@ -279,6 +300,9 @@ public class PutAction extends FileAction {
             
             throw ex;
         } finally {
+            if (bytesWritten > 0L) {
+                logInfo.setBytes(bytesWritten);
+            }
             if (successful) {
                 log.debug("put: done " + nodeURI.getURI().toASCIIString());
             } else if (putStarted) {
