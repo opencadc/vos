@@ -79,6 +79,8 @@ import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.util.MultiValuedProperties;
+import ca.nrc.cadc.util.PropertiesReader;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -1234,22 +1236,22 @@ public class Main implements Runnable {
             File f = new File(propFile);
             if (f.exists()) {
                 if (f.canRead()) {
-                    try {
-                        Properties p = new Properties();
-                        p.load(new FileReader(f));
-                        for (String key : p.stringPropertyNames()) {
-                            URI keyURI;
-                            try {
-                                keyURI = new URI(key);
-                            } catch (URISyntaxException e) {
-                                throw new IllegalArgumentException("invalid node properties key: " + key);
-                            }
-                            String val = p.getProperty(key);
+                    PropertiesReader pr = new PropertiesReader(f);
+                    MultiValuedProperties mvp = pr.getAllProperties();
+                    for (String key : mvp.keySet()) {
+                        URI keyURI;
+                        try {
+                            keyURI = new URI(key);
+                        } catch (URISyntaxException e) {
+                            throw new IllegalArgumentException("invalid node properties key: " + key);
+                        }
+                        String val = mvp.getFirstPropertyValue(key);
+                        NodeProperty np = new NodeProperty(keyURI, val);
+                        if (val == null || val.trim().isEmpty()) {
+                            properties.add(new NodeProperty(keyURI));
+                        } else {
                             properties.add(new NodeProperty(keyURI, val));
                         }
-                    } catch (IOException ex) {
-                        log.info("failed to read properties file: " + f.getAbsolutePath()
-                                     + "(" + ex.getMessage() + ", skipping)");
                     }
                 } else {
                     log.info("cannot read properties file: " + f.getAbsolutePath()
