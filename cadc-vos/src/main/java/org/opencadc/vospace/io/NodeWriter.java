@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -123,6 +123,10 @@ public class NodeWriter implements XmlProcessor {
     private Namespace vosNamespace;
     private Set<URI> immutableProps;
 
+    public static final DateFormat getDateFormat() {
+        return DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+    }
+    
     public NodeWriter() {
         this(VOSPACE_NS_20);
     }
@@ -321,8 +325,8 @@ public class NodeWriter implements XmlProcessor {
     protected void addNodeVariablesToProperties(Node node, Set<NodeProperty> properties) {
         NodeProperty dateProp = node.getProperty(VOS.PROPERTY_URI_DATE);
         if (dateProp == null && node.getLastModified() != null) {
-            // default to metadata date
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            // default to node metadata date
+            DateFormat df = getDateFormat();
             properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(node.getLastModified())));
         }
         

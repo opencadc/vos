@@ -225,8 +225,8 @@ public class VOS {
     // Flag indicating if the Node is public (true/false)
     public static final URI PROPERTY_URI_ISPUBLIC = URI.create(VOSPACE_URI_NAMESPACE + "core#ispublic");
 
-    // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
-    public static final URI PROPERTY_URI_CREATION_DATE = URI.create(VOSPACE_URI_NAMESPACE + "core#creationDate");
+    // proposed: timestamp of the last modification to the stored bytes (DataNode only)
+    public static final URI PROPERTY_URI_CONTENTDATE = URI.create(VOSPACE_URI_NAMESPACE + "core#content-date");
 
     /*
      * CADC Node Properties
@@ -302,13 +302,15 @@ public class VOS {
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_RIGHTS);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_AVAILABLESPACE);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_RUNID);
-        VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CONTENTLENGTH);
+        
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_QUOTA);
+        VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CONTENTDATE);
+        VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CONTENTLENGTH);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CONTENTENCODING);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CONTENTMD5);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_GROUPREAD);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_GROUPWRITE);
         VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_ISPUBLIC);
-        VOSPACE_CORE_PROPERTIES.add(PROPERTY_URI_CREATION_DATE);
+        
     }
 }

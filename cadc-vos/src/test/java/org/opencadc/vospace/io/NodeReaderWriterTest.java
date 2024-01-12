@@ -649,7 +649,7 @@ public class NodeReaderWriterTest {
         Long contentLength = 540000L;
         maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
         maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentChecksum.toASCIIString()));
-        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATION_DATE, contentLastModified));
+        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTDATE, contentLastModified));
         maxDataNode.getAccepts().add(VOS.VIEW_ANY);
         maxDataNode.getProvides().add(VOS.VIEW_BINARY);
         addStandardNodeVariables(maxDataNode);
