@@ -69,6 +69,7 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -164,9 +165,10 @@ public class Utils {
         for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
             NodeProperty newProperty = newIter.next();
             if (newProperty.getKey().toASCIIString().startsWith(VOS.VOSPACE_URI_NAMESPACE)) {
-                if (!VOS.VOSPACE_CORE_PROPERTIES.contains(newProperty.getKey())) {
-                    throw NodeFault.InvalidArgument.getStatus("non-standard property uri in namespace " 
-                            + VOS.VOSPACE_URI_NAMESPACE + ": " + newProperty.getKey());
+                try {
+                    validatePropertyKey(newProperty.getKey());
+                } catch (URISyntaxException ex) {
+                    throw NodeFault.InvalidArgument.getStatus(ex.getMessage());
                 }
             }
             if (oldProps.contains(newProperty)) {
@@ -174,6 +176,29 @@ public class Utils {
             }
             if (!newProperty.isMarkedForDeletion() && !immutable.contains(newProperty.getKey())) {
                 oldProps.add(newProperty);
+            }
+        }
+    }
+    
+    private static void validatePropertyKey(URI key) throws URISyntaxException {
+        if (key.getScheme() == null) {
+            throw new URISyntaxException("invalid structure: no scheme", key.toASCIIString());
+        }
+        if (!key.getScheme().equals("ivo") && !key.getScheme().equals("http") && !key.getScheme().equals("https")) {
+            throw new URISyntaxException("invalid structure: unknown scheme", key.toASCIIString());
+        }
+        if (key.getAuthority() == null) {
+            throw new URISyntaxException("invalid structure: no authority", key.toASCIIString());
+        }
+        if (key.getPath() == null) {
+            throw new URISyntaxException("invalid structure: no path", key.toASCIIString());
+        }
+        if (key.getFragment() == null) {
+            throw new URISyntaxException("invalid structure: no fragment", key.toASCIIString());
+        }
+        if (key.toASCIIString().startsWith(VOS.VOSPACE_URI_NAMESPACE)) {
+            if (!VOS.VOSPACE_CORE_PROPERTIES.contains(key)) {
+                throw new URISyntaxException("unrecognized property URI in vospace namespace", key.toASCIIString());
             }
         }
     }
