@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -142,6 +142,10 @@ public class NodesTest extends VOSTest {
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             ContainerNode testNode = new ContainerNode(name);
+            // try to add an immutable prop at creation: should be ignored 
+            // --- use length aka file size since we are not writing file content
+            NodeProperty immutable = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+            testNode.getProperties().add(immutable);
 
             // cleanup
             if (nodelockSupported) {
@@ -164,6 +168,7 @@ public class NodesTest extends VOSTest {
             ContainerNode persistedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
+            Assert.assertFalse(persistedNode.getProperties().contains(immutable)); // ignored
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -183,7 +188,20 @@ public class NodesTest extends VOSTest {
             if (nodelockSupported) {
                 Assert.assertTrue(updatedNode.isLocked);
             }
-
+            Assert.assertFalse(updatedNode.getProperties().contains(immutable)); // ignored
+            
+            // fail to update with a sketch property URI
+            URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
+            NodeProperty illegalProp = new NodeProperty(illegal, "that should not work");
+            testNode.getProperties().add(illegalProp);
+            try {
+                post(nodeURL, nodeURI, testNode, true, 400);
+                Assert.fail("expected IllegalArgumentException, but updated testNode with " + illegal);
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected Exception: " + expected);
+            }
+            testNode.getProperties().remove(illegalProp);
+            
             // failed to add a subdirectory (node locked)
             if (nodelockSupported) {
                 String subDirName = name + "/subDir";
@@ -233,6 +251,10 @@ public class NodesTest extends VOSTest {
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
             DataNode testNode = new DataNode(name);
+            // try to add an immutable prop at creation: should be ignored 
+            // --- use length aka file size since we are not writing file content
+            NodeProperty immutable = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+            testNode.getProperties().add(immutable);
             put(nodeURL, nodeURI, testNode);
 
             // GET the new node
@@ -240,8 +262,12 @@ public class NodesTest extends VOSTest {
             log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
             Assert.assertTrue(result.node instanceof DataNode);
             DataNode persistedNode = (DataNode) result.node;
+            for (NodeProperty np : persistedNode.getProperties()) {
+                log.info("persisted prop: " + np.getKey() + " = " + np.getValue());
+            }
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
+            Assert.assertFalse(persistedNode.getProperties().contains(immutable)); // ignored
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -251,10 +277,26 @@ public class NodesTest extends VOSTest {
             // GET the updated node
             result = get(nodeURL, 200, XML_CONTENT_TYPE);
             DataNode updatedNode = (DataNode) result.node;
+            for (NodeProperty np : updatedNode.getProperties()) {
+                log.info("updated prop: " + np.getKey() + " = " + np.getValue());
+            }
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
+            Assert.assertFalse(updatedNode.getProperties().contains(immutable)); // ignored
+
+            // fail to update with a sketch property URI
+            URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
+            NodeProperty illegalProp = new NodeProperty(illegal, "that should not work");
+            testNode.getProperties().add(illegalProp);
+            try {
+                post(nodeURL, nodeURI, testNode, true, 400);
+                Assert.fail("expected IllegalArgumentException, but updated testNode with " + illegal);
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected Exception: " + expected);
+            }
+            testNode.getProperties().remove(illegalProp);
 
             if (cleanupOnSuccess) {
                 delete(nodeURL);
