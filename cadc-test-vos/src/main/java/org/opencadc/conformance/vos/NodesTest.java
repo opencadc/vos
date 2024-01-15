@@ -168,7 +168,12 @@ public class NodesTest extends VOSTest {
             ContainerNode persistedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
-            Assert.assertFalse(persistedNode.getProperties().contains(immutable)); // ignored
+            NodeProperty len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -188,7 +193,12 @@ public class NodesTest extends VOSTest {
             if (nodelockSupported) {
                 Assert.assertTrue(updatedNode.isLocked);
             }
-            Assert.assertFalse(updatedNode.getProperties().contains(immutable)); // ignored
+            len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
             
             // fail to update with a sketch property URI
             URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
@@ -267,7 +277,12 @@ public class NodesTest extends VOSTest {
             }
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
-            Assert.assertFalse(persistedNode.getProperties().contains(immutable)); // ignored
+            NodeProperty len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -284,7 +299,12 @@ public class NodesTest extends VOSTest {
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
-            Assert.assertFalse(updatedNode.getProperties().contains(immutable)); // ignored
+            len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
 
             // fail to update with a sketch property URI
             URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
