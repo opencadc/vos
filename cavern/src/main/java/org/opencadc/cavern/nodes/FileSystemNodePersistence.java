@@ -100,7 +100,6 @@ import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -385,7 +384,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                 }
             }
         }
-
+        
         NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
 
         if (node instanceof LinkNode) {
