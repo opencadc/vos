@@ -384,7 +384,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                 }
             }
         }
-        
+
         NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
 
         if (node instanceof LinkNode) {
