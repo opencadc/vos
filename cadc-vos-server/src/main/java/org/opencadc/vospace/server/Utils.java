@@ -80,6 +80,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOS;
 
 /**
  * Utility methods
@@ -158,16 +159,21 @@ public class Utils {
      * @param newProps set of new Node Properties to be used for the update
      * @param immutable set of immutable property keys to skip
      */
-    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps, Set<URI> immutable) {
+    public static void updateNodeProperties(Set<NodeProperty> oldProps, Set<NodeProperty> newProps, Set<URI> immutable) 
+            throws Exception {
         for (Iterator<NodeProperty> newIter = newProps.iterator(); newIter.hasNext(); ) {
             NodeProperty newProperty = newIter.next();
-            if (!immutable.contains(newProperty.getKey())) {
-                if (oldProps.contains(newProperty)) {
-                    oldProps.remove(newProperty);
+            if (newProperty.getKey().toASCIIString().startsWith(VOS.VOSPACE_URI_NAMESPACE)) {
+                if (!VOS.VOSPACE_CORE_PROPERTIES.contains(newProperty.getKey())) {
+                    throw NodeFault.InvalidArgument.getStatus("non-standard property uri in namespace " 
+                            + VOS.VOSPACE_URI_NAMESPACE + ": " + newProperty.getKey());
                 }
-                if (!newProperty.isMarkedForDeletion()) {
-                    oldProps.add(newProperty);
-                }
+            }
+            if (oldProps.contains(newProperty)) {
+                oldProps.remove(newProperty);
+            }
+            if (!newProperty.isMarkedForDeletion() && !immutable.contains(newProperty.getKey())) {
+                oldProps.add(newProperty);
             }
         }
     }

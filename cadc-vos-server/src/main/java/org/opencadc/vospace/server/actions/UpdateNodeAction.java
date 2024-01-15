@@ -141,7 +141,7 @@ public class UpdateNodeAction extends NodeAction {
     }
 
     public static Node updateProperties(Node serverNode, Node clientNode, NodePersistence nodePersistence, Subject caller)
-            throws NodeNotSupportedException {
+            throws Exception {
         // merge change request
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();
