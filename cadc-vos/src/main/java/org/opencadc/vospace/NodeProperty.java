@@ -115,7 +115,7 @@ public class NodeProperty implements Comparable<NodeProperty> {
 
     @Override
     public String toString() {
-        return "NodeProperty[" + this.key + ":" + this.value + ":" + readOnly + "]";
+        return "NodeProperty[" + this.key + ":" + this.value + ":ro=" + readOnly + ":del=" + markedForDeletion + "]";
     }
 
     @Override

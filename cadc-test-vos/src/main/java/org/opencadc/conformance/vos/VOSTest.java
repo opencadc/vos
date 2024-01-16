@@ -263,11 +263,15 @@ public abstract class VOSTest {
         }
     }
 
-    public void post(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
-        post(nodeURL, vosURI, node, true);
+    public void post(URL nodeURL, VOSURI vosURI, Node node) throws Exception {
+        post(nodeURL, vosURI, node, true, 200);
     }
     
-    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify) throws IOException {
+    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify) throws Exception {
+        post(nodeURL, vosURI, node, verify, 200);
+    }
+    
+    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify, int expectedCode) throws Exception {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
@@ -282,8 +286,12 @@ public abstract class VOSTest {
         if (!verify && post.getResponseCode() == 404) {
             return;
         }
-        Assert.assertEquals("expected POST response code = 200",
-                            200, post.getResponseCode());
+        Assert.assertEquals("expected POST response code = " + expectedCode,
+                            expectedCode, post.getResponseCode());
+        if (expectedCode >= 400) {
+            Assert.assertNotNull(post.getThrowable());
+            throw (Exception) post.getThrowable();
+        }
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
     }
 
@@ -333,7 +341,7 @@ public abstract class VOSTest {
     }
 
     protected void makeWritable(String[] subdirNames, GroupURI accessGroup)
-            throws NodeParsingException, NodeNotSupportedException, IOException {
+            throws Exception {
         for (String nodeName : subdirNames) {
             URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
             NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);

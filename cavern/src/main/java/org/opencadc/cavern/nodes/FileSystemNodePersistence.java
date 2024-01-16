@@ -100,7 +100,6 @@ import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Views;
@@ -128,7 +127,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     VOS.PROPERTY_URI_AVAILABLESPACE,
                     VOS.PROPERTY_URI_CONTENTLENGTH,
                     VOS.PROPERTY_URI_CONTENTMD5,
-                    VOS.PROPERTY_URI_CREATION_DATE,
+                    VOS.PROPERTY_URI_CONTENTDATE,
                     VOS.PROPERTY_URI_DATE,
                     VOS.PROPERTY_URI_CREATOR,
                     VOS.PROPERTY_URI_QUOTA
