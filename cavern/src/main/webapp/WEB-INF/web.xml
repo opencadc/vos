@@ -220,16 +220,8 @@
             <param-value>ca.nrc.cadc.uws.web.SyncGetAction</param-value>
         </init-param>
         <init-param>
-            <param-name>post</param-name>
-            <param-value>ca.nrc.cadc.uws.web.SyncPostAction</param-value>
-        </init-param>
-        <init-param>
             <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
             <param-value>org.opencadc.cavern.uws.PackageJobManager</param-value>
-        </init-param>
-        <init-param>
-            <param-name>ca.nrc.cadc.rest.InlineContentHandler</param-name>
-            <param-value>org.opencadc.vospace.server.transfers.InlineTransferHandler</param-value>
         </init-param>
         <load-on-startup>3</load-on-startup>
     </servlet>
