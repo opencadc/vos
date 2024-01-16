@@ -151,6 +151,7 @@ public class VospacePackageRunner extends PackageRunner {
      */
     @Override
     protected void initPackage() {
+        log.info("VospacePackageRunner init");
         log.debug("initPackage start");
         try {
             // check job is valid
