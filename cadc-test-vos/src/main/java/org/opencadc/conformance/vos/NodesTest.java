@@ -110,6 +110,7 @@ public class NodesTest extends VOSTest {
     
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
+    protected boolean paginationLimitIgnored = false;
     protected boolean nodelockSupported = true;
     
     protected boolean cleanupOnSuccess = true;
@@ -771,20 +772,35 @@ public class NodesTest extends VOSTest {
             
             if (!paginationSupported) {
                 // check that a pagination request is rejected in the spec-compliant way
-                final URL limitURL = new URL(parentURL + "?limit=2");
-                final HttpGet limitGet = new HttpGet(limitURL, true);
+                String suri = parentURI.getURI().toASCIIString() + "/limit-nodes-child-4";
+                // rejected
+                final URL startURL = new URL(parentURL + "?uri=" + suri);
+                final HttpGet startGet = new HttpGet(startURL, true);
+                log.info("pagination rejected: " + startURL);
                 try {
                     Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-                        limitGet.prepare();
+                        startGet.prepare();
                         return null;
                     });
-                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + limitGet.getResponseCode());
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + startGet.getResponseCode());
                 } catch (IllegalArgumentException ex) {
                     if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
                         log.info("caught valid reject: " + ex.getMessage());
                     } else {
                         throw ex;
                     }
+                }
+                
+                if (paginationLimitIgnored) {
+                    final URL limitURL = new URL(parentURL + "?limit=3");
+                    final HttpGet limitGet = new HttpGet(limitURL, true);
+                    log.info("limit ignored: " + limitURL);
+                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                        limitGet.prepare();
+                        return null;
+                    });
+                    log.info("limit ignored: " + limitGet.getResponseCode() + " " + limitGet.getThrowable());
+                    Assert.assertEquals(200, limitGet.getResponseCode());
                 }
                 
                 // delete the parent node

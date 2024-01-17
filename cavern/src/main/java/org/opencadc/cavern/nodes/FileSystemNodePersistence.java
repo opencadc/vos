@@ -263,8 +263,8 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (start == null && limit != null && limit == 0) {
             return new EmptyNodeIterator();
         }
-        if (limit != null || start != null) {
-            throw new UnsupportedOperationException("batch options for container node listing");
+        if (start != null) {
+            throw new UnsupportedOperationException("batch container node listing: limit ignored, resume not implemented");
         }
         
         try {
