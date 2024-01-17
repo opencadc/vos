@@ -183,12 +183,13 @@ public class CreateNodeAction extends NodeAction {
         }
 
         // pick out eligible admin-only props (they are immutable to normal users)
-        List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller,
+        final List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller,
                 nodePersistence);
         
         // sanitize input properties into clean set
         Set<NodeProperty> np = new HashSet<>();
         Utils.updateNodeProperties(np, clientNode.getProperties(), nodePersistence.getImmutableProps());
+        clientNode.getProperties().clear();
         clientNode.getProperties().addAll(np);
         clientNode.getProperties().addAll(allowedAdminProps);
 

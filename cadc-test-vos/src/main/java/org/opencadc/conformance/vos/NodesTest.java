@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -110,6 +110,7 @@ public class NodesTest extends VOSTest {
     
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
+    protected boolean paginationLimitIgnored = false;
     protected boolean nodelockSupported = true;
     
     protected boolean cleanupOnSuccess = true;
@@ -142,6 +143,10 @@ public class NodesTest extends VOSTest {
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             ContainerNode testNode = new ContainerNode(name);
+            // try to add an immutable prop at creation: should be ignored 
+            // --- use length aka file size since we are not writing file content
+            NodeProperty immutable = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+            testNode.getProperties().add(immutable);
 
             // cleanup
             if (nodelockSupported) {
@@ -164,6 +169,12 @@ public class NodesTest extends VOSTest {
             ContainerNode persistedNode = (ContainerNode) result.node;
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
+            NodeProperty len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -183,7 +194,25 @@ public class NodesTest extends VOSTest {
             if (nodelockSupported) {
                 Assert.assertTrue(updatedNode.isLocked);
             }
-
+            len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
+            
+            // fail to update with a sketch property URI
+            URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
+            NodeProperty illegalProp = new NodeProperty(illegal, "that should not work");
+            testNode.getProperties().add(illegalProp);
+            try {
+                post(nodeURL, nodeURI, testNode, true, 400);
+                Assert.fail("expected IllegalArgumentException, but updated testNode with " + illegal);
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected Exception: " + expected);
+            }
+            testNode.getProperties().remove(illegalProp);
+            
             // failed to add a subdirectory (node locked)
             if (nodelockSupported) {
                 String subDirName = name + "/subDir";
@@ -233,6 +262,10 @@ public class NodesTest extends VOSTest {
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
             DataNode testNode = new DataNode(name);
+            // try to add an immutable prop at creation: should be ignored 
+            // --- use length aka file size since we are not writing file content
+            NodeProperty immutable = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+            testNode.getProperties().add(immutable);
             put(nodeURL, nodeURI, testNode);
 
             // GET the new node
@@ -240,8 +273,17 @@ public class NodesTest extends VOSTest {
             log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
             Assert.assertTrue(result.node instanceof DataNode);
             DataNode persistedNode = (DataNode) result.node;
+            for (NodeProperty np : persistedNode.getProperties()) {
+                log.info("persisted prop: " + np.getKey() + " = " + np.getValue());
+            }
             Assert.assertEquals(testNode, persistedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
+            NodeProperty len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
 
             // POST an update to the node
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
@@ -251,10 +293,31 @@ public class NodesTest extends VOSTest {
             // GET the updated node
             result = get(nodeURL, 200, XML_CONTENT_TYPE);
             DataNode updatedNode = (DataNode) result.node;
+            for (NodeProperty np : updatedNode.getProperties()) {
+                log.info("updated prop: " + np.getKey() + " = " + np.getValue());
+            }
             Assert.assertEquals(testNode, updatedNode);
             Assert.assertEquals(nodeURI, result.vosURI);
             Assert.assertEquals(testNode.getName(), updatedNode.getName());
             Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
+            len = persistedNode.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (len == null || len.getValue().equals("0")) {
+                log.info("immutable prop test: " + len);
+            } else {
+                Assert.fail("immutable prop test: " + len);
+            }
+
+            // fail to update with a sketch property URI
+            URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
+            NodeProperty illegalProp = new NodeProperty(illegal, "that should not work");
+            testNode.getProperties().add(illegalProp);
+            try {
+                post(nodeURL, nodeURI, testNode, true, 400);
+                Assert.fail("expected IllegalArgumentException, but updated testNode with " + illegal);
+            } catch (IllegalArgumentException expected) {
+                log.info("caught expected Exception: " + expected);
+            }
+            testNode.getProperties().remove(illegalProp);
 
             if (cleanupOnSuccess) {
                 delete(nodeURL);
@@ -709,20 +772,35 @@ public class NodesTest extends VOSTest {
             
             if (!paginationSupported) {
                 // check that a pagination request is rejected in the spec-compliant way
-                final URL limitURL = new URL(parentURL + "?limit=2");
-                final HttpGet limitGet = new HttpGet(limitURL, true);
+                String suri = parentURI.getURI().toASCIIString() + "/limit-nodes-child-4";
+                // rejected
+                final URL startURL = new URL(parentURL + "?uri=" + suri);
+                final HttpGet startGet = new HttpGet(startURL, true);
+                log.info("pagination rejected: " + startURL);
                 try {
                     Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
-                        limitGet.prepare();
+                        startGet.prepare();
                         return null;
                     });
-                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + limitGet.getResponseCode());
+                    Assert.fail("expected: " + VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED + " but got: " + startGet.getResponseCode());
                 } catch (IllegalArgumentException ex) {
                     if (ex.getMessage().startsWith(VOS.IVOA_FAULT_OPTION_NOT_SUPPORTED)) {
                         log.info("caught valid reject: " + ex.getMessage());
                     } else {
                         throw ex;
                     }
+                }
+                
+                if (paginationLimitIgnored) {
+                    final URL limitURL = new URL(parentURL + "?limit=3");
+                    final HttpGet limitGet = new HttpGet(limitURL, true);
+                    log.info("limit ignored: " + limitURL);
+                    Subject.doAs(authSubject, (PrivilegedExceptionAction<Object>) () -> {
+                        limitGet.prepare();
+                        return null;
+                    });
+                    log.info("limit ignored: " + limitGet.getResponseCode() + " " + limitGet.getThrowable());
+                    Assert.assertEquals(200, limitGet.getResponseCode());
                 }
                 
                 // delete the parent node
