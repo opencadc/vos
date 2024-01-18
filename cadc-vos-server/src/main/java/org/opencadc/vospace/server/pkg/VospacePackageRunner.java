@@ -317,7 +317,8 @@ public class VospacePackageRunner extends PackageRunner {
             PackageItem current = next;
             log.debug("next() advance start");
             advance();
-            log.debug(String.format("next() advance end: next: %s ondeck: %s", current, next));
+            log.debug(String.format("next() advance end: next: %s ondeck: %s",
+                    current.getRelativePath(), next == null ? null : next.getRelativePath()));
             return current;
         }
 
@@ -329,7 +330,7 @@ public class VospacePackageRunner extends PackageRunner {
             next = null;
 
             // process list of given targets, returning a PackageItem for a DataNode
-            // or a LinkNode, and adding ContainerNode's to deferred list of nodes.
+            // or a LinkNode, and adding ContainerNode's to a list of deferred nodes to processed later.
             while (targetIterator.hasNext()) {
                 Node node = targetIterator.next();
                 targetIterator.remove();
@@ -352,8 +353,12 @@ public class VospacePackageRunner extends PackageRunner {
             while (!hasNext) {
                 // if the currentNodeIterator is null or empty, move the deferred nodes into currentNodes
                 // a refresh to iterator to the currentNodes.
+                log.debug("currentIterator exhausted: " + (currentIterator == null || !currentIterator.hasNext()));
+                log.debug("deferredNodes empty: " + deferredNodes.isEmpty());
                 boolean refreshCurrentIterator =
                         (currentIterator == null || !currentIterator.hasNext()) && !deferredNodes.isEmpty();
+                log.debug("refreshCurrentIterator: " + refreshCurrentIterator);
+
                 if (refreshCurrentIterator) {
                     // copy deferredNodes into currentNodes for processing
                     currentNodes.addAll(deferredNodes);
@@ -368,6 +373,8 @@ public class VospacePackageRunner extends PackageRunner {
                 // if the childIterator is null or empty, get an iterator to the next child nodes.
                 boolean emptyChildIterator = childIterator == null || !childIterator.hasNext();
                 boolean populatedCurrentIterator = currentIterator != null && currentIterator.hasNext();
+                log.debug("emptyChildIterator: " + emptyChildIterator);
+                log.debug("populatedCurrentIterator: " + populatedCurrentIterator);
                 if (emptyChildIterator && populatedCurrentIterator) {
                     // get the next container node and it's PackageItem
                     ContainerNode node = currentIterator.next();
@@ -376,6 +383,7 @@ public class VospacePackageRunner extends PackageRunner {
 
                     // check read access and if granted refresh the childIterator
                     boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(node, caller);
+                    log.debug("canRead: " + canRead);
                     if (canRead) {
                         childIterator = nodePersistence.iterator(node, null, null);
                         log.debug("refreshed childIterator for " + node.getName());
@@ -388,7 +396,9 @@ public class VospacePackageRunner extends PackageRunner {
                 }
 
                 // if the childIterator is empty, done.
-                if (childIterator == null || !childIterator.hasNext()) {
+                boolean childIteratorExhausted = childIterator == null || !childIterator.hasNext();
+                log.debug("childIteratorExhausted: " + childIteratorExhausted);
+                if (childIteratorExhausted) {
                     log.debug("empty childIterator, exit");
                     return;
                 }
@@ -403,7 +413,11 @@ public class VospacePackageRunner extends PackageRunner {
                         return;
                     }
                 }
-                hasNext = true;
+
+                // no deferred node to process, done
+                if (deferredNodes.isEmpty()) {
+                    hasNext = true;
+                }
                 log.debug("exhausted childIterator, exit");
             }
         }
