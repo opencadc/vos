@@ -210,6 +210,7 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             ErrorSummary error = null;
             ExecutionPhase endPhase = ExecutionPhase.COMPLETED;
             if (successCount == 0) {
+                log.warn("HERE");
                 endPhase = ExecutionPhase.ERROR;
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, error, new Date());
             } else {
@@ -224,7 +225,7 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                 }
             }
             if (!endPhase.equals(ep)) {
-                log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase);
+                log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase + " vs " + ep);
             }
             logInfo.setSuccess(true);
         } catch (ResourceNotFoundException e) {
