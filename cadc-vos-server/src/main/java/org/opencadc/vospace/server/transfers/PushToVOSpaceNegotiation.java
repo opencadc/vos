@@ -78,6 +78,7 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
@@ -112,27 +113,22 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
 
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
-            PathResolver resolver = new PathResolver(nodePersistence, authorizer, true);
-
-            Node n = resolver.getNode(target.getParentURI().getPath());
-            if (!(n instanceof ContainerNode)) {
-                throw new TransferException("parent is not a container node");
-            }
-            ContainerNode parent = (ContainerNode) n;
-            log.debug("found parent: " + parent);
-            Subject caller = AuthenticationUtil.getCurrentSubject();
-            if (!authorizer.hasSingleNodeWritePermission(parent, caller)) {
-                throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
-            }
-            
-            //Node node = resolveNodeForWrite(authorizer, nodePersistence, target, DataNode.class, true, true, true);
-            Node node = nodePersistence.get(parent, target.getName());
+            PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
+            Node node = pr.getNode(target.getPath());
             log.debug("target node: " + target + " -> " + node);
             
             DataNode dn = null;
+            Subject caller = AuthenticationUtil.getCurrentSubject();
             if (node == null) {
-                if (!authorizer.hasSingleNodeWritePermission(parent, caller)) {
-                    throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
+                Node tmp = pr.getNode(target.getParent());
+                if (tmp == null) {
+                    throw new NodeNotFoundException(target.getParent());
+                }
+                ContainerNode parent;
+                if (tmp instanceof ContainerNode) {
+                    parent = (ContainerNode) tmp;
+                } else {
+                    throw new IllegalArgumentException(target.getParent() + " not a valid path");
                 }
                 // create: this should do the same things that CreateNodeAction does
                 dn = new DataNode(target.getName());

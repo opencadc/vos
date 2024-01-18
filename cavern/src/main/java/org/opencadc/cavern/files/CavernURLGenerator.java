@@ -100,6 +100,7 @@ import org.opencadc.permissions.TokenTool;
 import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
@@ -148,20 +149,31 @@ public class CavernURLGenerator implements TransferGenerator {
         }
         List<Protocol> ret = null;
         try {
-            Direction dir = transfer.getDirection();
-            PathResolver ps = new PathResolver(nodePersistence, authorizer, true);
-            Node n = ps.getNode(target.getParentURI().getPath());
-            // assume not null and Container already checked by caller (TransferRunner)
-            ContainerNode parent = (ContainerNode) n;
-            Node node = nodePersistence.get(parent, target.getName());
+            PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
+            Node node = pr.getNode(target.getPath());
+            ContainerNode parent;
+            String name;
+            if (node == null) {
+                // maybe a DataNode that needs to be created later. Check the parent (Note: a bit repetitive to check
+                // the entire path again)
+                Node tmp = pr.getNode(target.getParent());
+                if (tmp == null) {
+                    throw new NodeNotFoundException(target.getParent());
+                }
+                if (tmp instanceof ContainerNode) {
+                    parent = (ContainerNode) tmp;
+                } else {
+                    throw new IllegalArgumentException(target.getParent() + " not a valid path");
+                }
+                name = target.getName();
+            } else {
+                parent = node.parent;
+                name = node.getName();
+            }
 
             Subject currentSubject = AuthenticationUtil.getCurrentSubject();
-            if (Direction.pushToVoSpace.equals(dir) && node == null) {
-                // create new data node?? this currently does not happen because the library
-                // creates the DataNode
-                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
-            } else if (node instanceof DataNode) {
-                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
+            if (node instanceof DataNode) {
+                ret = handleDataNode(parent, name, transfer, currentSubject);
             } else if (node instanceof ContainerNode) {
                 ret = handleContainerMount(target.getPath(), transfer, currentSubject);
             } else {
@@ -176,7 +188,7 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    private List<Protocol> handleDataNode(ContainerNode parent, String name, Transfer trans, Subject s) {
+    private List<Protocol> handleDataNode(Node parent, String name, Transfer trans, Subject s) {
         log.debug("handleDataNode: " + parent +  " " + name);
 
         try {
@@ -213,7 +225,7 @@ public class CavernURLGenerator implements TransferGenerator {
         Subject caller = AuthenticationUtil.getCurrentSubject();
         Object userObject = im.toOwner(caller); // posix
         String callingUser = (userObject == null ? null : userObject.toString()); // uid, null for anon is OK
-        
+
         LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
         VOSURI vp = loc.getURI(parent);
         String parentPath = vp.getPath();

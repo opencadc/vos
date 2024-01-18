@@ -105,9 +105,8 @@ public class PathResolver {
     private final VOSpaceAuthorizer voSpaceAuthorizer;
     private final boolean resolveLinks;
     
-    private List<String> visitedPaths = new ArrayList<>();
     private int visitLimit = 20;
-    private int visitCount = 0;
+
 
 
     public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLinks) {
@@ -125,7 +124,9 @@ public class PathResolver {
      */
     public Node getNode(String nodePath) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-            
+        int visitCount = 0;
+        List<String> visitedPaths = new ArrayList<>();
+
         log.debug("get: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
@@ -140,7 +141,7 @@ public class PathResolver {
             while (pathIter.hasNext()) {
                 String name = pathIter.next();
                 log.debug("get node: '" + name + "' in path '" + nodePath + "'");
-                Node child = nodePersistence.get((ContainerNode) node, name);
+                Node child = nodePersistence.get(node, name);
                 if (child == null) {
                     return null;
                 }
@@ -149,28 +150,31 @@ public class PathResolver {
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
 
-                if (resolveLinks && pathIter.hasNext()) {
-                    while (child instanceof LinkNode) {
-                        log.debug("Resolving link node " + Utils.getPath(node));
-                        if (visitCount > visitLimit) {
-                            throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
-                        }
-                        visitCount++;
-                        log.debug("visit number " + visitCount);
-
-                        LinkNode linkNode = (LinkNode) child;
-                        VOSURI targetURI = validateTargetURI(linkNode);
-
-                        String linkPath = targetURI.getPath();
-                        if (visitedPaths.contains(linkPath)) {
-                            throw NodeFault.UnreadableLinkTarget.getStatus(
-                                    "detected link node cycle: already followed link -> " + linkPath);
-                        }
-                        visitedPaths.add(linkPath);
-                        
-                        // recursive follow
-                        child = getNode(targetURI.getPath());
+                while (child instanceof LinkNode) {
+                    if (!resolveLinks && !pathIter.hasNext()) {
+                        log.debug("Returning link node " + Utils.getPath(child));
+                        break;
                     }
+                    log.debug("Resolving link node " + Utils.getPath(child));
+                    if (visitCount > visitLimit) {
+                        throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
+                    }
+                    visitCount++;
+                    log.debug("visit number " + visitCount);
+
+                    LinkNode linkNode = (LinkNode) child;
+                    VOSURI targetURI = validateTargetURI(linkNode);
+
+                    String linkPath = targetURI.getPath();
+                    if (visitedPaths.contains(linkPath)) {
+                        throw NodeFault.UnreadableLinkTarget.getStatus(
+                                "detected link node cycle: already followed link -> " + linkPath);
+                    }
+                    visitedPaths.add(linkPath);
+
+                    // recursive follow
+                    log.debug("Resolve: " + linkPath);
+                    child = getNode(linkPath);
                 }
                 if (pathIter.hasNext()) {
                     if (child instanceof ContainerNode) {
@@ -182,8 +186,8 @@ public class PathResolver {
                 ret = child;
             }
         }
-        
-        log.debug("return node: " + Utils.getPath(ret));
+
+        log.debug("return node: " + (( ret != null) ? Utils.getPath(ret) : null));
         return ret;
     }
 

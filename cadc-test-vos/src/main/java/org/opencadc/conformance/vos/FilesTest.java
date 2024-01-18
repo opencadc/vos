@@ -111,6 +111,7 @@ public class FilesTest extends VOSTest {
             // Create a Transfer
             Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
             transfer.version = VOS.VOSPACE_21;
+            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             transfer.getProtocols().add(protocol);

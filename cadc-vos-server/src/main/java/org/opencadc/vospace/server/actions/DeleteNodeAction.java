@@ -90,7 +90,7 @@ public class DeleteNodeAction extends NodeAction {
     @Override
     public void doAction() throws Exception {
         VOSURI target = getTargetURI();
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, false);
         Node serverNode = pathResolver.getNode(getTargetURI().getPath());
 
         if (serverNode == null) {

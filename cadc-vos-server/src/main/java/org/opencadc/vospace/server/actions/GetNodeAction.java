@@ -122,7 +122,7 @@ public class GetNodeAction extends NodeAction {
         
         // get parent node
         // TBD: resolveLinks=true?
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, false);
         Node serverNode = pathResolver.getNode(target.getPath());
         if (serverNode == null) {
             throw NodeFault.NodeNotFound.getStatus(target.toString());

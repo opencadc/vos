@@ -260,6 +260,8 @@ public class TransferTest extends VOSTest {
             // create
             final ContainerNode con = new ContainerNode(cpath);
             put(conURL, conURI, con);
+            final DataNode data = new DataNode(path);
+            put(nodeURL, nodeURI, data);
             final LinkNode link = new LinkNode(linkPath, nodeURI.getURI());
             put(linkURL, linkURI, link);
             
