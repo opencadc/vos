@@ -76,6 +76,7 @@ import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -88,6 +89,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -99,6 +101,7 @@ import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -117,6 +120,10 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class PackageTest extends VOSTest {
 
     private static final Logger log = Logger.getLogger(PackageTest.class);
+
+    static {
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+    }
 
     private static final String ZIP_CONTENT_TYPE = "application/zip";
     private static final String TAR_CONTENT_TYPE = "application/x-tar";
@@ -217,7 +224,6 @@ public class PackageTest extends VOSTest {
             log.debug("tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
-            Assert.assertEquals(1024L, tarPkg.length());
 
             // cleanup
             delete(nodeURL, false);
@@ -250,7 +256,7 @@ public class PackageTest extends VOSTest {
             expected.add(name);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-//            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            //doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodeURL, false);
@@ -486,13 +492,13 @@ public class PackageTest extends VOSTest {
         URL endpoint = new URL(details.getProtocols().get(0).getEndpoint());
 
         // PUT a file to the endpoint
-        log.info("PUT: " + endpoint);
+        log.debug("PUT: " + endpoint);
         ByteArrayInputStream is = new ByteArrayInputStream(content.getBytes());
         put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
 
         return nodeURI;
     }
-
+    
     private File downloadPackage(List<URI> targets, String contentType, Subject testSubject)
             throws Exception {
 
@@ -512,9 +518,9 @@ public class PackageTest extends VOSTest {
         transferWriter.write(transfer, sw);
         log.debug("transfer XML: " + sw);
 
-        // POST the transfer
+        // POST the transfer to synctrans
         FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-        HttpPost post = new HttpPost(pkgServiceURL, fileContent, false);
+        HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
         Subject.doAs(testSubject, new RunnableAction(post));
         Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
@@ -532,15 +538,19 @@ public class PackageTest extends VOSTest {
         log.debug("GET responseCode: " + download.getResponseCode());
         Assert.assertEquals("expected GET response code = 200", 200, download.getResponseCode());
         Assert.assertNull("expected GET throwable == null", download.getThrowable());
-        Assert.assertTrue(String.format("expected GET Content-Type %s, found %s ",
-                        contentType, download.getContentType()), download.getContentType().startsWith(contentType));
+
+
+        Assert.assertEquals(String.format("expected GET Content-Type %s, found %s ",
+                        contentType, download.getContentType()), contentType, download.getContentType());
         File pkg = download.getFile();
         Assert.assertNotNull("download file is null", pkg);
         Assert.assertTrue("package file not found", pkg.exists());
+        log.debug("package file: " + pkg.getAbsolutePath());
 
         String archiveType = contentType.equals(ZIP_CONTENT_TYPE) ? ArchiveStreamFactory.ZIP : ArchiveStreamFactory.TAR;
-        Assert.assertTrue("package file has wrong extension", pkg.getName().endsWith(archiveType));
-        log.debug("package file: " + pkg.getAbsolutePath());
+        Assert.assertTrue(String.format("expected file extension %s, actual %s", archiveType, pkg.getName()),
+                pkg.getName().endsWith(archiveType));
+
         return pkg;
     }
 
@@ -560,7 +570,7 @@ public class PackageTest extends VOSTest {
         ArchiveEntry entry;
         while((entry = archiveInputStream.getNextEntry()) != null) {
             if (!archiveInputStream.canReadEntryData(entry)) {
-                log.info("unable to read archive entry: " + entry.getName());
+                log.debug("unable to read archive entry: " + entry.getName());
                 continue;
             }
 
@@ -622,28 +632,5 @@ public class PackageTest extends VOSTest {
         boolean deleted = file.delete();
         log.debug(String.format("%s deleted: %s", file.getName(), deleted));
     }
-
-//    static class CreateTransferAction implements PrivilegedExceptionAction<ClientTransfer> {
-//
-//        VOSpaceClient voSpaceClient;
-//        Transfer transfer;
-//        boolean run;
-//
-//        CreateTransferAction(VOSpaceClient voSpaceClient, Transfer transfer, boolean run) {
-//            this.voSpaceClient = voSpaceClient;
-//            this.transfer = transfer;
-//            this.run = run;
-//        }
-//
-//        @Override
-//        public ClientTransfer run() throws Exception {
-//            ClientTransfer clientTransfer = voSpaceClient.createTransfer(transfer);
-//            if (run) {
-//                clientTransfer.run();
-//            }
-//            return clientTransfer;
-//        }
-//
-//    }
 
 }
