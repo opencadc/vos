@@ -70,7 +70,6 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.util.StringUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,9 +78,7 @@ import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
@@ -103,16 +100,21 @@ public class PathResolver {
     private static final int VISIT_LIMIT_MAX = 40;
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
-    private final boolean resolveLinks;
+    private final boolean resolveLeafLink;
     
     private int visitLimit = 20;
 
-
-
-    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLinks) {
+    /**
+     * Ctor
+     * @param nodePersistence - node persistence to use
+     * @param voSpaceAuthorizer - vo authorizer to check permissions along the path
+     * @param resolveLeafLink - If true and the leaf node is a LinkNode it resolves it, otherwise it returns the
+     *                        LinkNode after potentially resolving other links in the path.
+     */
+    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLeafLink) {
         this.nodePersistence = nodePersistence;
         this.voSpaceAuthorizer = voSpaceAuthorizer;
-        this.resolveLinks = resolveLinks;
+        this.resolveLeafLink = resolveLeafLink;
     }
 
     /**
@@ -151,7 +153,7 @@ public class PathResolver {
                 }
 
                 while (child instanceof LinkNode) {
-                    if (!resolveLinks && !pathIter.hasNext()) {
+                    if (!resolveLeafLink && !pathIter.hasNext()) {
                         log.debug("Returning link node " + Utils.getPath(child));
                         break;
                     }

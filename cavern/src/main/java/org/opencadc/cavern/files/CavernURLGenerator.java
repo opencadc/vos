@@ -147,30 +147,29 @@ public class CavernURLGenerator implements TransferGenerator {
         if (transfer == null) {
             throw new IllegalArgumentException("transfer is required");
         }
-        List<Protocol> ret = null;
+        List<Protocol> ret;
         try {
             PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            Node node = pr.getNode(target.getPath());
-            ContainerNode parent;
+            Node parent = pr.getNode(target.getParent());
+            if (!(parent instanceof ContainerNode)) {
+                throw new IllegalArgumentException(target.getParent() + " not a valid path");
+            }
+            Node node = nodePersistence.get((ContainerNode) parent, target.getName());
             String name;
             if (node == null) {
-                // maybe a DataNode that needs to be created later. Check the parent (Note: a bit repetitive to check
-                // the entire path again)
-                Node tmp = pr.getNode(target.getParent());
-                if (tmp == null) {
-                    throw new NodeNotFoundException(target.getParent());
-                }
-                if (tmp instanceof ContainerNode) {
-                    parent = (ContainerNode) tmp;
-                } else {
-                    throw new IllegalArgumentException(target.getParent() + " not a valid path");
-                }
+                // maybe a DataNode that needs to be created later.
                 name = target.getName();
             } else {
+                if (node instanceof LinkNode) {
+                    // resolve it
+                    pr.validateTargetURI((LinkNode) node);
+                    VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
+                    node = pr.getNode(targetURI.getPath());
+                }
                 parent = node.parent;
                 name = node.getName();
             }
-
+            log.debug("Resolved target node - parent " + parent + " name " + name);
             Subject currentSubject = AuthenticationUtil.getCurrentSubject();
             if (node instanceof DataNode) {
                 ret = handleDataNode(parent, name, transfer, currentSubject);
