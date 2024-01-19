@@ -77,6 +77,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOSURI;
@@ -114,22 +115,29 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            Node node = pr.getNode(target.getPath());
+            ContainerNode parent;
+            try {
+                parent = (ContainerNode) pr.getNode(target.getParent());
+            } catch (ClassCastException ex) {
+                throw new IllegalArgumentException(target.getParent() + " not a valid path");
+            }
+            Node node = nodePersistence.get(parent, target.getName());
+            while (node instanceof LinkNode) {
+                // resolve it
+                pr.validateTargetURI((LinkNode) node);
+                VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
+                try {
+                    parent = (ContainerNode) pr.getNode(targetURI.getParent());
+                } catch (ClassCastException ex) {
+                    throw new IllegalArgumentException(target.getParent() + " in link node not a valid path");
+                }
+                node = nodePersistence.get(parent, target.getName());
+            }
             log.debug("target node: " + target + " -> " + node);
             
             DataNode dn = null;
             Subject caller = AuthenticationUtil.getCurrentSubject();
             if (node == null) {
-                Node tmp = pr.getNode(target.getParent());
-                if (tmp == null) {
-                    throw new NodeNotFoundException(target.getParent());
-                }
-                ContainerNode parent;
-                if (tmp instanceof ContainerNode) {
-                    parent = (ContainerNode) tmp;
-                } else {
-                    throw new IllegalArgumentException(target.getParent() + " not a valid path");
-                }
                 // create: this should do the same things that CreateNodeAction does
                 dn = new DataNode(target.getName());
                 dn.parent = parent;

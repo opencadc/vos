@@ -101,8 +101,10 @@ public class PathResolver {
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
     private final boolean resolveLeafLink;
-    
+
+    List<String> visitedPaths = new ArrayList<>();
     private int visitLimit = 20;
+    int visitCount = 0;
 
     /**
      * Ctor
@@ -126,15 +128,11 @@ public class PathResolver {
      */
     public Node getNode(String nodePath) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-        int visitCount = 0;
-        List<String> visitedPaths = new ArrayList<>();
-
         log.debug("get: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
         
         Node ret = node;
-        
         if (StringUtil.hasLength(nodePath)) {
             if (nodePath.charAt(0) == '/') {
                 nodePath = nodePath.substring(1);

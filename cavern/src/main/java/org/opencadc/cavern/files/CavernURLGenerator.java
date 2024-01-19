@@ -150,22 +150,31 @@ public class CavernURLGenerator implements TransferGenerator {
         List<Protocol> ret;
         try {
             PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            Node parent = pr.getNode(target.getParent());
-            if (!(parent instanceof ContainerNode)) {
+            ContainerNode parent;
+            try {
+                parent = (ContainerNode) pr.getNode(target.getParent());
+            } catch (ClassCastException ex) {
                 throw new IllegalArgumentException(target.getParent() + " not a valid path");
             }
-            Node node = nodePersistence.get((ContainerNode) parent, target.getName());
+            Node node = nodePersistence.get(parent, target.getName());
+            while (node instanceof LinkNode) {
+                // resolve it
+                pr.validateTargetURI((LinkNode) node);
+                VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
+                try {
+                    parent = (ContainerNode) pr.getNode(targetURI.getParent());
+                } catch (ClassCastException ex) {
+                    throw new IllegalArgumentException(target.getParent() + " in link node not a valid path");
+                }
+                node = nodePersistence.get((ContainerNode) parent, target.getName());
+            }
             String name;
             if (node == null) {
-                // maybe a DataNode that needs to be created later.
+                // new DataNode that needs to be created later.
                 name = target.getName();
+                node = parent;
             } else {
-                if (node instanceof LinkNode) {
-                    // resolve it
-                    pr.validateTargetURI((LinkNode) node);
-                    VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
-                    node = pr.getNode(targetURI.getPath());
-                }
+                // existing DataNode/ContainerNode
                 parent = node.parent;
                 name = node.getName();
             }
