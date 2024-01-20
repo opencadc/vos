@@ -258,7 +258,7 @@ public class TransferRunner implements JobRunner {
 
                 // set the job phase to SUSPENDED (the job is suspended pending further processing.)
                 // the PackageRunner expects a job to be SUSPENDED before it will execute the job.
-                jobUpdater.setPhase(job.getID(), job.getExecutionPhase(), ExecutionPhase.SUSPENDED);
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.SUSPENDED);
 
                 // redirect to view endpoint
                 String location = String.format("%s/%s/run", accessUrl, job.getID());
