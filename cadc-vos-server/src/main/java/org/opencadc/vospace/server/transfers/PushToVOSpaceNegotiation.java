@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2011.                            (c) 2011.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -77,9 +77,6 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
@@ -115,31 +112,15 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            ContainerNode parent;
-            try {
-                parent = (ContainerNode) pr.getNode(target.getParent());
-            } catch (ClassCastException ex) {
-                throw new IllegalArgumentException(target.getParent() + " not a valid path");
-            }
-            Node node = nodePersistence.get(parent, target.getName());
-            while (node instanceof LinkNode) {
-                // resolve it
-                pr.validateTargetURI((LinkNode) node);
-                VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
-                try {
-                    parent = (ContainerNode) pr.getNode(targetURI.getParent());
-                } catch (ClassCastException ex) {
-                    throw new IllegalArgumentException(target.getParent() + " in link node not a valid path");
-                }
-                node = nodePersistence.get(parent, target.getName());
-            }
-            log.debug("target node: " + target + " -> " + node);
-            
-            DataNode dn = null;
+            PathResolver.Resolved resolved = pr.resolveNode(target);
+            log.debug("Resolved target node: " + resolved);
+
+            DataNode dn;
             Subject caller = AuthenticationUtil.getCurrentSubject();
-            if (node == null) {
+            if (resolved.child == null) {
                 // create: this should do the same things that CreateNodeAction does
                 dn = new DataNode(target.getName());
+                ContainerNode parent = resolved.parent;
                 dn.parent = parent;
                 dn.owner = caller;
                 if (parent.inheritPermissions != null && parent.inheritPermissions) {
@@ -148,8 +129,8 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
                     dn.getReadWriteGroup().addAll(parent.getReadWriteGroup());
                 }
                 nodePersistence.put(dn);
-            } else if (node instanceof DataNode) {
-                dn = (DataNode) node;
+            } else if (resolved.child instanceof DataNode) {
+                dn = (DataNode) resolved.child;
                 if (!authorizer.hasSingleNodeWritePermission(dn, caller)) {
                     throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
                 }
@@ -168,7 +149,7 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             //    throw new NodeBusyException("node is busy with write");
             //}
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
-            updateTransferJob(node, loc.getURI(dn).getURI(), ExecutionPhase.EXECUTING);
+            updateTransferJob(dn, loc.getURI(dn).getURI(), ExecutionPhase.EXECUTING);
             updated = true;
         } finally {
             if (!updated) {

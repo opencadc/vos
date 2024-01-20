@@ -661,9 +661,8 @@ public class NodesTest extends VOSTest {
             }
             delete(parentURL, false);
 
-            ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
-            parent = new ContainerNode(parentName);
+            ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
 
             // add 6 direct child nodes
@@ -756,9 +755,8 @@ public class NodesTest extends VOSTest {
             }
             delete(parentURL, false);
 
-            ContainerNode parent = new ContainerNode(parentName);
             log.info("put: " + parentURI + " -> " + parentURL);
-            parent = new ContainerNode(parentName);
+            ContainerNode parent = new ContainerNode(parentName);
             put(parentURL, parentURI, parent);
             
             // check that limit=0 is supported
@@ -810,8 +808,7 @@ public class NodesTest extends VOSTest {
             
             // add 3 direct child nodes
             int i = 0;
-            for (String n : childNames) {
-                String child1Name = n;
+            for (String child1Name : childNames) {
                 String child1Path = parentName + "/" + child1Name;
                 URL child1URL = getNodeURL(nodesServiceURL, child1Path);
                 VOSURI child1URI = getVOSURI(child1Path);
