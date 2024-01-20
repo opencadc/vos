@@ -73,6 +73,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import java.io.IOException;
@@ -186,6 +187,16 @@ public class VospacePackageRunner extends PackageRunner {
     @Override
     protected Iterator<PackageItem> getItems() {
         return new PackageItemIterator(targetList);
+    }
+
+    /**
+     * Return the expected phase of the PackageRunner job.
+     *
+     * @return SUSPENDED ExecutionPhase
+     */
+    @Override
+    protected ExecutionPhase getInitialPhase() {
+        return ExecutionPhase.SUSPENDED;
     }
 
     /**
