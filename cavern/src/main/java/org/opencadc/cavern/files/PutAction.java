@@ -243,7 +243,7 @@ public class PutAction extends FileAction {
             } else {
                 if (csp == null) {
                     // add
-                    csp = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, actualMD5.toASCIIString());
+                    csp = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, actualMD5.getSchemeSpecificPart());
                     node.getProperties().add(csp);
                 } else {
                     // replace
