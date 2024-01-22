@@ -262,6 +262,7 @@ public class CavernURLGenerator implements TransferGenerator {
         PosixPrincipal pp = nodePersistence.getIdentityManager().toPosixPrincipal(caller);
         List<Protocol> ret = new ArrayList<>();
         for (Protocol p : trans.getProtocols()) {
+            log.debug("transfer protocol: " + p.getUri());
             if (VOS.PROTOCOL_SSHFS.equals(p.getUri())) {
                 if (sshServerBase == null) {
                     throw new UnsupportedOperationException("sshfs mount not configured");

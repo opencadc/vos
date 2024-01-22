@@ -69,11 +69,13 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -95,8 +97,14 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
+    protected final URL filesServiceURL;
+
     protected FilesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
+
+        RegistryClient regClient = new RegistryClient();
+        this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES_20, AuthMethod.ANON);
+        log.info(String.format("%s: %s", Standards.VOSPACE_FILES_20, filesServiceURL));
     }
 
     @Test

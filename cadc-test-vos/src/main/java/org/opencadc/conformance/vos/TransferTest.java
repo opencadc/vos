@@ -69,12 +69,14 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
@@ -112,10 +114,16 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
+    protected final URL transferServiceURL;
+
     private static final List<Integer> PUT_OK = Arrays.asList(new Integer[] { 200, 201});
     
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
+
+        RegistryClient regClient = new RegistryClient();
+        this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
+        log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
     }
 
     @Test

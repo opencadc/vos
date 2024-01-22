@@ -114,17 +114,11 @@ public abstract class VOSTest {
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
 
-    
     public static final String XML_CONTENT_TYPE = "text/xml";
     public static final String TEXT_CONTENT_TYPE = "text/plain";
-    
     public final URI resourceID;
     public final URL nodesServiceURL;
-    public final URL filesServiceURL;
     public final URL synctransServiceURL;
-    public final URL transferServiceURL;
-    public final URL recursiveDeleteServiceURL;
-    public final URL recursiveNodePropsServiceURL;
     public final Subject authSubject;
     
     protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
@@ -138,20 +132,8 @@ public abstract class VOSTest {
         this.nodesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_NODES_20, nodesServiceURL));
 
-        this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES_20, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_FILES_20, filesServiceURL));
-
         this.synctransServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_SYNC_21, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_SYNC_21, synctransServiceURL));
-
-        this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
-
-        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
-        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
-
-        this.recursiveNodePropsServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_NODEPROPS, AuthMethod.CERT);
-        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_NODEPROPS, recursiveNodePropsServiceURL));
     }
 
     @Before
@@ -175,7 +157,7 @@ public abstract class VOSTest {
     public void noop() {
         log.info("no-op test");
     }
-    
+
     public URL getNodeURL(URL serviceURL, String path)
         throws MalformedURLException {
         if (path == null) {
