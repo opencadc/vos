@@ -147,21 +147,19 @@ public class CavernURLGenerator implements TransferGenerator {
         List<Protocol> ret;
         try {
             PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            PathResolver.Resolved resolved = pr.resolveNode(target);
-            log.debug("Resolved target node: " + resolved);
+            Node node = pr.getNode(target.getPath());
+            if (node == null) {
+                throw new NodeNotFoundException(target.getPath());
+            }
+            log.debug("Resolved target node: " + node.getName());
             final Subject currentSubject = AuthenticationUtil.getCurrentSubject();
-            if (resolved.child != null) {
-                if (resolved.child instanceof DataNode) {
-                    ret = handleDataNode(resolved.child.parent, resolved.child.getName(), transfer);
-                } else if (resolved.child instanceof ContainerNode) {
-                    ret = handleContainerMount(target.getPath(), transfer, currentSubject);
-                } else {
-                    throw new UnsupportedOperationException(resolved.child.getClass().getSimpleName() + " transfer "
-                            + target.getPath());
-                }
+            if (node instanceof DataNode) {
+                ret = handleDataNode(node.parent, node.getName(), transfer);
+            } else if (node instanceof ContainerNode) {
+                ret = handleContainerMount(target.getPath(), transfer, currentSubject);
             } else {
-                // assume DataNode that needs to be created
-                ret = handleDataNode(resolved.parent, resolved.childName, transfer);
+                throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer "
+                        + target.getPath());
             }
 
         } catch (NodeNotFoundException ex) {
@@ -300,8 +298,6 @@ public class CavernURLGenerator implements TransferGenerator {
             throw new AccessControlException("unable to validate preauth token: key not found");
         }
         
-        TokenTool tk = new TokenTool(pubKeyFile);
-
         // Use this function in case the incoming URI uses '!' instead of '~'
         // in the authority.
         // This will translate the URI to use '~' in it's authority.
@@ -310,6 +306,7 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("targetURI for validation: " + commonFormURI.toString());
         log.debug("grant class: " + grantClass);
 
+        TokenTool tk = new TokenTool(pubKeyFile);
         return tk.validateToken(token, commonFormURI.getURI(), grantClass);
     }
 

@@ -82,6 +82,7 @@ import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
 
@@ -118,8 +119,11 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             DataNode dn;
             Subject caller = AuthenticationUtil.getCurrentSubject();
             if (resolved.child == null) {
+                if (!authorizer.hasSingleNodeWritePermission(resolved.parent, caller)) {
+                    throw NodeFault.PermissionDenied.getStatus(Utils.getPath(resolved.parent));
+                }
                 // create: this should do the same things that CreateNodeAction does
-                dn = new DataNode(target.getName());
+                dn = new DataNode(resolved.childName);
                 ContainerNode parent = resolved.parent;
                 dn.parent = parent;
                 dn.owner = caller;

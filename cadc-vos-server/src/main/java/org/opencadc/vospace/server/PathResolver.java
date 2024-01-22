@@ -136,12 +136,12 @@ public class PathResolver {
         } catch (ClassCastException ex) {
             throw new IllegalArgumentException(nodeURI.getParent() + " not a valid path");
         }
+        if (parent == null) {
+            throw new IllegalArgumentException(nodeURI.getParent() + " not a valid path");
+        }
         Node node = nodePersistence.get(parent, nodeURI.getName());
         Resolved result = new Resolved();
-        if ((parent == null) && (node != null)) {
-            // node in root directory
-            parent = nodePersistence.getRootNode();
-        } else {
+        if ((node == null)) {
             result.childName = nodeURI.getName(); // default name
         }
         while (node instanceof LinkNode) {
@@ -193,7 +193,6 @@ public class PathResolver {
                 log.debug("get node: '" + name + "' in path '" + nodePath + "'");
                 Node child = nodePersistence.get(node, name);
                 if (child == null) {
-                    log.debug("---------------!!!!!!!!!!!!!!!");
                     return null;
                 }
                 if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
