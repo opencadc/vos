@@ -90,7 +90,7 @@ import org.opencadc.vospace.transfer.TransferReader;
 
 public class TransferRunner implements JobRunner {
 
-    private static Logger log = Logger.getLogger(TransferRunner.class);
+    private static final Logger log = Logger.getLogger(TransferRunner.class);
 
     private static final String VOS_PREFIX = "vos://";
 
@@ -213,6 +213,7 @@ public class TransferRunner implements JobRunner {
     private void doit() {
         Transfer transfer = null;
         boolean customPushPull = false;
+        boolean pkgRedirect = false;
         VOSpaceTransfer trans = null;
         List<Parameter> additionalParameters = null;
         try {
@@ -247,6 +248,24 @@ public class TransferRunner implements JobRunner {
             Direction direction = transfer.getDirection();
             if (!isValidDirection(direction, customPushPull)) {
                 sendError(ErrorType.FATAL, "InternalFault (invalid direction: " + direction + ")", HttpURLConnection.HTTP_BAD_REQUEST);
+                return;
+            }
+
+            // check if the transfer view has a configured endpoint
+            if (transfer.getView() != null && transfer.getView().getURI().equals(Standards.PKG_10)) {
+                URL accessURL = regClient.getAccessURL(nodePersistence.getResourceID());
+                String accessUrl = accessURL.toExternalForm().replace("capabilities", "pkg");
+
+                // set the job phase to SUSPENDED (the job is suspended pending further processing.)
+                // the PackageRunner expects a job to be SUSPENDED before it will execute the job.
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.SUSPENDED);
+
+                // redirect to view endpoint
+                String location = String.format("%s/%s/run", accessUrl, job.getID());
+                log.debug("pkg location: " + location);
+                syncOutput.setHeader("Location", location);
+                syncOutput.setCode(HttpURLConnection.HTTP_SEE_OTHER);
+                pkgRedirect = true;
                 return;
             }
 
@@ -306,6 +325,7 @@ public class TransferRunner implements JobRunner {
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_BAD_REQUEST, true);
                 return;
             } catch (UnsupportedOperationException ex) {
+                ex.printStackTrace();
                 String msg = "Unsupported Operation: " + ex.getMessage();
                 log.debug(msg, ex);
                 // now set the job to error
@@ -335,14 +355,16 @@ public class TransferRunner implements JobRunner {
                 log.error("Original error", t);
             }
         } finally {
-            try {
-                doTransferRedirect(transfer, additionalParameters);
-            } catch (Throwable t) {
-                log.error("failed to do tranfer redirect", t);
+            if (!pkgRedirect) {
                 try {
-                    sendError(ExecutionPhase.EXECUTING, ErrorType.FATAL, t.getMessage(), HttpURLConnection.HTTP_INTERNAL_ERROR, false);
-                } catch (Exception e) {
-                    log.error("Failed to update job.", e);
+                    doTransferRedirect(transfer, additionalParameters);
+                } catch (Throwable t) {
+                    log.error("failed to do transfer redirect", t);
+                    try {
+                        sendError(ExecutionPhase.EXECUTING, ErrorType.FATAL, t.getMessage(), HttpURLConnection.HTTP_INTERNAL_ERROR, false);
+                    } catch (Exception e) {
+                        log.error("Failed to update job.", e);
+                    }
                 }
             }
             log.debug("DONE");
