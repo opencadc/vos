@@ -143,7 +143,7 @@ public class PathResolver {
 
     private ResolvedNode resolveNode(String nodePath, boolean resolveLeafLink) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-        log.debug("resolve node: [" + nodePath+ "]");
+        log.debug("resolve node: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
         
