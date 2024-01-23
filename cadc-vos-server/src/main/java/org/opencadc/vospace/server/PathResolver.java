@@ -100,7 +100,7 @@ public class PathResolver {
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
 
-    private int visitLimit = 2;
+    private int visitLimit = 20;
 
 
     /**
