@@ -77,7 +77,6 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
@@ -114,7 +113,7 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             PathResolver pr = new PathResolver(nodePersistence, authorizer);
-            PathResolver.ResolvedNode rn = pr.getTargetDataNode(target.getPath());
+            PathResolver.ResolvedNode rn = pr.getTargetNode(target.getPath());
             if (rn == null) {
                 throw NodeFault.ContainerNotFound.getStatus(target.getPath());
             }

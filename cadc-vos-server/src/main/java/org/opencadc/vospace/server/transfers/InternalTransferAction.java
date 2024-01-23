@@ -139,39 +139,34 @@ public class InternalTransferAction extends VOSpaceTransfer {
 
             // resolve the links to containers in the path so we get the actual node
             PathResolver res = new PathResolver(nodePersistence, authorizer);
-            Node srcNode = res.getNode(srcURI.getPath(), true);
+            Node srcNode = res.getNode(srcURI.getPath(), false);
 
             log.debug("Resolved src path: " + srcURI + " -> " + srcNode);
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
             srcURI = loc.getURI(srcNode);
 
-            // resolve destination, parent first
-            //TODO might need a new path resolver for link cycles
-            Node destParent = res.getNode(destURI.getParentURI().getPath(), true);
-            if (!(destParent instanceof ContainerNode)) {
+            PathResolver.ResolvedNode rn = res.getTargetNode(destURI.getPath());
+            if ((rn == null) || ((rn.node != null) && !(rn.node instanceof ContainerNode))) {
                 throw new IllegalArgumentException("parent of destination is not a ContainerNode");
             }
-
-            ContainerNode destContainer = (ContainerNode) destParent;
-            Node n = nodePersistence.get(destContainer, destURI.getName());
-            String destName = null;
-            if (n instanceof ContainerNode) {
-                // found: destURI is an existing container: move into
-                destContainer = (ContainerNode) n;
-                destName = srcURI.getName();
+            ContainerNode destContainer;
+            String destName;
+            if (rn.node == null) {
+                if (rn.name.equals(destURI.getName())) {
+                    // 
+                    destContainer = rn.parent;
+                    destName = rn.name;
+                } else {
+                    throw new IllegalArgumentException("destination link not found");
+                }
             } else {
-                throw new TransferException("destination is not a container");
+                destContainer = (ContainerNode) rn.node;
+                destName = srcURI.getName();
             }
-            if (destName == null) {
-                // destURI is not an existing container: move and/or rename
-                // keep destContainer === destParent == destURI.getParent
-                destName = destURI.getName();
-            }
-
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
 
             Subject caller = AuthenticationUtil.getCurrentSubject();
-            // check permission to remove src from it's current parent
+            // check permission to remove src from its current parent
             if (!authorizer.hasSingleNodeWritePermission(srcNode.parent, caller)) {
                 throw NodeFault.PermissionDenied.getStatus(loc.getURI(srcNode).getPath());
             }

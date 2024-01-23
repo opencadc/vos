@@ -71,7 +71,6 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.util.StringUtil;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -121,7 +120,7 @@ public class PathResolver {
      * @return ResolvedNode object with the actual node (or null if it doesn't exist), its parent and its name.
      * @throws Exception
      */
-    public ResolvedNode getTargetDataNode(String nodePath) throws Exception {
+    public ResolvedNode getTargetNode(String nodePath) throws Exception {
         return resolveNode(nodePath, true, new ArrayList<>());
     }
 
@@ -175,12 +174,15 @@ public class PathResolver {
                         ret.node = null;
                         break;
                     }
+                } else {
+                    ret.parent = child.parent;
+                    ret.node = child;
+                    ret.name = child.getName();
                 }
                 if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
                     LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
-
 
                 while (child instanceof LinkNode) {
                     if (!resolveLeafLink && !pathIter.hasNext()) {
@@ -221,9 +223,6 @@ public class PathResolver {
                         return null;
                     }
                 }
-                ret.parent = child.parent;
-                ret.node = child;
-                ret.name = child.getName();
             }
         }
 
