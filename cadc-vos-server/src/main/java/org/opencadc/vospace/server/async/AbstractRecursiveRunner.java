@@ -187,9 +187,9 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             }
 
             log.debug("node: " + target);
-            PathResolver pathResolver = new PathResolver(nodePersistence, authorizer, true);
+            PathResolver pathResolver = new PathResolver(nodePersistence, authorizer);
             String nodePath = target.getPath();
-            Node serverNode = pathResolver.getNode(nodePath);
+            Node serverNode = pathResolver.getNode(nodePath, true);
             if (serverNode == null) {
                 Exception ex = NodeFault.NodeNotFound.getStatus(nodePath);
                 sendError(ex.getMessage());
@@ -215,7 +215,7 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
             }
             if (!endPhase.equals(ep)) {
-                log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase + " vs " + ep);
+                log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase);
             }
             logInfo.setSuccess(true);
         } catch (ResourceNotFoundException e) {

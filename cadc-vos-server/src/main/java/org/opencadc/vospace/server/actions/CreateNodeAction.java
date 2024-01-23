@@ -112,8 +112,8 @@ public class CreateNodeAction extends NodeAction {
         
         // get parent container node
         // TBD: resolveLinks=true?
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
-        Node serverNode = pathResolver.getNode(target.getParentURI().getPath());
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node serverNode = pathResolver.getNode(target.getParentURI().getPath(), true);
         if (!(serverNode instanceof ContainerNode)) {
             throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
         }

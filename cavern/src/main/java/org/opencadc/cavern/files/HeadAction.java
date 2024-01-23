@@ -133,7 +133,7 @@ public class HeadAction extends FileAction {
             
             // PathResolver checks read permission
             // TODO: disable permission checks in resolver if preauthGranted
-            Node node = pathResolver.getNode(nodeURI.getPath());
+            Node node = pathResolver.getNode(nodeURI.getPath(), true);
             if (node == null) {
                 throw NodeFault.NodeNotFound.getStatus(nodeURI.getURI().toASCIIString());
             }

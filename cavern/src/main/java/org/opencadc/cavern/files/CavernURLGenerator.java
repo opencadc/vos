@@ -146,8 +146,8 @@ public class CavernURLGenerator implements TransferGenerator {
         }
         List<Protocol> ret;
         try {
-            PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            Node node = pr.getNode(target.getPath());
+            PathResolver pr = new PathResolver(nodePersistence, authorizer);
+            Node node = pr.getNode(target.getPath(), true);
             if (node == null) {
                 throw new NodeNotFoundException(target.getPath());
             }

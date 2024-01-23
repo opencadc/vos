@@ -159,7 +159,7 @@ public class PutAction extends FileAction {
             // PathResolver checks read permission
             String parentPath = nodeURI.getParentURI().getPath();
             // TODO: disable permission checks in resolver
-            Node n = pathResolver.getNode(parentPath);
+            Node n = pathResolver.getNode(parentPath, true);
             if (n == null) {
                 throw new ResourceNotFoundException("not found: parent container " + parentPath);
             }

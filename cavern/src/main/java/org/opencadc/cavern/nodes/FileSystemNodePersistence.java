@@ -390,7 +390,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
             try {
-                PathResolver ps = new PathResolver(this, new VOSpaceAuthorizer(this), true);
+                PathResolver ps = new PathResolver(this, new VOSpaceAuthorizer(this));
                 ps.validateTargetURI(ln);
             } catch (Exception ex) {
                 throw new UnsupportedOperationException("link to external resource", ex);

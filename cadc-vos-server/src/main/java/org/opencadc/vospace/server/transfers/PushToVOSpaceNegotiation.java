@@ -77,6 +77,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
@@ -112,19 +113,22 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
 
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
-            PathResolver pr = new PathResolver(nodePersistence, authorizer, true);
-            PathResolver.Resolved resolved = pr.resolveNode(target);
-            log.debug("Resolved target node: " + resolved);
+            PathResolver pr = new PathResolver(nodePersistence, authorizer);
+            PathResolver.ResolvedNode rn = pr.getTargetDataNode(target.getPath());
+            if (rn == null) {
+                throw NodeFault.ContainerNotFound.getStatus(target.getPath());
+            }
+            log.debug("Target target node: " + rn);
 
-            DataNode dn;
             Subject caller = AuthenticationUtil.getCurrentSubject();
-            if (resolved.child == null) {
-                if (!authorizer.hasSingleNodeWritePermission(resolved.parent, caller)) {
-                    throw NodeFault.PermissionDenied.getStatus(Utils.getPath(resolved.parent));
+            DataNode dn;
+            if (rn.node == null) {
+                if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
+                    throw NodeFault.PermissionDenied.getStatus(Utils.getPath(rn.parent));
                 }
                 // create: this should do the same things that CreateNodeAction does
-                dn = new DataNode(resolved.childName);
-                ContainerNode parent = resolved.parent;
+                dn = new DataNode(rn.name);
+                ContainerNode parent = rn.parent;
                 dn.parent = parent;
                 dn.owner = caller;
                 if (parent.inheritPermissions != null && parent.inheritPermissions) {
@@ -133,8 +137,8 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
                     dn.getReadWriteGroup().addAll(parent.getReadWriteGroup());
                 }
                 nodePersistence.put(dn);
-            } else if (resolved.child instanceof DataNode) {
-                dn = (DataNode) resolved.child;
+            } else if (rn.node instanceof DataNode) {
+                dn = (DataNode) rn.node;
                 if (!authorizer.hasSingleNodeWritePermission(dn, caller)) {
                     throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
                 }

@@ -71,6 +71,7 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.util.StringUtil;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -87,8 +88,6 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
  * Utility class to follow and resolve the target of link nodes in a local vospace including checking
  * read permission along the path.
  *
- * <p>If the last node on the path is a link node, it will not be resolved.
- *
  * @author adriand
  * @author majorb
  */
@@ -100,7 +99,6 @@ public class PathResolver {
     private static final int VISIT_LIMIT_MAX = 40;
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
-    private final boolean resolveLeafLink;
 
     List<String> visitedPaths = new ArrayList<>();
     private int visitLimit = 20;
@@ -110,79 +108,49 @@ public class PathResolver {
      * Ctor
      * @param nodePersistence - node persistence to use
      * @param voSpaceAuthorizer - vo authorizer to check permissions along the path
-     * @param resolveLeafLink - If true and the leaf node is a LinkNode it resolves it, otherwise it returns the
-     *                        LinkNode after potentially resolving other links in the path.
+
      */
-    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLeafLink) {
+    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer) {
         this.nodePersistence = nodePersistence;
         this.voSpaceAuthorizer = voSpaceAuthorizer;
-        this.resolveLeafLink = resolveLeafLink;
     }
 
     /**
-     * Resolves a node URI and returns a Resolved object that contains either the resolved node if the node exists
-     * or the resolved parent and the name of the node if the node is to be created by the caller.
-     * @param nodeURI URI of the node to be resolved
-     * @return Resolved object containing either the child node if it exists already or the parent node and the name
-     *         of the child node to be created otherwise
+     * Resolves a data node URI and returns a ResolvedNode object that contains details of the data node: the node
+     * itself (if exists), its parent and the node name.
+     * @param nodePath path of the data node to be resolved
+     * @return ResolvedNode object with the actual node (or null if it doesn't exist), its parent and its name.
      * @throws Exception
      */
-    public Resolved resolveNode(VOSURI nodeURI) throws Exception {
-        log.debug("resolve node: [" + nodeURI + "]");
-
-        ContainerNode parent;
-        try {
-            parent = (ContainerNode) getNode(nodeURI.getParent());
-        } catch (ClassCastException ex) {
-            throw new IllegalArgumentException(nodeURI.getParent() + " not a valid path");
-        }
-        if (parent == null) {
-            throw new IllegalArgumentException(nodeURI.getParent() + " not a valid path");
-        }
-        Node node = nodePersistence.get(parent, nodeURI.getName());
-        Resolved result = new Resolved();
-        if ((node == null)) {
-            result.childName = nodeURI.getName(); // default name
-        }
-        while (node instanceof LinkNode) {
-            // resolve it
-            validateTargetURI((LinkNode) node);
-            VOSURI targetURI = new VOSURI(((LinkNode)node).getTarget());
-            log.debug("Target uri " + targetURI);
-            try {
-                parent = (ContainerNode) getNode(targetURI.getParent());
-                log.debug("Parent " + targetURI.getParent() + " is resolved to " + parent);
-            } catch (ClassCastException ex) {
-                throw new IllegalArgumentException(nodeURI.getParent() + " in link node not a valid path");
-            }
-            node = nodePersistence.get(parent, targetURI.getName());
-            result.childName = targetURI.getName();
-        }
-        if (node == null) {
-            // new DataNode that needs to be created later.
-            result.parent = parent;
-        } else {
-            // existing DataNode/ContainerNode
-            result.childName = null;
-            result.child = node;
-        }
-        return result;
+    public ResolvedNode getTargetDataNode(String nodePath) throws Exception {
+        return resolveNode(nodePath, true);
     }
 
     /**
      * Resolves a node URI, follow links, and returns the end node.
      *
-     * @param nodePath
+     * @param nodePath path of the data node to be resolved
+     * @param resolveLeafLink - If true and the leaf node is a LinkNode it resolves it, otherwise it returns the
+     *                         LinkNode after potentially resolving other links in the path.
      * @return the last node in the path or null if not found
      * @throws org.opencadc.vospace.LinkingException
      */
-    public Node getNode(String nodePath) throws Exception {
+    public Node getNode(String nodePath, boolean resolveLeafLink) throws Exception {
+        ResolvedNode rn = resolveNode(nodePath, resolveLeafLink);
+        if ((rn == null) || (rn.node == null)) {
+            return null;
+        }
+        return rn.node;
+    }
+
+    private ResolvedNode resolveNode(String nodePath, boolean resolveLeafLink) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-        log.debug("get: [" + nodePath + "]");
+        log.debug("resolve node: [" + nodePath+ "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
         
-        Node ret = node;
+        ResolvedNode ret = new ResolvedNode();
+        ret.parent = node;
         if (StringUtil.hasLength(nodePath)) {
             if (nodePath.charAt(0) == '/') {
                 nodePath = nodePath.substring(1);
@@ -190,10 +158,19 @@ public class PathResolver {
             Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
             while (pathIter.hasNext()) {
                 String name = pathIter.next();
-                log.debug("get node: '" + name + "' in path '" + nodePath + "'");
+                log.debug("get node: '" + name + "' in parent '" + Utils.getPath(node) + "'");
                 Node child = nodePersistence.get(node, name);
                 if (child == null) {
-                    return null;
+                    if (pathIter.hasNext()) {
+                        log.debug("Could not find child node " + name);
+                        return null;
+                    } else {
+                        // got to a non-existent leaf
+                        ret.parent = node;
+                        ret.name = name;
+                        ret.node = null;
+                        break;
+                    }
                 }
                 if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
                     LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
@@ -223,21 +200,35 @@ public class PathResolver {
                     visitedPaths.add(linkPath);
 
                     // recursive follow
-                    log.debug("Resolve: " + linkPath);
-                    child = getNode(linkPath);
+                    log.debug("Resolve: " + targetURI.getPath());
+                    ret = resolveNode(targetURI.getPath(), resolveLeafLink);
+                    if (ret == null) {
+                        log.debug("Could not resolve link " + targetURI.getPath());
+                        return null;
+                    } else {
+                        child = ret.node;
+                    }
                 }
                 if (pathIter.hasNext()) {
                     if (child instanceof ContainerNode) {
                         node = (ContainerNode) child;
                     } else {
+                        log.debug("Found non container node in the path " + nodePath);
                         return null;
                     }
                 }
-                ret = child;
+                ret.parent = child.parent;
+                ret.node = child;
+                ret.name = child.getName();
             }
+        } else {
+            // root node
+            ret.node = ret.parent;
+            ret.parent = ret.node.parent;
+            ret.name = ret.node.getName();
         }
 
-        log.debug("return node: " + ((ret != null) ? Utils.getPath(ret) : null));
+        log.debug("return resolved node: " + ret);
         return ret;
     }
 
@@ -273,16 +264,13 @@ public class PathResolver {
         this.visitLimit = visitLimit;
     }
 
-    public static class Resolved {
+    public static class ResolvedNode {
         public ContainerNode parent;
-        public String childName;
-        public Node child; // possibly null
+        public String name;
+        public Node node;
 
         public String toString() {
-            return "parent " + parent + ", child " + child + ", childName " + childName;
+            return "parent " + parent + ", node " + node + " name " + name;
         }
     }
-
-
-
 }

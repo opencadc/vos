@@ -105,9 +105,9 @@ public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
             confirmSingleTarget(transfer);
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
-            PathResolver resolver = new PathResolver(nodePersistence, authorizer, true);
+            PathResolver resolver = new PathResolver(nodePersistence, authorizer);
 
-            Node node = resolver.getNode(target.getPath());
+            Node node = resolver.getNode(target.getPath(), true);
             if (!(node instanceof ContainerNode)) {
                 throw new TransferException("node is not a container node");
             }

@@ -138,15 +138,16 @@ public class InternalTransferAction extends VOSpaceTransfer {
             log.debug("checking move permissions: " + srcURI + " -> " + destURI);
 
             // resolve the links to containers in the path so we get the actual node
-            PathResolver res = new PathResolver(nodePersistence, authorizer, true);
-            Node srcNode = res.getNode(srcURI.getPath());
+            PathResolver res = new PathResolver(nodePersistence, authorizer);
+            Node srcNode = res.getNode(srcURI.getPath(), true);
 
             log.debug("Resolved src path: " + srcURI + " -> " + srcNode);
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
             srcURI = loc.getURI(srcNode);
 
             // resolve destination, parent first
-            Node destParent = res.getNode(destURI.getParentURI().getPath());
+            //TODO might need a new path resolver for link cycles
+            Node destParent = res.getNode(destURI.getParentURI().getPath(), true);
             if (!(destParent instanceof ContainerNode)) {
                 throw new IllegalArgumentException("parent of destination is not a ContainerNode");
             }

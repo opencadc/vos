@@ -109,8 +109,8 @@ public class UpdateNodeAction extends NodeAction {
         }
 
         voSpaceAuthorizer.setDisregardLocks(true); // locks don't apply to properties updates
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, false);
-        Node serverNode = pathResolver.getNode(target.getPath());
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node serverNode = pathResolver.getNode(target.getPath(), false);
         if (serverNode == null) {
             throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget.toString());
         }
