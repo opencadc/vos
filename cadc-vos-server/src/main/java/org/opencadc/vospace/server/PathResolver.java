@@ -100,9 +100,7 @@ public class PathResolver {
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
 
-    List<String> visitedPaths = new ArrayList<>();
     private int visitLimit = 20;
-    int visitCount = 0;
 
     /**
      * Ctor
@@ -177,6 +175,8 @@ public class PathResolver {
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
 
+                List<String> visitedPaths = new ArrayList<>();
+                int visitCount = 0;
                 while (child instanceof LinkNode) {
                     if (!resolveLeafLink && !pathIter.hasNext()) {
                         log.debug("Returning link node " + Utils.getPath(child));
