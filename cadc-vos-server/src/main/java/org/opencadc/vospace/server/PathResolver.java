@@ -100,7 +100,8 @@ public class PathResolver {
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
 
-    private int visitLimit = 20;
+    private int visitLimit = 2;
+
 
     /**
      * Ctor
@@ -121,7 +122,7 @@ public class PathResolver {
      * @throws Exception
      */
     public ResolvedNode getTargetDataNode(String nodePath) throws Exception {
-        return resolveNode(nodePath, true);
+        return resolveNode(nodePath, true, new ArrayList<>());
     }
 
     /**
@@ -134,25 +135,30 @@ public class PathResolver {
      * @throws org.opencadc.vospace.LinkingException
      */
     public Node getNode(String nodePath, boolean resolveLeafLink) throws Exception {
-        ResolvedNode rn = resolveNode(nodePath, resolveLeafLink);
+        ResolvedNode rn = resolveNode(nodePath, resolveLeafLink, new ArrayList<>());
         if ((rn == null) || (rn.node == null)) {
             return null;
         }
         return rn.node;
     }
 
-    private ResolvedNode resolveNode(String nodePath, boolean resolveLeafLink) throws Exception {
+    private ResolvedNode resolveNode(String nodePath, boolean resolveLeafLink, List<String> visitedPaths) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
         log.debug("resolve node: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
         
         ResolvedNode ret = new ResolvedNode();
-        ret.parent = node;
-        if (StringUtil.hasLength(nodePath)) {
-            if (nodePath.charAt(0) == '/') {
-                nodePath = nodePath.substring(1);
-            }
+        while (StringUtil.hasLength(nodePath) && (nodePath.charAt(0) == '/')) {
+            nodePath = nodePath.substring(1);
+        }
+
+        if (!StringUtil.hasLength(nodePath)) {
+            // root node
+            ret.node = node;
+            ret.parent = node.parent;
+            ret.name = node.getName();
+        } else {
             Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
             while (pathIter.hasNext()) {
                 String name = pathIter.next();
@@ -175,19 +181,17 @@ public class PathResolver {
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
 
-                List<String> visitedPaths = new ArrayList<>();
-                int visitCount = 0;
+
                 while (child instanceof LinkNode) {
                     if (!resolveLeafLink && !pathIter.hasNext()) {
                         log.debug("Returning link node " + Utils.getPath(child));
                         break;
                     }
                     log.debug("Resolving link node " + Utils.getPath(child));
-                    if (visitCount > visitLimit) {
+                    if (visitedPaths.size() > visitLimit) {
                         throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
                     }
-                    visitCount++;
-                    log.debug("visit number " + visitCount);
+                    log.debug("visit number " + visitedPaths.size());
 
                     LinkNode linkNode = (LinkNode) child;
                     VOSURI targetURI = validateTargetURI(linkNode);
@@ -201,7 +205,7 @@ public class PathResolver {
 
                     // recursive follow
                     log.debug("Resolve: " + targetURI.getPath());
-                    ret = resolveNode(targetURI.getPath(), resolveLeafLink);
+                    ret = resolveNode(targetURI.getPath(), resolveLeafLink, visitedPaths);
                     if (ret == null) {
                         log.debug("Could not resolve link " + targetURI.getPath());
                         return null;
@@ -221,12 +225,8 @@ public class PathResolver {
                 ret.node = child;
                 ret.name = child.getName();
             }
-        } else {
-            // root node
-            ret.node = ret.parent;
-            ret.parent = ret.node.parent;
-            ret.name = ret.node.getName();
         }
+
 
         log.debug("return resolved node: " + ret);
         return ret;
