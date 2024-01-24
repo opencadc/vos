@@ -212,6 +212,8 @@ public class PathResolver {
                         log.debug("Could not resolve link " + targetURI.getPath());
                         return null;
                     } else {
+                        // not found target leaf node
+                        ret.brokenLeafLink = !pathIter.hasNext() && (ret.node == null);
                         child = ret.node;
                     }
                 }
@@ -267,9 +269,11 @@ public class PathResolver {
         public ContainerNode parent;
         public String name;
         public Node node;
+        // true if leaf node is a link node with a resolvable but non-existing target
+        public boolean brokenLeafLink = false;
 
         public String toString() {
-            return "parent " + parent + ", node " + node + " name " + name;
+            return "parent " + parent + ", node " + node + " name " + name + " brokenLeafLink " + brokenLeafLink;
         }
     }
 }

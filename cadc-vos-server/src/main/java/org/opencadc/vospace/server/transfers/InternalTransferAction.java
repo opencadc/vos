@@ -146,18 +146,22 @@ public class InternalTransferAction extends VOSpaceTransfer {
             srcURI = loc.getURI(srcNode);
 
             PathResolver.ResolvedNode rn = res.getTargetNode(destURI.getPath());
-            if ((rn == null) || ((rn.node != null) && !(rn.node instanceof ContainerNode))) {
-                throw new IllegalArgumentException("parent of destination is not a ContainerNode");
+            if (rn == null) {
+                throw NodeFault.NodeNotFound.getStatus("Parent directory for destination " + destURI.getPath());
+            }
+
+            if ((rn.node != null) && !(rn.node instanceof ContainerNode)) {
+                throw NodeFault.NodeNotFound.getStatus("Resolved parent (" +
+                        loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
             }
             ContainerNode destContainer;
             String destName;
             if (rn.node == null) {
-                if (rn.name.equals(destURI.getName())) {
-                    // 
+                if (rn.brokenLeafLink) {
+                    throw NodeFault.UnreadableLinkTarget.getStatus(destURI.getPath());
+                } else {
                     destContainer = rn.parent;
                     destName = rn.name;
-                } else {
-                    throw new IllegalArgumentException("destination link not found");
                 }
             } else {
                 destContainer = (ContainerNode) rn.node;
