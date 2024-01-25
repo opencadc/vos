@@ -140,6 +140,9 @@ public class InternalTransferAction extends VOSpaceTransfer {
             // resolve the links to containers in the path so we get the actual node
             PathResolver res = new PathResolver(nodePersistence, authorizer);
             Node srcNode = res.getNode(srcURI.getPath(), false);
+            if (srcNode == null) {
+                throw NodeFault.NodeNotFound.getStatus(srcURI.getPath());
+            }
 
             log.debug("Resolved src path: " + srcURI + " -> " + srcNode);
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
