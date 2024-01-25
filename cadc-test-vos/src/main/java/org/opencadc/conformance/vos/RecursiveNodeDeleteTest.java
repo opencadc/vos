@@ -69,10 +69,13 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
@@ -91,7 +94,6 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
-import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOSURI;
@@ -100,6 +102,8 @@ import org.opencadc.vospace.io.NodeReader;
 
 public class RecursiveNodeDeleteTest extends VOSTest {
     private static final Logger log = Logger.getLogger(RecursiveNodeDeleteTest.class);
+
+    protected final URL recursiveDeleteServiceURL;
 
     // permissions tests
     private GroupURI accessGroup;
@@ -112,11 +116,14 @@ public class RecursiveNodeDeleteTest extends VOSTest {
     protected boolean nodelockSupported = true;
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
-
     protected boolean cleanupOnSuccess = true;
     
     protected RecursiveNodeDeleteTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
+
+        RegistryClient regClient = new RegistryClient();
+        this.recursiveDeleteServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_DELETE, AuthMethod.CERT);
+        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_DELETE, recursiveDeleteServiceURL));
     }
 
     /**

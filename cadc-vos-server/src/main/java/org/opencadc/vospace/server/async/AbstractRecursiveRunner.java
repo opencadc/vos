@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,8 +67,6 @@
 
 package org.opencadc.vospace.server.async;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.SyncOutput;
 import ca.nrc.cadc.util.ThrowableUtil;
@@ -76,7 +74,6 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
@@ -89,16 +86,12 @@ import java.util.List;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
-import org.opencadc.vospace.server.actions.DeleteNodeAction;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -108,7 +101,7 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
  */
 public abstract class AbstractRecursiveRunner implements JobRunner {
 
-    private static Logger log = Logger.getLogger(AbstractRecursiveRunner.class);
+    private static final Logger log = Logger.getLogger(AbstractRecursiveRunner.class);
 
     // containers are not locked while being emptied for the recursive delete and might need a few revisits in order
     // for the operation to succeed.
@@ -194,9 +187,9 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             }
 
             log.debug("node: " + target);
-            PathResolver pathResolver = new PathResolver(nodePersistence, authorizer, true);
+            PathResolver pathResolver = new PathResolver(nodePersistence, authorizer);
             String nodePath = target.getPath();
-            Node serverNode = pathResolver.getNode(nodePath);
+            Node serverNode = pathResolver.getNode(nodePath, true);
             if (serverNode == null) {
                 Exception ex = NodeFault.NodeNotFound.getStatus(nodePath);
                 sendError(ex.getMessage());
@@ -218,10 +211,8 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                 if (errorCount > 0) {
                     endPhase = ExecutionPhase.ABORTED;
                     results.add(new Result("errorcount", URI.create("final:" + errorCount)));
-                    ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
-                } else {
-                    ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
                 }
+                ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
             }
             if (!endPhase.equals(ep)) {
                 log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase);

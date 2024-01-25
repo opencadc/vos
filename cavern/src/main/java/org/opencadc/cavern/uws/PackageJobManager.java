@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2018.                            (c) 2018.
+*  (c) 2022.                            (c) 2022.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,63 +62,39 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 5 $
+*
 ************************************************************************
- */
+*/
 
-package org.opencadc.vospace.server.transfers;
+package org.opencadc.cavern.uws;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.JobExecutor;
+import ca.nrc.cadc.uws.server.JobPersistence;
+import ca.nrc.cadc.uws.server.SyncJobExecutor;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.LocalServiceURI;
-import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
-import org.opencadc.vospace.transfer.Transfer;
+import org.opencadc.cavern.uws.CavernJobManager;
+import org.opencadc.vospace.server.pkg.VospacePackageRunner;
 
-/**
- *
- * @author pdowler
- */
-public class BiDirectionalTransferNegotiation extends VOSpaceTransfer {
 
-    private static final Logger log = Logger.getLogger(BiDirectionalTransferNegotiation.class);
+public class PackageJobManager extends CavernJobManager {
+    private static final Logger log = Logger.getLogger(PackageJobManager.class);
 
-    private VOSpaceAuthorizer authorizer;
+    private static final Long MAX_EXEC_DURATION = 3600L; // proxied download
+    private static final Long MAX_DESTRUCTION = 7200L; 
+    private static final Long MAX_QUOTE = 3600L;
 
-    public BiDirectionalTransferNegotiation(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
-        super(per, ju, job, transfer);
-        this.authorizer = new VOSpaceAuthorizer(nodePersistence);
-    }
+    public PackageJobManager() {
+        super();
 
-    @Override
-    public void doAction() throws Exception {
-        boolean updated = false;
-        try {
-            // Even though Transfer.java supports multiple targets, this type
-            // of transfer does not.
-            // This call confirms a single target exists or throws TransferException.
-            confirmSingleTarget(transfer);
-            VOSURI target = new VOSURI(transfer.getTargets().get(0));
+        JobPersistence jobPersistence = createJobPersistence();
+        super.setJobPersistence(jobPersistence);
 
-            PathResolver resolver = new PathResolver(nodePersistence, authorizer);
+        JobExecutor jobExecutor = new SyncJobExecutor(jobPersistence, VospacePackageRunner.class);
+        super.setJobExecutor(jobExecutor);
 
-            Node node = resolver.getNode(target.getPath(), true);
-            if (!(node instanceof ContainerNode)) {
-                throw new TransferException("node is not a container node");
-            }
-
-            LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
-            updateTransferJob(node, loc.getURI(node).getURI(), ExecutionPhase.EXECUTING);
-            updated = true;
-        } finally {
-            if (!updated) {
-                updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
-            }
-        }
+        super.setMaxExecDuration(MAX_EXEC_DURATION);
+        super.setMaxDestruction(MAX_DESTRUCTION);
+        super.setMaxQuote(MAX_QUOTE);
     }
 }

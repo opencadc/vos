@@ -69,18 +69,20 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.Result;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -93,7 +95,6 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
-import static org.opencadc.conformance.vos.VOSTest.XML_CONTENT_TYPE;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
@@ -101,13 +102,14 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
-import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
 
 public class RecursiveNodePropsTest extends VOSTest {
     private static final Logger log = Logger.getLogger(RecursiveNodePropsTest.class);
+
+    public final URL recursiveNodePropsServiceURL;
 
     // permissions tests
     private GroupURI accessGroup;
@@ -120,11 +122,14 @@ public class RecursiveNodePropsTest extends VOSTest {
     protected boolean nodelockSupported = true;
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
-
     protected boolean cleanupOnSuccess = true;
 
     protected RecursiveNodePropsTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
+
+        RegistryClient regClient = new RegistryClient();
+        this.recursiveNodePropsServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_NODEPROPS, AuthMethod.CERT);
+        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_NODEPROPS, recursiveNodePropsServiceURL));
     }
 
     /**

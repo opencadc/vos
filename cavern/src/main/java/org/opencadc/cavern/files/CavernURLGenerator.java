@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -76,14 +76,12 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
@@ -146,28 +144,24 @@ public class CavernURLGenerator implements TransferGenerator {
         if (transfer == null) {
             throw new IllegalArgumentException("transfer is required");
         }
-        List<Protocol> ret = null;
+        List<Protocol> ret;
         try {
-            Direction dir = transfer.getDirection();
-            PathResolver ps = new PathResolver(nodePersistence, authorizer, true);
-            Node n = ps.getNode(target.getParentURI().getPath());
-            // assume not null and Container already checked by caller (TransferRunner)
-            ContainerNode parent = (ContainerNode) n;
-            Node node = nodePersistence.get(parent, target.getName());
-
-            Subject currentSubject = AuthenticationUtil.getCurrentSubject();
-            if (Direction.pushToVoSpace.equals(dir) && node == null) {
-                // create new data node?? this currently does not happen because the library
-                // creates the DataNode
-                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
-            } else if (node instanceof DataNode) {
-                ret = handleDataNode(parent, target.getName(), transfer, currentSubject);
+            PathResolver pr = new PathResolver(nodePersistence, authorizer);
+            Node node = pr.getNode(target.getPath(), true);
+            if (node == null) {
+                throw new NodeNotFoundException(target.getPath());
+            }
+            log.debug("Resolved target node: " + node.getName());
+            final Subject currentSubject = AuthenticationUtil.getCurrentSubject();
+            if (node instanceof DataNode) {
+                ret = handleDataNode(node.parent, node.getName(), transfer);
             } else if (node instanceof ContainerNode) {
                 ret = handleContainerMount(target.getPath(), transfer, currentSubject);
             } else {
                 throw new UnsupportedOperationException(node.getClass().getSimpleName() + " transfer "
-                    + target.getPath());
+                        + target.getPath());
             }
+
         } catch (NodeNotFoundException ex) {
             throw new FileNotFoundException(target.getPath());
         } catch (LinkingException ex) {
@@ -176,7 +170,7 @@ public class CavernURLGenerator implements TransferGenerator {
         return ret;
     }
 
-    private List<Protocol> handleDataNode(ContainerNode parent, String name, Transfer trans, Subject s) {
+    private List<Protocol> handleDataNode(Node parent, String name, Transfer trans) {
         log.debug("handleDataNode: " + parent +  " " + name);
 
         try {
@@ -198,7 +192,7 @@ public class CavernURLGenerator implements TransferGenerator {
         }
         
         boolean allowAnon = true;
-        Class<? extends Grant> grantClass = null;
+        Class<? extends Grant> grantClass;
         if (Direction.pullFromVoSpace.equals(dir)) {
             grantClass = ReadGrant.class;
         } else if (Direction.pushToVoSpace.equals(dir)) {
@@ -213,7 +207,7 @@ public class CavernURLGenerator implements TransferGenerator {
         Subject caller = AuthenticationUtil.getCurrentSubject();
         Object userObject = im.toOwner(caller); // posix
         String callingUser = (userObject == null ? null : userObject.toString()); // uid, null for anon is OK
-        
+
         LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
         VOSURI vp = loc.getURI(parent);
         String parentPath = vp.getPath();
@@ -261,12 +255,12 @@ public class CavernURLGenerator implements TransferGenerator {
     }
     
     private List<Protocol> handleContainerMount(String path, Transfer trans, Subject caller) {
-        Direction dir = trans.getDirection();
         final Map<String,String> params = new TreeMap<>(); // empty for now
         
         PosixPrincipal pp = nodePersistence.getIdentityManager().toPosixPrincipal(caller);
         List<Protocol> ret = new ArrayList<>();
         for (Protocol p : trans.getProtocols()) {
+            log.debug("transfer protocol: " + p.getUri());
             if (VOS.PROTOCOL_SSHFS.equals(p.getUri())) {
                 if (sshServerBase == null) {
                     throw new UnsupportedOperationException("sshfs mount not configured");
@@ -284,13 +278,8 @@ public class CavernURLGenerator implements TransferGenerator {
                         path = path.substring(1);
                     }
                     sb.append(path);
-                    try {
-                        URI u = new URI(sb.toString());
-                        Protocol pe = new Protocol(p.getUri(), sb.toString(), params);
-                        ret.add(pe);
-                    } catch (URISyntaxException ex) {
-                        throw new RuntimeException("BUG: failed to generate mount endpoint URI", ex);
-                    }
+                    Protocol pe = new Protocol(p.getUri(), sb.toString(), params);
+                    ret.add(pe);
                 }
             } else {
                 log.debug("unsupported container protocol: " + p.getUri());
@@ -309,8 +298,6 @@ public class CavernURLGenerator implements TransferGenerator {
             throw new AccessControlException("unable to validate preauth token: key not found");
         }
         
-        TokenTool tk = new TokenTool(pubKeyFile);
-
         // Use this function in case the incoming URI uses '!' instead of '~'
         // in the authority.
         // This will translate the URI to use '~' in it's authority.
@@ -319,8 +306,8 @@ public class CavernURLGenerator implements TransferGenerator {
         log.debug("targetURI for validation: " + commonFormURI.toString());
         log.debug("grant class: " + grantClass);
 
-        String tokenUser = tk.validateToken(token, commonFormURI.getURI(), grantClass);
-        return tokenUser;
+        TokenTool tk = new TokenTool(pubKeyFile);
+        return tk.validateToken(token, commonFormURI.getURI(), grantClass);
     }
 
     void initFilesCap() throws IOException, ResourceNotFoundException {

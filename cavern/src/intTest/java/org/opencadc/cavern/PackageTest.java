@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2024.                            (c) 2024.
+ *  (c) 2023.                            (c) 2023.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,53 +62,31 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  : 5 $
+ *
  ************************************************************************
  */
 
-package org.opencadc.vospace.server.actions;
+package org.opencadc.cavern;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import javax.security.auth.Subject;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.Node;
-import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.NodeFault;
-import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
-import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
-/**
- * Class to perform the deletion of a Node.
- *
- * @author majorb
- * @author adriand
- */
-public class DeleteNodeAction extends NodeAction {
-    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
+public class PackageTest extends org.opencadc.conformance.vos.PackageTest {
 
-    @Override
-    public void doAction() throws Exception {
-        VOSURI target = getTargetURI();
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        Node serverNode = pathResolver.getNode(getTargetURI().getPath(), false);
+    private static final Logger log = Logger.getLogger(PackageTest.class);
 
-        if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus("Target " + target.toString());
-        }
-        delete(serverNode, voSpaceAuthorizer, nodePersistence);
+    static {
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.vospace.server.pkg", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.uws", Level.INFO);
     }
 
-    // Note: called from RecursiveDeleteNodeRunner too
-    public static void delete(Node node, VOSpaceAuthorizer voSpaceAuthorizer,
-                                  NodePersistence nodePersistence) throws Exception {
-        Subject caller = AuthenticationUtil.getCurrentSubject();
-        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(node.parent, caller)
-                || (node.isLocked != null && node.isLocked)) {
-            throw NodeFault.PermissionDenied.getStatus(Utils.getPath(node));
-        }
-
-        log.debug("delete node: " + Utils.getPath(node));
-        nodePersistence.delete(node);
+    public PackageTest() {
+            super(Constants.RESOURCE_ID, Constants.TEST_CERT);
     }
+
 }

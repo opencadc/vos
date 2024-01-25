@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,11 +69,13 @@
 
 package org.opencadc.conformance.vos;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.reg.Standards;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -95,8 +97,14 @@ import org.opencadc.vospace.transfer.TransferWriter;
 public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
+    protected final URL filesServiceURL;
+
     protected FilesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
+
+        RegistryClient regClient = new RegistryClient();
+        this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES_20, AuthMethod.ANON);
+        log.info(String.format("%s: %s", Standards.VOSPACE_FILES_20, filesServiceURL));
     }
 
     @Test
@@ -111,6 +119,7 @@ public class FilesTest extends VOSTest {
             // Create a Transfer
             Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
             transfer.version = VOS.VOSPACE_21;
+            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
             Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             transfer.getProtocols().add(protocol);

@@ -138,39 +138,42 @@ public class InternalTransferAction extends VOSpaceTransfer {
             log.debug("checking move permissions: " + srcURI + " -> " + destURI);
 
             // resolve the links to containers in the path so we get the actual node
-            PathResolver res = new PathResolver(nodePersistence, authorizer, true);
-            Node srcNode = res.getNode(srcURI.getPath());
+            PathResolver res = new PathResolver(nodePersistence, authorizer);
+            Node srcNode = res.getNode(srcURI.getPath(), false);
+            if (srcNode == null) {
+                throw NodeFault.NodeNotFound.getStatus(srcURI.getPath());
+            }
 
             log.debug("Resolved src path: " + srcURI + " -> " + srcNode);
             LocalServiceURI loc = new LocalServiceURI(nodePersistence.getResourceID());
             srcURI = loc.getURI(srcNode);
 
-            // resolve destination, parent first
-            Node destParent = res.getNode(destURI.getParentURI().getPath());
-            if (!(destParent instanceof ContainerNode)) {
-                throw new IllegalArgumentException("parent of destination is not a ContainerNode");
+            PathResolver.ResolvedNode rn = res.getTargetNode(destURI.getPath());
+            if (rn == null) {
+                throw NodeFault.NodeNotFound.getStatus("Parent directory for destination " + destURI.getPath());
             }
 
-            ContainerNode destContainer = (ContainerNode) destParent;
-            Node n = nodePersistence.get(destContainer, destURI.getName());
-            String destName = null;
-            if (n instanceof ContainerNode) {
-                // found: destURI is an existing container: move into
-                destContainer = (ContainerNode) n;
-                destName = srcURI.getName();
+            if ((rn.node != null) && !(rn.node instanceof ContainerNode)) {
+                throw NodeFault.NodeNotFound.getStatus("Resolved parent (" +
+                        loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
+            }
+            ContainerNode destContainer;
+            String destName;
+            if (rn.node == null) {
+                if (rn.brokenLeafLink) {
+                    throw NodeFault.UnreadableLinkTarget.getStatus(destURI.getPath());
+                } else {
+                    destContainer = rn.parent;
+                    destName = rn.name;
+                }
             } else {
-                throw new TransferException("destination is not a container");
+                destContainer = (ContainerNode) rn.node;
+                destName = srcURI.getName();
             }
-            if (destName == null) {
-                // destURI is not an existing container: move and/or rename
-                // keep destContainer === destParent == destURI.getParent
-                destName = destURI.getName();
-            }
-
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
 
             Subject caller = AuthenticationUtil.getCurrentSubject();
-            // check permission to remove src from it's current parent
+            // check permission to remove src from its current parent
             if (!authorizer.hasSingleNodeWritePermission(srcNode.parent, caller)) {
                 throw NodeFault.PermissionDenied.getStatus(loc.getURI(srcNode).getPath());
             }

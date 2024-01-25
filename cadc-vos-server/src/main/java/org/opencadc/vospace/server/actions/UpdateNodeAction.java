@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -75,7 +75,6 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -110,8 +109,8 @@ public class UpdateNodeAction extends NodeAction {
         }
 
         voSpaceAuthorizer.setDisregardLocks(true); // locks don't apply to properties updates
-        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer, true);
-        Node serverNode = pathResolver.getNode(target.getPath());
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node serverNode = pathResolver.getNode(target.getPath(), false);
         if (serverNode == null) {
             throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget.toString());
         }
