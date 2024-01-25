@@ -152,12 +152,12 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
             // careful to capture a link to data node so we can get the right filename in the transfer
-            PathResolver resolver1 = new PathResolver(nodePersistence, authorizer, false);
-            Node apparentNode = resolver1.getNode(target.getPath());
+            PathResolver resolver1 = new PathResolver(nodePersistence, authorizer);
+            Node apparentNode = resolver1.getNode(target.getPath(), false);
             Node actualNode = apparentNode;
             if (apparentNode instanceof LinkNode) {
-                PathResolver resolver2 = new PathResolver(nodePersistence, authorizer, true);
-                actualNode = resolver2.getNode(target.getPath());
+                PathResolver resolver2 = new PathResolver(nodePersistence, authorizer);
+                actualNode = resolver2.getNode(target.getPath(), true);
             }
             log.debug("Resolved path: " + target + " -> " + actualNode);
 

@@ -70,7 +70,6 @@
 package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.util.StringUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,9 +78,7 @@ import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
-import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
@@ -89,8 +86,6 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 /**
  * Utility class to follow and resolve the target of link nodes in a local vospace including checking
  * read permission along the path.
- *
- * <p>If the last node on the path is a link node, it will not be resolved.
  *
  * @author adriand
  * @author majorb
@@ -103,87 +98,138 @@ public class PathResolver {
     private static final int VISIT_LIMIT_MAX = 40;
     private final NodePersistence nodePersistence;
     private final VOSpaceAuthorizer voSpaceAuthorizer;
-    private final boolean resolveLinks;
-    
-    private List<String> visitedPaths = new ArrayList<>();
+
     private int visitLimit = 20;
-    private int visitCount = 0;
 
 
-    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, boolean resolveLinks) {
+    /**
+     * Ctor
+     * @param nodePersistence - node persistence to use
+     * @param voSpaceAuthorizer - vo authorizer to check permissions along the path
+
+     */
+    public PathResolver(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer) {
         this.nodePersistence = nodePersistence;
         this.voSpaceAuthorizer = voSpaceAuthorizer;
-        this.resolveLinks = resolveLinks;
+    }
+
+    /**
+     * Resolves a data node URI and returns a ResolvedNode object that contains details of the data node: the node
+     * itself (if exists), its parent and the node name.
+     * @param nodePath path of the data node to be resolved
+     * @return ResolvedNode object with the actual node (or null if it doesn't exist), its parent and its name.
+     * @throws Exception
+     */
+    public ResolvedNode getTargetNode(String nodePath) throws Exception {
+        return resolveNode(nodePath, true, new ArrayList<>());
     }
 
     /**
      * Resolves a node URI, follow links, and returns the end node.
      *
-     * @param nodePath
+     * @param nodePath path of the data node to be resolved
+     * @param resolveLeafLink - If true and the leaf node is a LinkNode it resolves it, otherwise it returns the
+     *                         LinkNode after potentially resolving other links in the path.
      * @return the last node in the path or null if not found
      * @throws org.opencadc.vospace.LinkingException
      */
-    public Node getNode(String nodePath) throws Exception {
+    public Node getNode(String nodePath, boolean resolveLeafLink) throws Exception {
+        ResolvedNode rn = resolveNode(nodePath, resolveLeafLink, new ArrayList<>());
+        if ((rn == null) || (rn.node == null)) {
+            return null;
+        }
+        return rn.node;
+    }
+
+    private ResolvedNode resolveNode(String nodePath, boolean resolveLeafLink, List<String> visitedPaths) throws Exception {
         final Subject subject = AuthenticationUtil.getCurrentSubject();
-            
-        log.debug("get: [" + nodePath + "]");
+        log.debug("resolve node: [" + nodePath + "]");
         ContainerNode node = nodePersistence.getRootNode();
         voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject);
         
-        Node ret = node;
-        
-        if (StringUtil.hasLength(nodePath)) {
-            if (nodePath.charAt(0) == '/') {
-                nodePath = nodePath.substring(1);
-            }
+        ResolvedNode ret = new ResolvedNode();
+        while (StringUtil.hasLength(nodePath) && (nodePath.charAt(0) == '/')) {
+            nodePath = nodePath.substring(1);
+        }
+
+        if (!StringUtil.hasLength(nodePath)) {
+            // root node
+            ret.node = node;
+            ret.parent = node.parent;
+            ret.name = node.getName();
+        } else {
             Iterator<String> pathIter = Arrays.stream(nodePath.split("/")).iterator();
             while (pathIter.hasNext()) {
                 String name = pathIter.next();
-                log.debug("get node: '" + name + "' in path '" + nodePath + "'");
-                Node child = nodePersistence.get((ContainerNode) node, name);
+                log.debug("get node: '" + name + "' in parent '" + Utils.getPath(node) + "'");
+                Node child = nodePersistence.get(node, name);
                 if (child == null) {
-                    return null;
+                    if (pathIter.hasNext()) {
+                        log.debug("Could not find child node " + name);
+                        return null;
+                    } else {
+                        // got to a non-existent leaf
+                        ret.parent = node;
+                        ret.name = name;
+                        ret.node = null;
+                        break;
+                    }
+                } else {
+                    ret.parent = child.parent;
+                    ret.node = child;
+                    ret.name = child.getName();
                 }
                 if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
                     LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }
 
-                if (resolveLinks && pathIter.hasNext()) {
-                    while (child instanceof LinkNode) {
-                        log.debug("Resolving link node " + Utils.getPath(node));
-                        if (visitCount > visitLimit) {
-                            throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
-                        }
-                        visitCount++;
-                        log.debug("visit number " + visitCount);
+                while (child instanceof LinkNode) {
+                    if (!resolveLeafLink && !pathIter.hasNext()) {
+                        log.debug("Returning link node " + Utils.getPath(child));
+                        break;
+                    }
+                    log.debug("Resolving link node " + Utils.getPath(child));
+                    if (visitedPaths.size() > visitLimit) {
+                        throw NodeFault.UnreadableLinkTarget.getStatus("Exceeded link limit.");
+                    }
+                    log.debug("visit number " + visitedPaths.size());
 
-                        LinkNode linkNode = (LinkNode) child;
-                        VOSURI targetURI = validateTargetURI(linkNode);
+                    LinkNode linkNode = (LinkNode) child;
+                    VOSURI targetURI = validateTargetURI(linkNode);
 
-                        String linkPath = targetURI.getPath();
-                        if (visitedPaths.contains(linkPath)) {
-                            throw NodeFault.UnreadableLinkTarget.getStatus(
-                                    "detected link node cycle: already followed link -> " + linkPath);
-                        }
-                        visitedPaths.add(linkPath);
-                        
-                        // recursive follow
-                        child = getNode(targetURI.getPath());
+                    String linkPath = targetURI.getPath();
+                    if (visitedPaths.contains(linkPath)) {
+                        throw NodeFault.UnreadableLinkTarget.getStatus(
+                                "detected link node cycle: already followed link -> " + linkPath);
+                    }
+                    visitedPaths.add(linkPath);
+
+                    // recursive follow
+                    log.debug("Resolve: " + targetURI.getPath());
+                    ret = resolveNode(targetURI.getPath(), resolveLeafLink, visitedPaths);
+                    if (ret == null) {
+                        log.debug("Could not resolve link " + targetURI.getPath());
+                        return null;
+                    } else {
+                        // not found target leaf node
+                        ret.brokenLeafLink = !pathIter.hasNext() && (ret.node == null);
+                        child = ret.node;
                     }
                 }
                 if (pathIter.hasNext()) {
                     if (child instanceof ContainerNode) {
                         node = (ContainerNode) child;
                     } else {
+                        log.debug("Found non container node in the path " + nodePath);
                         return null;
                     }
                 }
-                ret = child;
             }
         }
-        
-        log.debug("return node: " + Utils.getPath(ret));
+
+
+        log.debug("return resolved node: " + ret);
         return ret;
     }
 
@@ -196,7 +242,6 @@ public class PathResolver {
      */
     public VOSURI validateTargetURI(LinkNode linkNode) throws Exception {
         LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
-        VOSURI nodeURI = localServiceURI.getURI(linkNode);
         VOSURI targetURI = new VOSURI(linkNode.getTarget());
 
         log.debug("Validating target: " + targetURI.getServiceURI() + " vs " + localServiceURI.getVOSBase().getServiceURI());
@@ -220,4 +265,15 @@ public class PathResolver {
         this.visitLimit = visitLimit;
     }
 
+    public static class ResolvedNode {
+        public ContainerNode parent;
+        public String name;
+        public Node node;
+        // true if leaf node is a link node with a resolvable but non-existing target
+        public boolean brokenLeafLink = false;
+
+        public String toString() {
+            return "parent " + parent + ", node " + node + " name " + name + " brokenLeafLink " + brokenLeafLink;
+        }
+    }
 }

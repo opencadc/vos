@@ -126,7 +126,7 @@ public abstract class FileAction extends RestAction {
             Context ctx = new InitialContext();
             this.nodePersistence = (FileSystemNodePersistence) ctx.lookup(jndiNodePersistence);
             this.authorizer = new VOSpaceAuthorizer(nodePersistence);
-            this.pathResolver = new PathResolver(nodePersistence, authorizer, true);
+            this.pathResolver = new PathResolver(nodePersistence, authorizer);
             this.config = nodePersistence.getConfig();
             this.identityManager = nodePersistence.getIdentityManager();
         } catch (NamingException oops) {

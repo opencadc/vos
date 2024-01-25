@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -88,7 +88,6 @@ import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -100,6 +99,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -138,91 +138,201 @@ public class TransferTest extends VOSTest {
             // Cleanup leftover node
             delete(nodeURL, false);
 
-            // Create a push-to-vospace Transfer for the node
-            Transfer pushTransfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
-            pushTransfer.version = VOS.VOSPACE_21;
-            pushTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
-            Protocol putWithCert = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            putWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pushTransfer.getProtocols().add(putWithCert);
-
-            // negotiate the transfer
-            Transfer details = doTransfer(pushTransfer);
-            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
-                    Direction.pushToVoSpace, details.getDirection());
-            Assert.assertNotNull(details.getProtocols());
-            log.info(pushTransfer.getDirection() + " results: " + details.getProtocols().size());
-            URL putURL = null;
-            for (Protocol p : details.getProtocols()) {
-                String endpoint = p.getEndpoint();
-                log.info("PUT endpoint: " + endpoint);
-                try {
-                    
-                    URL u = new URL(endpoint);
-                    if (putURL == null) {
-                        putURL = u; // first
-                    }
-                } catch (MalformedURLException e) {
-                    Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
-                }
-            }
-            Assert.assertNotNull(putURL);
-            
-            // put the bytes
-            Random rnd = new Random();
-            byte[] data = new byte[1024];
-            rnd.nextBytes(data);
-            FileContent content = new FileContent(data, "application/octet-stream");
-            HttpUpload put = new HttpUpload(content, putURL);
-            put.run();
-            log.info("put: " + put.getResponseCode() + " " + put.getThrowable());
-            Assert.assertTrue(PUT_OK.contains(put.getResponseCode()));
-            Assert.assertNull(put.getThrowable());
-
-            // Create a pull-from-vospace Transfer for the node
-            Transfer pullTransfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            pullTransfer.version = VOS.VOSPACE_21;
-            pullTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET)); // anon, preauth
-            Protocol getWithCert = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            getWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pullTransfer.getProtocols().add(getWithCert);
-            
-
-            // Do the transfer
-            details = doTransfer(pullTransfer);
-            Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
-                    Direction.pullFromVoSpace, details.getDirection());
-            Assert.assertNotNull(details.getProtocols());
-            log.info(pullTransfer.getDirection() + " results: " + details.getProtocols().size());
-            URL getURL = null;
-            for (Protocol p : details.getProtocols()) {
-                String endpoint = p.getEndpoint();
-                log.info("GET endpoint: " + endpoint);
-                try {
-                    URL u = new URL(endpoint);
-                    if (getURL == null) {
-                        getURL = u; // first
-                    }
-                } catch (MalformedURLException e) {
-                    Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
-                }
-            }
-            Assert.assertNotNull(getURL);
-            
-            // get the bytes
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(getURL, bos);
-            get.run();
-            log.info("get: " + get.getResponseCode() + " " + get.getContentType() + " " + get.getThrowable());
-            Assert.assertEquals(200, get.getResponseCode());
-            Assert.assertNull(get.getThrowable());
-            Assert.assertEquals(content.getBytes().length, get.getContentLength());
-            Assert.assertEquals(content.getContentType(), get.getContentType());
-            byte[] actual = bos.toByteArray();
-            Assert.assertArrayEquals(content.getBytes(), actual);
+            verifyPushPull(nodeURI.getURI());
             
             // Delete the node
             delete(nodeURL, false);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    private void verifyPushPull(URI testURI) throws Exception {
+        // Create a push-to-vospace Transfer for the node
+        Transfer pushTransfer = new Transfer(testURI, Direction.pushToVoSpace);
+        pushTransfer.version = VOS.VOSPACE_21;
+        pushTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
+        Protocol putWithCert = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+        putWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+        pushTransfer.getProtocols().add(putWithCert);
+
+        // negotiate the transfer
+        Transfer details = doTransfer(pushTransfer);
+        Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
+                Direction.pushToVoSpace, details.getDirection());
+        Assert.assertNotNull(details.getProtocols());
+        log.info(pushTransfer.getDirection() + " results: " + details.getProtocols().size());
+        URL putURL = null;
+        for (Protocol p : details.getProtocols()) {
+            String endpoint = p.getEndpoint();
+            log.info("PUT endpoint: " + endpoint);
+            try {
+
+                URL u = new URL(endpoint);
+                if (putURL == null) {
+                    putURL = u; // first
+                }
+            } catch (MalformedURLException e) {
+                Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
+            }
+        }
+        Assert.assertNotNull(putURL);
+
+        // put the bytes
+        Random rnd = new Random();
+        byte[] data = new byte[1024];
+        rnd.nextBytes(data);
+        FileContent content = new FileContent(data, "application/octet-stream");
+        HttpUpload put = new HttpUpload(content, putURL);
+        put.run();
+        log.info("put: " + put.getResponseCode() + " " + put.getThrowable());
+        Assert.assertTrue(PUT_OK.contains(put.getResponseCode()));
+        Assert.assertNull(put.getThrowable());
+
+        // Create a pull-from-vospace Transfer for the node
+        Transfer pullTransfer = new Transfer(testURI, Direction.pullFromVoSpace);
+        pullTransfer.version = VOS.VOSPACE_21;
+        pullTransfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET)); // anon, preauth
+        Protocol getWithCert = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+        getWithCert.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+        pullTransfer.getProtocols().add(getWithCert);
+
+
+        // Do the transfer
+        details = doTransfer(pullTransfer);
+        Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
+                Direction.pullFromVoSpace, details.getDirection());
+        Assert.assertNotNull(details.getProtocols());
+        log.info(pullTransfer.getDirection() + " results: " + details.getProtocols().size());
+        URL getURL = null;
+        for (Protocol p : details.getProtocols()) {
+            String endpoint = p.getEndpoint();
+            log.info("GET endpoint: " + endpoint);
+            try {
+                URL u = new URL(endpoint);
+                if (getURL == null) {
+                    getURL = u; // first
+                }
+            } catch (MalformedURLException e) {
+                Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
+            }
+        }
+        Assert.assertNotNull(getURL);
+
+        // get the bytes
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        HttpGet get = new HttpGet(getURL, bos);
+        get.run();
+        log.info("get: " + get.getResponseCode() + " " + get.getContentType() + " " + get.getThrowable());
+        Assert.assertEquals(200, get.getResponseCode());
+        Assert.assertNull(get.getThrowable());
+        Assert.assertEquals(content.getBytes().length, get.getContentLength());
+        Assert.assertEquals(content.getContentType(), get.getContentType());
+        byte[] actual = bos.toByteArray();
+        Assert.assertArrayEquals(content.getBytes(), actual);
+    }
+
+    @Test
+    public void syncPushPullViaDataLinkTest() {
+        // C/D
+        // L -> C/D
+        // put to L
+        // get from L
+        try {
+            // create ContainerNode
+            final String cpath = "syncPushPullViaDataLinkTest";
+            final URL conURL = getNodeURL(nodesServiceURL, cpath);
+            final VOSURI conURI = getVOSURI(cpath);
+            
+            // create LinkNode -> DataNode
+            final String linkPath = "transfer-data-link";
+            final URL linkURL = getNodeURL(nodesServiceURL, linkPath);
+            final VOSURI linkURI = getVOSURI(linkPath);
+            
+            // create a ContainerNode/DataNode
+            final String path = cpath + "/data-node";
+            final URL nodeURL = getNodeURL(nodesServiceURL, path);
+            final VOSURI nodeURI = getVOSURI(path);
+
+            // Cleanup leftover node
+            log.info("nodeURL: " + nodeURL);
+            delete(nodeURL, false);
+            log.info("linkURL: " + linkURL);
+            delete(linkURL, false);
+            log.info("conURL: " + conURL);
+            delete(conURL, false);
+            
+            // create
+            final ContainerNode con = new ContainerNode(cpath);
+            put(conURL, conURI, con);
+            final DataNode data = new DataNode(path);
+            put(nodeURL, nodeURI, data);
+            final LinkNode link = new LinkNode(linkPath, nodeURI.getURI());
+            put(linkURL, linkURI, link);
+            
+            final URI testURI = linkURI.getURI();
+            log.info("link to data node: " + testURI);
+
+            verifyPushPull(testURI);
+            
+            // cleanup
+            //delete(nodeURL, false);
+            //delete(linkURL, false);
+            //delete(conURL, false);
+            
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+    
+    @Test
+    public void syncPushPullViaContainerLinkTest() {
+        // C/D
+        // L -> C
+        // put to L/D
+        // get from L/D
+        try {
+            // create ContainerNode
+            final String cpath = "transfer-container";
+            final URL conURL = getNodeURL(nodesServiceURL, cpath);
+            final VOSURI conURI = getVOSURI(cpath);
+            
+            // create LinkNode -> ContainerNode
+            final String linkPath = "transfer-container-link";
+            final URL linkURL = getNodeURL(nodesServiceURL, linkPath);
+            final VOSURI linkURI = getVOSURI(linkPath);
+            
+            // create a ContainerNode/DataNode
+            final String path = cpath + "/data-node";
+            final URL nodeURL = getNodeURL(nodesServiceURL, path);
+            final VOSURI nodeURI = getVOSURI(path);
+
+            // Cleanup leftover node
+            log.info("nodeURL: " + nodeURL);
+            delete(nodeURL, false);
+            log.info("linkURL: " + linkURL);
+            delete(linkURL, false);
+            log.info("conURL: " + conURL);
+            delete(conURL, false);
+            
+            // create
+            final ContainerNode con = new ContainerNode(cpath);
+            put(conURL, conURI, con);
+            final LinkNode link = new LinkNode(linkPath, conURI.getURI());
+            put(linkURL, linkURI, link);
+            
+            final URI testURI = new URI(linkURI.getURI().toASCIIString() + "/" + nodeURI.getName());
+            log.info("link to data node: " + testURI);
+
+            verifyPushPull(testURI);
+            
+            // cleanup
+            //delete(nodeURL, false);
+            //delete(linkURL, false);
+            //delete(conURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);

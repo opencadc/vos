@@ -140,7 +140,7 @@ public class VospacePackageRunner extends PackageRunner {
             Context ctx = new InitialContext();
             this.nodePersistence = (NodePersistence) ctx.lookup(jndiKey);
             this.vospaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);
-            this.pathResolver = new PathResolver(nodePersistence, vospaceAuthorizer, true);
+            this.pathResolver = new PathResolver(nodePersistence, vospaceAuthorizer);
             this.resourceID = nodePersistence.getResourceID();
         } catch (NamingException e) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiKey, e);
@@ -446,7 +446,7 @@ public class VospacePackageRunner extends PackageRunner {
                 VOSURI vosURI = new VOSURI(target);
                 String nodePath = vosURI.getPath();
                 try {
-                    Node node = pathResolver.getNode(nodePath);
+                    Node node = pathResolver.getNode(nodePath, true);
                     targetNodes.add(node);
                     log.debug(String.format("target %s -> node %s", target.toASCIIString(), node.getName()));
                 } catch (Exception e) {
