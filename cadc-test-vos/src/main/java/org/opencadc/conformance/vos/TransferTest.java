@@ -88,7 +88,6 @@ import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.text.ParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -96,7 +95,6 @@ import java.util.Map;
 import java.util.Random;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.jdom2.JDOMException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
@@ -332,9 +330,9 @@ public class TransferTest extends VOSTest {
             verifyPushPull(testURI);
 
             // cleanup
-            //delete(nodeURL, false);
-            //delete(linkURL, false);
-            //delete(conURL, false);
+            delete(nodeURL, false);
+            delete(linkURL, false);
+            delete(conURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -423,7 +421,59 @@ public class TransferTest extends VOSTest {
         }
     }
 
-    private Job runMove(VOSURI sourceNodeURI, VOSURI destinationNodeURI) throws JDOMException, IOException, ParseException {
+    @Test
+    public void testCircularMove() throws Exception {
+        // move in a subdirectory should fail
+        // testMove/dir cannot be moved to testMove/dir/sbudir
+
+        // create a directory
+        String parentName = "testMove";
+        ContainerNode testNode = new ContainerNode(parentName);
+        testNode.owner = authSubject;
+        testNode.isPublic = false;
+
+        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+        final VOSURI nodeURI = getVOSURI(parentName);
+
+        String dirName = "dir";
+        ContainerNode dirNode = new ContainerNode(dirName);
+        dirNode.parent = testNode;
+        String dirPath = parentName + "/" + dirName;
+        final VOSURI dirURI = getVOSURI(dirPath);
+        final URL dirURL = getNodeURL(nodesServiceURL, dirPath);
+
+        String subDirName = "subdir";
+        ContainerNode subDirNode = new ContainerNode(subDirName);
+        subDirNode.parent = dirNode;
+        String subDirPath = dirPath + "/" + subDirName;
+        final VOSURI subDirURI = getVOSURI(subDirPath);
+        final URL subDirURL = getNodeURL(nodesServiceURL, subDirPath);
+
+        // cleanup
+        delete(subDirURL, false);
+        delete(dirURL, false);
+        delete(nodeURL, false);
+
+        // PUT the nodes
+        log.info("putAction: " + nodeURI + " -> " + nodeURL);
+        put(nodeURL, nodeURI, testNode);
+        log.info("putAction: " + dirURI + " -> " + dirURL);
+        put(dirURL, dirURI, dirNode);
+        log.info("putAction: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        Job job = runMove(dirURI, subDirURI);
+        // This failure could leave orphaned nodes in the database
+        Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
+        Assert.assertTrue(job.getErrorSummary().getSummaryMessage(), job.getErrorSummary().getSummaryMessage().contains(
+                "Cannot move container node into its descendants"));
+
+        delete(subDirURL);
+        delete(dirURL);
+        delete(nodeURL);
+    }
+
+    private Job runMove(VOSURI sourceNodeURI, VOSURI destinationNodeURI) throws Exception {
         // Create a Transfer
         Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
         transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
@@ -498,58 +548,6 @@ public class TransferTest extends VOSTest {
         get = new HttpGet(jobURL, out);
         Subject.doAs(authSubject, new RunnableAction(get));
         return reader.read(new StringReader(out.toString()));
-    }
-
-    @Test
-    public void testCircularMove() throws Exception {
-        // move in a subdirectory should fail
-        // testMove/dir cannot be moved to testMove/dir/sbudir
-
-        // create a directory
-        String parentName = "testMove";
-        ContainerNode testNode = new ContainerNode(parentName);
-        testNode.owner = authSubject;
-        testNode.isPublic = false;
-
-        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
-        final VOSURI nodeURI = getVOSURI(parentName);
-
-        String dirName = "dir";
-        ContainerNode dirNode = new ContainerNode(dirName);
-        dirNode.parent = testNode;
-        String dirPath = parentName + "/" + dirName;
-        final VOSURI dirURI = getVOSURI(dirPath);
-        final URL dirURL = getNodeURL(nodesServiceURL, dirPath);
-
-        String subDirName = "subdir";
-        ContainerNode subDirNode = new ContainerNode(subDirName);
-        subDirNode.parent = dirNode;
-        String subDirPath = dirPath + "/" + subDirName;
-        final VOSURI subDirURI = getVOSURI(subDirPath);
-        final URL subDirURL = getNodeURL(nodesServiceURL, subDirPath);
-
-        // cleanup
-        delete(subDirURL, false);
-        delete(dirURL, false);
-        delete(nodeURL, false);
-
-        // PUT the nodes
-        log.info("putAction: " + nodeURI + " -> " + nodeURL);
-        put(nodeURL, nodeURI, testNode);
-        log.info("putAction: " + dirURI + " -> " + dirURL);
-        put(dirURL, dirURI, dirNode);
-        log.info("putAction: " + subDirURI + " -> " + subDirURL);
-        put(subDirURL, subDirURI, subDirNode);
-
-        Job job = runMove(dirURI, subDirURI);
-        // This failure could leave orphaned nodes in the database
-        Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
-        Assert.assertTrue(job.getErrorSummary().getSummaryMessage(), job.getErrorSummary().getSummaryMessage().contains(
-                "Cannot move container node into its descendants"));
-
-        delete(subDirURL);
-        delete(dirURL);
-        delete(nodeURL);
     }
 
     protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
