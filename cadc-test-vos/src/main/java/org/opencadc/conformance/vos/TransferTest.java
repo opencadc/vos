@@ -116,8 +116,8 @@ public class TransferTest extends VOSTest {
 
     protected final URL transferServiceURL;
 
-    private static final List<Integer> PUT_OK = Arrays.asList(new Integer[] { 200, 201});
-    
+    private static final List<Integer> PUT_OK = Arrays.asList(200, 201);
+
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
 
@@ -139,7 +139,7 @@ public class TransferTest extends VOSTest {
             delete(nodeURL, false);
 
             verifyPushPull(nodeURI.getURI());
-            
+
             // Delete the node
             delete(nodeURL, false);
 
@@ -245,12 +245,12 @@ public class TransferTest extends VOSTest {
             final String cpath = "syncPushPullViaDataLinkTest";
             final URL conURL = getNodeURL(nodesServiceURL, cpath);
             final VOSURI conURI = getVOSURI(cpath);
-            
+
             // create LinkNode -> DataNode
             final String linkPath = "transfer-data-link";
             final URL linkURL = getNodeURL(nodesServiceURL, linkPath);
             final VOSURI linkURI = getVOSURI(linkPath);
-            
+
             // create a ContainerNode/DataNode
             final String path = cpath + "/data-node";
             final URL nodeURL = getNodeURL(nodesServiceURL, path);
@@ -263,7 +263,7 @@ public class TransferTest extends VOSTest {
             delete(linkURL, false);
             log.info("conURL: " + conURL);
             delete(conURL, false);
-            
+
             // create
             final ContainerNode con = new ContainerNode(cpath);
             put(conURL, conURI, con);
@@ -271,23 +271,23 @@ public class TransferTest extends VOSTest {
             put(nodeURL, nodeURI, data);
             final LinkNode link = new LinkNode(linkPath, nodeURI.getURI());
             put(linkURL, linkURI, link);
-            
+
             final URI testURI = linkURI.getURI();
             log.info("link to data node: " + testURI);
 
             verifyPushPull(testURI);
-            
+
             // cleanup
-            //delete(nodeURL, false);
-            //delete(linkURL, false);
-            //delete(conURL, false);
-            
+            delete(nodeURL, false);
+            delete(linkURL, false);
+            delete(conURL, false);
+
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
         }
     }
-    
+
     @Test
     public void syncPushPullViaContainerLinkTest() {
         // C/D
@@ -299,12 +299,12 @@ public class TransferTest extends VOSTest {
             final String cpath = "transfer-container";
             final URL conURL = getNodeURL(nodesServiceURL, cpath);
             final VOSURI conURI = getVOSURI(cpath);
-            
+
             // create LinkNode -> ContainerNode
             final String linkPath = "transfer-container-link";
             final URL linkURL = getNodeURL(nodesServiceURL, linkPath);
             final VOSURI linkURI = getVOSURI(linkPath);
-            
+
             // create a ContainerNode/DataNode
             final String path = cpath + "/data-node";
             final URL nodeURL = getNodeURL(nodesServiceURL, path);
@@ -317,22 +317,22 @@ public class TransferTest extends VOSTest {
             delete(linkURL, false);
             log.info("conURL: " + conURL);
             delete(conURL, false);
-            
+
             // create
             final ContainerNode con = new ContainerNode(cpath);
             put(conURL, conURI, con);
             final LinkNode link = new LinkNode(linkPath, conURI.getURI());
             put(linkURL, linkURI, link);
-            
+
             final URI testURI = new URI(linkURI.getURI().toASCIIString() + "/" + nodeURI.getName());
             log.info("link to data node: " + testURI);
 
             verifyPushPull(testURI);
-            
+
             // cleanup
-            //delete(nodeURL, false);
-            //delete(linkURL, false);
-            //delete(conURL, false);
+            delete(nodeURL, false);
+            delete(linkURL, false);
+            delete(conURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -356,7 +356,7 @@ public class TransferTest extends VOSTest {
             final VOSURI destinationNodeURI = getVOSURI(destinationName);
             final ContainerNode destinationNode = new ContainerNode(destinationName);
             log.debug("destination URL: " + destinationNodeURL);
-            
+
             // Source child ContainerNode
             String childContainerName = "move-source-container-child-node";
             String childContainerPath = sourceName + "/" + childContainerName;
@@ -370,7 +370,7 @@ public class TransferTest extends VOSTest {
             URL childDataNodeURL = getNodeURL(nodesServiceURL, childDataPath);
             final VOSURI childDataNodeURI = getVOSURI(childDataPath);
             final DataNode childDataNode = new DataNode(childDataName);
-            
+
             // Cleanup old nodes
             delete(childContainerNodeURL, false);
             delete(childDataNodeURL, false);
@@ -383,89 +383,14 @@ public class TransferTest extends VOSTest {
             // Put new nodes
             put(sourceNodeURL, sourceNodeURI, sourceNode);
             put(destinationNodeURL, destinationNodeURI, destinationNode);
-            
+
             log.debug("source-container-child URL: " + childContainerNodeURL);
             put(childContainerNodeURL, childContainerNodeURI, childContainerNode);
 
             log.debug("source-data-child URL: " + childDataNodeURL);
             put(childDataNodeURL, childDataNodeURI, childDataNode);
 
-            // Create a Transfer
-            Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-
-            // Write the Transfer document
-            TransferWriter transferWriter = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            transferWriter.write(transfer, sw);
-            log.debug("transfer request XML: " + sw);
-
-            // Post the transfer document
-            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-            HttpPost post = new HttpPost(transferServiceURL, fileContent, false);
-            Subject.doAs(authSubject, new RunnableAction(post));
-            Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
-            Assert.assertNull("expected POST throwable == null", post.getThrowable());
-            URL jobURL = post.getRedirectURL();
-            log.debug("jobURL: " + jobURL);
-            Assert.assertNotNull(jobURL);
-            
-            // Get the job
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(jobURL, out);
-            log.debug("GET: " + post.getRedirectURL());
-            Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("GET responseCode: " + get.getResponseCode());
-            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
-            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
-                              get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
-
-            // Read the job
-            log.debug("job XML:\n" + out);
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(out.toString()));
-            Assert.assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
-
-            // Run the job.
-            Map<String, Object> parameters = new HashMap<>();
-            parameters.put("PHASE", "RUN");
-            URL jobPhaseURL = new URL(jobURL + "/phase");
-            post = new HttpPost(jobPhaseURL, parameters, false);
-            Subject.doAs(authSubject, new RunnableAction(post));
-            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
-
-            // polling: WAIT will block for up to 6 sec or until phase change or if job is in
-            // a terminal phase
-            URL jobPoll = new URL(jobURL + "?WAIT=6"); 
-            int count = 0;
-            boolean done = false;
-            while (!done && count < 10) { // max 10*6 = 60 sec polling
-                out = new ByteArrayOutputStream();
-                log.debug("poll: " + jobPoll);
-                get = new HttpGet(jobPoll, out);
-                Subject.doAs(authSubject, new RunnableAction(get));
-                Assert.assertNull(get.getThrowable());
-                job = reader.read(new StringReader(out.toString()));
-                log.debug("current phase: " + job.getExecutionPhase());
-                switch (job.getExecutionPhase()) {
-                    case QUEUED: 
-                    case EXECUTING:
-                        count++;
-                        break;
-                    default:
-                        done = true;
-                }
-                log.debug("done: " + job.getExecutionPhase() + " " + job.getErrorSummary());
-                Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-            }
-
-            // Check if the job completed
-            out = new ByteArrayOutputStream();
-            get = new HttpGet(jobURL, out);
-            Subject.doAs(authSubject, new RunnableAction(get));
-            job = reader.read(new StringReader(out.toString()));
+            Job job = runMove(sourceNodeURI, destinationNodeURI);
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             // Source node should not be found
@@ -494,6 +419,135 @@ public class TransferTest extends VOSTest {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
         }
+    }
+
+    @Test
+    public void testCircularMove() throws Exception {
+        // move in a subdirectory should fail
+        // testMove/dir cannot be moved to testMove/dir/sbudir
+
+        // create a directory
+        String parentName = "testMove";
+        ContainerNode testNode = new ContainerNode(parentName);
+        testNode.owner = authSubject;
+        testNode.isPublic = false;
+
+        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
+        final VOSURI nodeURI = getVOSURI(parentName);
+
+        String dirName = "dir";
+        ContainerNode dirNode = new ContainerNode(dirName);
+        dirNode.parent = testNode;
+        String dirPath = parentName + "/" + dirName;
+        final VOSURI dirURI = getVOSURI(dirPath);
+        final URL dirURL = getNodeURL(nodesServiceURL, dirPath);
+
+        String subDirName = "subdir";
+        ContainerNode subDirNode = new ContainerNode(subDirName);
+        subDirNode.parent = dirNode;
+        String subDirPath = dirPath + "/" + subDirName;
+        final VOSURI subDirURI = getVOSURI(subDirPath);
+        final URL subDirURL = getNodeURL(nodesServiceURL, subDirPath);
+
+        // cleanup
+        delete(subDirURL, false);
+        delete(dirURL, false);
+        delete(nodeURL, false);
+
+        // PUT the nodes
+        log.info("putAction: " + nodeURI + " -> " + nodeURL);
+        put(nodeURL, nodeURI, testNode);
+        log.info("putAction: " + dirURI + " -> " + dirURL);
+        put(dirURL, dirURI, dirNode);
+        log.info("putAction: " + subDirURI + " -> " + subDirURL);
+        put(subDirURL, subDirURI, subDirNode);
+
+        Job job = runMove(dirURI, subDirURI);
+        // This failure could leave orphaned nodes in the database
+        Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
+        Assert.assertTrue(job.getErrorSummary().getSummaryMessage(), job.getErrorSummary().getSummaryMessage().contains(
+                "Cannot move container node into its descendants"));
+
+        delete(subDirURL);
+        delete(dirURL);
+        delete(nodeURL);
+    }
+
+    private Job runMove(VOSURI sourceNodeURI, VOSURI destinationNodeURI) throws Exception {
+        // Create a Transfer
+        Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
+        transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+        transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+
+        // Write the Transfer document
+        TransferWriter transferWriter = new TransferWriter();
+        StringWriter sw = new StringWriter();
+        transferWriter.write(transfer, sw);
+        log.debug("transfer request XML: " + sw);
+
+        // Post the transfer document
+        FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+        HttpPost post = new HttpPost(transferServiceURL, fileContent, false);
+        Subject.doAs(authSubject, new RunnableAction(post));
+        Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
+        Assert.assertNull("expected POST throwable == null", post.getThrowable());
+        URL jobURL = post.getRedirectURL();
+        log.debug("jobURL: " + jobURL);
+        Assert.assertNotNull(jobURL);
+
+        // Get the job
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        HttpGet get = new HttpGet(jobURL, out);
+        log.debug("GET: " + post.getRedirectURL());
+        Subject.doAs(authSubject, new RunnableAction(get));
+        log.debug("GET responseCode: " + get.getResponseCode());
+        Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+        Assert.assertNull("expected GET throwable == null", get.getThrowable());
+        Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
+                          get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+        // Read the job
+        log.debug("job XML:\n" + out);
+        JobReader reader = new JobReader();
+        Job job = reader.read(new StringReader(out.toString()));
+        Assert.assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
+
+        // Run the job.
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("PHASE", "RUN");
+        URL jobPhaseURL = new URL(jobURL + "/phase");
+        post = new HttpPost(jobPhaseURL, parameters, false);
+        Subject.doAs(authSubject, new RunnableAction(post));
+        Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
+
+        // polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        // a terminal phase
+        URL jobPoll = new URL(jobURL + "?WAIT=6");
+        int count = 0;
+        boolean done = false;
+        while (!done && count < 10) { // max 10*6 = 60 sec polling
+            out = new ByteArrayOutputStream();
+            log.debug("poll: " + jobPoll);
+            get = new HttpGet(jobPoll, out);
+            Subject.doAs(authSubject, new RunnableAction(get));
+            Assert.assertNull(get.getThrowable());
+            job = reader.read(new StringReader(out.toString()));
+            log.debug("current phase: " + job.getExecutionPhase());
+            switch (job.getExecutionPhase()) {
+                case QUEUED:
+                case EXECUTING:
+                    count++;
+                    break;
+                default:
+                    done = true;
+            }
+        }
+
+        // Check if the job completed
+        out = new ByteArrayOutputStream();
+        get = new HttpGet(jobURL, out);
+        Subject.doAs(authSubject, new RunnableAction(get));
+        return reader.read(new StringReader(out.toString()));
     }
 
     protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {

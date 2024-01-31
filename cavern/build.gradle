@@ -40,7 +40,7 @@ dependencies {
     implementation 'org.opencadc:cadc-dali:[1.0,)'
     implementation 'org.opencadc:cadc-pkg-server:[1.2.0,)'
     implementation 'org.opencadc:cadc-vos:[2.0,)'
-    implementation 'org.opencadc:cadc-vos-server:[2.0.8,)'
+    implementation 'org.opencadc:cadc-vos-server:[2.0.9,)'
 
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
 
@@ -50,6 +50,6 @@ dependencies {
     testImplementation 'org.opencadc:cadc-test-uws:[1.0,)'
     testImplementation 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
-    intTestImplementation 'org.opencadc:cadc-test-vos:[2.1.5,)'
+    intTestImplementation 'org.opencadc:cadc-test-vos:[2.1.6,)'
     intTestImplementation 'org.opencadc:cadc-test-vosi:[1.0.11,)'
 }

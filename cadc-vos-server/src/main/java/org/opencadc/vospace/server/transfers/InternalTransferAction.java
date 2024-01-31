@@ -88,6 +88,7 @@ import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
 
@@ -100,7 +101,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
 
     private static final Logger log = Logger.getLogger(InternalTransferAction.class);
 
-    private VOSpaceAuthorizer authorizer;
+    private final VOSpaceAuthorizer authorizer;
 
     public InternalTransferAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
@@ -170,6 +171,17 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 destContainer = (ContainerNode) rn.node;
                 destName = srcURI.getName();
             }
+
+            // prevent moves from directory to its sub-directories
+            if (srcNode instanceof ContainerNode) {
+                String srcPath = Utils.getPath(srcNode);
+                String destPath = Utils.getPath(destContainer);
+                if (destPath.contains(srcPath)) {
+                    throw NodeFault.ContainerNotFound.getStatus(
+                            "Cannot move container node into its descendants: source " +
+                                    "path " + srcPath + " in resolved path " + destPath);
+                }
+            }
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
 
             Subject caller = AuthenticationUtil.getCurrentSubject();
@@ -192,7 +204,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
             nodePersistence.move(srcNode, destContainer, destName);
 
             // final job state
-            List<Result> resultsList = new ArrayList<Result>();
+            List<Result> resultsList = new ArrayList<>();
             String newPath = loc.getURI(srcNode).getPath() + "/" + destName;
             resultsList.add(new Result("destination", new URI(newPath)));
             job.setResultsList(resultsList);
