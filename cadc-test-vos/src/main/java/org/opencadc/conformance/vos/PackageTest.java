@@ -103,6 +103,7 @@ import org.apache.commons.compress.utils.IOUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
@@ -121,14 +122,17 @@ public class PackageTest extends VOSTest {
     private static final Logger log = Logger.getLogger(PackageTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.DEBUG);
     }
 
     private static final String ZIP_CONTENT_TYPE = "application/zip";
     private static final String TAR_CONTENT_TYPE = "application/x-tar";
 
-    protected PackageTest(URI resourceID, File testCert) {
+    private final boolean fooLinks;
+
+    protected PackageTest(URI resourceID, File testCert, boolean fooLinks) {
         super(resourceID, testCert);
+        this.fooLinks = fooLinks;
     }
 
 
@@ -275,11 +279,11 @@ public class PackageTest extends VOSTest {
             //  /root/target-2/
             //  /root/target-2/file2
 
-            String root = "multi-target-root-node";
-            String target1 = root + "/target-1";
-            String file1 = target1 + "/target-1-file.txt";
-            String target2 = root + "/target-2";
-            String file2 = target2 + "/target-2-file.txt";
+            String root = "multi-target-root-node/";
+            String target1 = root + "target-1/";
+            String file1 = target1 + "target-1-file.txt";
+            String target2 = root + "target-2/";
+            String file2 = target2 + "target-2-file.txt";
 
             URL rootURL = getNodeURL(nodesServiceURL, root);
             URL target1URL = getNodeURL(nodesServiceURL, target1);
@@ -337,14 +341,14 @@ public class PackageTest extends VOSTest {
              //   /root-folder/folder-2/folder-3/link-1.txt
 
             // nodes paths
-            String root = "full-root-folder";
-            String file1 = root + "/file-1.txt";
-            String folder1 = root + "/folder-1";
-            String folder2 = root + "/folder-2";
-            String file2 = folder2 + "/file-2.txt";
-            String file3 = folder2 + "/file-3.txt";
-            String folder3 = folder2 + "/folder-3";
-            String link1 = folder3 + "/link-1.txt";
+            String root = "full-root-folder/";
+            String file1 = root + "file-1.txt";
+            String folder1 = root + "folder-1/";
+            String folder2 = root + "folder-2/";
+            String file2 = folder2 + "file-2.txt";
+            String file3 = folder2 + "file-3.txt";
+            String folder3 = folder2 + "folder-3/";
+            String link1 = folder3 + "link-1.txt";
 
             // node URL's
             URL rootURL = getNodeURL(nodesServiceURL, root);
@@ -392,6 +396,190 @@ public class PackageTest extends VOSTest {
             // cleanup
             delete(nodes);
 
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    @Test
+    public void inPackageLinkNodeTest() {
+        // /dir1/dir2/link1
+        // /dir1/dir2/file1
+        // /dir1/dir3/file2
+        // link1 is a link to file2
+        // download package for dir1 which must have the LinkNode link1 -> file2
+        try {
+            String root = "in-package-link-root-node/";
+            String dir1 = root + "dir1/";
+            String dir2 = dir1 + "dir2/";
+            String link1 = dir2 + "link1";
+            String file1 = dir2 + "file1";
+            String dir3 = dir1 + "dir3/";
+            String file2 = dir3 + "file2";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL dir1URL = getNodeURL(nodesServiceURL, dir1);
+            URL dir2URL = getNodeURL(nodesServiceURL, dir2);
+            URL link1URL = getNodeURL(nodesServiceURL, link1);
+            URL file1URL = getNodeURL(nodesServiceURL, file1);
+            URL dir3URL = getNodeURL(nodesServiceURL, dir3);
+            URL file2URL = getNodeURL(nodesServiceURL, file2);
+
+            URL[] nodes = new URL[] {file2URL, dir3URL, file1URL, link1URL, dir2URL, dir1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String file1Content = "file-1-content";
+            String file2Content = "file-2-content";
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI dir1URI = putContainerNode(dir1, dir1URL);
+            VOSURI dir2URI = putContainerNode(dir2, dir2URL);
+            VOSURI file1URI = putDataNode(file1, file1Content, authSubject);
+            VOSURI dir3URI = putContainerNode(dir3, dir3URL);
+            VOSURI file2URI = putDataNode(file2, file2Content, authSubject);
+            VOSURI link1URI = putLinkNode(link1, link1URL, file2URI.getURI());
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(dir1URI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(link1);
+            expected.add(file1);
+            expected.add(file2);
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    @Test
+    public void outOfPackageLinkNodeTest() {
+        // /dir1/dir2/link1
+        // /dir1/dir2/file1
+        // /dir1/dir3/file2
+        // link1 is a link to file2
+        // download package for dir1 which must have the LinkNode link1 -> file2
+        try {
+            String root = "out-of-package-link-root-node";
+            String dir1 = root + "/dir1";
+            String dir2 = dir1 + "/dir2";
+            String link1 = dir2 + "/link1";
+            String file1 = dir2 + "/file1";
+            String dir3 = dir1 + "/dir3";
+            String file2 = dir3 + "/file2";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL dir1URL = getNodeURL(nodesServiceURL, dir1);
+            URL dir2URL = getNodeURL(nodesServiceURL, dir2);
+            URL link1URL = getNodeURL(nodesServiceURL, link1);
+            URL file1URL = getNodeURL(nodesServiceURL, file1);
+            URL dir3URL = getNodeURL(nodesServiceURL, dir3);
+            URL file2URL = getNodeURL(nodesServiceURL, file2);
+
+            URL[] nodes = new URL[] {file2URL, dir3URL, file1URL, link1URL, dir2URL, dir1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String file1Content = "file-1-content";
+            String file2Content = "file-2-content";
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI dir1URI = putContainerNode(dir1, dir1URL);
+            VOSURI dir2URI = putContainerNode(dir2, dir2URL);
+            VOSURI file1URI = putDataNode(file1, file1Content, authSubject);
+            VOSURI dir3URI = putContainerNode(dir3, dir3URL);
+            VOSURI file2URI = putDataNode(file2, file2Content, authSubject);
+            VOSURI linkCURI = putLinkNode(link1, link1URL, file2URI.getURI());
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(dir2URI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(file1);
+            expected.add(file2);
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    @Test
+    public void externalLinkNodeTest() {
+        // /dir1/dir2/link1
+        // /dir1/dir2/file1
+        // /dir1/dir3/file2
+        // link1 is a link to an external resource
+        // download package for dir1 which must not have link1 in the package
+        try {
+            String root = "external-link-root-node/";
+            String dir1 = root + "dir1/";
+            String dir2 = dir1 + "dir2/";
+            String link1 = dir2 + "link1";
+            String file1 = dir2 + "file1";
+            String dir3 = dir1 + "dir3/";
+            String file2 = dir3 + "file2";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL dir1URL = getNodeURL(nodesServiceURL, dir1);
+            URL dir2URL = getNodeURL(nodesServiceURL, dir2);
+            URL link1URL = getNodeURL(nodesServiceURL, link1);
+            URL file1URL = getNodeURL(nodesServiceURL, file1);
+            URL dir3URL = getNodeURL(nodesServiceURL, dir3);
+            URL file2URL = getNodeURL(nodesServiceURL, file2);
+
+            URL[] nodes = new URL[] {file2URL, dir3URL, file1URL, link1URL, dir2URL, dir1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String file1Content = "file-1-content";
+            String file2Content = "file-2-content";
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI dir1URI = putContainerNode(dir1, dir1URL);
+            VOSURI dir2URI = putContainerNode(dir2, dir2URL);
+            VOSURI file1URI = putDataNode(file1, file1Content, authSubject);
+            VOSURI dir3URI = putContainerNode(dir3, dir3URL);
+            VOSURI file2URI = putDataNode(file2, file2Content, authSubject);
+            VOSURI linkCURI = putLinkNode(link1, link1URL, URI.create("http://localhost.com"));
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(dir1URI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(file1);
+            expected.add(file2);
+
+            doTest(targets, expected, TAR_CONTENT_TYPE);
+            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
         } catch (Exception e) {
             log.error("Unexpected error", e);
             Assert.fail("Unexpected error: " + e);
@@ -451,9 +639,15 @@ public class PackageTest extends VOSTest {
         VOSURI nodeURI = getVOSURI(filename);
         Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
         transfer.version = VOS.VOSPACE_21;
-        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-        protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-        transfer.getProtocols().add(protocol);
+        Protocol anon = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+        anon.setSecurityMethod(Standards.SECURITY_METHOD_ANON);
+        transfer.getProtocols().add(anon);
+        Protocol cookie = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+        cookie.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
+        transfer.getProtocols().add(cookie);
+        Protocol token = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+        token.setSecurityMethod(Standards.SECURITY_METHOD_TOKEN);
+        transfer.getProtocols().add(token);
 
         // Get the transfer document
         TransferWriter writer = new TransferWriter();
@@ -508,7 +702,7 @@ public class PackageTest extends VOSTest {
         packageView.getParameters().add(new View.Parameter(VOS.PROPERTY_URI_FORMAT, contentType));
         transfer.setView(packageView);
         Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-        protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+        protocol.setSecurityMethod(Standards.SECURITY_METHOD_COOKIE);
         transfer.getProtocols().add(protocol);
 
         // Write a transfer document
