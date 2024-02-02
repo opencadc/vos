@@ -613,11 +613,13 @@ public class PackageTest extends VOSTest {
         File pkg = downloadPackage(targets, contentType, authSubject);
         Assert.assertNotNull(pkg);
         log.debug("archive file: " + pkg.getAbsolutePath());
+        System.out.println("archive file: " + pkg.getAbsolutePath());
 
         // extract the package
         File extracted = extractPackage(pkg, contentType);
         Assert.assertNotNull(extracted);
         log.debug("extracted file: " + extracted.getAbsolutePath());
+        System.out.println("extracted file: " + extracted.getAbsolutePath());
 
         // verify package files
         verifyPackage(expected, extracted);
