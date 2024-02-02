@@ -199,7 +199,7 @@ public class CreateNodeAction extends NodeAction {
         
         // output modified node
         NodeWriter nodeWriter = getNodeWriter();
-        syncOutput.setCode(200); // Created??
+        syncOutput.setCode(201); // Created??
         syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);

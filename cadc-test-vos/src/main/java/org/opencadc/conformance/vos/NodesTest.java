@@ -1020,8 +1020,8 @@ public class NodesTest extends VOSTest {
         putAction = new HttpUpload(is, childURL);
         Subject.doAs(groupMember, new RunnableAction(putAction));
         log.debug("PUT responseCode: " + putAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, putAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 201",
+                201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
         log.debug("Delete node " + childURL);
