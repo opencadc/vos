@@ -86,7 +86,7 @@ public class PackageTest extends org.opencadc.conformance.vos.PackageTest {
     }
 
     public PackageTest() {
-            super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+            super(Constants.RESOURCE_ID, Constants.TEST_CERT, false);
     }
 
 }
