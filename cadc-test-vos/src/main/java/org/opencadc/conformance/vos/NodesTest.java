@@ -224,7 +224,7 @@ public class NodesTest extends VOSTest {
                     put(subDirURL, subDirURI, subDirNode);
                     Assert.fail("New node should fail when parent is locked");
                 } catch (AssertionError ex) {
-                    Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
+                    Assert.assertEquals("expected PUT response code = 201 expected:<201> but was:<403>",
                             ex.getMessage());
                 }
             }
