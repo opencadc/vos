@@ -89,6 +89,7 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
@@ -138,9 +139,10 @@ public class PutAction extends FileAction {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
             
             Subject caller = AuthenticationUtil.getCurrentSubject();
+            FileSystemNodePersistence fsNodePersistence = (FileSystemNodePersistence) nodePersistence;
             boolean preauthGranted = false;
             if (preauthToken != null) {
-                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                CavernURLGenerator cav = new CavernURLGenerator(fsNodePersistence);
                 Object tokenUser = cav.validateToken(preauthToken, nodeURI, WriteGrant.class);
                 preauthGranted = true;
                 caller.getPrincipals().clear();
@@ -184,16 +186,16 @@ public class PutAction extends FileAction {
             
             // check write permission
             if (!preauthGranted) {
-                if (n != null && authorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
+                if (n != null && voSpaceAuthorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
                     log.debug("authorized to write to existing data node");
-                } else if (authorizer.hasSingleNodeWritePermission(cn, AuthenticationUtil.getCurrentSubject())) {
+                } else if (voSpaceAuthorizer.hasSingleNodeWritePermission(cn, AuthenticationUtil.getCurrentSubject())) {
                     log.debug("authorized to write to parent container");
                 } else {
                     throw new AccessControlException("permission denied: write to " + nodeURI.getPath());
                 }
             }
             
-            target = nodePersistence.nodeToPath(nodeURI);
+            target = fsNodePersistence.nodeToPath(nodeURI);
             
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
             MessageDigest md = MessageDigest.getInstance("MD5");

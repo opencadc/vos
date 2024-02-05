@@ -387,7 +387,7 @@ public class TransferRunner implements JobRunner {
                     
                     TransferGenerator gen = nodePersistence.getTransferGenerator();
                     //List<Protocol> plist = TransferUtil.getTransferEndpoints(trans, job, additionalParameters);
-                    List<Protocol> plist = gen.getEndpoints(target, transfer, job, additionalParameters);
+                    List<Protocol> plist = gen.getEndpoints(target, transfer, additionalParameters);
                     if (plist.isEmpty()) {
                         sendError(ExecutionPhase.EXECUTING,
                                 ErrorType.FATAL, "requested transfer specs not supported",

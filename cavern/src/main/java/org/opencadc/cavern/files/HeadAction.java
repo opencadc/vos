@@ -81,8 +81,10 @@ import java.nio.file.Path;
 import java.security.AccessControlException;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
@@ -114,8 +116,9 @@ public class HeadAction extends FileAction {
             
             Subject caller = AuthenticationUtil.getCurrentSubject();
             boolean preauthGranted = false;
+            FileSystemNodePersistence fsNodePersistence = (FileSystemNodePersistence) nodePersistence;
             if (preauthToken != null) {
-                CavernURLGenerator cav = new CavernURLGenerator(nodePersistence);
+                CavernURLGenerator cav = new CavernURLGenerator(fsNodePersistence);
                 Object tokenUser = cav.validateToken(preauthToken, nodeURI, ReadGrant.class);
                 preauthGranted = true;
                 caller.getPrincipals().clear();
@@ -140,31 +143,16 @@ public class HeadAction extends FileAction {
 
             // GetAction code is common for both /files and /preauth endpoints. Neither will support
             // GET for container nodes
-            if (node instanceof ContainerNode) {
-                log.debug("container nodes not supported for GET");
-                throw new IllegalArgumentException("GET for directories not supported");
+            if (!(node instanceof DataNode)) {
+                log.debug("only data nodes supported for GET");
+                throw new IllegalArgumentException("GET supported for data nodes only");
             }
             
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());
-            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
-            syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
-            syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
-            syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
-            
-            String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            if (contentMD5 != null) {
-                try {
-                    URI md5 = new URI(contentMD5);
-                    syncOutput.setDigest(md5);
-                } catch (URISyntaxException ex) {
-                    log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);
-                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
-                    // user mistake
-                }
-            }
+            setResponseHeaders((DataNode)node);
 
-            Path ret = nodePersistence.nodeToPath(nodeURI);
+            Path ret = fsNodePersistence.nodeToPath(nodeURI);
             syncOutput.setCode(200);
             return ret;
         } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {

@@ -324,7 +324,7 @@ public class TransferDetailsServlet extends HttpServlet {
                         result.setContentLength(transfer.getContentLength());
 
                         // Add protocol list with endpoints just built
-                        List<Protocol> protos = transferGen.getEndpoints(target, transfer, job, additionalParams);
+                        List<Protocol> protos = transferGen.getEndpoints(target, transfer, additionalParams);
                         result.getProtocols().addAll(protos);
                         result.setView(transfer.getView());
 

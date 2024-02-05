@@ -89,6 +89,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import javax.security.auth.Subject;
+import javax.swing.JList;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
 import org.opencadc.cavern.nodes.FileSystemNodePersistence;
@@ -136,7 +137,7 @@ public class CavernURLGenerator implements TransferGenerator {
     }
 
     @Override
-    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams) throws Exception {
+    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, List<Parameter> additionalParams) throws Exception {
         log.debug("getEndpoints: " + target);
         if (target == null) {
             throw new IllegalArgumentException("target is required");
@@ -315,7 +316,7 @@ public class CavernURLGenerator implements TransferGenerator {
             // ugh: self lookup
             RegistryClient reg = new RegistryClient();
             Capabilities caps = reg.getCapabilities(nodePersistence.getResourceID());
-            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES_20);
+            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES);
         }
     }
 }

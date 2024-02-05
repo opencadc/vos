@@ -72,6 +72,7 @@ package org.opencadc.vospace.server.transfers;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
+import javax.swing.JList;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -94,7 +95,6 @@ public interface TransferGenerator {
      *
      * @param target single target URI from the transfer
      * @param transfer The transfer object with requested protocol(s)
-     * @param job The UWS job associated with the transfer request.
      * @param additionalParams Any additional parameters associated with the request.
      * 
      * @return list of protocol(s) with endpoints
@@ -102,6 +102,6 @@ public interface TransferGenerator {
      * @throws Exception implementations are responsible for throwing right exception 
      *         to generate the correct output
      */
-    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams)
+    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, List<Parameter> additionalParams)
             throws Exception;
 }

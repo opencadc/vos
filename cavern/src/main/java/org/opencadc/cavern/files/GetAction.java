@@ -97,12 +97,17 @@ public class GetAction extends HeadAction {
         ByteCountOutputStream out = null;
         try {
             Path source = resolveAndSetMetadata();
-            
-            out = new ByteCountOutputStream(syncOutput.getOutputStream());
-            log.debug("Starting copy of file " + source);
-            Files.copy(source, out);
-            log.debug("Completed copy of file " + source);
-            out.flush();
+
+            if (source.toFile().length() == 0) {
+                syncOutput.setCode(204);
+                log.debug("Empty file " + source);
+            } else {
+                out = new ByteCountOutputStream(syncOutput.getOutputStream());
+                log.debug("Starting copy of file " + source);
+                Files.copy(source, out);
+                log.debug("Completed copy of file " + source);
+                out.flush();
+            }
 
         } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {
             log.debug("404 error with GET: ",  e);

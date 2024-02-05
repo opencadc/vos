@@ -78,6 +78,7 @@ import ca.nrc.cadc.net.NetUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -224,7 +225,7 @@ public class NodesTest extends VOSTest {
                     put(subDirURL, subDirURI, subDirNode);
                     Assert.fail("New node should fail when parent is locked");
                 } catch (AssertionError ex) {
-                    Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
+                    Assert.assertEquals("expected PUT response code in [200, 201]",
                             ex.getMessage());
                 }
             }
@@ -306,6 +307,19 @@ public class NodesTest extends VOSTest {
             } else {
                 Assert.fail("immutable prop test: " + len);
             }
+
+            // test view=data
+            URL viewDataNodeUrl = getNodeURL(nodesServiceURL, name + "?view=data");
+            HttpGet getRequest = new HttpGet(viewDataNodeUrl, false);
+            log.debug("GET: " + viewDataNodeUrl);
+            Subject.doAs(authSubject, new RunnableAction(getRequest));
+            log.debug("GET responseCode: " + getRequest.getResponseCode() + " " + getRequest.getThrowable());
+            Assert.assertEquals(HttpURLConnection.HTTP_SEE_OTHER, getRequest.getResponseCode());
+            Assert.assertNull(getRequest.getThrowable());
+            String expectedFilesLocation = nodeURL.toString().replace("/nodes/", "/files/");
+            log.debug("view=data redirects " + expectedFilesLocation + " vs "
+                    + getRequest.getResponseHeader("Location"));
+            Assert.assertTrue(expectedFilesLocation.equalsIgnoreCase(getRequest.getResponseHeader("Location")));
 
             // fail to update with a sketch property URI
             URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");

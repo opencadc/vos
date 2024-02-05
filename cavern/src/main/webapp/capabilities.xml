@@ -89,7 +89,7 @@
   </capability>
 -->
 
-  <capability standardID="ivo://ivoa.net/std/VOSpace/v2.x#files">
+  <capability standardID="ivo://ivoa.net/std/VOSpace#files-proto">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="base">https://replace.com/cavern/files</accessURL>
       <securityMethod/>

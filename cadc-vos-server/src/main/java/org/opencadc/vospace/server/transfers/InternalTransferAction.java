@@ -155,8 +155,8 @@ public class InternalTransferAction extends VOSpaceTransfer {
             }
 
             if ((rn.node != null) && !(rn.node instanceof ContainerNode)) {
-                throw NodeFault.NodeNotFound.getStatus("Resolved parent (" +
-                        loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
+                throw NodeFault.NodeNotFound.getStatus("Resolved parent ("
+                        + loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
             }
             ContainerNode destContainer;
             String destName;
@@ -178,8 +178,8 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 String destPath = Utils.getPath(destContainer);
                 if (destPath.contains(srcPath)) {
                     throw NodeFault.ContainerNotFound.getStatus(
-                            "Cannot move container node into its descendants: source " +
-                                    "path " + srcPath + " in resolved path " + destPath);
+                            "Cannot move container node into its descendants: source "
+                                    + "path " + srcPath + " in resolved path " + destPath);
                 }
             }
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);

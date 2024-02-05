@@ -71,10 +71,15 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.util.Date;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeReader;
@@ -82,6 +87,7 @@ import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -131,7 +137,7 @@ public abstract class NodeAction extends RestAction {
     }
     
     @Override
-    protected final InlineContentHandler getInlineContentHandler() {
+    protected InlineContentHandler getInlineContentHandler() {
         return new InlineNodeHandler(INLINE_CONTENT_TAG);
     }
     
@@ -199,6 +205,39 @@ public abstract class NodeAction extends RestAction {
         return ret;
     }
 
+    protected void setResponseHeaders(DataNode node) {
+        syncOutput.setHeader("Content-Disposition", "inline; filename=\"" + node.getName() + "\"");
+        for (NodeProperty prop : node.getProperties()) {
+            if (prop.getKey().equals(VOS.PROPERTY_URI_DATE)) {
+                try {
+                    Date lastMod = NodeWriter.getDateFormat().parse(prop.getValue());
+                    syncOutput.setLastModified(lastMod);
+
+                } catch (ParseException e) {
+                    log.warn("BUG: Unexpected date format " + prop.getValue() + " for " + Utils.getPath(node));
+                }
+            }
+            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTLENGTH)) {
+                syncOutput.setHeader("Content-Length", prop.getValue());
+            }
+            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTENCODING)) {
+                syncOutput.setHeader("Content-Encoding", prop.getValue());
+            }
+            if (prop.getKey().equals(VOS.PROPERTY_URI_TYPE)) {
+                syncOutput.setHeader("Content-Type", prop.getValue());
+            }
+            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTMD5)) {
+                try {
+                    URI md5 = new URI("md5:" + prop.getValue());
+                    syncOutput.setDigest(md5);
+                } catch (URISyntaxException ex) {
+                    log.error("found invalid checksum attribute " + prop.getValue() + " on node " + Utils.getPath(node));
+                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
+                    // user mistake
+                }
+            }
+        }
+    }
     
     /*
     protected AbstractView getView() throws Exception {

@@ -313,7 +313,7 @@ public class PackageTest extends VOSTest {
             expected.add(file2);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-//            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            // doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -327,14 +327,14 @@ public class PackageTest extends VOSTest {
     @Test
     public void fullTest() {
         try {
-             //   /root-folder/
-             //   /root-folder/file-1.txt
-             //   /root-folder/folder-1/
-             //   /root-folder/folder-2/
-             //   /root-folder/folder-2/file-2.txt
-             //   /root-folder/folder-2/file-3.txt
-             //   /root-folder/folder-2/folder-3/
-             //   /root-folder/folder-2/folder-3/link-1.txt
+            //   /root-folder/
+            //   /root-folder/file-1.txt
+            //   /root-folder/folder-1/
+            //   /root-folder/folder-2/
+            //   /root-folder/folder-2/file-2.txt
+            //   /root-folder/folder-2/file-3.txt
+            //   /root-folder/folder-2/folder-3/
+            //   /root-folder/folder-2/folder-3/link-1.txt
 
             // nodes paths
             String root = "full-root-folder";
@@ -387,7 +387,7 @@ public class PackageTest extends VOSTest {
             expected.add(file3);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-//            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            // doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -567,7 +567,7 @@ public class PackageTest extends VOSTest {
         ArchiveInputStream archiveInputStream = archiveStreamFactory.createArchiveInputStream(
                 archiveType, inputStream);
         ArchiveEntry entry;
-        while((entry = archiveInputStream.getNextEntry()) != null) {
+        while ((entry = archiveInputStream.getNextEntry()) != null) {
             if (!archiveInputStream.canReadEntryData(entry)) {
                 log.debug("unable to read archive entry: " + entry.getName());
                 continue;
