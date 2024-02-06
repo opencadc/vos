@@ -103,7 +103,7 @@ public class CreateNodeAction extends NodeAction {
             throw NodeFault.InvalidArgument.getStatus("no node document");
         }
         final VOSURI clientNodeURI = getInputURI();
-        final VOSURI target = getTargetURI();
+        final VOSURI target = Utils.getTargetURI(nodePersistence, syncInput.getPath());
         
         // validate doc vs path because some redundancy in API
         if (!clientNodeURI.equals(target)) {

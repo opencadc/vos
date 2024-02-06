@@ -140,27 +140,7 @@ public abstract class NodeAction extends RestAction {
     protected InlineContentHandler getInlineContentHandler() {
         return new InlineNodeHandler(INLINE_CONTENT_TAG);
     }
-    
-    // the absolute URI constructed from the request path
-    protected final VOSURI getTargetURI() {
-        URI resourceID = nodePersistence.getResourceID();
-        LocalServiceURI loc = new LocalServiceURI(resourceID);
 
-        String nodePath = syncInput.getPath();        
-        if (nodePath == null) {
-            nodePath = nodePersistence.getRootNode().getName();
-        } else {
-            nodePath = "/" + nodePath;
-        }
-
-        String suri = loc.getVOSBase().getURI().toASCIIString() + nodePath;
-        try {
-            return new VOSURI(suri);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("BUG: VOSURI syntax: " + suri, e);
-        }
-    }
-    
     // get the Node from the input document
     protected final Node getInputNode() {
         Object o = syncInput.getContent(INLINE_CONTENT_TAG);
@@ -205,40 +185,6 @@ public abstract class NodeAction extends RestAction {
         return ret;
     }
 
-    protected void setResponseHeaders(DataNode node) {
-        syncOutput.setHeader("Content-Disposition", "inline; filename=\"" + node.getName() + "\"");
-        for (NodeProperty prop : node.getProperties()) {
-            if (prop.getKey().equals(VOS.PROPERTY_URI_DATE)) {
-                try {
-                    Date lastMod = NodeWriter.getDateFormat().parse(prop.getValue());
-                    syncOutput.setLastModified(lastMod);
-
-                } catch (ParseException e) {
-                    log.warn("BUG: Unexpected date format " + prop.getValue() + " for " + Utils.getPath(node));
-                }
-            }
-            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTLENGTH)) {
-                syncOutput.setHeader("Content-Length", prop.getValue());
-            }
-            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTENCODING)) {
-                syncOutput.setHeader("Content-Encoding", prop.getValue());
-            }
-            if (prop.getKey().equals(VOS.PROPERTY_URI_TYPE)) {
-                syncOutput.setHeader("Content-Type", prop.getValue());
-            }
-            if (prop.getKey().equals(VOS.PROPERTY_URI_CONTENTMD5)) {
-                try {
-                    URI md5 = new URI("md5:" + prop.getValue());
-                    syncOutput.setDigest(md5);
-                } catch (URISyntaxException ex) {
-                    log.error("found invalid checksum attribute " + prop.getValue() + " on node " + Utils.getPath(node));
-                    // yes, just skip: users can set attributes so hard to tell if this is a bug or
-                    // user mistake
-                }
-            }
-        }
-    }
-    
     /*
     protected AbstractView getView() throws Exception {
         if (syncInput.getParameter(QUERY_PARAM_VIEW) == null) {

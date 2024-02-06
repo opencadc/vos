@@ -82,6 +82,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.VOSURI;
 
 /**
  * Utility methods
@@ -240,5 +241,24 @@ public class Utils {
 
         // TODO: also check admin group(s) aka root.getReadWriteGroup() membership
         return false;
+    }
+
+    // the absolute URI constructed from the request path
+    public static VOSURI getTargetURI(NodePersistence nodePersistence, String nodePath) {
+        URI resourceID = nodePersistence.getResourceID();
+        LocalServiceURI loc = new LocalServiceURI(resourceID);
+
+        if (nodePath == null) {
+            nodePath = nodePersistence.getRootNode().getName();
+        } else {
+            nodePath = "/" + nodePath;
+        }
+
+        String suri = loc.getVOSBase().getURI().toASCIIString() + nodePath;
+        try {
+            return new VOSURI(suri);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("BUG: VOSURI syntax: " + suri, e);
+        }
     }
 }

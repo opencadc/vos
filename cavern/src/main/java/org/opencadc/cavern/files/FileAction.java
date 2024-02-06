@@ -72,6 +72,7 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -83,6 +84,7 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.actions.BaseFileAction;
 import org.opencadc.vospace.server.actions.NodeAction;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
@@ -91,7 +93,7 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
  * @author majorb
  * @author jeevesh
  */
-public abstract class FileAction extends NodeAction {
+public abstract class FileAction extends BaseFileAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     // Key values needed for FileAction
@@ -124,6 +126,10 @@ public abstract class FileAction extends NodeAction {
         this.pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         this.config = ((FileSystemNodePersistence)nodePersistence).getConfig();
         this.identityManager = ((FileSystemNodePersistence)nodePersistence).getIdentityManager();
+
+        if (this instanceof PutAction) {
+            checkWritable();
+        }
     }
 
     private VOSURI parsePath(String path, boolean hasToken) {
