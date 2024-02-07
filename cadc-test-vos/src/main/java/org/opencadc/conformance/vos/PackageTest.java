@@ -581,6 +581,70 @@ public class PackageTest extends VOSTest {
         }
     }
 
+    @Test
+    public void linkTargetInDifferentPackageRootTest() {
+        if (!testExternalLinks) {
+            log.info("testExternalLinks=false, skipping externalLinkNodeTest");
+            return;
+        }
+        // /dir1/dir2/link
+        // /dirA/dirB/target
+        // link points to target
+        // download package for dir1 & dirA must have link1 relative to fileA
+        try {
+            String root = "different-package-root-node/";
+            String dir1 = root + "dir1/";
+            String dir2 = dir1 + "dir2/";
+            String link = dir2 + "link";
+            String dirA = root + "dirA/";
+            String dirB = dirA + "dirB/";
+            String target = dirB + "target";
+
+            URL rootURL = getNodeURL(nodesServiceURL, root);
+            URL dir1URL = getNodeURL(nodesServiceURL, dir1);
+            URL dir2URL = getNodeURL(nodesServiceURL, dir2);
+            URL linkURL = getNodeURL(nodesServiceURL, link);
+            URL dirAURL = getNodeURL(nodesServiceURL, dirA);
+            URL dirBURL = getNodeURL(nodesServiceURL, dirB);
+            URL targetURL = getNodeURL(nodesServiceURL, target);
+
+            URL[] nodes = new URL[] {targetURL, dirBURL, dirAURL, linkURL, dir2URL, dir1URL, rootURL};
+
+            // cleanup
+            delete(nodes);
+
+            // upload the folders and files
+            String targetContent = "target-content";
+
+            VOSURI rootURI = putContainerNode(root, rootURL);
+            VOSURI dir1URI = putContainerNode(dir1, dir1URL);
+            VOSURI dir2URI = putContainerNode(dir2, dir2URL);
+            VOSURI dirAURI = putContainerNode(dirA, dirAURL);
+            VOSURI dirBURI = putContainerNode(dirB, dirBURL);
+            VOSURI targetURI = putDataNode(target, targetContent, authSubject);
+            VOSURI linkURI = putLinkNode(link, linkURL, targetURI.getURI());
+
+            // package targets to download
+            List<URI> targets = new ArrayList<>();
+            targets.add(dir1URI.getURI());
+            targets.add(dirAURI.getURI());
+
+            // expected files in download
+            List<String> expected = new ArrayList<>();
+            expected.add(link);
+            expected.add(target);
+
+//            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
+
+            // cleanup
+            delete(nodes);
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
     private VOSURI putContainerNode(String path, URL url) throws IOException {
         ContainerNode node = new ContainerNode(path);
         VOSURI uri = getVOSURI(path);
@@ -613,13 +677,11 @@ public class PackageTest extends VOSTest {
         File pkg = downloadPackage(targets, contentType, authSubject);
         Assert.assertNotNull(pkg);
         log.debug("archive file: " + pkg.getAbsolutePath());
-        System.out.println("archive file: " + pkg.getAbsolutePath());
 
         // extract the package
         File extracted = extractPackage(pkg, contentType);
         Assert.assertNotNull(extracted);
         log.debug("extracted file: " + extracted.getAbsolutePath());
-        System.out.println("extracted file: " + extracted.getAbsolutePath());
 
         // verify package files
         verifyPackage(expected, extracted);

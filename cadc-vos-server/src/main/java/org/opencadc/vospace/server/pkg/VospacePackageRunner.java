@@ -76,7 +76,6 @@ import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -86,6 +85,7 @@ import java.security.AccessControlException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -97,6 +97,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.pkg.server.PackageItem;
 import org.opencadc.pkg.server.PackageRunner;
+import org.opencadc.pkg.server.TarWriter;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -104,6 +105,7 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.View;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
@@ -125,7 +127,6 @@ public class VospacePackageRunner extends PackageRunner {
     private PathResolver pathResolver;
     private List<URI> targetList;
     private String appName;
-    private String baseNodeUri;
 
     public VospacePackageRunner() {
     }
@@ -146,49 +147,9 @@ public class VospacePackageRunner extends PackageRunner {
             this.vospaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);
             this.pathResolver = new PathResolver(nodePersistence, vospaceAuthorizer);
             this.resourceID = nodePersistence.getResourceID();
-            this.baseNodeUri = getBaseNodeUri(resourceID);
         } catch (NamingException e) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiKey, e);
         }
-    }
-
-    /**
-     *
-     * @param node
-     * @param target
-     * @param relativePath
-     * @return
-     */
-    public static boolean isTargetInPackage(URI node, URI target, String relativePath) {
-        // Get the root of the node path
-        if (relativePath.startsWith("/")) {
-            String root;
-            int index = relativePath.indexOf("/", 1);
-            if (index == -1) {
-                root = relativePath.substring(1);
-            } else {
-                root = relativePath.substring(1, index);
-            }
-
-            if (node.getScheme().equals(target.getScheme()) && node.getAuthority().equals(target.getAuthority()) ) {
-                String[] nodes = node.getPath().split("/");
-                String[] targets = target.getPath().split("/");
-                // length - 1 to ignore the ending link and target path segments
-                int length = Math.min(nodes.length, targets.length) -1;
-                // i = 1 to ignore first empty segment in the array
-                for (int i = 1; i < length; i++) {
-                    log.debug(String.format("node seg: %s target seg: %s root: %s", nodes[i], targets[i], root));
-                    if (nodes[i].equals(targets[i])) {
-                        if (nodes[i].equals(root)) {
-                            return true;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -244,6 +205,34 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     /**
+     * Get the response format MIME type from the package view in the transfer.
+     *
+     * @return MIME type
+     */
+    @Override
+    protected String getResponseFormat() {
+        String responseFormat = null;
+        View packageView = packageTransfer.getView();
+        if (packageView != null && packageView.getURI().equals(Standards.PKG_10)) {
+            for (View.Parameter parameter : packageView.getParameters()) {
+                if (parameter.getUri().equals(VOS.PROPERTY_URI_FORMAT)) {
+                    responseFormat = parameter.getValue();
+                    log.debug("found package response format: " + responseFormat);
+                    break;
+                }
+            }
+            log.debug("package response format not found in View parameters");
+        } else {
+            throw new IllegalStateException("VospacePackageRunner does not have expected a Transfer View: "
+                    + Standards.PKG_10);
+        }
+        if (responseFormat == null) {
+            responseFormat = TarWriter.MIME_TYPE;
+        }
+        return responseFormat;
+    }
+
+    /**
      * Get the URL to the given node VOSURI.
      *
      * @param nodeURI VOSURI to the node.
@@ -281,15 +270,18 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     // Get a PackageItem for a directory from the given ContainerNode.
-    protected PackageItem getDirectoryPackageItem(ContainerNode node, String relativePath) {
+    // The parentPath is the relative path to the ContainerNode parent in the package.
+    protected PackageItem getDirectoryPackageItem(String parentPath, ContainerNode node) {
+        String relativePath = parentPath + "/" + node.getName();
         return new PackageItem(relativePath);
     }
 
     // Get a PackageItem for a file from the given DataNode.
-    protected PackageItem getFilePackageItem(DataNode node, String relativePath)
+    // The parentPath is the relative path to the DataNode parent in the package.
+    protected PackageItem getFilePackageItem(String parentPath, DataNode node)
             throws NodeNotFoundException, PrivilegedActionException {
 
-        String nodeRelativePath = relativePath + "/" + node.getName();
+        String nodeRelativePath = parentPath + "/" + node.getName();
         String nodePath = Utils.getPath(node);
         VOSURI nodeURI = new VOSURI(resourceID, nodePath);
         URL endpointURL = getURL(nodeURI);
@@ -297,24 +289,42 @@ public class VospacePackageRunner extends PackageRunner {
     }
 
     // Get a PackageItem for a symbolic link from the given LinkNode.
-    protected PackageItem getSymbolicLinkPackageItem(LinkNode node, String relativePath) {
-        String nodePath = Utils.getPath(node);
-        log.debug("LinkNode path: " + nodePath);
+    // The parentPath is the relative path to the LinkNode parent in the package.
+    protected PackageItem getSymbolicLinkPackageItem(String parentPath, LinkNode node) {
 
-        // check that the link target is in the package
-        // return a null PackageItem if it is out of the package
-        VOSURI nodeURI = new VOSURI(this.resourceID, nodePath);
-        URI targetURI = node.getTarget();
-        boolean inPackage = isTargetInPackage(nodeURI.getURI(), targetURI, relativePath);
-        if (!inPackage) {
+        // check that the link node target is in the path of a package targets
+        URI linkTarget = node.getTarget();
+        boolean targetInPackage = false;
+        for (URI pkgTarget : targetList) {
+            if (linkTarget.toASCIIString().startsWith(pkgTarget.toASCIIString())) {
+                targetInPackage = true;
+                break;
+            }
+        }
+        if (!targetInPackage) {
             return null;
         }
 
-        // get the relative path for the link in the package
-        Path linkPath = Paths.get(nodePath);
-        Path targetPath = Paths.get(targetURI.getPath());
-        Path linkRelativePath = linkPath.relativize(targetPath);
-        return new PackageItem(nodePath, linkRelativePath.toString());
+        String relativePath = parentPath + "/" + node.getName();
+
+        // get the relative path for the link in the package.
+        // relativize throws a runtime if the two paths don't share a common root
+        // which is possible if the link and target come from different package targets.
+        // since all package targets are in the archive root, and it's a relative path,
+        // prepend a temp path segment to both paths to avoid the exception.
+        String nodePath = Utils.getPath(node);
+        Path linkPath = Paths.get("tmp" + nodePath);
+        Path targetPath = Paths.get("tmp" + linkTarget.getPath());
+        Path linkRelativePath = null;
+        try {
+            linkRelativePath = linkPath.relativize(targetPath);
+        } catch (IllegalArgumentException e) {
+            log.debug(String.format("unable to create relative link %s -> %s", linkPath, targetPath));
+        }
+        if (linkRelativePath == null) {
+            return null;
+        }
+        return new PackageItem(relativePath, linkRelativePath.toString());
     }
 
     // Build a filename from the provided URI.
@@ -328,20 +338,16 @@ public class VospacePackageRunner extends PackageRunner {
         return path;
     }
 
-    private String getBaseNodeUri(URI resourceID) {
-        return String.format("vos://%s", resourceID.getAuthority());
-    }
-
     class PackageItemIterator implements Iterator<PackageItem> {
 
         private final Subject caller;
-        private final List<RelativeNode> deferredNodes;
-        private final List<RelativeNode> currentNodes;
+        private final List<RelativeContainerNode> deferredNodes;
+        private final List<RelativeContainerNode> currentNodes;
         private final Iterator<Node> targetIterator;
-        private ListIterator<RelativeNode> currentIterator;
+        private ListIterator<RelativeContainerNode> currentIterator;
         private ResourceIterator<Node> childIterator;
         private PackageItem next = null;
-        private String parentPath = "";
+        private String currentParentPath = "";
 
         public PackageItemIterator(List<URI> targets) {
             if (targets == null) {
@@ -388,7 +394,6 @@ public class VospacePackageRunner extends PackageRunner {
 
         /**
          * Find the PackageItem to return as next().
-         *
          */
         private void advance() {
             try {
@@ -402,7 +407,7 @@ public class VospacePackageRunner extends PackageRunner {
                     targetIterator.remove();
                     if (node != null) {
                         log.debug("target: " + node.getName());
-                        next = doChildNode(node, "");
+                        next = doChildNode("", node);
                         if (next != null) {
                             log.debug("return next: " + next);
                             return;
@@ -434,38 +439,34 @@ public class VospacePackageRunner extends PackageRunner {
                             isCurrentIteratorEmpty(), isChildIteratorEmpty()));
                     if (isChildIteratorEmpty() && !isCurrentIteratorEmpty()) {
                         // get the next parent (container) node and it's package-item
-                        RelativeNode relativeNode = currentIterator.next();
-                        log.debug("currentIterator next: " + relativeNode.node.getName());
+                        RelativeContainerNode currentNode = currentIterator.next();
+                        log.debug("currentIterator next: " + currentNode.node.getName());
                         currentIterator.remove();
-                        parentPath = relativeNode.path;
-                        next = getDirectoryPackageItem(relativeNode.node, relativeNode.path);
+                        next = getDirectoryPackageItem(currentNode.parentPath, currentNode.node);
+                        currentParentPath = next.getRelativePath();
 
                         // check read access to the parent and if granted refresh the childIterator
-                        boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(relativeNode.node, caller);
-                        log.debug(String.format("%s read permission: %s", relativeNode.node.getName(), canRead));
+                        boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(currentNode.node, caller);
+                        log.debug(String.format("%s read permission: %s", currentNode.node.getName(), canRead));
                         if (canRead) {
-                            childIterator = nodePersistence.iterator(relativeNode.node, null, null);
-                            log.debug("refreshed childIterator for: " + relativeNode.node.getName());
+                            childIterator = nodePersistence.iterator(currentNode.node, null, null);
+                            log.debug("refreshed childIterator for: " + currentNode.node.getName());
                         }
                         // return the container PackageItem
                         log.debug("return next: " + next);
                         return;
                     }
 
-                    // no children in the current parent node to process, done.
-                    if (isChildIteratorEmpty()) {
-                        log.debug("empty childIterator, return");
-                        return;
-                    }
-
                     // loop through the child nodes for the next PackageItem.
-                    while (childIterator.hasNext()) {
-                        Node child = childIterator.next();
-                        log.debug("childIterator next: " + child.getName());
-                        next = doChildNode(child, parentPath);
-                        if (next != null) {
-                            log.debug("return next: " + next);
-                            return;
+                    if (!isChildIteratorEmpty()) {
+                        while (childIterator.hasNext()) {
+                            Node child = childIterator.next();
+                            log.debug("childIterator next: " + child.getName());
+                            next = doChildNode(currentParentPath, child);
+                            if (next != null) {
+                                log.debug("return next: " + next);
+                                return;
+                            }
                         }
                     }
 
@@ -527,22 +528,21 @@ public class VospacePackageRunner extends PackageRunner {
          * @param child child Node.
          * @return a PackageItem, or null if the node is a ContainerNode, or error creating the PackageItem.
          */
-        private PackageItem doChildNode(Node child, String nodePath) {
+        private PackageItem doChildNode(String parentPath, Node child) {
             log.debug("doChildNode().start");
             PackageItem packageItem = null;
             try {
                 if (child instanceof ContainerNode) {
-                    String childPath = nodePath + "/" + child.getName();
-                    deferredNodes.add(new RelativeNode((ContainerNode) child, childPath));
+                    deferredNodes.add(new RelativeContainerNode(parentPath, (ContainerNode) child));
                     log.debug(child.getName() + " added to deferred nodes");
                 } else {
                     boolean canRead = vospaceAuthorizer.hasSingleNodeReadPermission(child, caller);
                     if (!canRead) {
                         log.debug(child.getName() + " read permission denied");
                     } else if (child instanceof DataNode) {
-                        packageItem = getFilePackageItem((DataNode) child, nodePath);
+                        packageItem = getFilePackageItem(parentPath, (DataNode) child);
                     } else if (child instanceof LinkNode) {
-                        packageItem = getSymbolicLinkPackageItem((LinkNode) child, nodePath);
+                        packageItem = getSymbolicLinkPackageItem(parentPath, (LinkNode) child);
                     } else {
                         log.info("unknown node type: " + Utils.getPath(child) + CONTINUING_PROCESSING);
                     }
@@ -563,13 +563,22 @@ public class VospacePackageRunner extends PackageRunner {
 
     }
 
-    public class RelativeNode {
+    /**
+     * Class that holds a container node, and the path
+     * from the target to the container node parent.
+     */
+    static class RelativeContainerNode {
+        public String parentPath;
         public ContainerNode node;
-        public String path;
 
-        public RelativeNode(ContainerNode node, String path) {
+        /**
+         *
+         * @param parentPath the path from the target to node parent.
+         * @param node a ContainerNode
+         */
+        public RelativeContainerNode(String parentPath, ContainerNode node) {
+            this.parentPath = parentPath;
             this.node = node;
-            this.path = path;
         }
     }
 
