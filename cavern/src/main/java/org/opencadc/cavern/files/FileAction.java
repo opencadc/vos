@@ -72,7 +72,6 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -84,8 +83,6 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.actions.BaseFileAction;
-import org.opencadc.vospace.server.actions.NodeAction;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -93,13 +90,15 @@ import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
  * @author majorb
  * @author jeevesh
  */
-public abstract class FileAction extends BaseFileAction {
+public abstract class FileAction extends RestAction {
     private static final Logger log = Logger.getLogger(FileAction.class);
 
     // Key values needed for FileAction
     private VOSURI nodeURI;
     protected String preauthToken;
 
+    protected FileSystemNodePersistence nodePersistence;
+    protected VOSpaceAuthorizer authorizer;
     protected PathResolver pathResolver;
     protected CavernConfig config;
     protected PosixIdentityManager identityManager;
@@ -121,12 +120,20 @@ public abstract class FileAction extends BaseFileAction {
     }
 
     @Override
-    public void initAction() throws Exception {
-        super.initAction();
-        this.pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-        this.config = ((FileSystemNodePersistence)nodePersistence).getConfig();
-        this.identityManager = ((FileSystemNodePersistence)nodePersistence).getIdentityManager();
+    public void initAction() throws IllegalArgumentException {
+        String jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
+        try {
+            Context ctx = new InitialContext();
+            this.nodePersistence = (FileSystemNodePersistence) ctx.lookup(jndiNodePersistence);
+            this.authorizer = new VOSpaceAuthorizer(nodePersistence);
+            this.pathResolver = new PathResolver(nodePersistence, authorizer);
+            this.config = nodePersistence.getConfig();
+            this.identityManager = nodePersistence.getIdentityManager();
+        } catch (NamingException oops) {
+            throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
+        }
 
+        checkReadable();
         if (this instanceof PutAction) {
             checkWritable();
         }

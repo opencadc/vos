@@ -84,7 +84,6 @@ import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
-import org.opencadc.vospace.server.Utils;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -120,7 +119,7 @@ public class GetNodeAction extends NodeAction {
 
     @Override
     public void doAction() throws Exception {
-        VOSURI target = Utils.getTargetURI(nodePersistence, syncInput.getPath());
+        VOSURI target = getTargetURI();
 
         String view = syncInput.getParameter(QUERY_PARAM_VIEW);
         if ("data".equalsIgnoreCase(view)) {
@@ -186,7 +185,7 @@ public class GetNodeAction extends NodeAction {
                 if (!target.getPath().equals(parentPath)) {
                     throw NodeFault.InvalidURI.getStatus(
                             "uri parameter (" + vuri.toString() + ") not a child of target uri ("
-                                    + Utils.getTargetURI(nodePersistence, syncInput.getPath()) + ").");
+                                    + getTargetURI() + ").");
                 }
                 pageStart = vuri.getName();
             }

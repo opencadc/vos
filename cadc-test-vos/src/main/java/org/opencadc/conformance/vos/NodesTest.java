@@ -308,19 +308,6 @@ public class NodesTest extends VOSTest {
                 Assert.fail("immutable prop test: " + len);
             }
 
-            // test view=data
-            URL viewDataNodeUrl = getNodeURL(nodesServiceURL, name + "?view=data");
-            HttpGet getRequest = new HttpGet(viewDataNodeUrl, false);
-            log.debug("GET: " + viewDataNodeUrl);
-            Subject.doAs(authSubject, new RunnableAction(getRequest));
-            log.debug("GET responseCode: " + getRequest.getResponseCode() + " " + getRequest.getThrowable());
-            Assert.assertEquals(HttpURLConnection.HTTP_SEE_OTHER, getRequest.getResponseCode());
-            Assert.assertNull(getRequest.getThrowable());
-            String expectedFilesLocation = nodeURL.toString().replace("/nodes/", "/files/");
-            log.debug("view=data redirects " + expectedFilesLocation + " vs "
-                    + getRequest.getResponseHeader("Location"));
-            Assert.assertTrue(expectedFilesLocation.equalsIgnoreCase(getRequest.getResponseHeader("Location")));
-
             // fail to update with a sketch property URI
             URI illegal = new URI(VOS.VOSPACE_URI_NAMESPACE + "core#make-stuff-up");
             NodeProperty illegalProp = new NodeProperty(illegal, "that should not work");
@@ -923,45 +910,30 @@ public class NodesTest extends VOSTest {
         }
     }
 
-    //@Test
-    public void dataViewTest() {
+    @Test
+    public void testDataView() {
         try {
-            // upload test file
             String name = "view-data-node";
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             DataNode node = new DataNode(name);
+
+            // cleanup
+            delete(nodeURL, false);
+
             put(nodeURL, nodeURI, node);
 
-            // get the node with view=data
-            URL getURL = new URL(nodeURL + "?view=data");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(getURL, out);
-            get.setFollowRedirects(false);
-            Subject.doAs(authSubject, new RunnableAction(get));
-            Assert.assertNotNull(get.getThrowable());
-            URL redirectURL = get.getRedirectURL();
-            Assert.assertNotNull(redirectURL);
-            log.debug("location = " + redirectURL);
-
-            String query = redirectURL.getQuery();
-            String[] params = query.split("&");
-            Assert.assertEquals(3, params.length);
-            for (String p : params) {
-                String[] pv = p.split("=");
-                String key = pv[0];
-                String val = NetUtil.decode(pv[1]);
-                Assert.assertEquals(2, pv.length);
-                if ("target".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(nodeURI.getURI().toASCIIString(), val);
-                } else if ("protocol".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(VOS.PROTOCOL_HTTPS_GET.toASCIIString(), val);
-                } else if ("direction".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(Direction.pullFromVoSpace.getValue(), val);
-                } else {
-                    Assert.fail(String.format("unexpected transfer parameter: %s = %s", key, val));
-                }
-            }
+            URL viewDataNodeUrl = getNodeURL(nodesServiceURL, name + "?view=data");
+            HttpGet getRequest = new HttpGet(viewDataNodeUrl, false);
+            log.debug("GET: " + viewDataNodeUrl);
+            Subject.doAs(authSubject, new RunnableAction(getRequest));
+            log.debug("GET responseCode: " + getRequest.getResponseCode() + " " + getRequest.getThrowable());
+            Assert.assertEquals(HttpURLConnection.HTTP_SEE_OTHER, getRequest.getResponseCode());
+            Assert.assertNull(getRequest.getThrowable());
+            String expectedFilesLocation = nodeURL.toString().replace("/nodes/", "/files/");
+            log.debug("view=data redirects " + expectedFilesLocation + " vs "
+                    + getRequest.getResponseHeader("Location"));
+            Assert.assertTrue(expectedFilesLocation.equalsIgnoreCase(getRequest.getResponseHeader("Location")));
 
             if (cleanupOnSuccess) {
                 delete(nodeURL);

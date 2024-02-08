@@ -119,106 +119,111 @@ public class FilesTest extends VOSTest {
 
     @Test
     public void fileTest() throws Exception {
-        // Put a DataNode
-        String name = "files-data-node";
-        URL nodeURL = getNodeURL(nodesServiceURL, name);
-        VOSURI nodeURI = getVOSURI(name);
-        log.debug("files-data-node URL: " + nodeURL);
+        try {
+            // Put a DataNode
+            String name = "files-data-node";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
+            log.debug("files-data-node URL: " + nodeURL);
 
-        // cleanup
-        delete(nodeURL, false);
+            // cleanup
+            delete(nodeURL, false);
 
-        // Create a Transfer
-        Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
-        transfer.version = VOS.VOSPACE_21;
-        transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
-        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-        protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-        transfer.getProtocols().add(protocol);
+            // Create a Transfer
+            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
+            transfer.version = VOS.VOSPACE_21;
+            transfer.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon, preauth
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            transfer.getProtocols().add(protocol);
 
-        // Get the transfer document
-        TransferWriter writer = new TransferWriter();
-        StringWriter sw = new StringWriter();
-        writer.write(transfer, sw);
-        log.debug("files-data-node transfer XML: " + sw);
+            // Get the transfer document
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+            log.debug("files-data-node transfer XML: " + sw);
 
-        // POST the transfer document
-        FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-        URL transferURL = getNodeURL(synctransServiceURL, name);
-        log.debug("transfer URL: " + transferURL);
-        HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-        Subject.doAs(authSubject, new RunnableAction(post));
-        Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", post.getThrowable());
+            // POST the transfer document
+            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            URL transferURL = getNodeURL(synctransServiceURL, name);
+            log.debug("transfer URL: " + transferURL);
+            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(authSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
+            Assert.assertNull("expected PUT throwable == null", post.getThrowable());
 
-        // Get the transfer details
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet get = new HttpGet(post.getRedirectURL(), out);
-        log.debug("GET: " + post.getRedirectURL());
-        Subject.doAs(authSubject, new RunnableAction(get));
-        log.debug("GET responseCode: " + get.getResponseCode());
-        Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", get.getThrowable());
-        Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
-                          get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+            // Get the transfer details
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpGet get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(authSubject, new RunnableAction(get));
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
+                              get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
-        // Get the endpoint from the transfer details
-        log.debug("transfer details XML: " + out);
-        TransferReader transferReader = new TransferReader();
-        Transfer details = transferReader.read(out.toString(), "vos");
-        Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
-                            Direction.pushToVoSpace, details.getDirection());
-        Assert.assertTrue("expected >0 endpoints", details.getProtocols().size() > 0);
-        URL endpoint = new URL(details.getProtocols().get(0).getEndpoint());
+            // Get the endpoint from the transfer details
+            log.debug("transfer details XML: " + out);
+            TransferReader transferReader = new TransferReader();
+            Transfer details = transferReader.read(out.toString(), "vos");
+            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
+                                Direction.pushToVoSpace, details.getDirection());
+            Assert.assertTrue("expected >0 endpoints", details.getProtocols().size() > 0);
+            URL endpoint = new URL(details.getProtocols().get(0).getEndpoint());
 
-        // PUT a file to the endpoint
-        log.info("PUT: " + endpoint);
-        String expected = "test content for files endpoint\n";
-        ByteArrayInputStream is = new ByteArrayInputStream(expected.getBytes());
-        put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
+            // PUT a file to the endpoint
+            log.info("PUT: " + endpoint);
+            String expected = "test content for files endpoint\n";
+            ByteArrayInputStream is = new ByteArrayInputStream(expected.getBytes());
+            put(endpoint, is, VOSTest.TEXT_CONTENT_TYPE);
 
-        URL fileURL = getNodeURL(filesServiceURL, name);
+            URL fileURL = getNodeURL(filesServiceURL, name);
 
-        // test HEAD
-        log.info("HEAD: " + fileURL);
+            // test HEAD
+            log.info("HEAD: " + fileURL);
 
-        HttpGet headFile = new HttpGet(fileURL, out);
-        headFile.setHeadOnly(true);
-        Subject.doAs(authSubject, new RunnableAction(headFile));
-        log.info("GET response: " + headFile.getResponseCode() + " " + headFile.getThrowable());
-        Assert.assertEquals("expected GET response code = 200", 200, headFile.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", headFile.getThrowable());
-        Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
-        String contentDisposition = "inline; filename=\"" + name + "\"";
-        Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-        if (headFile.getDigest() != null) {
-            Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
+            HttpGet headFile = new HttpGet(fileURL, out);
+            headFile.setHeadOnly(true);
+            Subject.doAs(authSubject, new RunnableAction(headFile));
+            log.info("GET response: " + headFile.getResponseCode() + " " + headFile.getThrowable());
+            Assert.assertEquals("expected GET response code = 200", 200, headFile.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", headFile.getThrowable());
+            Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
+            String contentDisposition = "inline; filename=\"" + name + "\"";
+            Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
+            if (headFile.getDigest() != null) {
+                Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
+            }
+            Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
+            Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
+
+            log.info("GET: " + fileURL);
+            out = new ByteArrayOutputStream();
+            HttpGet getFile = new HttpGet(fileURL, out);
+            Subject.doAs(authSubject, new RunnableAction(getFile));
+            log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
+            Assert.assertEquals("expected GET response code = 200", 200, getFile.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
+            Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
+            Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
+            if (headFile.getDigest() != null) {
+                Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
+            }
+            Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
+            Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
+
+
+            String actual = out.toString();
+            log.debug("file content: " + actual);
+            Assert.assertEquals("expected file content to match", expected, actual);
+
+            // Delete the node
+            delete(nodeURL);
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
         }
-        Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
-        Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
-
-        log.info("GET: " + fileURL);
-        out = new ByteArrayOutputStream();
-        HttpGet getFile = new HttpGet(fileURL, out);
-        Subject.doAs(authSubject, new RunnableAction(getFile));
-        log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
-        Assert.assertEquals("expected GET response code = 200", 200, getFile.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
-        Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
-        Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-        if (headFile.getDigest() != null) {
-            Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
-        }
-        Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
-        Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
-
-
-        String actual = out.toString();
-        log.debug("file content: " + actual);
-        Assert.assertEquals("expected file content to match", expected, actual);
-
-        // Delete the node
-        delete(nodeURL);
     }
 
     @Test
@@ -271,13 +276,7 @@ public class FilesTest extends VOSTest {
 
     protected static URI computeChecksumURI(byte[] input) throws NoSuchAlgorithmException, IOException {
         MessageDigest md = MessageDigest.getInstance("MD5");
-        InputStream in = new ByteArrayInputStream(input);
-        DigestInputStream dis = new DigestInputStream(in, md);
-        int bytesRead = dis.read();
-        byte[] buf = new byte[512];
-        while (bytesRead > 0) {
-            bytesRead = dis.read(buf);
-        }
+        md.update(input);
         byte[] digest = md.digest();
         return URI.create("md5:" + HexUtil.toHex(digest));
     }

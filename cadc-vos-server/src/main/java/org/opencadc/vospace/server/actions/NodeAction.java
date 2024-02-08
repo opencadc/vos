@@ -71,15 +71,10 @@ import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.ParseException;
-import java.util.Date;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import org.apache.log4j.Logger;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeProperty;
-import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.JsonNodeWriter;
 import org.opencadc.vospace.io.NodeReader;
@@ -87,7 +82,6 @@ import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
-import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -137,10 +131,30 @@ public abstract class NodeAction extends RestAction {
     }
     
     @Override
-    protected InlineContentHandler getInlineContentHandler() {
+    protected final InlineContentHandler getInlineContentHandler() {
         return new InlineNodeHandler(INLINE_CONTENT_TAG);
     }
+    
+    // the absolute URI constructed from the request path
+    protected final VOSURI getTargetURI() {
+        URI resourceID = nodePersistence.getResourceID();
+        LocalServiceURI loc = new LocalServiceURI(resourceID);
 
+        String nodePath = syncInput.getPath();        
+        if (nodePath == null) {
+            nodePath = nodePersistence.getRootNode().getName();
+        } else {
+            nodePath = "/" + nodePath;
+        }
+
+        String suri = loc.getVOSBase().getURI().toASCIIString() + nodePath;
+        try {
+            return new VOSURI(suri);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("BUG: VOSURI syntax: " + suri, e);
+        }
+    }
+    
     // get the Node from the input document
     protected final Node getInputNode() {
         Object o = syncInput.getContent(INLINE_CONTENT_TAG);
@@ -185,6 +199,7 @@ public abstract class NodeAction extends RestAction {
         return ret;
     }
 
+    
     /*
     protected AbstractView getView() throws Exception {
         if (syncInput.getParameter(QUERY_PARAM_VIEW) == null) {
