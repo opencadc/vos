@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,10 +69,8 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
-import javax.swing.JList;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;

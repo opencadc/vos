@@ -118,7 +118,7 @@ public class FilesTest extends VOSTest {
     }
 
     @Test
-    public void fileTest() throws Exception {
+    public void fileTest() {
         try {
             // Put a DataNode
             String name = "files-data-node";
