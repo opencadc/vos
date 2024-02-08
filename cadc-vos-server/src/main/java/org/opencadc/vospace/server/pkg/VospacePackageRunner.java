@@ -253,10 +253,8 @@ public class VospacePackageRunner extends PackageRunner {
 
             // Use a temporary Job with just the remote IP to avoid the original Job in
             // a transfer URL which may close the Job.
-            Job pkgJob = new Job();
-            pkgJob.setRemoteIP(remoteIP);
             TransferGenerator transferGenerator = nodePersistence.getTransferGenerator();
-            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, pkgJob, null);
+            List<Protocol> protocols = transferGenerator.getEndpoints(nodeURI, packageTransfer, null);
             log.debug("num transfer protocols: " + protocols.size());
 
             // Get the node endpoint from the first protocol

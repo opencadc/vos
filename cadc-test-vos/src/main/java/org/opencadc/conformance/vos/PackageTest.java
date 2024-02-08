@@ -121,7 +121,7 @@ public class PackageTest extends VOSTest {
     private static final Logger log = Logger.getLogger(PackageTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
     }
 
     private static final String ZIP_CONTENT_TYPE = "application/zip";
@@ -271,11 +271,11 @@ public class PackageTest extends VOSTest {
     @Test
     public void multipleTargetTest() {
         try {
-            //  /multi-target-root-node/
-            //  /multi-target-root-node/dir1/
-            //  /multi-target-root-node/dir1/file1
-            //  /multi-target-root-node/dir2/
-            //  /multi-target-root-node/dir2/file2
+            //  multi-target-root-node/
+            //  multi-target-root-node/dir1/
+            //  multi-target-root-node/dir1/file1
+            //  multi-target-root-node/dir2/
+            //  multi-target-root-node/dir2/file2
 
             String root = "multi-target-root-node/";
             String dir1 = root + "dir1/";
@@ -329,12 +329,12 @@ public class PackageTest extends VOSTest {
     @Test
     public void fullTest() {
         try {
-             //   /full-root-folder/
-             //   /full-root-folder/pkg-root/file1.txt
-             //   /full-root-folder/pkg-root/dir1/
-             //   /full-root-folder/pkg-root/dir2/
-             //   /full-root-folder/pkg-root/dir2/file2.txt
-             //   /full-root-folder/pkg-root/dir2/file3.txt
+             //   full-root-folder/
+             //   full-root-folder/pkg-root/file1.txt
+             //   full-root-folder/pkg-root/dir1/
+             //   full-root-folder/pkg-root/dir2/
+             //   full-root-folder/pkg-root/dir2/file2.txt
+             //   full-root-folder/pkg-root/dir2/file3.txt
 
             // nodes paths
             String root = "full-root-folder/";
@@ -396,9 +396,9 @@ public class PackageTest extends VOSTest {
 
     @Test
     public void inPackageLinkNodeTest() {
-        // /dir1/dir2/link1
-        // /dir1/dir2/file1
-        // /dir1/dir3/file2
+        // dir1/dir2/link1
+        // dir1/dir2/file1
+        // dir1/dir3/file2
         // link1 is a link to file2
         // download package for dir1 which must have the LinkNode link1 -> file2
         try {
@@ -458,9 +458,9 @@ public class PackageTest extends VOSTest {
 
     @Test
     public void outOfPackageLinkNodeTest() {
-        // /dir1/dir2/link1
-        // /dir1/dir2/file1
-        // /dir1/dir3/file2
+        // dir1/dir2/link1
+        // dir1/dir2/file1
+        // dir1/dir3/file2
         // link1 is a link to file2
         // download package for dir1 which must have the LinkNode link1 -> file2
         try {
@@ -522,9 +522,9 @@ public class PackageTest extends VOSTest {
             log.info("testExternalLinks=false, skipping externalLinkNodeTest");
             return;
         }
-        // /dir1/dir2/link1
-        // /dir1/dir2/file1
-        // /dir1/dir3/file2
+        // dir1/dir2/link1
+        // dir1/dir2/file1
+        // dir1/dir3/file2
         // link1 is a link to an external resource
         // download package for dir1 which must not have link1 in the package
         try {
@@ -587,8 +587,8 @@ public class PackageTest extends VOSTest {
             log.info("testExternalLinks=false, skipping externalLinkNodeTest");
             return;
         }
-        // /dir1/dir2/link
-        // /dirA/dirB/target
+        // dir1/dir2/link
+        // dirA/dirB/target
         // link points to target
         // download package for dir1 & dirA must have link1 relative to fileA
         try {
@@ -820,7 +820,7 @@ public class PackageTest extends VOSTest {
         ArchiveInputStream archiveInputStream = archiveStreamFactory.createArchiveInputStream(
                 archiveType, inputStream);
         ArchiveEntry entry;
-        while((entry = archiveInputStream.getNextEntry()) != null) {
+        while ((entry = archiveInputStream.getNextEntry()) != null) {
             if (!archiveInputStream.canReadEntryData(entry)) {
                 log.debug("unable to read archive entry: " + entry.getName());
                 continue;

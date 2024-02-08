@@ -193,9 +193,8 @@ public abstract class VOSTest {
         log.debug("PUT " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(put));
         log.debug("PUT responseCode: " + put.getResponseCode());
-        // TODO revert response code back to expected 201
-        Assert.assertEquals("expected PUT response code = 201",
-                            201, put.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 200",
+                            200, put.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
     }
 
@@ -205,7 +204,6 @@ public abstract class VOSTest {
         log.debug("PUT " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(put));
         log.debug("PUT responseCode: " + put.getResponseCode());
-        // TODO revert response code back to expected 201
         Assert.assertEquals("expected PUT response code = 201",
                             201, put.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
