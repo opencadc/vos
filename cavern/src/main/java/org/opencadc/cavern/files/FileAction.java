@@ -120,7 +120,7 @@ public abstract class FileAction extends RestAction {
     }
 
     @Override
-    public void initAction() throws ResourceNotFoundException, IllegalArgumentException {
+    public void initAction() throws IllegalArgumentException {
         String jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
@@ -131,6 +131,11 @@ public abstract class FileAction extends RestAction {
             this.identityManager = nodePersistence.getIdentityManager();
         } catch (NamingException oops) {
             throw new RuntimeException("BUG: NodePersistence implementation not found with JNDI key " + jndiNodePersistence, oops);
+        }
+
+        checkReadable();
+        if (this instanceof PutAction) {
+            checkWritable();
         }
     }
 

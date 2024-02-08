@@ -79,6 +79,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import java.util.Date;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.permissions.ReadGrant;
@@ -88,6 +89,7 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeWriter;
 import org.opencadc.vospace.server.NodeFault;
 
 /**
@@ -147,15 +149,19 @@ public class HeadAction extends FileAction {
             
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());
-            syncOutput.setHeader("Content-Disposition", "inline; filename=" + nodeURI.getName());
+            syncOutput.setHeader("Content-Disposition", "inline; filename=\"" + nodeURI.getName() + "\"");
             syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
             syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
             syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            if (node.getPropertyValue(VOS.PROPERTY_URI_DATE) != null) {
+                Date lastMod = NodeWriter.getDateFormat().parse(node.getPropertyValue(VOS.PROPERTY_URI_DATE));
+                syncOutput.setLastModified(lastMod);
+            }
             
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
             if (contentMD5 != null) {
                 try {
-                    URI md5 = new URI(contentMD5);
+                    URI md5 = new URI("md5:" + contentMD5);
                     syncOutput.setDigest(md5);
                 } catch (URISyntaxException ex) {
                     log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);

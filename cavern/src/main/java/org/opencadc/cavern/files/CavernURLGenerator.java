@@ -76,7 +76,6 @@ import ca.nrc.cadc.reg.Capability;
 import ca.nrc.cadc.reg.Interface;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -136,7 +135,7 @@ public class CavernURLGenerator implements TransferGenerator {
     }
 
     @Override
-    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams) throws Exception {
+    public List<Protocol> getEndpoints(VOSURI target, Transfer transfer, List<Parameter> additionalParams) throws Exception {
         log.debug("getEndpoints: " + target);
         if (target == null) {
             throw new IllegalArgumentException("target is required");
@@ -315,7 +314,7 @@ public class CavernURLGenerator implements TransferGenerator {
             // ugh: self lookup
             RegistryClient reg = new RegistryClient();
             Capabilities caps = reg.getCapabilities(nodePersistence.getResourceID());
-            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES_20);
+            this.filesCap = caps.findCapability(Standards.VOSPACE_FILES);
         }
     }
 }

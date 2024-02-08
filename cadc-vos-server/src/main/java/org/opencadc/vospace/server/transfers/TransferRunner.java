@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2009.                            (c) 2009.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -387,7 +387,7 @@ public class TransferRunner implements JobRunner {
                     
                     TransferGenerator gen = nodePersistence.getTransferGenerator();
                     //List<Protocol> plist = TransferUtil.getTransferEndpoints(trans, job, additionalParameters);
-                    List<Protocol> plist = gen.getEndpoints(target, transfer, job, additionalParameters);
+                    List<Protocol> plist = gen.getEndpoints(target, transfer, additionalParameters);
                     if (plist.isEmpty()) {
                         sendError(ExecutionPhase.EXECUTING,
                                 ErrorType.FATAL, "requested transfer specs not supported",

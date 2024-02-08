@@ -83,34 +83,27 @@ paths:
                     description: Service busy
                 default:
                     description: Unexpected error
-        put:
+        head:
             description: |
-                Create a file at a specified location
+                Get the metadata of the specified file.
             tags:
                 - Files
-            consumes:
-                - text/xml
             responses:
                 '200':
                     description: Successful response
                 '400':
-                    description: If filePath ends in a data node.
+                    description: If the user requested a container node (directory).
                 '403':
                     description: If the user does not have permission.
                 '404':
-                    description: If the path to the file could not be found.
+                    description: If the file or part of the path to the file could not be found.
                 '500':
                     description: Internal error
                 '503':
                     description: Service busy
                 default:
                     description: Unexpected error
-        parameters:
-            - name: filePath
-              in: path
-              description: The path for the file
-              required: true
-              type: string
+
     /nodes/{nodePath}:
         get:
             description: |
@@ -150,6 +143,13 @@ paths:
                   description: for container nodes, the number of children to return.
                   required: false
                   type: string
+                - name: view
+                  in: query
+                  description: for data nodes, a specific view
+                  required: false
+                  type: string
+                  enum:
+                      - data
         post:
             description: |
                 Set the property values for a specific Node

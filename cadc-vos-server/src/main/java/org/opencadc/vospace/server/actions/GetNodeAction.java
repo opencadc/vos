@@ -72,6 +72,8 @@ import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
@@ -118,10 +120,24 @@ public class GetNodeAction extends NodeAction {
     @Override
     public void doAction() throws Exception {
         VOSURI target = getTargetURI();
+
+        String view = syncInput.getParameter(QUERY_PARAM_VIEW);
+        if ("data".equalsIgnoreCase(view)) {
+            // makes the assumption that /files endpoint is a sibling of /nodes
+            URI requestURI = URI.create(syncInput.getRequestURI());
+            String filesPath = syncInput.getContextPath() + "/files" + target.getPath();
+            // query params are not passed through
+            URI filesURI = new URI(requestURI.getScheme(), requestURI.getHost(), filesPath, null);
+            String location = filesURI.toASCIIString();
+            log.debug("Redirecting view=data request to " + location);
+            syncOutput.setHeader("Location", location);
+            syncOutput.setCode(HttpURLConnection.HTTP_SEE_OTHER);
+            return;
+        }
+
         final String detailLevel = syncInput.getParameter(QUERY_PARAM_DETAIL);
         
         // get parent node
-        // TBD: resolveLinks=true?
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         Node serverNode = pathResolver.getNode(target.getPath(), false);
         if (serverNode == null) {

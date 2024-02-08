@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2023.                            (c) 2023.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,7 +69,6 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 import org.opencadc.vospace.VOSURI;
@@ -94,7 +93,6 @@ public interface TransferGenerator {
      *
      * @param target single target URI from the transfer
      * @param transfer The transfer object with requested protocol(s)
-     * @param job The UWS job associated with the transfer request.
      * @param additionalParams Any additional parameters associated with the request.
      * 
      * @return list of protocol(s) with endpoints
@@ -102,6 +100,6 @@ public interface TransferGenerator {
      * @throws Exception implementations are responsible for throwing right exception 
      *         to generate the correct output
      */
-    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, Job job, List<Parameter> additionalParams)
+    List<Protocol> getEndpoints(VOSURI target, Transfer transfer, List<Parameter> additionalParams)
             throws Exception;
 }
