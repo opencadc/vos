@@ -257,7 +257,7 @@ public class PackageTest extends VOSTest {
             expected.add(name);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            //doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodeURL, false);
@@ -315,7 +315,7 @@ public class PackageTest extends VOSTest {
             expected.add(file2);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-//            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -383,7 +383,7 @@ public class PackageTest extends VOSTest {
             expected.add(file3);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-//            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -446,7 +446,7 @@ public class PackageTest extends VOSTest {
             expected.add(file2);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -506,7 +506,7 @@ public class PackageTest extends VOSTest {
             expected.add(file1);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -571,7 +571,7 @@ public class PackageTest extends VOSTest {
             expected.add(file2);
 
             doTest(targets, expected, TAR_CONTENT_TYPE);
-            //            doTest(targets, expected, ZIP_CONTENT_TYPE);
+            doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
             delete(nodes);
@@ -634,7 +634,7 @@ public class PackageTest extends VOSTest {
             expected.add(link);
             expected.add(target);
 
-//            doTest(targets, expected, TAR_CONTENT_TYPE);
+            doTest(targets, expected, TAR_CONTENT_TYPE);
             doTest(targets, expected, ZIP_CONTENT_TYPE);
 
             // cleanup
