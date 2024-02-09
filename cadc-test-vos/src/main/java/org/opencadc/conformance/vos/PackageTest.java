@@ -583,10 +583,6 @@ public class PackageTest extends VOSTest {
 
     @Test
     public void linkTargetInDifferentPackageRootTest() {
-        if (!testExternalLinks) {
-            log.info("testExternalLinks=false, skipping externalLinkNodeTest");
-            return;
-        }
         // dir1/dir2/link
         // dirA/dirB/target
         // link points to target

@@ -50,6 +50,6 @@ dependencies {
     testImplementation 'org.opencadc:cadc-test-uws:[1.0,)'
     testImplementation 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
-    intTestImplementation 'org.opencadc:cadc-test-vos:[2.1.7,)'
+    intTestImplementation 'org.opencadc:cadc-test-vos:[2.1.6,)'
     intTestImplementation 'org.opencadc:cadc-test-vosi:[1.0.11,)'
 }
