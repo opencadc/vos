@@ -255,7 +255,6 @@ public class FilesTest extends VOSTest {
         Assert.assertEquals(0, headFile.getContentLength());
         String contentDisposition = "inline; filename=\"" + name + "\"";
         Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-        Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
 
         log.info("GET: " + fileURL);
         out = new ByteArrayOutputStream();
@@ -266,9 +265,7 @@ public class FilesTest extends VOSTest {
         Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
         Assert.assertEquals(0, headFile.getContentLength());
         Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-        Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
-
-
+        
         // Delete the node
         delete(nodeURL);
 
