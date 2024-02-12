@@ -89,9 +89,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -196,7 +193,6 @@ public abstract class VOSTest {
         log.debug("PUT " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(put));
         log.debug("PUT responseCode: " + put.getResponseCode());
-        // TODO revert response code back to expected 201
         Assert.assertEquals("expected PUT response code = 200",
                             200, put.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
@@ -208,9 +204,8 @@ public abstract class VOSTest {
         log.debug("PUT " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(put));
         log.debug("PUT responseCode: " + put.getResponseCode());
-        Integer[] validCodes = new Integer[]{200, 201};
-        Assert.assertTrue("expected PUT response code in [200, 201]",
-                Arrays.asList(validCodes).contains(put.getResponseCode()));
+        Assert.assertEquals("expected PUT response code = 201",
+                            201, put.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", put.getThrowable());
     }
 

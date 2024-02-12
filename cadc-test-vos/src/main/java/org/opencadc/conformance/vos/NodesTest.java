@@ -225,7 +225,7 @@ public class NodesTest extends VOSTest {
                     put(subDirURL, subDirURI, subDirNode);
                     Assert.fail("New node should fail when parent is locked");
                 } catch (AssertionError ex) {
-                    Assert.assertEquals("expected PUT response code in [200, 201]",
+                    Assert.assertEquals("expected PUT response code = 201 expected:<201> but was:<403>",
                             ex.getMessage());
                 }
             }
@@ -1006,8 +1006,8 @@ public class NodesTest extends VOSTest {
         putAction = new HttpUpload(is, childURL);
         Subject.doAs(groupMember, new RunnableAction(putAction));
         log.debug("PUT responseCode: " + putAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, putAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 201",
+                201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
         log.debug("Delete node " + childURL);
