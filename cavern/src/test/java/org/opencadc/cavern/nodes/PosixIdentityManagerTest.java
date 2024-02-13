@@ -67,26 +67,14 @@
 
 package org.opencadc.cavern.nodes;
 
-
-import org.opencadc.cavern.nodes.PosixIdentityManager;
-import ca.nrc.cadc.ac.ACIdentityManager;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.auth.NumericPrincipal;
 import ca.nrc.cadc.auth.PosixPrincipal;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-
-import java.io.File;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Set;
-import java.util.UUID;
-
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;

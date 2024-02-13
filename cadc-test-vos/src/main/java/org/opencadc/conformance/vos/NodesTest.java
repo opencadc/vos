@@ -78,6 +78,7 @@ import ca.nrc.cadc.net.NetUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -224,7 +225,7 @@ public class NodesTest extends VOSTest {
                     put(subDirURL, subDirURI, subDirNode);
                     Assert.fail("New node should fail when parent is locked");
                 } catch (AssertionError ex) {
-                    Assert.assertEquals("expected PUT response code = 200 expected:<200> but was:<403>",
+                    Assert.assertEquals("expected PUT response code = 201 expected:<201> but was:<403>",
                             ex.getMessage());
                 }
             }
@@ -909,45 +910,30 @@ public class NodesTest extends VOSTest {
         }
     }
 
-    //@Test
-    public void dataViewTest() {
+    @Test
+    public void testDataView() {
         try {
-            // upload test file
             String name = "view-data-node";
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             DataNode node = new DataNode(name);
+
+            // cleanup
+            delete(nodeURL, false);
+
             put(nodeURL, nodeURI, node);
 
-            // get the node with view=data
-            URL getURL = new URL(nodeURL + "?view=data");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(getURL, out);
-            get.setFollowRedirects(false);
-            Subject.doAs(authSubject, new RunnableAction(get));
-            Assert.assertNotNull(get.getThrowable());
-            URL redirectURL = get.getRedirectURL();
-            Assert.assertNotNull(redirectURL);
-            log.debug("location = " + redirectURL);
-
-            String query = redirectURL.getQuery();
-            String[] params = query.split("&");
-            Assert.assertEquals(3, params.length);
-            for (String p : params) {
-                String[] pv = p.split("=");
-                String key = pv[0];
-                String val = NetUtil.decode(pv[1]);
-                Assert.assertEquals(2, pv.length);
-                if ("target".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(nodeURI.getURI().toASCIIString(), val);
-                } else if ("protocol".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(VOS.PROTOCOL_HTTPS_GET.toASCIIString(), val);
-                } else if ("direction".equalsIgnoreCase(key)) {
-                    Assert.assertEquals(Direction.pullFromVoSpace.getValue(), val);
-                } else {
-                    Assert.fail(String.format("unexpected transfer parameter: %s = %s", key, val));
-                }
-            }
+            URL viewDataNodeUrl = getNodeURL(nodesServiceURL, name + "?view=data");
+            HttpGet getRequest = new HttpGet(viewDataNodeUrl, false);
+            log.debug("GET: " + viewDataNodeUrl);
+            Subject.doAs(authSubject, new RunnableAction(getRequest));
+            log.debug("GET responseCode: " + getRequest.getResponseCode() + " " + getRequest.getThrowable());
+            Assert.assertEquals(HttpURLConnection.HTTP_SEE_OTHER, getRequest.getResponseCode());
+            Assert.assertNull(getRequest.getThrowable());
+            String expectedFilesLocation = nodeURL.toString().replace("/nodes/", "/files/");
+            log.debug("view=data redirects " + expectedFilesLocation + " vs "
+                    + getRequest.getResponseHeader("Location"));
+            Assert.assertTrue(expectedFilesLocation.equalsIgnoreCase(getRequest.getResponseHeader("Location")));
 
             if (cleanupOnSuccess) {
                 delete(nodeURL);
@@ -1020,8 +1006,8 @@ public class NodesTest extends VOSTest {
         putAction = new HttpUpload(is, childURL);
         Subject.doAs(groupMember, new RunnableAction(putAction));
         log.debug("PUT responseCode: " + putAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, putAction.getResponseCode());
+        Assert.assertEquals("expected PUT response code = 201",
+                201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
         log.debug("Delete node " + childURL);

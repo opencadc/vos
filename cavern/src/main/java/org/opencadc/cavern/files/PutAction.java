@@ -263,6 +263,7 @@ public class PutAction extends FileAction {
             }
 
             nodePersistence.put(node);
+            syncOutput.setCode(201);
             successful = true;
         } catch (AccessDeniedException e) {
             // TODO: this is a deployment error because cavern doesn't have permission to filesystem

@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2021.                            (c) 2021.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -88,6 +88,7 @@ import org.opencadc.vospace.server.LocalServiceURI;
 import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
 
@@ -100,7 +101,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
 
     private static final Logger log = Logger.getLogger(InternalTransferAction.class);
 
-    private VOSpaceAuthorizer authorizer;
+    private final VOSpaceAuthorizer authorizer;
 
     public InternalTransferAction(NodePersistence per, JobUpdater ju, Job job, Transfer transfer) {
         super(per, ju, job, transfer);
@@ -154,8 +155,8 @@ public class InternalTransferAction extends VOSpaceTransfer {
             }
 
             if ((rn.node != null) && !(rn.node instanceof ContainerNode)) {
-                throw NodeFault.NodeNotFound.getStatus("Resolved parent (" +
-                        loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
+                throw NodeFault.NodeNotFound.getStatus("Resolved parent ("
+                        + loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
             }
             ContainerNode destContainer;
             String destName;
@@ -169,6 +170,17 @@ public class InternalTransferAction extends VOSpaceTransfer {
             } else {
                 destContainer = (ContainerNode) rn.node;
                 destName = srcURI.getName();
+            }
+
+            // prevent moves from directory to its sub-directories
+            if (srcNode instanceof ContainerNode) {
+                String srcPath = Utils.getPath(srcNode);
+                String destPath = Utils.getPath(destContainer);
+                if (destPath.contains(srcPath)) {
+                    throw NodeFault.ContainerNotFound.getStatus(
+                            "Cannot move container node into its descendants: source "
+                                    + "path " + srcPath + " in resolved path " + destPath);
+                }
             }
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
 
@@ -192,7 +204,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
             nodePersistence.move(srcNode, destContainer, destName);
 
             // final job state
-            List<Result> resultsList = new ArrayList<Result>();
+            List<Result> resultsList = new ArrayList<>();
             String newPath = loc.getURI(srcNode).getPath() + "/" + destName;
             resultsList.add(new Result("destination", new URI(newPath)));
             job.setResultsList(resultsList);
