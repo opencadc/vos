@@ -68,6 +68,7 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
 import java.io.InputStream;
@@ -481,7 +482,7 @@ public class NodeReader implements XmlProcessor {
         Set<GroupURI> groups = new TreeSet<>();
         NodeProperty nodeProperty = getNodeProperty(key, properties);
         if (nodeProperty != null) {
-            if (nodeProperty.getValue() != null) {
+            if (StringUtil.hasText(nodeProperty.getValue())) {
                 String[] values = nodeProperty.getValue().split(delimiter);
                 for (String value : values) {
                     GroupURI groupURI;

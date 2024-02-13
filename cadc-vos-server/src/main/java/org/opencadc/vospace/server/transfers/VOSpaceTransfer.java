@@ -137,7 +137,8 @@ public abstract class VOSpaceTransfer {
 
     void validateView()
             throws TransferException, Exception {
-        if (transfer.getView() != null && !transfer.getView().getURI().equals(VOS.VIEW_DEFAULT)) {
+        if (transfer.getView() != null && !transfer.getView().getURI().equals(VOS.VIEW_DEFAULT)
+                && !transfer.getView().getURI().equals(new URI("ivo://cadc.nrc.ca/vospace/view#data"))) {
             Views views = nodePersistence.getViews();
             View view = views.getView(transfer.getView().getURI());
             if (view == null) {
