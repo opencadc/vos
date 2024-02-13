@@ -177,7 +177,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 String srcPath = Utils.getPath(srcNode);
                 String destPath = Utils.getPath(destContainer);
                 if (destPath.contains(srcPath)) {
-                    throw NodeFault.ContainerNotFound.getStatus(
+                    throw NodeFault.InvalidArgument.getStatus(
                             "Cannot move container node into its descendants: source "
                                     + "path " + srcPath + " in resolved path " + destPath);
                 }
