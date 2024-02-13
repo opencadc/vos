@@ -313,23 +313,20 @@ public class TransferRunner implements JobRunner {
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, "NotAuthenticated", HttpURLConnection.HTTP_UNAUTHORIZED, true);
                 return;
             } catch (IllegalArgumentException ex) {
-                // target node was not a DataNode
-                String msg = "Invalid Argument (target node is not a DataNode)";
+                // target not valid for specified operation
+                String msg = ex.getMessage();
                 log.debug(msg, ex);
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_BAD_REQUEST, true);
                 return;
             } catch (LinkingException link) {
-                String msg = "Link Exception: " + link.getMessage();
+                String msg = link.getMessage();
                 log.debug(msg, link);
-                // now set the job to error
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_BAD_REQUEST, true);
                 return;
             } catch (UnsupportedOperationException ex) {
-                ex.printStackTrace();
-                String msg = "Unsupported Operation: " + ex.getMessage();
+                String msg = ex.getMessage();
                 log.debug(msg, ex);
-                // now set the job to error
-                sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_NOT_IMPLEMENTED, true);
+                sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_BAD_METHOD, true);
                 return;
             }
         } catch (TransientException e) {
