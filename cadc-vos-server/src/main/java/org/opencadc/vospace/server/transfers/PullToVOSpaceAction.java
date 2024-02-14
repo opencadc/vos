@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2011.                            (c) 2011.
+*  (c) 2024.                            (c) 2024.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,19 +69,11 @@
 
 package org.opencadc.vospace.server.transfers;
 
-import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobUpdater;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import org.opencadc.vospace.LinkingException;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Transfer;
-import org.opencadc.vospace.transfer.TransferParsingException;
 
 /**
  *
@@ -93,10 +85,7 @@ public class PullToVOSpaceAction extends VOSpaceTransfer {
         super(per, ju, job, transfer);
     }
 
-    public void doAction()
-            throws JobPersistenceException, JobNotFoundException,
-            LinkingException, NodeNotFoundException, TransferParsingException,
-            IOException, TransientException, URISyntaxException {
+    public void doAction() throws Exception {
         throw new UnsupportedOperationException(Direction.pullToVoSpaceValue + " not implemented");
     }
 }
