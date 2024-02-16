@@ -79,6 +79,7 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
+import org.opencadc.persist.Entity;
 
 /**
  *
@@ -88,7 +89,7 @@ public class NodeEntityTest {
     private static final Logger log = Logger.getLogger(NodeEntityTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.persist", Level.INFO);
+        Log4jInit.setLevel("org.opencadc.persist", Level.DEBUG);
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
     
@@ -275,6 +276,63 @@ public class NodeEntityTest {
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testShiftValues() {
+        try {
+            Entity.MCS_DEBUG = true;
+            
+            final UUID rootID = new UUID(0L, 0L);
+            final ContainerNode root = new ContainerNode(rootID, "root");
+            
+            ContainerNode n = new ContainerNode("foo");
+            n.parent = root;
+            URI mcs1 = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("base metaChecksum: " + mcs1);
+            
+            // shift same value to another field
+            n.inheritPermissions = true;
+            URI b0 = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("inheritPermissions metaChecksum: " + b0);
+            Assert.assertNotEquals(mcs1, b0);
+
+            n.inheritPermissions = null;
+            n.isLocked = true;
+            URI b1 =  n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("isLocked metaChecksum: " + b1);
+            Assert.assertNotEquals(b0, b1);
+
+            n.isLocked = null;
+            n.isPublic = true;
+            URI b2 =  n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("isLocked metaChecksum: " + b2);
+            Assert.assertNotEquals("shift boolean", b1, b2);
+            n.isPublic = null;
+            n.inheritPermissions = true;
+            
+            // shift same value to an adjacent field
+            GroupURI guri = new GroupURI(URI.create("ivo://opencadc.org/gms?FOO"));
+            n.getReadOnlyGroup().add(guri);
+            URI rog = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("read-only group metaChecksum: " + rog);
+            Assert.assertNotEquals(mcs1, rog);
+            
+            n.getReadOnlyGroup().clear();
+            n.getReadWriteGroup().add(guri);
+            URI rwg = n.computeMetaChecksum(MessageDigest.getInstance("MD5"));
+            log.info("read-write group metaChecksum: " + rwg);
+            Assert.assertNotEquals(mcs1, rog);
+            Assert.assertNotEquals("shift group", rog, rwg);
+            n.getReadWriteGroup().clear();
+            
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        } finally {
+            Entity.MCS_DEBUG = false;
         }
     }
 }
