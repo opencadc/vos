@@ -80,22 +80,19 @@ public class DeletedNodeEvent extends Entity {
     private static final Logger log = Logger.getLogger(DeletedNodeEvent.class);
 
     private final String nodeType;
-    private final URI storageID;
+    public URI storageID;
     
-    public DeletedNodeEvent(UUID id, Class nodeType, URI storageID) {
-        super(id, false);
+    public DeletedNodeEvent(UUID id, Class nodeType) {
+        super(id, Node.ENTITY_TRUNCATE_DATES, Node.ENTITY_DIGEST_FIELD_NAMES);
         NodeUtil.assertNotNull(DeletedNodeEvent.class, "nodeType", nodeType);
         this.nodeType = nodeType.getSimpleName();
-        
-        // storageID may be null
-        this.storageID = storageID;
+        this.storageID = null;
     }
 
+    /**
+     * @return simple class name for the node type
+     */
     public String getNodeType() {
         return nodeType;
-    }
-
-    public URI getStorageID() {
-        return storageID;
     }
 }
