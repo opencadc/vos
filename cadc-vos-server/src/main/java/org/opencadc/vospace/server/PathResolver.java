@@ -179,7 +179,9 @@ public class PathResolver {
                     ret.node = child;
                     ret.name = child.getName();
                 }
-                if (!voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
+
+                // do not check read permission on leaf nodes
+                if (pathIter.hasNext() && !voSpaceAuthorizer.hasSingleNodeReadPermission(child, subject)) {
                     LocalServiceURI lsURI = new LocalServiceURI(nodePersistence.getResourceID());
                     throw NodeFault.PermissionDenied.getStatus(lsURI.getURI(child).toString());
                 }

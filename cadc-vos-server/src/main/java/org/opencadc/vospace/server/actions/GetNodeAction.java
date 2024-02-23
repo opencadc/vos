@@ -147,65 +147,68 @@ public class GetNodeAction extends NodeAction {
         
         if (serverNode instanceof ContainerNode) {
             ContainerNode node = (ContainerNode) serverNode;
-
             log.debug("node: " + node);
 
-            // TBD: sorting parameters
-            String sortParam = syncInput.getParameter(QUERY_PARAM_SORT_KEY);
-            if (sortParam != null) {
-                throw new UnsupportedOperationException("sort by " + sortParam);
-            }
-            
-            String sortOrderParam = syncInput.getParameter(QUERY_PARAM_ORDER_KEY);
-            if (sortOrderParam != null) {
-                throw new UnsupportedOperationException("sort order " + sortOrderParam);
-            }
+            // Check for read permission to list child nodes.
+            Subject subject = AuthenticationUtil.getCurrentSubject();
+            if (voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+                // TBD: sorting parameters
+                String sortParam = syncInput.getParameter(QUERY_PARAM_SORT_KEY);
+                if (sortParam != null) {
+                    throw new UnsupportedOperationException("sort by " + sortParam);
+                }
 
-            // paging parameters
-            String pageLimitString = syncInput.getParameter(QUERY_PARAM_LIMIT);
-            String startURI = syncInput.getParameter(QUERY_PARAM_URI);
+                String sortOrderParam = syncInput.getParameter(QUERY_PARAM_ORDER_KEY);
+                if (sortOrderParam != null) {
+                    throw new UnsupportedOperationException("sort order " + sortOrderParam);
+                }
 
-            Integer pageLimit = null;
-            if (pageLimitString != null) {
-                try {
-                    pageLimit = Integer.parseInt(pageLimitString);
-                    if (pageLimit < 0) {
-                        throw new NumberFormatException();
+                // paging parameters
+                String pageLimitString = syncInput.getParameter(QUERY_PARAM_LIMIT);
+                String startURI = syncInput.getParameter(QUERY_PARAM_URI);
+
+                Integer pageLimit = null;
+                if (pageLimitString != null) {
+                    try {
+                        pageLimit = Integer.parseInt(pageLimitString);
+                        if (pageLimit < 0) {
+                            throw new NumberFormatException();
+                        }
+                    } catch (NumberFormatException e) {
+                        throw NodeFault.InvalidArgument.getStatus("value for limit must be a positive integer.");
                     }
-                } catch (NumberFormatException e) {
-                    throw NodeFault.InvalidArgument.getStatus("value for limit must be a positive integer.");
                 }
-            }
 
-            String pageStart = null;
-            if (StringUtil.hasText(startURI)) {
-                VOSURI vuri = new VOSURI(startURI);
-                String parentPath = vuri.getParent();
-                log.debug("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
-                if (!target.getPath().equals(parentPath)) {
-                    throw NodeFault.InvalidURI.getStatus(
-                            "uri parameter (" + vuri.toString() + ") not a child of target uri ("
-                                    + getTargetURI() + ").");
+                String pageStart = null;
+                if (StringUtil.hasText(startURI)) {
+                    VOSURI vuri = new VOSURI(startURI);
+                    String parentPath = vuri.getParent();
+                    log.debug("pagination: target.path=" + target.getPath() + " start.parentPath=" + parentPath);
+                    if (!target.getPath().equals(parentPath)) {
+                        throw NodeFault.InvalidURI.getStatus(
+                                "uri parameter (" + vuri.toString() + ") not a child of target uri ("
+                                        + getTargetURI() + ").");
+                    }
+                    pageStart = vuri.getName();
                 }
-                pageStart = vuri.getName();
-            }
 
-            long start = System.currentTimeMillis();
-            log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
-            try {
-                ResourceIterator<Node> ci = nodePersistence.iterator(node, pageLimit, pageStart);
-                if (VOS.Detail.max.getValue().equals(detailLevel)) {
-                    node.childIterator = new TagChildAccessRightsWrapper(ci, AuthenticationUtil.getCurrentSubject());
-                } else {
-                    node.childIterator = ci;
+                long start = System.currentTimeMillis();
+                log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
+                try {
+                    ResourceIterator<Node> ci = nodePersistence.iterator(node, pageLimit, pageStart);
+                    if (VOS.Detail.max.getValue().equals(detailLevel)) {
+                        node.childIterator = new TagChildAccessRightsWrapper(ci, subject);
+                    } else {
+                        node.childIterator = ci;
+                    }
+                } catch (UnsupportedOperationException ex) {
+                    throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
                 }
-            } catch (UnsupportedOperationException ex) {
-                throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
-            }
 
-            long end = System.currentTimeMillis();
-            long dt = (end - start);
-            log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
+                long end = System.currentTimeMillis();
+                long dt = (end - start);
+                log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
+            }
         }
 
         // get the properties if no detail level is specified (null) or if the
