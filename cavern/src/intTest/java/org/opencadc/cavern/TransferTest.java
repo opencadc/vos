@@ -70,16 +70,20 @@ package org.opencadc.cavern;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.transfer.Direction;
@@ -95,15 +99,20 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
     
     public TransferTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+
+        // enables the updateNodeNotOwnedTest, the cavern-auth-test.pem user, and the Constants.TEST_CERT user,
+        // are both members of the writeGroup group.
+        GroupURI writeGroup = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?Test-Write"));
+        File writeGroupCert = FileUtil.getFileFromResource("cavern-write-test.pem", TransferTest.class);
+        super.enableWriteAccess(writeGroup, writeGroupCert);
     }
-    
+
     @Test
     public void testPreauthToken() {
         try {
