@@ -75,7 +75,6 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -96,7 +95,6 @@ import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeReader;
-import org.opencadc.vospace.transfer.Direction;
 
 public class NodesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(NodesTest.class);
@@ -952,40 +950,27 @@ public class NodesTest extends VOSTest {
         
         // create a directory
         String parentName = "testPermissions";
-        ContainerNode testNode = new ContainerNode(parentName);
-        testNode.owner = authSubject;
-        testNode.isPublic = false;
+        ContainerNode parentNode = new ContainerNode(parentName);
+        parentNode.owner = authSubject;
+        parentNode.isPublic = false;
 
-        final URL nodeURL = getNodeURL(nodesServiceURL, parentName);
-        final VOSURI nodeURI = getVOSURI(parentName);
+        final URL parentURL = getNodeURL(nodesServiceURL, parentName);
+        final VOSURI parentURI = getVOSURI(parentName);
 
         String childName = "testGroupUser";
         ContainerNode childNode = new ContainerNode(childName);
-        childNode.parent = testNode;
+        childNode.parent = parentNode;
         String childPath = parentName + "/" + childName;
         final VOSURI childURI = getVOSURI(childPath);
         final URL childURL = getNodeURL(nodesServiceURL, childPath);
-        
+
         // cleanup
         delete(childURL, false);
-        delete(nodeURL, false);
+        delete(parentURL, false);
 
         // PUT the node
-        log.info("putAction: " + nodeURI + " -> " + nodeURL);
-        put(nodeURL, nodeURI, testNode);
-
-        // try to access it as a different user (memberUser) - it should fail
-        HttpGet getAction = new HttpGet(nodeURL, true);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
-
-        // give groupMember read access through the group
-        getAction = new HttpGet(nodeURL, true);
-        testNode.getReadOnlyGroup().add(accessGroup);
-        post(nodeURL, nodeURI, testNode);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals("expected GET response code = 200", 200, getAction.getResponseCode());
-        Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
+        log.info("putAction: " + parentURI + " -> " + parentURL);
+        put(parentURL, parentURI, parentNode);
 
         // permission denied to write in the container without write permission
         InputStream is = prepareInput(childURI, childNode);
@@ -998,9 +983,9 @@ public class NodesTest extends VOSTest {
                 403, putAction.getResponseCode());
 
         // same test after permission granted
-        testNode.getReadWriteGroup().add(accessGroup);
-        log.debug("Node update " + testNode.getReadWriteGroup());
-        post(nodeURL, nodeURI, testNode);
+        parentNode.getReadWriteGroup().add(accessGroup);
+        log.debug("Node update " + parentNode.getReadWriteGroup());
+        post(parentURL, parentURI, parentNode);
         log.debug("PUT succeed " + childURL);
         is.reset();
         putAction = new HttpUpload(is, childURL);
@@ -1010,16 +995,38 @@ public class NodesTest extends VOSTest {
                 201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
+        // try to access it as a different user (memberUser) with no permissions - it should succeed but with no children
+        parentNode.getReadWriteGroup().clear();
+        parentNode.clearReadWriteGroups = true;
+        post(parentURL, parentURI, parentNode);
+        NodeReader.NodeReaderResult result = get(parentURL, 200, XML_CONTENT_TYPE, true, groupMember);
+        Assert.assertTrue(result.node instanceof ContainerNode);
+        ContainerNode serverNode = (ContainerNode) result.node;
+        Assert.assertTrue("expected no child nodes", serverNode.getNodes().isEmpty());
+
+        // give groupMember read access through the group, get should succeed and return the child node
+        parentNode.getReadOnlyGroup().add(accessGroup);
+        post(parentURL, parentURI, parentNode);
+        result = get(parentURL, 200, XML_CONTENT_TYPE, true, groupMember);
+        Assert.assertTrue(result.node instanceof ContainerNode);
+        serverNode = (ContainerNode) result.node;
+        Assert.assertFalse("expected no child nodes", serverNode.getNodes().isEmpty());
+
+        // give groupMember write access through the group
+        parentNode.getReadWriteGroup().add(accessGroup);
+        post(parentURL, parentURI, parentNode);
+
+        // groupMember should be able to delete the child node
         log.debug("Delete node " + childURL);
         HttpDelete deleteAction = new HttpDelete(childURL, true);
         Subject.doAs(groupMember, new RunnableAction(deleteAction));
         log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
+        Assert.assertEquals("expected DELETE response code = 200",
                 200, deleteAction.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
+        Assert.assertNull("expected DELETE throwable == null", deleteAction.getThrowable());
 
         if (cleanupOnSuccess) {
-            delete(nodeURL);
+            delete(parentURL);
         }
     }
 

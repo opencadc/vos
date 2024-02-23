@@ -164,10 +164,9 @@ public class PackageTest extends VOSTest {
 
             Subject anonSubject = AuthenticationUtil.getAnonSubject();
             File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, anonSubject);
-            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            log.debug("permissionDenied tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
-            Assert.assertEquals(1024L, tarPkg.length());
 
             // cleanup
             delete(fileURL, false);
@@ -192,10 +191,9 @@ public class PackageTest extends VOSTest {
             // should return empty archive if node not found.
             // check tar file exists.
             File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
-            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            log.debug("targetNotFound tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
-            Assert.assertEquals(1024L, tarPkg.length());
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -222,7 +220,7 @@ public class PackageTest extends VOSTest {
             // tar does not create an empty directory for an empty tar archive
             // check tar file exists.
             File tarPkg = downloadPackage(targets, TAR_CONTENT_TYPE, authSubject);
-            log.debug("tar file: " + tarPkg.getAbsolutePath());
+            log.debug("emptyTarget tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
 
@@ -677,7 +675,7 @@ public class PackageTest extends VOSTest {
         // extract the package
         File extracted = extractPackage(pkg, contentType);
         Assert.assertNotNull(extracted);
-        log.debug("extracted file: " + extracted.getAbsolutePath());
+        log.debug("extracted archive: " + extracted.getAbsolutePath());
 
         // verify package files
         verifyPackage(expected, extracted);

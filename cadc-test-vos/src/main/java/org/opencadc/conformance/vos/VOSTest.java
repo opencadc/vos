@@ -184,25 +184,23 @@ public abstract class VOSTest {
 
     public void put(URL nodeURL, VOSURI vosURI, Node node) throws IOException {
         InputStream in = prepareInput(vosURI, node);
-        put(nodeURL, in, XML_CONTENT_TYPE);
+        put(nodeURL, in, XML_CONTENT_TYPE, authSubject);
     }
 
-    public void put(URL nodeURL, File file, String contentType) {
-        HttpUpload put = new HttpUpload(file, nodeURL);
-        put.setRequestProperty("Content-Type", contentType);
-        log.debug("PUT " + nodeURL);
-        Subject.doAs(authSubject, new RunnableAction(put));
-        log.debug("PUT responseCode: " + put.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                            200, put.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", put.getThrowable());
+    public void put(URL nodeURL, VOSURI vosURI, Node node, Subject subject) throws IOException {
+        InputStream in = prepareInput(vosURI, node);
+        put(nodeURL, in, XML_CONTENT_TYPE, subject);
     }
 
     public void put(URL nodeURL, InputStream is, String contentType) {
+        put(nodeURL, is, contentType, authSubject);
+    }
+
+    public void put(URL nodeURL, InputStream is, String contentType, Subject subject) {
         HttpUpload put = new HttpUpload(is, nodeURL);
         put.setRequestProperty("Content-Type", contentType);
         log.debug("PUT " + nodeURL);
-        Subject.doAs(authSubject, new RunnableAction(put));
+        Subject.doAs(subject, new RunnableAction(put));
         log.debug("PUT responseCode: " + put.getResponseCode());
         Assert.assertEquals("expected PUT response code = 201",
                             201, put.getResponseCode());
@@ -213,13 +211,18 @@ public abstract class VOSTest {
             throws NodeParsingException, NodeNotSupportedException {
         return get(url, responseCode, contentType, true);
     }
-    
+
     public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType, boolean verify)
+            throws NodeParsingException, NodeNotSupportedException {
+        return get(url, responseCode, contentType, verify, authSubject);
+    }
+    
+    public NodeReader.NodeReaderResult get(URL url, int responseCode, String contentType, boolean verify, Subject subject)
             throws NodeParsingException, NodeNotSupportedException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         HttpGet get = new HttpGet(url, out);
         log.debug("GET: " + url);
-        Subject.doAs(authSubject, new RunnableAction(get));
+        Subject.doAs(subject, new RunnableAction(get));
         log.debug("GET responseCode: " + get.getResponseCode() + " " + get.getThrowable());
 
         if (verify) {
@@ -240,14 +243,18 @@ public abstract class VOSTest {
     }
 
     public void post(URL nodeURL, VOSURI vosURI, Node node) throws Exception {
-        post(nodeURL, vosURI, node, true, 200);
+        post(nodeURL, vosURI, node, true, 200, authSubject);
     }
     
     public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify) throws Exception {
-        post(nodeURL, vosURI, node, verify, 200);
+        post(nodeURL, vosURI, node, verify, 200, authSubject);
+    }
+
+    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify, int expectedCode) throws Exception {
+        post(nodeURL, vosURI, node, verify, expectedCode, authSubject);
     }
     
-    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify, int expectedCode) throws Exception {
+    public void post(URL nodeURL, VOSURI vosURI, Node node, boolean verify, int expectedCode, Subject testSubject) throws Exception {
         StringBuilder sb = new StringBuilder();
         NodeWriter writer = new NodeWriter();
         writer.write(vosURI, node, sb, VOS.Detail.max);
@@ -257,7 +264,7 @@ public abstract class VOSTest {
         
         HttpPost post = new HttpPost(nodeURL, content, true);
         log.debug("POST: " + nodeURL);
-        Subject.doAs(authSubject, new RunnableAction(post));
+        Subject.doAs(testSubject, new RunnableAction(post));
         log.debug("POST responseCode: " + post.getResponseCode() + " " + post.getThrowable());
         if (!verify && post.getResponseCode() == 404) {
             return;
@@ -274,12 +281,16 @@ public abstract class VOSTest {
     public void delete(URL nodeURL) {
         delete(nodeURL, true);
     }
+
+    public void delete(URL nodeURL, boolean verify) {
+        delete(nodeURL, verify, authSubject);
+    }
     
     // verify==false ignores 404 only
-    public void delete(URL nodeURL, boolean verify) {
+    public void delete(URL nodeURL, boolean verify, Subject subject) {
         HttpDelete delete = new HttpDelete(nodeURL, true);
         log.debug("DELETE: " + nodeURL);
-        Subject.doAs(authSubject, new RunnableAction(delete));
+        Subject.doAs(subject, new RunnableAction(delete));
         log.debug("DELETE response: " + delete.getResponseCode() + " " + delete.getThrowable());
         if (!verify && delete.getResponseCode() == 404) {
             return;
