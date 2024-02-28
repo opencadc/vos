@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -89,6 +89,10 @@ import org.opencadc.persist.Entity;
  */
 public abstract class Node extends Entity implements Comparable<Node> {
     private static final Logger log = Logger.getLogger(Node.class);
+    
+    // Entity metaChecksum algorithm setup: DO NOT CHANGE
+    static final boolean ENTITY_TRUNCATE_DATES = false;
+    static final boolean ENTITY_DIGEST_FIELD_NAMES = true;
 
     /**
      * Server-side support for connecting a node to a parent container node. 
@@ -137,13 +141,13 @@ public abstract class Node extends Entity implements Comparable<Node> {
     private final Set<NodeProperty> properties = new TreeSet<>();
 
     protected Node(String name) {
-        super(false);
+        super(ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
         NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
     }
     
     protected Node(UUID id, String name) {
-        super(id, false);
+        super(id, ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
         NodeUtil.assertNotNull(Node.class, "name", "name");
         this.name = name;
     }
