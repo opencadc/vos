@@ -1010,11 +1010,10 @@ public class NodesTest extends VOSTest {
                 201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
-        // test owner of root directory fails to read due to a lack of explicit permission ...
+        // test owner of root directory fails to read and delete due to a lack of explicit permission
         getAction = new HttpGet(childURL, true);
         Subject.doAs(authSubject, new RunnableAction(getAction));
         Assert.assertEquals(403, getAction.getResponseCode());
-        // ... and to delete
         HttpDelete deleteAction = new HttpDelete(childURL, true);
         Subject.doAs(authSubject, new RunnableAction(deleteAction));
         Assert.assertEquals(403, getAction.getResponseCode());
