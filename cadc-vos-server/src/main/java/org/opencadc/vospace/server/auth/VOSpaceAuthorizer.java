@@ -182,6 +182,11 @@ public class VOSpaceAuthorizer {
                 return true; // OK
             }
 
+            if (isAllocationOwner(node, subject)) {
+                log.debug("Allocation owner granted read permission.");
+                return true; // OK
+            }
+
             checkDelegation(node, subject);
 
             if (log.isDebugEnabled()) {
@@ -225,6 +230,11 @@ public class VOSpaceAuthorizer {
         if (subject != null) {
             if (isOwner(node, subject)) {
                 log.debug("Node owner granted write permission.");
+                return true; // OK
+            }
+
+            if (isAllocationOwner(node, subject)) {
+                log.debug("Allocation owner granted write permission");
                 return true; // OK
             }
 
@@ -335,6 +345,25 @@ public class VOSpaceAuthorizer {
                     return true; // caller===owner
                 }
             }
+        }
+        return false;
+    }
+
+    /**
+     * Check if the specified subject is the owner of the allocation a node belongsto. Allocation owner
+     * is identified as the owner of the first node in the path that has an associated quota attribute set.
+     * @param node
+     * @param subject
+     * @return
+     */
+    private boolean isAllocationOwner(Node node, Subject subject) {
+
+        Node parent = node.parent;
+        while (parent != null) {
+            if (parent.getProperty(VOS.PROPERTY_URI_QUOTA) != null) {
+                return isOwner(parent, subject);
+            }
+            parent = parent.parent;
         }
         return false;
     }
