@@ -93,9 +93,8 @@ public class ContainerNode extends Node {
     // server side child node iterator
     public transient ResourceIterator<Node> childIterator;
     
-    // support server-side container bytesUsed calculations
-    public transient Long bytesUsed;
-    public transient long delta = 0L;
+    // support server-side container bytesUsed aggregation into "allocations"
+    public Long bytesUsed;
 
     /**
      * ContainerNode constructor.

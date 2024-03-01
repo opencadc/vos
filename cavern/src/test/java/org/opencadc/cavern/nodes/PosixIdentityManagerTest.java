@@ -114,6 +114,14 @@ public class PosixIdentityManagerTest {
     }
 
     @Test
+    public void testCache() {
+        log.warn("technical debt: testCache not implemented yet");
+    }
+    
+    /*
+    // this requires a configured and functional IdentityManager + back end services
+    // and doesn't belong in unit test
+    @Test
     public void testRoundTrip() {
         try {
             // request subject contains: numeric, http, posix
@@ -150,4 +158,5 @@ public class PosixIdentityManagerTest {
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    */
 }

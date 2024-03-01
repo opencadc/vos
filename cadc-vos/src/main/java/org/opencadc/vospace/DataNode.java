@@ -96,8 +96,8 @@ public class DataNode extends Node {
     private final transient List<URI> accepts = new ArrayList<>();
     private final transient List<URI> provides = new ArrayList<>();
     
-    // support server-side container listing and bytesUsed calculations
-    public transient Long bytesUsed;
+    // support server-side bytesUsed for container listing
+    public Long bytesUsed;
     
     /**
      * Create new DataNode.
