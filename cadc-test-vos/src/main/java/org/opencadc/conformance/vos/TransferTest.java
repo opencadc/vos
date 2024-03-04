@@ -117,8 +117,8 @@ public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
     protected final URL transferServiceURL;
-    protected Subject writeAccessSubject;
-    protected GroupURI writeAccessGroup;
+    protected Subject altSubject;
+    protected GroupURI altGroup;
 
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -129,15 +129,15 @@ public class TransferTest extends VOSTest {
     }
 
     /**
-     * Set a group and subject used by updateNodeNotOwnedTest. if not set the test is disabled.
+     * Set a group and subject used by ownershipTest. if not set the test is disabled.
      *
-     * @param writeAccessGroup group with member writeAccessSubject.
-     * @param writeAccessCert certificate for a user a member of writeAccessGroup.
+     * @param altGroup group with member altCert.
+     * @param altCert certificate for a user that is a member of altGroup.
      */
-    protected void enableWriteAccess(GroupURI writeAccessGroup, File writeAccessCert) {
-        this.writeAccessGroup = writeAccessGroup;
-        this.writeAccessSubject = SSLUtil.createSubject(writeAccessCert);
-        log.debug(String.format("update - group: %s\n%s", writeAccessGroup.getURI(), writeAccessSubject));
+    protected void enableOwnershipTest(GroupURI altGroup, File altCert) {
+        this.altGroup = altGroup;
+        this.altSubject = SSLUtil.createSubject(altCert);
+        log.debug(String.format("update - group: %s\n%s", altGroup.getURI(), altSubject));
     }
 
     @Test
@@ -487,109 +487,6 @@ public class TransferTest extends VOSTest {
         delete(nodeURL);
     }
 
-
-    /**
-     * Test that a user can update a data node they do not own, but have write permission to the node.
-     *
-     * The authSubject user is the owner of the parent ContainerNode and child DataNode.
-     * The writeAccessSubject user is a member of the writeAccessGroup group.
-     * The writeAccessGroup by default does not have write access to the parent or child nodes.
-     * The writeAccessGroup group is given write access to the child node, which should
-     * allow the writeAccessSubject to write to the child node.
-     */
-    @Test
-    public void updateNodeNotOwnedTest() throws Exception {
-
-        Assume.assumeTrue("updateNodeNotOwnedTest not configured, skipping",
-                writeAccessGroup != null && writeAccessSubject != null);
-
-        try {
-            // Parent ContainerNode
-            String parentName = "update-not-owned-parent";
-            URL parentURL = getNodeURL(nodesServiceURL, parentName);
-            VOSURI parentURI = getVOSURI(parentName);
-            ContainerNode parentNode = new ContainerNode(parentName);
-            parentNode.owner = authSubject;
-            parentNode.isPublic = false;
-            log.debug("parentURL: " + parentURL);
-
-            // Create a DataNode.
-            String childName = "update-not-owned-child";
-            String childPath = parentName + "/" + childName;
-            URL childURL = getNodeURL(nodesServiceURL, childPath);
-            VOSURI childURI = getVOSURI(childPath);
-            DataNode childNode = new DataNode(childName);
-            childNode.owner = authSubject;
-            childNode.isPublic = false;
-            log.debug("childURL: " + childURL);
-
-            // Cleanup leftover node
-            delete(childURL, false);
-            delete(parentURL, false);
-
-            // PUT the nodes
-            put(parentURL, parentURI, parentNode);
-            put(childURL, childURI, childNode);
-
-            // Create a Transfer
-            Transfer pushTo = new Transfer(childURI.getURI(), Direction.pushToVoSpace);
-            pushTo.version = VOS.VOSPACE_21;
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            pushTo.getProtocols().add(protocol);
-
-            Transfer details = doTransfer(pushTo);
-            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
-                    Direction.pushToVoSpace, details.getDirection());
-            Assert.assertNotNull(details.getProtocols());
-            log.info(pushTo.getDirection() + " results: " + details.getProtocols().size());
-            URL putURL = null;
-            for (Protocol p : details.getProtocols()) {
-                String endpoint = p.getEndpoint();
-                log.info("PUT endpoint: " + endpoint);
-                try {
-                    URL u = new URL(endpoint);
-                    if (putURL == null) {
-                        putURL = u; // first
-                    }
-                } catch (MalformedURLException e) {
-                    Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
-                }
-            }
-            Assert.assertNotNull(putURL);
-
-            // writing to the child should fail
-            Random rnd = new Random();
-            byte[] data = new byte[1024];
-            rnd.nextBytes(data);
-            FileContent content = new FileContent(data, "application/octet-stream");
-            HttpUpload put = new HttpUpload(content, putURL);
-            Subject.doAs(writeAccessSubject, new RunnableAction(put));
-            log.debug("PUT responseCode: " + put.getResponseCode());
-            Assert.assertEquals("expected PUT response code = 403",
-                    403, put.getResponseCode());
-
-            // give write access to the child through the write group
-            childNode.getReadWriteGroup().add(writeAccessGroup);
-            post(childURL, childURI, childNode);
-
-            // writing to the child should succeed
-            put = new HttpUpload(content, putURL);
-            Subject.doAs(writeAccessSubject, new RunnableAction(put));
-            log.debug("PUT responseCode: " + put.getResponseCode());
-            Assert.assertEquals("expected PUT response code = 201",
-                    201, put.getResponseCode());
-
-            // Cleanup leftover node
-            delete(childURL, false);
-            delete(parentURL, false);
-
-        } catch (Exception e) {
-            log.error("Unexpected error", e);
-            Assert.fail("Unexpected error: " + e);
-        }
-    }
-
     private Job runMove(VOSURI sourceNodeURI, VOSURI destinationNodeURI) throws Exception {
         // Create a Transfer
         Transfer transfer = new Transfer(sourceNodeURI.getURI(), destinationNodeURI.getURI(), false);
@@ -667,7 +564,8 @@ public class TransferTest extends VOSTest {
         return reader.read(new StringReader(out.toString()));
     }
 
-    protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
+    protected Transfer doTransfer(Transfer transfer, Subject testSubject, int responseCode)
+            throws IOException, TransferParsingException {
         // Write a transfer document
         TransferWriter transferWriter = new TransferWriter();
         StringWriter sw = new StringWriter();
@@ -677,7 +575,7 @@ public class TransferTest extends VOSTest {
         // POST the transfer document
         FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
         HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-        Subject.doAs(authSubject, new RunnableAction(post));
+        Subject.doAs(testSubject, new RunnableAction(post));
         Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
         Assert.assertNull("expected POST throwable == null", post.getThrowable());
 
@@ -685,9 +583,12 @@ public class TransferTest extends VOSTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         HttpGet get = new HttpGet(post.getRedirectURL(), out);
         log.debug("GET: " + post.getRedirectURL());
-        Subject.doAs(authSubject, new RunnableAction(get));
+        Subject.doAs(testSubject, new RunnableAction(get));
         log.debug("GET responseCode: " + get.getResponseCode());
-        Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+        Assert.assertEquals("expected GET response code = " + responseCode, responseCode, get.getResponseCode());
+        if (responseCode != 200) {
+            return null;
+        }
         Assert.assertNull("expected GET throwable == null", get.getThrowable());
         Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
                 get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
@@ -696,6 +597,10 @@ public class TransferTest extends VOSTest {
         log.debug("GET Transfer XML: " + out);
         TransferReader transferReader = new TransferReader();
         return transferReader.read(out.toString(), "vos");
+    }
+
+    protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
+        return doTransfer(transfer, authSubject, 200);
     }
 
 }
