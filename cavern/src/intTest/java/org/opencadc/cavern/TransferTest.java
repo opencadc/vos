@@ -67,23 +67,31 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Random;
+import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.transfer.Direction;
@@ -106,11 +114,11 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
     public TransferTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
 
-        // enables the updateNodeNotOwnedTest, the cavern-auth-test.pem user, and the Constants.TEST_CERT user,
-        // are both members of the writeGroup group.
-        GroupURI writeGroup = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?Test-Write"));
-        File writeGroupCert = FileUtil.getFileFromResource("cavern-write-test.pem", TransferTest.class);
-        super.enableWriteAccess(writeGroup, writeGroupCert);
+        // enables the ownershipTest
+        // the cavern-auth-test.pem user is a member of the altGroup.
+        GroupURI altGroup = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
+        File altCert = FileUtil.getFileFromResource("cavern-auth-test.pem", TransferTest.class);
+        super.enableOwnershipTest(altGroup, altCert);
     }
 
     @Test
@@ -182,4 +190,108 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
             Assert.fail("Unexpected error: " + e);
         }
     }
+
+    /**
+     * Test that a user can update a data node they do not own, but have write permission to the node.
+     *
+     * The authSubject user is the owner of the parent ContainerNode and child DataNode.
+     * The altSubject user is a member of the altGroup group.
+     * The altGroup by default does not have write access to the parent or child nodes.
+     *
+     * The altGroup group is given write access to the child node, which should
+     * allow the altSubject to write to the child node.
+     */
+    @Test
+    public void ownershipTest() throws Exception {
+
+        Assume.assumeTrue("ownershipTest not configured, skipping",
+                altGroup != null && altSubject != null);
+
+        try {
+            // Parent ContainerNode
+            String parentName = "ownership-parent";
+            URL parentURL = getNodeURL(nodesServiceURL, parentName);
+            VOSURI parentURI = getVOSURI(parentName);
+            ContainerNode parentNode = new ContainerNode(parentName);
+            parentNode.owner = authSubject;
+            parentNode.isPublic = false;
+            log.debug("ownershipParentURL: " + parentURL);
+
+            // Create a DataNode.
+            String childName = "ownership-child";
+            String childPath = parentName + "/" + childName;
+            URL childURL = getNodeURL(nodesServiceURL, childPath);
+            VOSURI childURI = getVOSURI(childPath);
+            DataNode childNode = new DataNode(childName);
+            childNode.owner = authSubject;
+            childNode.isPublic = false;
+            log.debug("ownershipChildURL: " + childURL);
+
+            // Cleanup leftover node
+            delete(childURL, false);
+            delete(parentURL, false);
+
+            // PUT the nodes
+            put(parentURL, parentURI, parentNode);
+            put(childURL, childURI, childNode);
+
+            // Create a Transfer
+            Transfer pushTo = new Transfer(childURI.getURI(), Direction.pushToVoSpace);
+            pushTo.version = VOS.VOSPACE_21;
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pushTo.getProtocols().add(protocol);
+
+            Transfer details = doTransfer(pushTo);
+            Assert.assertEquals("expected transfer direction = " + Direction.pushToVoSpace,
+                    Direction.pushToVoSpace, details.getDirection());
+            Assert.assertNotNull(details.getProtocols());
+            log.info(pushTo.getDirection() + " results: " + details.getProtocols().size());
+            URL putURL = null;
+            for (Protocol p : details.getProtocols()) {
+                String endpoint = p.getEndpoint();
+                log.info("PUT endpoint: " + endpoint);
+                try {
+                    URL u = new URL(endpoint);
+                    if (putURL == null) {
+                        putURL = u; // first
+                    }
+                } catch (MalformedURLException e) {
+                    Assert.fail(String.format("invalid protocol endpoint: %s because %s", endpoint, e.getMessage()));
+                }
+            }
+            Assert.assertNotNull(putURL);
+
+            // writing to the child should fail
+            Random rnd = new Random();
+            byte[] data = new byte[1024];
+            rnd.nextBytes(data);
+            FileContent content = new FileContent(data, "application/octet-stream");
+            HttpUpload put = new HttpUpload(content, putURL);
+            Subject.doAs(altSubject, new RunnableAction(put));
+            log.debug("PUT responseCode: " + put.getResponseCode());
+            Assert.assertEquals("expected PUT response code = 403",
+                    403, put.getResponseCode());
+
+            // give write access to the child through the write group
+            childNode.getReadWriteGroup().add(altGroup);
+            post(childURL, childURI, childNode);
+
+            // writing to the child should succeed
+            put = new HttpUpload(content, putURL);
+            Subject.doAs(altSubject, new RunnableAction(put));
+            log.debug("PUT responseCode: " + put.getResponseCode());
+            Assert.assertEquals("expected PUT response code = 201",
+                    201, put.getResponseCode());
+
+            // Cleanup leftover node
+            delete(childURL, false);
+            delete(parentURL, false);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
 }
