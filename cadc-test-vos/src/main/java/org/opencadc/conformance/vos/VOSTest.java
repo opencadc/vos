@@ -100,6 +100,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.io.NodeParsingException;
@@ -139,12 +140,12 @@ public abstract class VOSTest {
     @Before
     public void initTestContainer() throws Exception {
         String name = rootTestFolderName;
-        URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
-        VOSURI nodeURI = getVOSURI(null);
         ContainerNode testNode = new ContainerNode(name);
         testNode.isPublic = true;
         testNode.inheritPermissions = false;
 
+        URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
+        VOSURI nodeURI = getVOSURI(null);
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
         if (result == null) {
             put(nodeURL, nodeURI, testNode);

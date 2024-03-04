@@ -967,7 +967,8 @@ public class NodesTest extends VOSTest {
         final URL childURL = getNodeURL(nodesServiceURL, childPath);
         
         // cleanup
-        delete(childURL, false);
+        HttpDelete deleteChildAction = new HttpDelete(childURL, true);
+        Subject.doAs(groupMember, new RunnableAction(deleteChildAction));
         delete(nodeURL, false);
 
         // PUT the node
@@ -1021,7 +1022,7 @@ public class NodesTest extends VOSTest {
         // Allocation owners have read and write access over their tree allocation.
         // Make root node an allocation node by adding the quota properties and test that the owner of
         // that node (authSubject) in their new role can now perform the above actions.
-        testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA));
+        testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, "123456"));
         post(nodeURL, nodeURI, testNode);
 
         getAction = new HttpGet(childURL, true);
