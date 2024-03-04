@@ -45,8 +45,6 @@ dependencies {
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
 
     testImplementation 'junit:junit:[4.0,)'
-    testImplementation 'xerces:xercesImpl:[2.0,)'
-    testImplementation 'org.skyscreamer:jsonassert:[1.0,)'
     testImplementation 'org.opencadc:cadc-test-uws:[1.0,)'
     testImplementation 'org.opencadc:cadc-access-control-identity:[1.1.0,)'
 
