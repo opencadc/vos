@@ -118,7 +118,7 @@ public interface NodePersistence {
      * 
      * @return set of configured containers where allocations can be found
      */
-    Set<ContainerNode> getAllocationHolders();
+    Set<ContainerNode> getAllocationParents();
     
     /**
      * Get the set of properties that are only writable by admins.
