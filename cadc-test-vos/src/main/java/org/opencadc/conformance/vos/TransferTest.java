@@ -564,7 +564,7 @@ public class TransferTest extends VOSTest {
         return reader.read(new StringReader(out.toString()));
     }
 
-    protected Transfer doTransfer(Transfer transfer, Subject testSubject, int responseCode)
+    protected Transfer doTransfer(Transfer transfer, Subject testSubject)
             throws IOException, TransferParsingException {
         // Write a transfer document
         TransferWriter transferWriter = new TransferWriter();
@@ -585,10 +585,7 @@ public class TransferTest extends VOSTest {
         log.debug("GET: " + post.getRedirectURL());
         Subject.doAs(testSubject, new RunnableAction(get));
         log.debug("GET responseCode: " + get.getResponseCode());
-        Assert.assertEquals("expected GET response code = " + responseCode, responseCode, get.getResponseCode());
-        if (responseCode != 200) {
-            return null;
-        }
+        Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
         Assert.assertNull("expected GET throwable == null", get.getThrowable());
         Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
                 get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
@@ -600,7 +597,7 @@ public class TransferTest extends VOSTest {
     }
 
     protected Transfer doTransfer(Transfer transfer) throws IOException, TransferParsingException {
-        return doTransfer(transfer, authSubject, 200);
+        return doTransfer(transfer, authSubject);
     }
 
 }
