@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -108,6 +108,18 @@ public interface NodePersistence {
      */
     ContainerNode getRootNode();
 
+    /**
+     * Get the set of container nodes that are the immediate parent of "allocations".
+     * Allocations are container nodes that belong to users. Use case 1: VOSpaceAuthorizer
+     * needs to identity allocations in order to grant allocation owner extra permissions
+     * to manage content in a multi-user/project environment. Use case 2: constrain the
+     * "create allocation" create node with different user) should be constrained to
+     * only happen in these container nodes.
+     * 
+     * @return set of configured containers where allocations can be found
+     */
+    Set<ContainerNode> getAllocationHolders();
+    
     /**
      * Get the set of properties that are only writable by admins.
      * 

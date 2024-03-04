@@ -217,6 +217,11 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
+    public Set<ContainerNode> getAllocationHolders() {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    @Override
     public Set<URI> getAdminProps() {
         return ADMIN_PROPS;
     }
