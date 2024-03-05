@@ -456,8 +456,9 @@ class NodeUtil {
         if (attrs.isDirectory()) {
             ret = new ContainerNode(p.getFileName().toString());
         } else if (attrs.isRegularFile()) {
-            ret = new DataNode(p.getFileName().toString());
-            // restore file-specific properties -- this is old and no longer know what it means
+            DataNode dn = new DataNode(p.getFileName().toString());
+            dn.bytesUsed = attrs.size();
+            ret = dn;
         } else if (attrs.isSymbolicLink()) {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
@@ -493,10 +494,7 @@ class NodeUtil {
         //ret.getProperties().add(new
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
         ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(modified)));
-        if (attrs.isRegularFile()) {
-            ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
-        }
-
+        
         if (getAttrs && !attrs.isSymbolicLink()) {
             Map<String,String> uda = ExtendedFileAttributes.getAttributes(p);
             for (Map.Entry<String,String> me : uda.entrySet()) {
