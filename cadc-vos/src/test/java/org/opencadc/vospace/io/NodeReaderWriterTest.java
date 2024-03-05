@@ -190,6 +190,7 @@ public class NodeReaderWriterTest {
 
     private void compareDataNodes(DataNode n1, DataNode n2) {
         Assert.assertEquals("busy", n1.busy, n2.busy);
+        Assert.assertEquals("busy", n1.bytesUsed, n2.bytesUsed);
     }
 
     private void compareLinkNodes(LinkNode n1, LinkNode n2) {
@@ -231,10 +232,11 @@ public class NodeReaderWriterTest {
     public void testReadOnlyNodeProps() {
         Set<URI> immutable = new TreeSet<>(
             Arrays.asList(
-                VOS.PROPERTY_URI_CONTENTLENGTH,
+                //VOS.PROPERTY_URI_CREATOR,       // not feasible to validate this is readOnly
+                //VOS.PROPERTY_URI_CONTENTLENGTH, // not feasible to validate this is readOnly
                 VOS.PROPERTY_URI_CONTENTMD5,
-                VOS.PROPERTY_URI_CREATOR,
-                VOS.PROPERTY_URI_QUOTA
+                VOS.PROPERTY_URI_QUOTA,
+                URI.create("my:custom:prop")
             )
         );
         try {
@@ -243,32 +245,49 @@ public class NodeReaderWriterTest {
             NodeWriter instance = new NodeWriter();
             instance.setImmutableProperties(immutable);
             
-            DataNode minDataNode = createMinDataNode();
-            minDataNode.ownerDisplay = "somebody";
-            minDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "666"));
-            minDataNode.isPublic = true;
+            DataNode orig = createMinDataNode();
+            orig.bytesUsed = 0L; // read-only but cannot verify
+            orig.isPublic = true; // cannot verify
+            orig.ownerDisplay = "somebody"; // cannot verify?
+            
             NodeProperty title = new NodeProperty(VOS.PROPERTY_URI_TITLE, "title");
             title.readOnly = false; // explicit
-            minDataNode.getProperties().add(title);
-            instance.write(dataURI, minDataNode, sb, VOS.Detail.max);
-            log.info(sb.toString());
-
-            // validate the XML
-            NodeReader reader = new NodeReader();
-            NodeReader.NodeReaderResult result = reader.read(sb.toString());
-            Node n2 = result.node;
+            orig.getProperties().add(title);
             
-            Assert.assertNotNull(n2.ownerDisplay);
-            NodeProperty np = n2.getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-            Assert.assertNotNull(np);
-            Assert.assertNotNull(np.readOnly); // xsd default to false so always passes
-            Assert.assertTrue(np.readOnly);
+            NodeProperty md5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, "362f2557fd5e0da097d6a5f7032d5044");
+            md5.readOnly = true;
+            orig.getProperties().add(md5);
+            
+            NodeProperty quota = new NodeProperty(VOS.PROPERTY_URI_QUOTA, "12345");
+            quota.readOnly = true;
+            orig.getProperties().add(quota);
+            
+            NodeProperty custom = new NodeProperty(URI.create("my:custom:prop"), "foo");
+            custom.readOnly = true;
+            orig.getProperties().add(custom);
+            
+            instance.write(dataURI, orig, sb, VOS.Detail.max);
+            String xml = sb.toString();
+            log.info(xml);
 
-            // make sure default version is still 2.0
-            //Assert.assertEquals(VOS.VOSPACE_20, n2.version);
-            Assert.assertTrue(n2 instanceof DataNode);
-            Assert.assertEquals(dataURI, result.vosURI);
-            compareNodes(minDataNode, n2);
+            // TODO: need to verify that the property elements in the XML have readOnly=true
+            // not feasible to validate this with NodeReader because some things get assigned to
+            // Node member vars instead so we need those that do not
+            NodeReader r = new NodeReader();
+            NodeReader.NodeReaderResult nr = r.read(xml);
+            
+            DataNode actual = (DataNode) nr.node;
+            Assert.assertEquals(orig.bytesUsed, actual.bytesUsed);
+            Assert.assertEquals(orig.isPublic, actual.isPublic);
+            Assert.assertEquals(orig.ownerDisplay, actual.ownerDisplay);
+            
+            for (URI rop : immutable) {
+                NodeProperty ap = actual.getProperty(rop);
+                log.info("found: " + ap);
+                Assert.assertNotNull(ap);
+                Assert.assertTrue(ap.readOnly);
+            }
+            
         } catch (Exception t) {
             log.error(t);
             Assert.fail(t.getMessage());
@@ -307,6 +326,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode minDataNode = createMinDataNode();
+            minDataNode.bytesUsed = 0L;
             instance.write(dataURI, minDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
@@ -333,6 +353,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             DataNode maxDataNode = createMaxDataNode();
+            maxDataNode.bytesUsed = 123L;
             instance.write(dataURI, maxDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
@@ -372,6 +393,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             UnstructuredDataNode unstructuredDataNode = createUnstructuredDataNode();
+            unstructuredDataNode.bytesUsed = 456L;
             instance.write(unstructuredURI, unstructuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
@@ -395,6 +417,7 @@ public class NodeReaderWriterTest {
             StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
             StructuredDataNode structuredDataNode = createStructuredDataNode();
+            structuredDataNode.bytesUsed = 789L;
             instance.write(structuredURI, structuredDataNode, sb, VOS.Detail.max);
             log.info(sb.toString());
 
@@ -646,8 +669,6 @@ public class NodeReaderWriterTest {
         maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "content-encoding"));
         URI contentChecksum = URI.create("md5:fd02b367a37f1ec989be20be40672fc5");
         String contentLastModified = "2023-02-03T08:45:12.345";
-        Long contentLength = 540000L;
-        maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
         maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentChecksum.toASCIIString()));
         maxDataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTDATE, contentLastModified));
         maxDataNode.getAccepts().add(VOS.VIEW_ANY);

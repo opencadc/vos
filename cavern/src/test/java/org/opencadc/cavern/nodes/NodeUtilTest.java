@@ -67,13 +67,45 @@
 
 package org.opencadc.cavern.nodes;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.opencadc.vospace.ContainerNode;
+
 
 /**
  *
  * @author pdowler
  */
 public class NodeUtilTest {
-    /**
-     * TODO: Some methods could be tested after some re-orgs
-     */
+   
+    @Test
+    public void testAbsoluteEquals() {
+        ContainerNode root = new ContainerNode("");
+        ContainerNode c1 = new ContainerNode("c1");
+        c1.parent = root;
+        ContainerNode c2 = new ContainerNode("c2");
+        c2.parent = root;
+        
+        ContainerNode cc1 = new ContainerNode("c1");
+        cc1.parent = c1;
+        ContainerNode cc2 = new ContainerNode("c2");
+        cc2.parent = c2;
+        
+        Assert.assertTrue(NodeUtil.absoluteEquals(root, root));
+        Assert.assertTrue(NodeUtil.absoluteEquals(c1, c1));
+        Assert.assertTrue(NodeUtil.absoluteEquals(c2, c2));
+        Assert.assertTrue(NodeUtil.absoluteEquals(cc1, cc1));
+        Assert.assertTrue(NodeUtil.absoluteEquals(cc2, cc2));
+        
+        Assert.assertFalse(NodeUtil.absoluteEquals(root, c1));
+        Assert.assertFalse(NodeUtil.absoluteEquals(c1, root));
+        
+        Assert.assertFalse(NodeUtil.absoluteEquals(c1, c2));  // diff names
+        Assert.assertFalse(NodeUtil.absoluteEquals(c1, cc1)); // same name, diff parents
+        Assert.assertFalse(NodeUtil.absoluteEquals(c1, cc2)); // diff names, diff parents
+        Assert.assertFalse(NodeUtil.absoluteEquals(c2, c1));  // flip
+        Assert.assertFalse(NodeUtil.absoluteEquals(cc1, c1)); // flip
+        Assert.assertFalse(NodeUtil.absoluteEquals(cc2, c1)); // flip
+        
+    }
 }

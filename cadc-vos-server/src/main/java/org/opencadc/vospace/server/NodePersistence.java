@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -71,15 +71,11 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.util.FileMetadata;
 import java.net.URI;
-import java.util.List;
 import java.util.Set;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.server.transfers.TransferGenerator;
 
 /**
@@ -108,6 +104,18 @@ public interface NodePersistence {
      */
     ContainerNode getRootNode();
 
+    /**
+     * Determine if a container node is an "allocation". Allocations are container 
+     * nodes that belong to users. 
+     * Use case: VOSpaceAuthorizer needs to identity allocations in order to grant 
+     * the allocation owner extra permissions to manage content in a multi-user/project 
+     * environment.
+     * 
+     * @param node the container node to check
+     * @return set of configured containers where allocations can be found
+     */
+    boolean isAllocation(ContainerNode node);
+    
     /**
      * Get the set of properties that are only writable by admins.
      * 

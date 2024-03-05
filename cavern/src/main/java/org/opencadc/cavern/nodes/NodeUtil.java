@@ -152,6 +152,30 @@ class NodeUtil {
         this.groupCache = groupCache;
     }
     
+    /**
+     * Determine if two container nodes are the same. This is used
+     * to identify allocation nodes
+     * @param c1 a container
+     * @param c2 a container
+     * @return true if they are the same node
+     */
+    public static boolean absoluteEquals(ContainerNode c1, ContainerNode c2) {
+        // note: cavern does not use/preserve Node.id except for root
+        if (!c1.getName().equals(c2.getName())) {
+            return false;
+        }
+        // same name, check parents
+        if (c1.parent == null && c2.parent == null) {
+            // both root
+            return true;
+        }
+        if (c1.parent == null || c2.parent == null) {
+            // one is root
+            return false;
+        }
+        return absoluteEquals(c1.parent, c2.parent);
+    }
+
     public static Path nodeToPath(Path root, VOSURI uri) {
         assertNotNull("root", root);
         assertNotNull("uri", uri);
@@ -432,8 +456,9 @@ class NodeUtil {
         if (attrs.isDirectory()) {
             ret = new ContainerNode(p.getFileName().toString());
         } else if (attrs.isRegularFile()) {
-            ret = new DataNode(p.getFileName().toString());
-            // restore file-specific properties -- this is old and no longer know what it means
+            DataNode dn = new DataNode(p.getFileName().toString());
+            dn.bytesUsed = attrs.size();
+            ret = dn;
         } else if (attrs.isSymbolicLink()) {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
@@ -469,10 +494,7 @@ class NodeUtil {
         //ret.getProperties().add(new
         //    NodeProperty(VOS.PROPERTY_URI_MODIFIED_DATE, df.format(modified)));
         ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(modified)));
-        if (attrs.isRegularFile()) {
-            ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(attrs.size())));
-        }
-
+        
         if (getAttrs && !attrs.isSymbolicLink()) {
             Map<String,String> uda = ExtendedFileAttributes.getAttributes(p);
             for (Map.Entry<String,String> me : uda.entrySet()) {

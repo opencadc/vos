@@ -403,8 +403,9 @@ public class NodeWriter implements XmlProcessor {
      * @param properties a Set of NodeProperty.
      */
     protected void addDataNodeVariablesToProperties(DataNode node, Set<NodeProperty> properties) {
-        // placeholder: nothing extra
-        // note: DataNode.busy is an attribute handled elsewhere
+        if (node.bytesUsed != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, node.bytesUsed.toString()));
+        }
     }
 
     /**

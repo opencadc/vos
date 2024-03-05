@@ -68,14 +68,11 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.FileNotFoundException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
@@ -84,6 +81,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.permissions.ReadGrant;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotFoundException;
@@ -146,13 +144,14 @@ public class HeadAction extends FileAction {
                 log.debug("container nodes not supported for GET");
                 throw new IllegalArgumentException("GET for directories not supported");
             }
-            
+            DataNode dn = (DataNode) node;
             log.debug("node path resolved: " + node.getName());
             log.debug("node type: " + node.getClass().getCanonicalName());
+            syncOutput.setHeader("Content-Length", dn.bytesUsed);
             syncOutput.setHeader("Content-Disposition", "inline; filename=\"" + nodeURI.getName() + "\"");
             syncOutput.setHeader("Content-Type", node.getPropertyValue(VOS.PROPERTY_URI_TYPE));
             syncOutput.setHeader("Content-Encoding", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING));
-            syncOutput.setHeader("Content-Length", node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            
             if (node.getPropertyValue(VOS.PROPERTY_URI_DATE) != null) {
                 Date lastMod = NodeWriter.getDateFormat().parse(node.getPropertyValue(VOS.PROPERTY_URI_DATE));
                 syncOutput.setLastModified(lastMod);

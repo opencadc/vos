@@ -131,6 +131,12 @@ public class VOSpaceAuthorizer {
         this.nodePersistence = nodePersistence;
     }
 
+    // for unit tests
+    VOSpaceAuthorizer() {
+        this.nodePersistence = null;
+    }
+
+    
     public void setDisregardLocks(boolean disregardLocks) {
         this.disregardLocks = disregardLocks;
     }
@@ -325,7 +331,7 @@ public class VOSpaceAuthorizer {
      * @param node    node to check
      * @return true of the current subject is the owner, otherwise false
      */
-    private boolean isOwner(Node node, Subject subject) {
+    boolean isOwner(Node node, Subject subject) {
         Subject owner = node.owner;
         if (owner == null) {
             throw new IllegalStateException("BUG: no owner found for node: " + node);
@@ -356,15 +362,17 @@ public class VOSpaceAuthorizer {
      * @param subject
      * @return
      */
-    private boolean isAllocationOwner(Node node, Subject subject) {
-
+    boolean isAllocationOwner(Node node, Subject subject) {
+        log.debug("isAllocationOwner: START");
         Node parent = node.parent;
         while (parent != null) {
             if (parent.getProperty(VOS.PROPERTY_URI_QUOTA) != null) {
+                log.debug("found allocation owner: " + parent.ownerID + " at " + parent.getName());
                 return isOwner(parent, subject);
             }
             parent = parent.parent;
         }
+        log.debug("not found: allocation owner");
         return false;
     }
 
