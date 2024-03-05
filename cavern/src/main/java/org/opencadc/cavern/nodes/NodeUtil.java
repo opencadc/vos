@@ -152,6 +152,30 @@ class NodeUtil {
         this.groupCache = groupCache;
     }
     
+    /**
+     * Determine if two container nodes are the same. This is used
+     * to identify allocation nodes
+     * @param c1 a container
+     * @param c2 a container
+     * @return true if they are the same node
+     */
+    public static boolean absoluteEquals(ContainerNode c1, ContainerNode c2) {
+        // note: cavern does not use/preserve Node.id except for root
+        if (!c1.getName().equals(c2.getName())) {
+            return false;
+        }
+        // same name, check parents
+        if (c1.parent == null && c2.parent == null) {
+            // both root
+            return true;
+        }
+        if (c1.parent == null || c2.parent == null) {
+            // one is root
+            return false;
+        }
+        return absoluteEquals(c1.parent, c2.parent);
+    }
+
     public static Path nodeToPath(Path root, VOSURI uri) {
         assertNotNull("root", root);
         assertNotNull("uri", uri);

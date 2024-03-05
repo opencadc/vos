@@ -71,15 +71,11 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.util.FileMetadata;
 import java.net.URI;
-import java.util.List;
 import java.util.Set;
 import org.opencadc.vospace.ContainerNode;
-import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
-import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.server.transfers.TransferGenerator;
 
 /**
@@ -109,16 +105,16 @@ public interface NodePersistence {
     ContainerNode getRootNode();
 
     /**
-     * Get the set of container nodes that are the immediate parent of "allocations".
-     * Allocations are container nodes that belong to users. Use case 1: VOSpaceAuthorizer
-     * needs to identity allocations in order to grant allocation owner extra permissions
-     * to manage content in a multi-user/project environment. Use case 2: constrain the
-     * "create allocation" create node with different user) should be constrained to
-     * only happen in these container nodes.
+     * Determine if a container node is an "allocation". Allocations are container 
+     * nodes that belong to users. 
+     * Use case: VOSpaceAuthorizer needs to identity allocations in order to grant 
+     * the allocation owner extra permissions to manage content in a multi-user/project 
+     * environment.
      * 
+     * @param node the container node to check
      * @return set of configured containers where allocations can be found
      */
-    Set<ContainerNode> getAllocationParents();
+    boolean isAllocation(ContainerNode node);
     
     /**
      * Get the set of properties that are only writable by admins.

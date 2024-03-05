@@ -80,6 +80,8 @@ import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
@@ -101,7 +103,11 @@ public class CavernConfig {
     public static final String ROOT_OWNER_UID = CAVERN_KEY + ".filesystem.rootOwner.uid";
     public static final String ROOT_OWNER_GID = CAVERN_KEY + ".filesystem.rootOwner.gid";
     
+    public static final String ALLOCATION_PARENT = CAVERN_KEY + ".allocationParent";
+    
     private final URI resourceID;
+    private final List<String> allocationParents = new ArrayList<>();
+    
     private final Path root;
     private final Path secrets;
     
@@ -126,17 +132,14 @@ public class CavernConfig {
         boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
         boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
-        
-        //boolean privateKeyProp = checkProperty(mvp, sb, PRIVATE_KEY, false);
-        //boolean publicKeyProp = checkProperty(mvp, sb, PUBLIC_KEY, false);
         boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
-
+        boolean allocProp = checkProperty(mvp, sb, ALLOCATION_PARENT, false);
+        
         if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
-            throw new IllegalStateException(sb.toString());
+            throw new InvalidConfigException(sb.toString());
         }
 
         String s = mvp.getFirstPropertyValue(RESOURCE_ID);
-        this.resourceID = URI.create(s);
         
         String baseDir = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
         String subPath = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
@@ -144,13 +147,29 @@ public class CavernConfig {
         if (baseDir.endsWith("/") || subPath.startsWith("/")) {
             sep = "";
         }
-        this.root = Paths.get(baseDir + sep + subPath);
+        this.root = Paths.get(baseDir, subPath);
+        this.resourceID = URI.create(s);
+        for (String sap : mvp.getProperty(ALLOCATION_PARENT)) {
+            String ap = sap;
+            if (ap.charAt(0) == '/') {
+                ap = ap.substring(1);
+            }
+            if (ap.length() > 0 && ap.charAt(ap.length() - 1) == '/') {
+                ap = ap.substring(0, ap.length() - 1);
+            }
+            if (ap.indexOf('/') >= 0) {
+                throw new InvalidConfigException("invalid " + ALLOCATION_PARENT + ": " + sap
+                    + " reason: must be a top-level container node name");
+            }
+            // empty string means root, otherwise child of root
+            allocationParents.add(ap);
+        }
         
         sep = "/";
         if (baseDir.endsWith("/")) {
             sep = "";
         }
-        this.secrets = Paths.get(baseDir + sep + "secrets");
+        this.secrets = Paths.get(baseDir, "secrets");
     }
 
     public URI getResourceID() {
@@ -161,6 +180,10 @@ public class CavernConfig {
         return root;
     }
     
+    public List<String> getAllocationParents() {
+        return allocationParents;
+    }
+
     public Path getSecrets() {
         return secrets;
     }

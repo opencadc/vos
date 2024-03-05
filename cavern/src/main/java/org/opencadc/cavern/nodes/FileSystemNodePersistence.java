@@ -83,6 +83,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -138,6 +139,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     private final GroupCache groupCache;
     
     private final ContainerNode root;
+    private final Set<ContainerNode> allocationParents = new TreeSet<>();
     private final Path rootPath;
     private final VOSURI rootURI;
     private final CavernConfig config;
@@ -190,6 +192,56 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
         this.groupCache = new GroupCache(posixMapper);
         this.localGroupsOnly = true;
+        
+        for (String ap : config.getAllocationParents()) {
+            if (ap.isEmpty()) {
+                // allocations are in root
+                allocationParents.add(root);
+                log.info("allocationParent: /");
+            } else {
+                try {
+
+                    // simple top-level names only
+                    ContainerNode cn = (ContainerNode) get(root, ap);
+                    String str = "";
+                    if (cn == null) {
+                        cn = new ContainerNode(ap);
+                        cn.parent = root;
+                        str = "created/";
+                    }
+                    cn.isPublic = true;
+                    cn.owner = root.owner;
+                    cn.inheritPermissions = false;
+                    put(cn);
+                    allocationParents.add(cn);
+                    log.info(str + "loaded allocationParent: /" + cn.getName());
+                } catch (NodeNotSupportedException bug) {
+                    throw new RuntimeException("BUG: failed to update isPublic=true on allocationParent " + ap, bug);
+                }
+            }
+        }
+    }
+    
+    // for use with allocationParents.add(node) and allocationParents.contains(node)
+    private class AbsoluteNodeComparator implements Comparator<Node> {
+        @Override
+        public int compare(Node n1, Node n2) {
+            if (n1 == null && n2 == null) {
+                throw new RuntimeException("BUG: two null args in comparator");
+            }
+            // nulls last
+            if (n1 == null && n2 != null) {
+                return 1;
+            }
+            if (n1 != null && n2 == null) {
+                return -1;
+            }
+            int ret = 0;
+            
+            return ret;
+            
+        }
+        
     }
     
     // support FileAction
@@ -217,10 +269,16 @@ public class FileSystemNodePersistence implements NodePersistence {
     }
 
     @Override
-    public Set<ContainerNode> getAllocationHolders() {
-        throw new UnsupportedOperationException("not implemented");
+    public boolean isAllocation(ContainerNode cn) {
+        ContainerNode p = cn.parent;
+        for (ContainerNode ap : allocationParents) {
+            if (NodeUtil.absoluteEquals(p.parent, ap)) {
+                return true;
+            }
+        }
+        return false;
     }
-
+    
     @Override
     public Set<URI> getAdminProps() {
         return ADMIN_PROPS;
@@ -347,11 +405,8 @@ public class FileSystemNodePersistence implements NodePersistence {
         if (node == null) {
             throw new IllegalArgumentException("arg cannot be null: node");
         }
-        if (node.parentID == null) {
-            if (node.parent == null) {
-                throw new RuntimeException("BUG: cannot persist node without parent: " + node);
-            }
-            node.parentID = node.parent.getID();
+        if (node.parent == null) {
+            throw new RuntimeException("BUG: cannot persist node without parent: " + node);
         }
         if (node.ownerID == null) {
             if (node.owner == null) {

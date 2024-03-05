@@ -54,6 +54,13 @@ A `cavern.properties` file in /config is required to run this service.  The foll
 # service identity
 org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 
+# (optional) container nodes in the root are allocations:
+org.opencadc.cavern.allocation = /
+
+# (optional) container nodes in /foo and /bar are allocations:
+#org.opencadc.cavern.allocationParent = /foo
+#org.opencadc.cavern.allocationParent = /bar
+
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
 org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content that could be mounted in other containers}
@@ -68,12 +75,20 @@ org.opencadc.cavern.filesystem.rootOwner.gid = {gid}
 
 # (optional) keys to generate pre-auth URLs to cavern: now generated internally
 
-
 # (optional) base directory exposed for sshfs mounts
 org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
 ```
 
 The _resourceID_ is the resourceID of _this_ `cavern` service.
+
+The _allocationParent_ is a path to a container node (directory) which contains space allocations. An allocation
+is owned by a user (uisually different from the _rootOwner_ admin user) who is responsible for the allocation
+and all conntent therein. The owner of an allocation is granted additional permissions within their 
+allocation (they can read/write/delete anything) so the owner cannot be blocked from access to any content
+within their allocation. This probably only matters for multi-user projects. Multiple _allocationParent_(s) may
+be configured to organise the top level of the content (e.g. /home and /projects). Paths configurted to be 
+_allocationParent_(s) will be automatically created (if necessary), owned by the _rootOwner_, and will be
+anonymously readable (public). 
 
 The _filesystem.baseDir_ is the path to a base directory containing the `cavern` nodes/files.
 
