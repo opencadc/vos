@@ -222,28 +222,6 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
     }
     
-    // for use with allocationParents.add(node) and allocationParents.contains(node)
-    private class AbsoluteNodeComparator implements Comparator<Node> {
-        @Override
-        public int compare(Node n1, Node n2) {
-            if (n1 == null && n2 == null) {
-                throw new RuntimeException("BUG: two null args in comparator");
-            }
-            // nulls last
-            if (n1 == null && n2 != null) {
-                return 1;
-            }
-            if (n1 != null && n2 == null) {
-                return -1;
-            }
-            int ret = 0;
-            
-            return ret;
-            
-        }
-        
-    }
-    
     // support FileAction
     public CavernConfig getConfig() {
         return config;
@@ -270,6 +248,9 @@ public class FileSystemNodePersistence implements NodePersistence {
 
     @Override
     public boolean isAllocation(ContainerNode cn) {
+        if (cn.parent == null) {
+            return false; // root is never an allocation
+        }
         ContainerNode p = cn.parent;
         for (ContainerNode ap : allocationParents) {
             if (NodeUtil.absoluteEquals(p.parent, ap)) {
