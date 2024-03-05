@@ -72,14 +72,11 @@ import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Random;
@@ -89,7 +86,6 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.VOS;
@@ -114,11 +110,8 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
     public TransferTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
 
-        // enables the ownershipTest
-        // the cavern-auth-test.pem user is a member of the altGroup.
-        GroupURI altGroup = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
-        File altCert = FileUtil.getFileFromResource("cavern-auth-test.pem", TransferTest.class);
-        super.enableOwnershipTest(altGroup, altCert);
+        // enables the ownershipTest, AUTH_TEST_CERT user is a member of AUTH_TEST_GROUP.
+        super.enableOwnershipTest(Constants.AUTH_TEST_GROUP, Constants.AUTH_TEST_CERT);
     }
 
     @Test
