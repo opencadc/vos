@@ -84,7 +84,7 @@ allocation (they can read/write/delete anything) so the owner cannot be blocked 
 within their allocation. This probably only matters for multi-user projects. Multiple _allocationParent_(s) may
 be configured to organise the top level of the content (e.g. /home and /projects). Paths configured to be 
 _allocationParent_(s) will be automatically created (if necessary), owned by the _rootOwner_, and will be
-anonymously readable (public). Limitation: only a single level of top-level _allocationParent_(s) are supported.
+anonymously readable (public). Limitation: only top-level container nodes can be configured as _allocationParent_(s).
 
 The _filesystem.baseDir_ is the path to a base directory containing the `cavern` nodes/files.
 
