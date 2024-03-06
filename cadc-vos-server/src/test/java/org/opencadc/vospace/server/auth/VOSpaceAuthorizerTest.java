@@ -69,14 +69,25 @@ package org.opencadc.vospace.server.auth;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.NumericPrincipal;
+import ca.nrc.cadc.io.ResourceIterator;
+import ca.nrc.cadc.net.TransientException;
+import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
+import org.opencadc.vospace.NodeUtil;
 import org.opencadc.vospace.VOS;
+import org.opencadc.vospace.server.NodePersistence;
+import org.opencadc.vospace.server.Utils;
+import org.opencadc.vospace.server.Views;
+import org.opencadc.vospace.server.transfers.TransferGenerator;
 
 /**
  *
@@ -121,9 +132,9 @@ public class VOSpaceAuthorizerTest {
         sub2.owner = other;
         
         final Subject caller = new Subject();
-        final VOSpaceAuthorizer auth = new VOSpaceAuthorizer();
+        DummyNodePersistent tnpi = new DummyNodePersistent();
+        final VOSpaceAuthorizer auth = new VOSpaceAuthorizer(tnpi);
         
-        // no quota to denote an allocation
         caller.getPrincipals().addAll(allocationOwner.getPrincipals());
         Assert.assertFalse("sub2", auth.isAllocationOwner(sub2, caller));
         Assert.assertFalse("sub1", auth.isAllocationOwner(sub1, caller));
@@ -157,8 +168,9 @@ public class VOSpaceAuthorizerTest {
         Assert.assertFalse("home", auth.isAllocationOwner(home, caller));
         Assert.assertFalse("root", auth.isAllocationOwner(root, caller));
         
-        alloc.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, "1234"));
-        
+        // make alloc an actual allocation
+        tnpi.allocParentNode = home;
+
         Assert.assertFalse("sub2", auth.isAllocationOwner(sub2, caller));
         Assert.assertFalse("sub1", auth.isAllocationOwner(sub1, caller));
         Assert.assertFalse("alloc", auth.isAllocationOwner(alloc, caller));
@@ -183,14 +195,83 @@ public class VOSpaceAuthorizerTest {
         Assert.assertFalse("home", auth.isAllocationOwner(home, caller));
         Assert.assertFalse("root", auth.isAllocationOwner(root, caller));
         
-        // this makes a parent allocation that includes the previous allocation
-        root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, "1234"));
-        Assert.assertFalse("sub2", auth.isAllocationOwner(sub2, caller));
-        Assert.assertFalse("sub1", auth.isAllocationOwner(sub1, caller));
-        // here we bypass the alloc quota and see the root quota
-        // TODO: is this the right behaviour??
-        Assert.assertTrue("alloc", auth.isAllocationOwner(alloc, caller));
-        Assert.assertTrue("home", auth.isAllocationOwner(home, caller));
-        Assert.assertFalse("root", auth.isAllocationOwner(root, caller));
+    }
+
+    class DummyNodePersistent implements NodePersistence {
+        public ContainerNode allocParentNode = null;
+
+
+        @Override
+        public boolean isAllocation(ContainerNode node) {
+            // very basic algorithm that detects if a node is an allocation node
+            if (allocParentNode == null) {
+                return false;
+            }
+            if (node.parent == null) {
+                return false;
+            }
+            return Utils.getPath(allocParentNode).equals(Utils.getPath(node.parent));
+        }
+
+        // methods below are not used/implemented
+        @Override
+        public Set<URI> getAdminProps() {
+            return null;
+        }
+
+        @Override
+        public URI getResourceID() {
+            return null;
+        }
+
+        @Override
+        public ContainerNode getRootNode() {
+            return null;
+        }
+
+        @Override
+        public Set<URI> getImmutableProps() {
+            return null;
+        }
+
+        @Override
+        public Views getViews() {
+            return null;
+        }
+
+        @Override
+        public TransferGenerator getTransferGenerator() {
+            return null;
+        }
+
+        @Override
+        public Node get(ContainerNode parent, String name) throws TransientException {
+            return null;
+        }
+
+        @Override
+        public void getProperties(Node node) throws TransientException {
+
+        }
+
+        @Override
+        public Node put(Node node) throws NodeNotSupportedException, TransientException {
+            return null;
+        }
+
+        @Override
+        public void move(Node node, ContainerNode dest, String newName) {
+
+        }
+
+        @Override
+        public void delete(Node node) throws TransientException {
+
+        }
+
+        @Override
+        public ResourceIterator<Node> iterator(ContainerNode parent, Integer limit, String start) {
+            return null;
+        }
     }
 }

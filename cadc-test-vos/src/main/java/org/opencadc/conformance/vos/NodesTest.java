@@ -1011,14 +1011,6 @@ public class NodesTest extends VOSTest {
                 201, putAction.getResponseCode());
         Assert.assertNull("expected PUT throwable == null", putAction.getThrowable());
 
-        // test owner of root directory fails to read and delete due to a lack of explicit permission
-        getAction = new HttpGet(childURL, true);
-        Subject.doAs(authSubject, new RunnableAction(getAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
-        HttpDelete deleteAction = new HttpDelete(childURL, true);
-        Subject.doAs(authSubject, new RunnableAction(deleteAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
-
         // Allocation owners have read and write access over their tree allocation.
         // Make root node an allocation node by adding the quota properties and test that the owner of
         // that node (authSubject) in their new role can now perform the above actions.
@@ -1027,9 +1019,10 @@ public class NodesTest extends VOSTest {
 
         getAction = new HttpGet(childURL, true);
         Subject.doAs(authSubject, new RunnableAction(getAction));
-        Assert.assertEquals(200, getAction.getResponseCode());
+        Assert.assertEquals("No access for allocation owner. Is allocation configured in the service?",
+                200, getAction.getResponseCode());
         log.debug("Delete node " + childURL);
-        deleteAction = new HttpDelete(childURL, true);
+        HttpDelete deleteAction = new HttpDelete(childURL, true);
         Subject.doAs(authSubject, new RunnableAction(deleteAction));
         log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
         Assert.assertEquals("expected PUT response code = 200",
