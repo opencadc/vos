@@ -83,6 +83,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.gms.IvoaGroupClient;
+import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
@@ -364,9 +365,9 @@ public class VOSpaceAuthorizer {
      */
     boolean isAllocationOwner(Node node, Subject subject) {
         log.debug("isAllocationOwner: START");
-        Node parent = node.parent;
+        ContainerNode parent = node.parent;
         while (parent != null) {
-            if (parent.getProperty(VOS.PROPERTY_URI_QUOTA) != null) {
+            if (nodePersistence.isAllocation(parent)) {
                 log.debug("found allocation owner: " + parent.ownerID + " at " + parent.getName());
                 return isOwner(parent, subject);
             }
