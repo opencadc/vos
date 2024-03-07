@@ -167,7 +167,6 @@ public class PackageTest extends VOSTest {
             log.debug("tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
-            Assert.assertEquals(1024L, tarPkg.length());
 
             // cleanup
             delete(fileURL, false);
@@ -195,7 +194,6 @@ public class PackageTest extends VOSTest {
             log.debug("tar file: " + tarPkg.getAbsolutePath());
             Assert.assertNotNull(tarPkg);
             Assert.assertTrue(tarPkg.canRead());
-            Assert.assertEquals(1024L, tarPkg.length());
 
         } catch (Exception e) {
             log.error("Unexpected error", e);

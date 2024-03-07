@@ -965,28 +965,47 @@ public class NodesTest extends VOSTest {
         String childPath = parentName + "/" + childName;
         final VOSURI childURI = getVOSURI(childPath);
         final URL childURL = getNodeURL(nodesServiceURL, childPath);
+
+        String listChildName = "testListUser";
+        ContainerNode listNode = new ContainerNode(listChildName);
+        listNode.parent = testNode;
+        String listChildPath = parentName + "/" + listChildName;
+        final VOSURI listChildURI = getVOSURI(listChildPath);
+        final URL listChildURL = getNodeURL(nodesServiceURL, listChildPath);
         
         // cleanup
         HttpDelete deleteChildAction = new HttpDelete(childURL, true);
         Subject.doAs(groupMember, new RunnableAction(deleteChildAction));
+        delete(listChildURL, false);
         delete(nodeURL, false);
 
         // PUT the node
         log.info("putAction: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
+        put(listChildURL, listChildURI, listNode);
 
-        // try to access it as a different user (memberUser) - it should fail
-        HttpGet getAction = new HttpGet(nodeURL, true);
+        // try to access it as a different user (memberUser)
+        // should be able to read the node, but not the node children
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        HttpGet getAction = new HttpGet(nodeURL, out);
         Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
+        Assert.assertEquals(200, getAction.getResponseCode());
+        NodeReader reader = new NodeReader();
+        NodeReader.NodeReaderResult result = reader.read(out.toString());
+        ContainerNode serverNode = (ContainerNode) result.node;
+        Assert.assertTrue(serverNode.getNodes().isEmpty());
 
         // give groupMember read access through the group
-        getAction = new HttpGet(nodeURL, true);
+        out = new ByteArrayOutputStream();
+        getAction = new HttpGet(nodeURL, out);
         testNode.getReadOnlyGroup().add(accessGroup);
         post(nodeURL, nodeURI, testNode);
         Subject.doAs(groupMember, new RunnableAction(getAction));
         Assert.assertEquals("expected GET response code = 200", 200, getAction.getResponseCode());
         Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
+        result = reader.read(out.toString());
+        serverNode = (ContainerNode) result.node;
+        Assert.assertFalse(serverNode.getNodes().isEmpty());
 
         // permission denied to write in the container without write permission
         InputStream is = prepareInput(childURI, childNode);
@@ -1030,6 +1049,7 @@ public class NodesTest extends VOSTest {
         Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
 
         if (cleanupOnSuccess) {
+            delete(listChildURL, false);
             delete(nodeURL);
         }
     }
