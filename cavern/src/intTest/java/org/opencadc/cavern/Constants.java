@@ -71,6 +71,7 @@ import ca.nrc.cadc.util.FileUtil;
 import java.io.File;
 import java.net.URI;
 import org.apache.log4j.Logger;
+import org.opencadc.gms.GroupURI;
 
 /**
  *
@@ -79,9 +80,13 @@ import org.apache.log4j.Logger;
 public abstract class Constants {
     static final URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
     static final File TEST_CERT;
+    static final File AUTH_TEST_CERT;
+    static final GroupURI AUTH_TEST_GROUP;
     
     static {
         TEST_CERT = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
+        AUTH_TEST_CERT = FileUtil.getFileFromResource("cavern-auth-test.pem", TransferTest.class);
+        AUTH_TEST_GROUP = new GroupURI(URI.create("ivo://cadc.nrc.ca/gms?opencadc-vospace-test"));
     }
     
     private Constants() { 

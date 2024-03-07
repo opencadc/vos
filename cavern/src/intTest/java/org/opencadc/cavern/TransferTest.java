@@ -95,13 +95,15 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
     
     public TransferTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+
+        // enables testDataNodePermission, AUTH_TEST_CERT user is a member of AUTH_TEST_GROUP.
+        super.enableTestDataNodePermission(Constants.AUTH_TEST_GROUP, Constants.AUTH_TEST_CERT);
     }
     
     @Test
