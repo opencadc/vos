@@ -82,27 +82,21 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
-import org.opencadc.gms.GroupURI;
-import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.io.NodeWriter;
+import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -287,6 +281,9 @@ public class FilesTest extends VOSTest {
 
     @Test
     public void testDataNodePermission() {
+
+        Assume.assumeTrue("testDataNodePermission not configured, skipping", altSubject != null);
+
         try {
             // Create a DataNode.
             String nodeName = "files-data-node-permissions";
@@ -296,41 +293,79 @@ public class FilesTest extends VOSTest {
             DataNode testNode = new DataNode(nodeName);
             testNode.owner = authSubject;
             testNode.isPublic = false;
-            log.debug("testNode: " + nodeURL);
+            log.debug("files-data-node-permissions: " + nodeURL);
 
-            // Cleanup leftover nodes
+            // cleanup
             delete(nodeURL, false);
 
-            // PUT the nodes
+            // PUT the node
             put(nodeURL, nodeURI, testNode);
 
-            // user without permissions should be able to read the node
+            // Create a pullFromVoSpace Transfer
+            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
+            transfer.version = VOS.VOSPACE_21;
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            transfer.getProtocols().add(protocol);
+
+            // Get the transfer document
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+            log.debug("files-data-node-permissions transfer XML: " + sw);
+
+            // POST the transfer document
+            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            URL transferURL = getNodeURL(synctransServiceURL, nodePath);
+            log.debug("transfer URL: " + transferURL);
+            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(authSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
+            Assert.assertNull("expected PUT throwable == null", post.getThrowable());
+
+            // Get the transfer details
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(nodeURL, out);
-            log.debug("GET: " + nodeURL);
-            Subject.doAs(altSubject, new RunnableAction(get));
+            HttpGet get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(authSubject, new RunnableAction(get));
             log.debug("GET responseCode: " + get.getResponseCode());
             Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
+                    get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
-            // user without permissions should not be able to write to the node
-            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            testNode.getProperties().add(nodeProperty);
+            // Get the endpoint from the transfer details
+            log.debug("transfer details XML: " + out);
+            TransferReader transferReader = new TransferReader();
+            Transfer details = transferReader.read(out.toString(), "vos");
+            Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
+                    Direction.pullFromVoSpace, details.getDirection());
+            Assert.assertTrue("expected >0 endpoints", !details.getProtocols().isEmpty());
+            URL endpoint = new URL(details.getEndpoint());
 
-            StringBuilder sb = new StringBuilder();
-            NodeWriter writer = new NodeWriter();
-            writer.write(nodeURI, testNode, sb, VOS.Detail.max);
-            log.debug("post content: " + sb.toString());
+            //  Get the node as a user without read permission, should fail.
+            log.info("GET: " + endpoint);
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(endpoint, out);
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
+            Assert.assertEquals("expected GET response code = 403", 403, get.getResponseCode());
 
-            FileContent content = new FileContent(sb.toString(), XML_CONTENT_TYPE, StandardCharsets.UTF_8);
+            // Make the node public.
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, VOSTest.XML_CONTENT_TYPE);
+            DataNode serverNode = (DataNode) result.node;
+            serverNode.isPublic = true;
+            post(nodeURL, nodeURI, serverNode);
 
-            HttpPost post = new HttpPost(nodeURL, content, true);
-            log.debug("POST: " + nodeURL);
-            Subject.doAs(altSubject, new RunnableAction(post));
-            log.debug("POST responseCode: " + post.getResponseCode() + " " + post.getThrowable());
-            Assert.assertEquals(403, post.getResponseCode());
+            // Get the node again, should succeed
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(endpoint, out);
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
 
-            // Cleanup leftover nodes
-            delete(nodeURL, false);
+            // Delete the node
+            delete(nodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
