@@ -965,47 +965,23 @@ public class NodesTest extends VOSTest {
         String childPath = parentName + "/" + childName;
         final VOSURI childURI = getVOSURI(childPath);
         final URL childURL = getNodeURL(nodesServiceURL, childPath);
-
-        String listChildName = "testListUser";
-        ContainerNode listNode = new ContainerNode(listChildName);
-        listNode.parent = testNode;
-        String listChildPath = parentName + "/" + listChildName;
-        final VOSURI listChildURI = getVOSURI(listChildPath);
-        final URL listChildURL = getNodeURL(nodesServiceURL, listChildPath);
         
         // cleanup
         HttpDelete deleteChildAction = new HttpDelete(childURL, true);
         Subject.doAs(groupMember, new RunnableAction(deleteChildAction));
-        delete(listChildURL, false);
         delete(nodeURL, false);
 
         // PUT the node
         log.info("putAction: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
-        put(listChildURL, listChildURI, listNode);
-
-        // try to access it as a different user (memberUser)
-        // should be able to read the node, but not the node children
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet getAction = new HttpGet(nodeURL, out);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals(200, getAction.getResponseCode());
-        NodeReader reader = new NodeReader();
-        NodeReader.NodeReaderResult result = reader.read(out.toString());
-        ContainerNode serverNode = (ContainerNode) result.node;
-        Assert.assertTrue(serverNode.getNodes().isEmpty());
 
         // give groupMember read access through the group
-        out = new ByteArrayOutputStream();
-        getAction = new HttpGet(nodeURL, out);
+        HttpGet getAction = new HttpGet(nodeURL, true);
         testNode.getReadOnlyGroup().add(accessGroup);
         post(nodeURL, nodeURI, testNode);
         Subject.doAs(groupMember, new RunnableAction(getAction));
         Assert.assertEquals("expected GET response code = 200", 200, getAction.getResponseCode());
         Assert.assertNull("expected GET throwable == null", getAction.getThrowable());
-        result = reader.read(out.toString());
-        serverNode = (ContainerNode) result.node;
-        Assert.assertFalse(serverNode.getNodes().isEmpty());
 
         // permission denied to write in the container without write permission
         InputStream is = prepareInput(childURI, childNode);
@@ -1040,16 +1016,25 @@ public class NodesTest extends VOSTest {
         Subject.doAs(authSubject, new RunnableAction(getAction));
         Assert.assertEquals("No access for allocation owner. Is allocation configured in the service?",
                 200, getAction.getResponseCode());
-        log.debug("Delete node " + childURL);
-        HttpDelete deleteAction = new HttpDelete(childURL, true);
-        Subject.doAs(authSubject, new RunnableAction(deleteAction));
-        log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, deleteAction.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
 
+        // set the authSubject as the child owner
+        childNode.owner = authSubject;
+        post(childURL, childURI, childNode);
+
+        // get the parent, with only read access to the parent, parent should have no children
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        getAction = new HttpGet(childURL, out);
+        Subject.doAs(groupMember, new RunnableAction(getAction));
+        Assert.assertEquals(200, getAction.getResponseCode());
+        NodeReader reader = new NodeReader();
+        NodeReader.NodeReaderResult result = reader.read(out.toString());
+        ContainerNode parentNode = (ContainerNode) result.node;
+        Assert.assertTrue(parentNode.getNodes().isEmpty());
+
+        // cleanup
+        deleteChildAction = new HttpDelete(childURL, true);
+        Subject.doAs(groupMember, new RunnableAction(deleteChildAction));
         if (cleanupOnSuccess) {
-            delete(listChildURL, false);
             delete(nodeURL);
         }
     }

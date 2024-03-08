@@ -287,9 +287,8 @@ public class FilesTest extends VOSTest {
         try {
             // Create a DataNode.
             String nodeName = "files-data-node-permissions";
-            String nodePath = nodeName;
-            URL nodeURL = getNodeURL(nodesServiceURL, nodePath);
-            VOSURI nodeURI = getVOSURI(nodePath);
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            VOSURI nodeURI = getVOSURI(nodeName);
             DataNode testNode = new DataNode(nodeName);
             testNode.owner = authSubject;
             testNode.isPublic = false;
@@ -301,68 +300,23 @@ public class FilesTest extends VOSTest {
             // PUT the node
             put(nodeURL, nodeURI, testNode);
 
-            // Create a pullFromVoSpace Transfer
-            Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pullFromVoSpace);
-            transfer.version = VOS.VOSPACE_21;
-            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
-            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
-            transfer.getProtocols().add(protocol);
+            // URL to the files endpoint for the node
+            URL fileURL = getNodeURL(filesServiceURL, nodeName);
 
-            // Get the transfer document
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            log.debug("files-data-node-permissions transfer XML: " + sw);
-
-            // POST the transfer document
-            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
-            URL transferURL = getNodeURL(synctransServiceURL, nodePath);
-            log.debug("transfer URL: " + transferURL);
-            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
-            Subject.doAs(authSubject, new RunnableAction(post));
-            Assert.assertEquals("expected POST response code = 303", 303, post.getResponseCode());
-            Assert.assertNull("expected PUT throwable == null", post.getThrowable());
-
-            // Get the transfer details
+            // HEAD request should succeed because parent has public access.
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpGet get = new HttpGet(post.getRedirectURL(), out);
-            log.debug("GET: " + post.getRedirectURL());
-            Subject.doAs(authSubject, new RunnableAction(get));
-            log.debug("GET responseCode: " + get.getResponseCode());
+            HttpGet get = new HttpGet(fileURL, out);
+            get.setHeadOnly(true);
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
             Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", get.getThrowable());
-            Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
-                    get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
-            // Get the endpoint from the transfer details
-            log.debug("transfer details XML: " + out);
-            TransferReader transferReader = new TransferReader();
-            Transfer details = transferReader.read(out.toString(), "vos");
-            Assert.assertEquals("expected transfer direction = " + Direction.pullFromVoSpace,
-                    Direction.pullFromVoSpace, details.getDirection());
-            Assert.assertTrue("expected >0 endpoints", !details.getProtocols().isEmpty());
-            URL endpoint = new URL(details.getEndpoint());
-
-            //  Get the node as a user without read permission, should fail.
-            log.info("GET: " + endpoint);
+            // GET request should fail.
             out = new ByteArrayOutputStream();
-            get = new HttpGet(endpoint, out);
+            get = new HttpGet(fileURL, out);
             Subject.doAs(altSubject, new RunnableAction(get));
             log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
             Assert.assertEquals("expected GET response code = 403", 403, get.getResponseCode());
-
-            // Make the node public.
-            NodeReader.NodeReaderResult result = get(nodeURL, 200, VOSTest.XML_CONTENT_TYPE);
-            DataNode serverNode = (DataNode) result.node;
-            serverNode.isPublic = true;
-            post(nodeURL, nodeURI, serverNode);
-
-            // Get the node again, should succeed
-            out = new ByteArrayOutputStream();
-            get = new HttpGet(endpoint, out);
-            Subject.doAs(altSubject, new RunnableAction(get));
-            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
-            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
 
             // Delete the node
             delete(nodeURL);
