@@ -190,22 +190,26 @@ public class GetNodeAction extends NodeAction {
                 pageStart = vuri.getName();
             }
 
-            long start = System.currentTimeMillis();
-            log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
-            try {
-                ResourceIterator<Node> ci = nodePersistence.iterator(node, pageLimit, pageStart);
-                if (VOS.Detail.max.getValue().equals(detailLevel)) {
-                    node.childIterator = new TagChildAccessRightsWrapper(ci, AuthenticationUtil.getCurrentSubject());
-                } else {
-                    node.childIterator = ci;
+            // Check for read permission to list child nodes.
+            Subject subject = AuthenticationUtil.getCurrentSubject();
+            if (voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+                long start = System.currentTimeMillis();
+                log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
+                try {
+                    ResourceIterator<Node> ci = nodePersistence.iterator(node, pageLimit, pageStart);
+                    if (VOS.Detail.max.getValue().equals(detailLevel)) {
+                        node.childIterator = new TagChildAccessRightsWrapper(ci, AuthenticationUtil.getCurrentSubject());
+                    } else {
+                        node.childIterator = ci;
+                    }
+                } catch (UnsupportedOperationException ex) {
+                    throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
                 }
-            } catch (UnsupportedOperationException ex) {
-                throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
-            }
 
-            long end = System.currentTimeMillis();
-            long dt = (end - start);
-            log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
+                long end = System.currentTimeMillis();
+                long dt = (end - start);
+                log.debug("nodePersistence.iterator() elapsed time: " + dt + "ms");
+            }
         }
 
         // get the properties if no detail level is specified (null) or if the

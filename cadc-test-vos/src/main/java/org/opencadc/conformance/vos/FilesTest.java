@@ -71,6 +71,7 @@ package org.opencadc.conformance.vos;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
@@ -81,23 +82,21 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URL;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -108,6 +107,7 @@ public class FilesTest extends VOSTest {
     private static final Logger log = Logger.getLogger(FilesTest.class);
 
     protected final URL filesServiceURL;
+    protected Subject altSubject;
 
     protected FilesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -115,6 +115,15 @@ public class FilesTest extends VOSTest {
         RegistryClient regClient = new RegistryClient();
         this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_FILES, filesServiceURL));
+    }
+
+    /**
+     * Set a subject used by testDataNodePermission. if not set the test is disabled.
+     *
+     * @param altCert certificate for a user.
+     */
+    protected void enableTestDataNodePermission(File altCert) {
+        this.altSubject = SSLUtil.createSubject(altCert);
     }
 
     @Test
@@ -213,7 +222,6 @@ public class FilesTest extends VOSTest {
             Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
             Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
 
-
             String actual = out.toString();
             log.debug("file content: " + actual);
             Assert.assertEquals("expected file content to match", expected, actual);
@@ -269,6 +277,54 @@ public class FilesTest extends VOSTest {
         // Delete the node
         delete(nodeURL);
 
+    }
+
+    @Test
+    public void testDataNodePermission() {
+
+        Assume.assumeTrue("testDataNodePermission not configured, skipping", altSubject != null);
+
+        try {
+            // Create a DataNode.
+            String nodeName = "files-data-node-permissions";
+            URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
+            VOSURI nodeURI = getVOSURI(nodeName);
+            DataNode testNode = new DataNode(nodeName);
+            testNode.owner = authSubject;
+            testNode.isPublic = false;
+            log.debug("files-data-node-permissions: " + nodeURL);
+
+            // cleanup
+            delete(nodeURL, false);
+
+            // PUT the node
+            put(nodeURL, nodeURI, testNode);
+
+            // URL to the files endpoint for the node
+            URL fileURL = getNodeURL(filesServiceURL, nodeName);
+
+            // HEAD request should succeed because parent has public access.
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpGet get = new HttpGet(fileURL, out);
+            get.setHeadOnly(true);
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+
+            // GET request should fail.
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(fileURL, out);
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.info("GET response: " + get.getResponseCode() + " " + get.getThrowable());
+            Assert.assertEquals("expected GET response code = 403", 403, get.getResponseCode());
+
+            // Delete the node
+            delete(nodeURL);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
     }
 
     protected static URI computeChecksumURI(byte[] input) throws NoSuchAlgorithmException, IOException {

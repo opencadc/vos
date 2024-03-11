@@ -975,13 +975,8 @@ public class NodesTest extends VOSTest {
         log.info("putAction: " + nodeURI + " -> " + nodeURL);
         put(nodeURL, nodeURI, testNode);
 
-        // try to access it as a different user (memberUser) - it should fail
-        HttpGet getAction = new HttpGet(nodeURL, true);
-        Subject.doAs(groupMember, new RunnableAction(getAction));
-        Assert.assertEquals(403, getAction.getResponseCode());
-
         // give groupMember read access through the group
-        getAction = new HttpGet(nodeURL, true);
+        HttpGet getAction = new HttpGet(nodeURL, true);
         testNode.getReadOnlyGroup().add(accessGroup);
         post(nodeURL, nodeURI, testNode);
         Subject.doAs(groupMember, new RunnableAction(getAction));
@@ -1021,14 +1016,24 @@ public class NodesTest extends VOSTest {
         Subject.doAs(authSubject, new RunnableAction(getAction));
         Assert.assertEquals("No access for allocation owner. Is allocation configured in the service?",
                 200, getAction.getResponseCode());
-        log.debug("Delete node " + childURL);
-        HttpDelete deleteAction = new HttpDelete(childURL, true);
-        Subject.doAs(authSubject, new RunnableAction(deleteAction));
-        log.debug("DELETE responseCode: " + deleteAction.getResponseCode());
-        Assert.assertEquals("expected PUT response code = 200",
-                200, deleteAction.getResponseCode());
-        Assert.assertNull("expected PUT throwable == null", deleteAction.getThrowable());
 
+        // set the authSubject as the child owner
+        childNode.owner = authSubject;
+        post(childURL, childURI, childNode);
+
+        // get the parent, with only read access to the parent, parent should have no children
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        getAction = new HttpGet(childURL, out);
+        Subject.doAs(groupMember, new RunnableAction(getAction));
+        Assert.assertEquals(200, getAction.getResponseCode());
+        NodeReader reader = new NodeReader();
+        NodeReader.NodeReaderResult result = reader.read(out.toString());
+        ContainerNode parentNode = (ContainerNode) result.node;
+        Assert.assertTrue(parentNode.getNodes().isEmpty());
+
+        // cleanup
+        deleteChildAction = new HttpDelete(childURL, true);
+        Subject.doAs(groupMember, new RunnableAction(deleteChildAction));
         if (cleanupOnSuccess) {
             delete(nodeURL);
         }

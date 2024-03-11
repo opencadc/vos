@@ -80,12 +80,15 @@ public class FilesTest extends org.opencadc.conformance.vos.FilesTest {
 
     static {
         Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
-        
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
     }
     
     public FilesTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
+
+        // enables testDataNodePermission
+        super.enableTestDataNodePermission(Constants.AUTH_TEST_CERT);
     }
+
 }

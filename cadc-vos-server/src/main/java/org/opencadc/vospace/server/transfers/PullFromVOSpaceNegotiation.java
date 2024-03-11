@@ -69,6 +69,7 @@
 
 package org.opencadc.vospace.server.transfers;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.server.JobUpdater;
@@ -78,8 +79,10 @@ import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.NodePersistence;
 import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 import org.opencadc.vospace.transfer.Transfer;
 
@@ -161,7 +164,11 @@ public class PullFromVOSpaceNegotiation extends VOSpaceTransfer {
             }
             log.debug("Resolved path: " + target + " -> " + actualNode);
 
-            if (!(actualNode instanceof DataNode)) {
+            if (actualNode instanceof DataNode) {
+                if (!authorizer.hasSingleNodeReadPermission(actualNode, AuthenticationUtil.getCurrentSubject())) {
+                    throw NodeFault.PermissionDenied.getStatus(Utils.getPath(actualNode));
+                }
+            } else {
                 throw new TransferException("target is not a data node");
             }
 

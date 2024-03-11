@@ -71,6 +71,7 @@ package org.opencadc.conformance.vos;
 
 import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
@@ -96,7 +97,9 @@ import java.util.Random;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
@@ -115,8 +118,8 @@ public class TransferTest extends VOSTest {
     private static final Logger log = Logger.getLogger(TransferTest.class);
 
     protected final URL transferServiceURL;
-
-    private static final List<Integer> PUT_OK = Arrays.asList(200, 201);
+    protected Subject altSubject;
+    protected GroupURI altGroup;
 
     protected TransferTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -124,6 +127,18 @@ public class TransferTest extends VOSTest {
         RegistryClient regClient = new RegistryClient();
         this.transferServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_TRANSFERS_20, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_TRANSFERS_20, transferServiceURL));
+    }
+
+    /**
+     * Set a group and subject used by testDataNodePermission. if not set the test is disabled.
+     *
+     * @param altGroup group with member altCert.
+     * @param altCert certificate for a user that is a member of altGroup.
+     */
+    protected void enableTestDataNodePermission(GroupURI altGroup, File altCert) {
+        this.altGroup = altGroup;
+        this.altSubject = SSLUtil.createSubject(altCert);
+        log.debug(String.format("update - group: %s\n%s", altGroup.getURI(), altSubject));
     }
 
     @Test
@@ -188,7 +203,7 @@ public class TransferTest extends VOSTest {
         HttpUpload put = new HttpUpload(content, putURL);
         put.run();
         log.info("put: " + put.getResponseCode() + " " + put.getThrowable());
-        Assert.assertTrue(PUT_OK.contains(put.getResponseCode()));
+        Assert.assertEquals(201, put.getResponseCode());
         Assert.assertNull(put.getThrowable());
 
         // Create a pull-from-vospace Transfer for the node
@@ -471,6 +486,171 @@ public class TransferTest extends VOSTest {
         delete(subDirURL);
         delete(dirURL);
         delete(nodeURL);
+    }
+
+    /**
+     * Test that a user can write to a data node after being given write permission.
+     *
+     * The authSubject user is the owner of the parent ContainerNode and child DataNode.
+     * The altSubject user is a member of the altGroup group.
+     * The altGroup by default does not have write access to the parent or child nodes.
+     * The altGroup group is given write access to the child node, which should
+     * allow the altSubject to write to the child node.
+     */
+    @Test
+    public void testDataNodePermission() throws Exception {
+
+        Assume.assumeTrue("testDataNodePermission not configured, skipping",
+                altGroup != null && altSubject != null);
+
+        try {
+            // Parent ContainerNode
+            String parentName = "transfer-data-node-permissions-parent";
+            URL parentURL = getNodeURL(nodesServiceURL, parentName);
+            VOSURI parentURI = getVOSURI(parentName);
+            ContainerNode parentNode = new ContainerNode(parentName);
+            parentNode.owner = authSubject;
+            parentNode.isPublic = false;
+            log.debug("parentURL: " + parentURL);
+
+            // Create a DataNode.
+            String childName = "transfer-data-node-permissions-child";
+            String childPath = parentName + "/" + childName;
+            URL childURL = getNodeURL(nodesServiceURL, childPath);
+            VOSURI childURI = getVOSURI(childPath);
+            DataNode childNode = new DataNode(childName);
+            childNode.owner = authSubject;
+            childNode.isPublic = false;
+            log.debug("childURL: " + childURL);
+
+            // Cleanup leftover nodes
+            delete(childURL, false);
+            delete(parentURL, false);
+
+            // PUT the nodes
+            put(parentURL, parentURI, parentNode);
+            put(childURL, childURI, childNode);
+
+            // give altGroup read access to the parent
+            parentNode.getReadOnlyGroup().add(altGroup);
+            post(parentURL, parentURI, parentNode);
+
+            // user without permission should be able to read the child
+            Transfer pullFrom = new Transfer(childURI.getURI(), Direction.pullFromVoSpace);
+            pullFrom.version = VOS.VOSPACE_21;
+            Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pullFrom.getProtocols().add(protocol);
+
+            TransferWriter transferWriter = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            transferWriter.write(pullFrom, sw);
+            log.debug("POST Transfer XML: " + sw);
+
+            FileContent fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            HttpPost post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(altSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
+            Assert.assertNull("expected POST throwable == null", post.getThrowable());
+            URL jobURL = post.getRedirectURL();
+            log.debug("jobURL: " + jobURL);
+            Assert.assertNotNull(jobURL);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpGet get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
+                    get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+            log.debug("GET Transfer XML: " + out);
+            TransferReader transferReader = new TransferReader();
+            Transfer details = transferReader.read(out.toString(), "vos");
+
+            // transfer endpoint should be null
+            Assert.assertNull(details.getEndpoint());
+
+
+            // user without permission should not be able to write to the child
+            Transfer pushTo = new Transfer(childURI.getURI(), Direction.pushToVoSpace);
+            pushTo.version = VOS.VOSPACE_21;
+            protocol = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+            protocol.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+            pushTo.getProtocols().add(protocol);
+
+            transferWriter = new TransferWriter();
+            sw = new StringWriter();
+            transferWriter.write(pushTo, sw);
+            log.debug("POST Transfer XML: " + sw);
+
+            fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(altSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
+            Assert.assertNull("expected POST throwable == null", post.getThrowable());
+            jobURL = post.getRedirectURL();
+            log.debug("jobURL: " + jobURL);
+            Assert.assertNotNull(jobURL);
+
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
+                    get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+            log.debug("GET Transfer XML: " + out);
+            transferReader = new TransferReader();
+            details = transferReader.read(out.toString(), "vos");
+
+            // transfer endpoint should be null
+            Assert.assertNull(details.getEndpoint());
+
+            // give write access to the child through the child readwrite group
+            childNode.getReadWriteGroup().add(altGroup);
+            post(childURL, childURI, childNode);
+
+            fileContent = new FileContent(sw.toString().getBytes(), VOSTest.XML_CONTENT_TYPE);
+            post = new HttpPost(synctransServiceURL, fileContent, false);
+            Subject.doAs(altSubject, new RunnableAction(post));
+            Assert.assertEquals("expected POST response code = 303",303, post.getResponseCode());
+            Assert.assertNull("expected POST throwable == null", post.getThrowable());
+            jobURL = post.getRedirectURL();
+            log.debug("jobURL: " + jobURL);
+            Assert.assertNotNull(jobURL);
+
+            out = new ByteArrayOutputStream();
+            get = new HttpGet(post.getRedirectURL(), out);
+            log.debug("GET: " + post.getRedirectURL());
+            Subject.doAs(altSubject, new RunnableAction(get));
+            log.debug("GET responseCode: " + get.getResponseCode());
+            Assert.assertEquals("expected GET response code = 200", 200, get.getResponseCode());
+            Assert.assertNull("expected GET throwable == null", get.getThrowable());
+            Assert.assertTrue("expected GET Content-Type starts with " + VOSTest.XML_CONTENT_TYPE,
+                    get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
+
+            log.debug("GET Transfer XML: " + out);
+            transferReader = new TransferReader();
+            details = transferReader.read(out.toString(), "vos");
+
+            // transfer endpoint should not be null
+            Assert.assertNotNull(details.getEndpoint());
+            log.debug("PUT url: " + details.getEndpoint());
+
+            // Cleanup leftover nodes
+            delete(childURL, false);
+            delete(parentURL, false);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
     }
 
     private Job runMove(VOSURI sourceNodeURI, VOSURI destinationNodeURI) throws Exception {
