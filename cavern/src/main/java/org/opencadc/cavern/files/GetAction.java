@@ -67,17 +67,24 @@
 
 package org.opencadc.cavern.files;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteCountOutputStream;
+import ca.nrc.cadc.io.MultiBufferIO;
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkingException;
 import org.opencadc.vospace.NodeNotFoundException;
+import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 
 /**
  * Get file bytes from the filesystem.
@@ -96,28 +103,28 @@ public class GetAction extends HeadAction {
     public void doAction()  throws Exception {
         ByteCountOutputStream out = null;
         try {
-            Path source = resolveAndSetMetadata();
-
-            if (source.toFile().length() == 0) {
+            DataNode node = resolveAndSetMetadata();
+            VOSURI nodeURI = getNodeURI();
+            Subject caller = AuthenticationUtil.getCurrentSubject();
+            if (!authorizer.hasSingleNodeReadPermission(node, caller)) {
+                throw NodeFault.PermissionDenied.getStatus(nodeURI.getURI().toASCIIString());
+            }
+            
+            if (node.bytesUsed != null && node.bytesUsed == 0) {
                 syncOutput.setCode(204);
-                log.debug("Empty file " + source);
             } else {
+                Path source = nodePersistence.nodeToPath(nodeURI);
+                InputStream in = new FileInputStream(source.toFile());
                 out = new ByteCountOutputStream(syncOutput.getOutputStream());
+                MultiBufferIO io = new MultiBufferIO();
                 log.debug("Starting copy of file " + source);
-                Files.copy(source, out);
+                io.copy(in, out);
+                out.flush();
                 log.debug("Completed copy of file " + source);
                 out.flush();
             }
-
-        } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {
-            log.debug("404 error with GET: ",  e);
-            throw new ResourceNotFoundException(e.getMessage());
-        } catch (LinkingException e) {
-            log.debug("400 error with GET: ",  e);
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            throw new AccessControlException(e.getMessage());
+        } catch (AccessDeniedException ex) {
+            throw new RuntimeException("CONFIG: unexpected read fail", ex);
         } finally {
             if (out != null && out.getByteCount() > 0L) {
                 logInfo.setBytes(out.getByteCount());

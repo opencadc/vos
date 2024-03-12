@@ -107,7 +107,7 @@ public class HeadAction extends FileAction {
     }
     
     // GetAction re-uses all this logic
-    Path resolveAndSetMetadata() throws Exception {
+    DataNode resolveAndSetMetadata() throws Exception {
         try {
             VOSURI nodeURI = getNodeURI();
             log.debug("target: " + nodeURI);
@@ -169,18 +169,10 @@ public class HeadAction extends FileAction {
                 }
             }
 
-            Path ret = nodePersistence.nodeToPath(nodeURI);
             syncOutput.setCode(200);
-            return ret;
-        } catch (NodeNotFoundException | FileNotFoundException | NoSuchFileException e) {
-            log.debug("404 error with GET: ",  e);
-            throw new ResourceNotFoundException(e.getMessage());
-        } catch (LinkingException e) {
-            log.debug("400 error with GET: ",  e);
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (AccessControlException | AccessDeniedException e) {
-            log.debug(e);
-            throw new AccessControlException(e.getMessage());
+            return dn;
+        } catch (AccessDeniedException ex) {
+            throw new RuntimeException("CONFIG: unexpected read fail", ex);
         }
     }
 }
