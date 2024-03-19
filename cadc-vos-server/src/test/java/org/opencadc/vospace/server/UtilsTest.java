@@ -69,6 +69,7 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.util.Log4jInit;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -90,7 +91,7 @@ public class UtilsTest {
     private static final Logger log = Logger.getLogger(UtilsTest.class);
 
     static {
-        Log4jInit.setLevel("org.opencadc.raven", Level.DEBUG);
+        Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
     }
 
     @Test
@@ -189,5 +190,80 @@ public class UtilsTest {
         Assert.assertEquals(2, oldProps.size());
         Assert.assertTrue(oldProps.contains(np1Update));
         Assert.assertTrue(oldProps.contains(np2));
+    }
+    
+    @Test
+    public void testValidatePropertyKey() throws Exception {
+        URI key;
+        
+        // valid
+        key = URI.create("http://opencadc.org/foo#bar");
+        Utils.validatePropertyKey(key);
+        log.info(key + " : OK");
+        
+        key = URI.create("https://opencadc.org/foo#bar");
+        Utils.validatePropertyKey(key);
+        log.info(key + " : OK");
+        
+        key = URI.create("ivo://ivoa.net/vospace/core#description");
+        Utils.validatePropertyKey(key);
+        log.info(key + " : OK");
+        
+        key = URI.create("pdd:foo/bar");
+        Utils.validatePropertyKey(key);
+        log.info(key + " : OK");
+        
+        key = URI.create("vos://cadc.nrc.ca~vault/pdowler/foo#bar");
+        Utils.validatePropertyKey(key);
+        log.info(key + " : OK");
+        
+        // invalid for various reasons
+        try {
+            key = URI.create("ivo://ivoa.net/vospace#namespace-violation");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
+
+        try {
+            key = URI.create("ivo://ivoa.net/vospace/core#namespace-violation");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
+
+        try {
+            key = URI.create("http://opencadc.org/no-fragment");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
+
+        try {
+            key = URI.create("https://opencadc.org/#no-path");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
+        
+        try {
+            key = URI.create("pdd://authority/foo/bar");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
+
+        try {
+            key = URI.create("vos:no-authority/pdowler/foo#vos-scheme-violation");
+            Utils.validatePropertyKey(key);
+            Assert.fail("expected URISyntaxException from " + key);
+        } catch (URISyntaxException expected) {
+            log.info("caught expected: " + expected);
+        }
     }
 }

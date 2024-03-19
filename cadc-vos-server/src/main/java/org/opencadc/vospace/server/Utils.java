@@ -180,7 +180,7 @@ public class Utils {
         }
     }
     
-    private static void validatePropertyKey(URI key) throws URISyntaxException {
+    public static void validatePropertyKey(URI key) throws URISyntaxException {
         if (key.getScheme() == null) {
             throw new URISyntaxException("invalid structure: no scheme", key.toASCIIString());
         }
@@ -194,7 +194,7 @@ public class Utils {
             if (key.getAuthority() == null) {
                 throw new URISyntaxException("invalid structure: no authority", key.toASCIIString());
             }
-            log.warn("key path: '" + key.getPath() + "'");
+            log.debug("key path: '" + key.getPath() + "'");
             if (key.getPath() == null || key.getPath().equals("/")) {
                 throw new URISyntaxException("invalid structure: no path", key.toASCIIString());
             }
