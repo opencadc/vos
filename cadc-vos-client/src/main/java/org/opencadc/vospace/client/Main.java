@@ -71,6 +71,7 @@ import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
@@ -978,8 +979,8 @@ public class Main implements Runnable {
             if (argMap.isSet("netrc")) {
                 this.subject = AuthenticationUtil.getSubject(new NetrcAuthenticator(true));
             } else if (argMap.isSet("cert")) {
-                // no default finding cert in known location
-                this.subject = CertCmdArgUtil.initSubject(argMap);
+                File cert = new File(argMap.getValue("cert"));
+                this.subject = SSLUtil.createSubject(cert);
             }
             AuthMethod meth = AuthenticationUtil.getAuthMethodFromCredentials(subject);
             log.info("authentication using: " + meth);
