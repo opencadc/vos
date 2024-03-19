@@ -184,22 +184,42 @@ public class Utils {
         if (key.getScheme() == null) {
             throw new URISyntaxException("invalid structure: no scheme", key.toASCIIString());
         }
-        if (!key.getScheme().equals("ivo") && !key.getScheme().equals("http") && !key.getScheme().equals("https")) {
-            throw new URISyntaxException("invalid structure: unknown scheme", key.toASCIIString());
-        }
-        if (key.getAuthority() == null) {
-            throw new URISyntaxException("invalid structure: no authority", key.toASCIIString());
-        }
-        if (key.getPath() == null) {
-            throw new URISyntaxException("invalid structure: no path", key.toASCIIString());
-        }
-        if (key.getFragment() == null) {
-            throw new URISyntaxException("invalid structure: no fragment", key.toASCIIString());
-        }
-        if (key.toASCIIString().startsWith(VOS.VOSPACE_URI_NAMESPACE)) {
-            if (!VOS.VOSPACE_CORE_PROPERTIES.contains(key)) {
-                throw new URISyntaxException("unrecognized property URI in vospace namespace", key.toASCIIString());
+
+        // vocabulary concepts allowed by IVOA Identifiers (ivo),
+        // IVOA Vocabularies-2.x (http, https) or a vocabulary stored in a specific vospace service
+        if (key.getScheme().equals("ivo") 
+                || key.getScheme().equals("http") || key.getScheme().equals("https")
+                || key.getScheme().equals("vos")) {
+            // must have authority + path + fragment
+            if (key.getAuthority() == null) {
+                throw new URISyntaxException("invalid structure: no authority", key.toASCIIString());
             }
+            log.warn("key path: '" + key.getPath() + "'");
+            if (key.getPath() == null || key.getPath().equals("/")) {
+                throw new URISyntaxException("invalid structure: no path", key.toASCIIString());
+            }
+            if (key.getFragment() == null) {
+                throw new URISyntaxException("invalid structure: no fragment", key.toASCIIString());
+            }
+            // do not allow query string
+            if (key.getQuery() != null) {
+                throw new URISyntaxException("invalid structure: query string not allowed", key.toASCIIString());
+            }
+            if (key.toASCIIString().startsWith(VOS.VOSPACE_URI_NAMESPACE)) {
+                if (!VOS.VOSPACE_CORE_PROPERTIES.contains(key)) {
+                    throw new URISyntaxException("unrecognized property URI in vospace namespace", key.toASCIIString());
+                }
+            }
+        } else {
+            // allow scheme:scheme-specific-part
+            if (key.getAuthority() != null) {
+                throw new URISyntaxException("invalid structure: authority in unrecognized scheme", key.toASCIIString());
+            }
+            String ssp = key.getSchemeSpecificPart();
+            if (ssp == null || ssp.isEmpty()) {
+                throw new URISyntaxException("invalid structure: custom scheme with no scheme-specific part", key.toASCIIString());
+            }
+            // don't care about query string or fragment
         }
     }
 
