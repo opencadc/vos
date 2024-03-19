@@ -493,11 +493,11 @@ public class Main implements Runnable {
                 ContainerNode cn = (ContainerNode) n;
                 if (!cn.getNodes().isEmpty()) {
                     StringBuilder sb = new StringBuilder();
-                    sb.append(pad("child nodes: ", 32));
-                    sb.append(pad("size",12));
-                    sb.append(pad("public",8));
-                    sb.append(pad("owner",12));
-                    sb.append(pad("last modified",26));
+                    sb.append(pad("child nodes:", 32,true));
+                    sb.append(pad("size",12,false));
+                    sb.append(pad("public",8,true));
+                    sb.append(pad("owner",12,true));
+                    sb.append(pad("last modified",26,true));
                     msg(sb.toString());
                 }
 
@@ -543,39 +543,53 @@ public class Main implements Runnable {
             }
             String pub = (child.isPublic == null ? "false" : child.isPublic.toString());
             VOSURI childURI = NodeUtil.getChildURI(parent, child.getName());
-            sb.append(pad(name,32));
-            sb.append(pad(getContentLength(child,true),12));
-            sb.append(pad(pub,8));
-            sb.append(pad(child.ownerDisplay,12));
-            sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26));
+            sb.append(pad(name,32,true));
+            sb.append(pad(getContentLength(child,true),12, false));
+            sb.append(pad(pub,8,true));
+            sb.append(pad(child.ownerDisplay,12,true));
+            sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26,true));
             msg(sb.toString());
         }
     }
 
-    private String pad(String s, int len) {
+    private String pad(String s, int len, boolean leftJustify) {
         if (s.length() >= len) {
             len = s.length() + 1;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(s);
-        for (int i = s.length(); i < len; i++) {
+        if (leftJustify) {
+            sb.append(s);
+        }
+        for (int i = s.length(); i < len - 1; i++) {
             sb.append(" ");
         }
+        if (!leftJustify) {
+            sb.append(s);
+        }
+        sb.append(" "); // separator for !leftJustify
         return sb.toString();
     }
 
     private String getContentLength(Node n, boolean simple) {
-        String contentLength = safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
-        if (!StringUtil.hasText(contentLength)) {
-            return "0";
+        if (n instanceof DataNode) {
+            DataNode sn = (DataNode) n;
+            if (sn.bytesUsed == null || sn.bytesUsed == 0L) {
+                return "0";
+            }
+            //return FileSizeType.getHumanReadableSize(sn.bytesUsed);
+            return sn.bytesUsed.toString();
         }
-        if (simple) {
-            return contentLength;
+        if (n instanceof ContainerNode) {
+            ContainerNode sn = (ContainerNode) n;
+            if (sn.bytesUsed == null || sn.bytesUsed == 0L) {
+                return "0";
+            }
+            //return FileSizeType.getHumanReadableSize(sn.bytesUsed);
+            return sn.bytesUsed.toString();
         }
-        return FileSizeType.getHumanReadableSize(Long.parseLong(contentLength))
-                + " (" + contentLength + " bytes)";
+        return "0"; // LinkNode
     }
-
+    
     private void copyToVOSpace()
         throws Throwable {
         
