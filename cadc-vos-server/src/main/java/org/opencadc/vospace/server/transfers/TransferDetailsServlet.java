@@ -149,8 +149,8 @@ public class TransferDetailsServlet extends HttpServlet {
             log.error("CONFIGURATION ERROR: failed to load " + JOB_MANAGER, ex);
         }
 
-        // ugh: recreate cadc-rest appName
-        String appName = config.getServletContext().getServletContextName();
+        // TECHNICAL DEBT: recreate cadc-rest appName
+        String appName = config.getServletContext().getContextPath().substring(1).replaceAll("/", "-");
         String jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
