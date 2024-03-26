@@ -69,10 +69,12 @@ package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
+import ca.nrc.cadc.rest.Version;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
@@ -105,6 +107,8 @@ public abstract class NodeAction extends RestAction {
     protected VOSpaceAuthorizer voSpaceAuthorizer;
     protected NodePersistence nodePersistence;
     protected LocalServiceURI localServiceURI;
+    
+    private Version version;
 
     protected NodeAction() {
         super();
@@ -115,7 +119,7 @@ public abstract class NodeAction extends RestAction {
         String jndiNodePersistence = super.appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
-            this.nodePersistence = ((NodePersistence) ctx.lookup(jndiNodePersistence));
+            this.nodePersistence = (NodePersistence) ctx.lookup(jndiNodePersistence);
             this.voSpaceAuthorizer = new VOSpaceAuthorizer(nodePersistence);        
             localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
         } catch (Exception oops) {
@@ -128,6 +132,30 @@ public abstract class NodeAction extends RestAction {
             checkWritable();
         }
 
+    }
+
+    @Override
+    protected String getServerImpl() {
+        String jndiKey = super.appName + "-" + Version.class.getName();
+        try {
+            Context ctx = new InitialContext();
+            this.version = (Version) ctx.lookup(jndiKey);
+        } catch (NamingException oops) {
+            log.warn("not found: " + jndiKey);
+        }
+        if (version == null) {
+            try {
+                Context ctx = new InitialContext();
+                this.version = getLibraryVersion(NodeAction.class);
+                ctx.bind(jndiKey, version); // for future use
+            } catch (NamingException oops) {
+                log.warn("failed to bind: " + jndiKey);
+            }
+        }
+        if (version == null) {
+            return "";
+        }
+        return version.getMajorMinor();
     }
     
     @Override
