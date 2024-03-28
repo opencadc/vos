@@ -23,12 +23,6 @@
     </interface>
   </capability>
 
-  <capability standardID="ivo://ivoa.net/std/VOSpace/v2.0#views">
-    <interface xsi:type="vs:ParamHTTP" role="std">
-      <accessURL use="full">https://replace.com/cavern/views</accessURL>
-    </interface>
-  </capability>
-
   <capability standardID="ivo://ivoa.net/std/VOSpace/v2.0#nodes">
     <interface xsi:type="vs:ParamHTTP" role="std">
       <accessURL use="base">https://replace.me.com/cavern/nodes</accessURL>
