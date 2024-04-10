@@ -263,6 +263,14 @@ public class PutAction extends FileAction {
             }
 
             nodePersistence.put(node);
+            syncOutput.setHeader("content-length", Long.toString(bytesWritten));
+            if (contentType != null) {
+                syncOutput.setHeader("content-type", contentType);
+            }
+
+            if (actualMD5 != null) {
+                syncOutput.setHeader("content-md5", actualMD5.getSchemeSpecificPart());
+            }
             syncOutput.setCode(201);
             successful = true;
         } catch (AccessDeniedException e) {
