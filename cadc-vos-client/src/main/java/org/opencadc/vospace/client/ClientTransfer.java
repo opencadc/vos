@@ -120,6 +120,8 @@ public class ClientTransfer implements Runnable {
     private Throwable throwable;
     private ExecutionPhase phase;
     private ErrorSummary error;
+    
+    private HttpTransfer httpTransfer;
 
     private ClientTransfer() {
 
@@ -163,6 +165,16 @@ public class ClientTransfer implements Runnable {
      */
     public Throwable getThrowable() {
         return throwable;
+    }
+
+    /**
+     * Get the HttpTransfer details after the transfer has run. This can be used to
+     * access response headers from the GET or PUT.
+     * 
+     * @return the http transfer object
+     */
+    public HttpTransfer getHttpTransferDetails() {
+        return httpTransfer;
     }
 
     /**
@@ -421,7 +433,8 @@ public class ClientTransfer implements Runnable {
         }
 
         runHttpTransfer(upload);
-
+        this.httpTransfer = upload;
+        
         if (upload.getThrowable() != null) {
             // allow illegal arugment exceptions through
             if (upload.getThrowable() instanceof IllegalArgumentException) {
@@ -470,6 +483,7 @@ public class ClientTransfer implements Runnable {
             }
 
             runHttpTransfer(download);
+            this.httpTransfer = download; // the last one
             if (download.getThrowable() == null) {
                 // the actual resulting file
                 this.localFile = download.getFile();

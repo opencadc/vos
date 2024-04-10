@@ -70,6 +70,7 @@ package org.opencadc.cavern.files;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.rest.RestAction;
+import ca.nrc.cadc.rest.Version;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.naming.Context;
@@ -137,6 +138,13 @@ public abstract class FileAction extends RestAction {
         if (this instanceof PutAction) {
             checkWritable();
         }
+    }
+
+    @Override
+    protected String getServerImpl() {
+        // no null version checking because fail to build correctly can't get past basic testing
+        Version v = getVersionFromResource();
+        return "vos/cavern-" + v.getMajorMinor();
     }
 
     private VOSURI parsePath(String path, boolean hasToken) {
