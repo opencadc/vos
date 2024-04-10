@@ -68,7 +68,6 @@
 package org.opencadc.cavern.files;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.io.MultiBufferIO;
@@ -269,7 +268,7 @@ public class PutAction extends FileAction {
             }
 
             if (actualMD5 != null) {
-                syncOutput.setHeader("content-md5", actualMD5.getSchemeSpecificPart());
+                syncOutput.setDigest(actualMD5);
             }
             syncOutput.setCode(201);
             successful = true;
