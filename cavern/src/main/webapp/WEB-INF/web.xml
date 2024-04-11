@@ -40,10 +40,6 @@
         <servlet-name>NodesServlet</servlet-name>
         <servlet-class>ca.nrc.cadc.rest.RestServlet</servlet-class>
         <init-param>
-            <param-name>augmentSubject</param-name>
-            <param-value>true</param-value>
-        </init-param>
-        <init-param>
             <param-name>init</param-name>
             <param-value>org.opencadc.cavern.CavernInitAction</param-value>
         </init-param>
