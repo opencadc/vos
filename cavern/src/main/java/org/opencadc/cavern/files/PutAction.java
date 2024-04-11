@@ -262,7 +262,7 @@ public class PutAction extends FileAction {
             }
 
             nodePersistence.put(node);
-            syncOutput.setHeader("content-length", Long.toString(bytesWritten));
+            syncOutput.setHeader("content-length", 0); // empty response
             if (contentType != null) {
                 syncOutput.setHeader("content-type", contentType);
             }
