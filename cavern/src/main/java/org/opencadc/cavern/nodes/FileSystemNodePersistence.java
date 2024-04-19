@@ -171,7 +171,8 @@ public class FileSystemNodePersistence implements NodePersistence {
             }
             PosixPrincipal admin = identityManager.toPosixPrincipal(root.owner);
             log.info("root node: " + rootPath + " owner: " + admin.getUidNumber() + "(" + admin.username + ")");
-            NodeUtil.setPosixOwnerGroup(rootPath, admin.getUidNumber(), admin.defaultGroup);
+            //NodeUtil.setPosixOwnerGroup(rootPath, admin.getUidNumber(), admin.defaultGroup);
+            NodeUtil.setPosixOwnerGroup(rootPath, 0, 0);
         } catch (IOException e) {
             throw new IllegalStateException("Error creating filesystem root directory " + root, e);
         }
