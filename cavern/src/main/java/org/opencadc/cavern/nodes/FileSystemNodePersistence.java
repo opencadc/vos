@@ -345,7 +345,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     private class IdentWrapper implements ResourceIterator<Node> {
 
         private final ContainerNode parent;
-        private final ResourceIterator<Node> childIter;
+        private ResourceIterator<Node> childIter;
         private final NodeUtil nut;
         
         IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
@@ -373,7 +373,11 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         @Override
         public void close() throws IOException {
-            childIter.close();
+            if (childIter != null) {
+                // silently OK to close more than once
+                childIter.close();
+                childIter = null;
+            }
         }
     }
 

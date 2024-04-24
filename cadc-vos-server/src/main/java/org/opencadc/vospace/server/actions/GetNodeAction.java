@@ -242,16 +242,15 @@ public class GetNodeAction extends NodeAction {
         syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
         try {
             nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
-        } catch (RuntimeException ex) {
+        } finally {
             if (resourceIter != null) {
                 try {
                     resourceIter.close();
                 } catch (Exception failToClose) {
-                    log.error("BADNESS: failed to close ContainerNode.childIterator -- possible resource leak", ex);
+                    log.error("BADNESS: failed to close ContainerNode.childIterator -- possible resource leak", failToClose);
                     
                 }
             }
-            throw ex;
         }
     }
     
