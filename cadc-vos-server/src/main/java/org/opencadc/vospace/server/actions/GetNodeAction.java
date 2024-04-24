@@ -145,6 +145,7 @@ public class GetNodeAction extends NodeAction {
         }
         log.debug("found: " + target + " as " + serverNode);
         
+        ResourceIterator<Node> resourceIter = null;
         if (serverNode instanceof ContainerNode) {
             ContainerNode node = (ContainerNode) serverNode;
 
@@ -192,7 +193,8 @@ public class GetNodeAction extends NodeAction {
 
             // Check for read permission to list child nodes.
             Subject subject = AuthenticationUtil.getCurrentSubject();
-            if (voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
+            if ((pageLimit == null || pageLimit > 0) 
+                    && voSpaceAuthorizer.hasSingleNodeReadPermission(node, subject)) {
                 long start = System.currentTimeMillis();
                 log.debug(String.format("get children of %s: start=[%s] limit=[%s] detail=%s", target.getPath(), startURI, pageLimit, detailLevel));
                 try {
@@ -202,6 +204,7 @@ public class GetNodeAction extends NodeAction {
                     } else {
                         node.childIterator = ci;
                     }
+                    resourceIter = node.childIterator;
                 } catch (UnsupportedOperationException ex) {
                     throw NodeFault.OptionNotSupported.getStatus(ex.getMessage());
                 }
@@ -237,8 +240,19 @@ public class GetNodeAction extends NodeAction {
 
         syncOutput.setCode(200);
         syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
-        // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
-        nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
+        try {
+            nodeWriter.write(localServiceURI.getURI(serverNode), serverNode, syncOutput.getOutputStream(), detail);
+        } catch (RuntimeException ex) {
+            if (resourceIter != null) {
+                try {
+                    resourceIter.close();
+                } catch (Exception failToClose) {
+                    log.error("BADNESS: failed to close ContainerNode.childIterator -- possible resource leak", ex);
+                    
+                }
+            }
+            throw ex;
+        }
     }
     
     private class TagChildAccessRightsWrapper implements ResourceIterator<Node> {
