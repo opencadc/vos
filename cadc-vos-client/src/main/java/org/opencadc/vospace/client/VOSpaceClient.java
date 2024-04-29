@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -71,7 +71,6 @@ import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.io.ByteLimitExceededException;
-import ca.nrc.cadc.net.ExpectationFailedException;
 import ca.nrc.cadc.net.FileContent;
 import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
@@ -98,6 +97,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.Node;
@@ -107,6 +107,8 @@ import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.client.async.RecursiveDeleteNode;
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import org.opencadc.vospace.io.NodeParsingException;
 import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.io.NodeWriter;
@@ -200,7 +202,7 @@ public class VOSpaceClient {
             put.setRequestProperty(HttpTransfer.CONTENT_TYPE, "text/xml");
 
             put.prepare();
-            log.warn("put response code: " + put.getResponseCode());
+            log.debug("put response code: " + put.getResponseCode());
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
             NodeReader.NodeReaderResult result = nodeReader.read(put.getInputStream());
@@ -319,12 +321,21 @@ public class VOSpaceClient {
         }
     }
 
-    // create an async transfer job
-    public ClientRecursiveSetNode setNodeRecursive(VOSURI vosURI, Node node) {
+    /**
+     * Create an async set node job to recursively set properties.
+     * 
+     * @param vosURI the node to start from
+     * @param node the node+properties to set
+     * @return a runnable async job
+     * @throws ResourceNotFoundException
+     * @throws IOException
+     * @throws InterruptedException 
+     */
+    public RecursiveSetNode createRecursiveSetNode(VOSURI vosURI, Node node) 
+        throws ResourceNotFoundException, IOException, InterruptedException {
         try {
             URL vospaceURL = lookupServiceURL(Standards.VOSPACE_RECURSIVE_NODEPROPS);
 
-            //String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
             NodeWriter nodeWriter = new NodeWriter();
             Writer stringWriter = new StringWriter();
             nodeWriter.write(vosURI, node, stringWriter, VOS.Detail.max);
@@ -335,30 +346,51 @@ public class VOSpaceClient {
             FileContent nodeContent = new FileContent(xml, "text/xml", Charset.forName("UTF-8"));
             HttpPost httpPost = new HttpPost(vospaceURL, nodeContent, false);
 
-            httpPost.run();
-
-            VOSClientUtil.checkFailure(httpPost.getThrowable());
+            httpPost.prepare();
 
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
 
             // we have only created the job, not run it
-            return new ClientRecursiveSetNode(jobUrl, node, schemaValidation);
-        } catch (MalformedURLException e) {
-            log.debug("failed to create transfer", e);
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            log.debug("failed to create transfer", e);
-            throw new RuntimeException(e);
-        } catch (NodeNotFoundException e) {
-            log.debug("Node not found", e);
-            throw new RuntimeException(e);
-        } catch (ResourceAlreadyExistsException e) {
-            log.debug("failed to create transfer", e);
-            throw new IllegalStateException("failed to create transfer", e);
-        }
+            RecursiveSetNode ret = new RecursiveSetNode(jobUrl, node);
+            ret.setSchemaValidation(schemaValidation);
+            return ret;
+        } catch (ByteLimitExceededException | ResourceAlreadyExistsException ex) {
+            throw new RuntimeException("unexpected failure", ex);
+        } 
     }
 
+    /**
+     * Create an async delete job to recursively delete a node. This works on a
+     * non-empty container node.
+     * 
+     * @param vosURI the node to delete
+     * @return a runnable async job
+     * @throws ResourceNotFoundException
+     * @throws IOException
+     * @throws InterruptedException 
+     */
+    public RecursiveDeleteNode createRecursiveDelete(VOSURI vosURI) 
+        throws ResourceNotFoundException, IOException, InterruptedException {
+        try {
+            URL vospaceURL = lookupServiceURL(Standards.VOSPACE_RECURSIVE_DELETE);
+
+            Map<String,Object> params = new TreeMap<>();
+            params.put("target", vosURI.getURI().toASCIIString());
+            HttpPost httpPost = new HttpPost(vospaceURL, params, false);
+            httpPost.prepare();
+
+            URL jobUrl = httpPost.getRedirectURL();
+            log.debug("Job URL is: " + jobUrl.toString());
+
+            // we have only created the job, not run it
+            RecursiveDeleteNode ret = new RecursiveDeleteNode(jobUrl);
+            ret.setSchemaValidation(schemaValidation);
+            return ret;
+        } catch (ByteLimitExceededException | ResourceAlreadyExistsException ex) {
+            throw new RuntimeException("unexpected failure", ex);
+        } 
+    }
 
     /**
      * Negotiate a transfer. The argument transfer specifies the target URI, the

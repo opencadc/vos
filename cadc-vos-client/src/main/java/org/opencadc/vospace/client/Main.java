@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -74,7 +74,6 @@ import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.NetrcAuthenticator;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
@@ -86,7 +85,6 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -98,7 +96,6 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
@@ -110,12 +107,14 @@ import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeLockedException;
-import org.opencadc.vospace.NodeNotFoundException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.NodeUtil;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.View;
+import org.opencadc.vospace.client.async.AsyncJob;
+import org.opencadc.vospace.client.async.RecursiveDeleteNode;
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -140,14 +139,11 @@ public class Main implements Runnable {
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
     public static final String ARG_MOVE = "move";
-    //public static final String ARG_TARGET = "target";
     public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
     public static final String ARG_GROUP_WRITE = "group-write";
     public static final String ARG_PROP = "prop";
-    //public static final String ARG_SRC = "src";
     public static final String ARG_LINK = "link";
-    //public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
     public static final String ARG_CONTENT_MD5 = "content-md5";
@@ -224,7 +220,7 @@ public class Main implements Runnable {
         try {
             command.validateCommand(argMap);
             command.validateCommandArguments(argMap);
-        } catch (IllegalArgumentException ex) {
+        } catch (Exception ex) {
             msg("illegal argument(s): " + ex.getMessage());
             msg("");
             usage();
@@ -256,7 +252,11 @@ public class Main implements Runnable {
         if (this.operation.equals(Operation.CREATE)) {
             doCreate();
         } else if (this.operation.equals(Operation.DELETE)) {
-            doDelete();
+            if  (recursiveMode) {
+                doRecursiveDelete();
+            } else {
+                doDelete();
+            }
         } else if (this.operation.equals(Operation.VIEW)) {
             doView();
         } else if (this.operation.equals(Operation.COPY)) {
@@ -387,18 +387,6 @@ public class Main implements Runnable {
         } catch (NullPointerException ex) {
             log.error("BUG", ex);
             System.exit(NET_STATUS);
-        /* TODO: Add this catch when we add delete src file from VOSpace for
-         *       Direction.pullFromVOSpace (see TODO above)
-        catch(NodeLockedException nlex)
-        {
-            if (destination == null)
-                msg("alinga-- failed to move: " + source + " -> " + transferDirection.getValue());
-            else
-                msg("alinga-- failed to move: " + source + " -> " + destination);
-            msg("          reason: " + nlex.getMessage());
-            System.exit(NET_STATUS);
-        }
-        */
         } catch (Throwable t) {
             if (t instanceof IllegalArgumentException) {
                 throw (IllegalArgumentException) t;
@@ -781,6 +769,36 @@ public class Main implements Runnable {
         log.debug("deleted vos file: " + this.source);
     }
 
+    private void doRecursiveDelete() {
+        try {
+            RecursiveDeleteNode rd = client.createRecursiveDelete(target);
+
+            Thread abortThread = new ClientAbortThread(rd.getJobURL());
+            Runtime.getRuntime().addShutdownHook(abortThread);
+            rd.setMonitor(true);
+            rd.run();
+            Runtime.getRuntime().removeShutdownHook(abortThread);
+            checkPhase(rd);
+
+            log.info("deleted: " + target);
+        } catch (ResourceNotFoundException ex) {
+            msg("not found: " + target);
+            System.exit(NET_STATUS);
+        } catch (Exception ex) {
+            log.error("unexpected fail", ex);
+            msg("failed to delete node: " + target);
+            if (ex.getMessage() != null) {
+                msg("          reason: " + ex.getMessage());
+            } else {
+                msg("          reason: " + ex);
+            }
+            if (ex.getCause() != null) {
+                msg("          reason: " + ex.getCause());
+            }
+            System.exit(NET_STATUS);
+        }
+    }
+
     private void doRecursiveSet() {
         try {
             log.debug("target.getPath()" + this.target.getPath());
@@ -800,7 +818,7 @@ public class Main implements Runnable {
             }
             up.getProperties().addAll(properties);
 
-            ClientRecursiveSetNode recSetNode = client.setNodeRecursive(target, up);
+            RecursiveSetNode recSetNode = client.createRecursiveSetNode(target, up);
 
             Thread abortThread = new ClientAbortThread(recSetNode.getJobURL());
             Runtime.getRuntime().addShutdownHook(abortThread);
@@ -854,7 +872,7 @@ public class Main implements Runnable {
         }
     }
 
-    private void checkPhase(ClientRecursiveSetNode recSetNode)
+    private void checkPhase(AsyncJob recSetNode)
         throws IOException, RuntimeException {
         ExecutionPhase ep = recSetNode.getPhase();
         if (ExecutionPhase.ERROR.equals(ep)) {
@@ -1028,7 +1046,7 @@ public class Main implements Runnable {
                 this.subject = AuthenticationUtil.getAnonSubject();
             }
         } catch (Exception ex) {
-            log.error("failed to load certificates: " + ex.getMessage());
+            log.error("failed to load certificates: " + ex.getMessage(), ex);
             System.exit(INIT_STATUS);
         }
 
@@ -1374,14 +1392,14 @@ public class Main implements Runnable {
             "operations:",
             "    --view <target URI> : allows optional query string (e.g. limit=0, detail=max, etc)",
             "    --create[=<ContainerNode|LinkNode|DataNode>] <node URI>  : default: ContainerNode",
-            "    --delete <target URI>",
-            "    --set <target URI>",
+            "    --delete [--recursive] <target URI>",
+            "    --set [--recursive] <target URI>",
             "    --copy <source URI> <destination URI>",
             "    --move <source URI> <destination URI>",
             "",
             "create and set options:",
             "",
-            "    [--inheritPermissions=<true|false>}                                                           ",
+            "    --inheritPermissions=<true|false>}                                                           ",
             "    [--link=<link URI>]      : the URI to which the LinkNode is pointing",
             "    [--prop=<properties file>]                                                                    ",
             "    [--content-type=<mimetype of source>]       : DataNode only",
@@ -1391,7 +1409,6 @@ public class Main implements Runnable {
             "    [--lock]                                                                                      ",
             "    [--public]                                                                                    ",
             "    [--prop=<properties file>]                                                                    ",
-            "    [--recursive]                                                                                 ",
             "",
             "copy:",
             "",

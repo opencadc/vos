@@ -67,6 +67,7 @@
 
 package org.opencadc.vospace.client;
 
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
@@ -233,7 +234,7 @@ public class ClientTransfer implements Runnable {
                 //                                              ClientRecursiveSetNode.class);
                 //extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
                 String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21,
-                                                              ClientRecursiveSetNode.class);
+                                                              RecursiveSetNode.class);
                 extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
                 jobReader = new JobReader(extraSchemas);
             } else {
