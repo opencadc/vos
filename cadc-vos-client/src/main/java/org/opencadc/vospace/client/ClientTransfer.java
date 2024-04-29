@@ -67,7 +67,6 @@
 
 package org.opencadc.vospace.client;
 
-import org.opencadc.vospace.client.async.RecursiveSetNode;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
@@ -95,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import org.opencadc.vospace.io.XmlProcessor;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Transfer;
