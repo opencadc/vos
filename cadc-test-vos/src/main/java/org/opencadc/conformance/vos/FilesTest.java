@@ -86,6 +86,8 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import javax.security.auth.Subject;
@@ -108,6 +110,7 @@ public class FilesTest extends VOSTest {
 
     protected final URL filesServiceURL;
     protected Subject altSubject;
+    protected boolean enablePassthroughParamTest = false;
 
     protected FilesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -124,6 +127,10 @@ public class FilesTest extends VOSTest {
      */
     protected void enableTestDataNodePermission(File altCert) {
         this.altSubject = SSLUtil.createSubject(altCert);
+    }
+
+    protected void enableTestPassthroughParams(boolean enable) {
+        this.enablePassthroughParamTest = enable;
     }
 
     @Test
@@ -210,6 +217,7 @@ public class FilesTest extends VOSTest {
             log.info("GET: " + fileURL);
             out = new ByteArrayOutputStream();
             HttpGet getFile = new HttpGet(fileURL, out);
+            getFile.setFollowRedirects(true);
             Subject.doAs(authSubject, new RunnableAction(getFile));
             log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
             Assert.assertEquals("expected GET response code = 200", 200, getFile.getResponseCode());
@@ -221,6 +229,35 @@ public class FilesTest extends VOSTest {
             }
             Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
             Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
+
+            if (enablePassthroughParamTest) {
+                String query = "FOO=1&FOO=2&BAR=" + URLEncoder.encode("[3]", "UTF-8");
+                URL purl = new URL(fileURL.toExternalForm() + "?" + query);
+                getFile = new HttpGet(purl, false);
+                Subject.doAs(authSubject, new RunnableAction(getFile));
+                log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
+                Assert.assertEquals("expected GET response code = 303", 303, getFile.getResponseCode());
+                Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
+                URL redirect = getFile.getRedirectURL();
+                log.info("redirect: " + redirect);
+                Assert.assertNotNull(redirect);
+                String qstr = redirect.getQuery();
+                Assert.assertNotNull(qstr);
+                String[] parts = qstr.split("&");
+                Assert.assertEquals("3 params", 3, parts.length);
+                Assert.assertTrue(qstr.contains("FOO=1"));
+                Assert.assertTrue(qstr.contains("FOO=2"));
+                String barVal = null;
+                for (String s : parts) {
+                    String[] kv = s.split("=");
+                    if ("BAR".equals(kv[0])) {
+                        barVal = kv[1];                        
+                    }
+                }
+                String bvd = URLDecoder.decode(barVal, "UTF-8");
+                Assert.assertEquals("[3]", bvd);
+            }
+            
 
             String actual = out.toString();
             log.debug("file content: " + actual);

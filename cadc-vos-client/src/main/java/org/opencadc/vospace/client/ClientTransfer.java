@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jdom2.JDOMException;
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import org.opencadc.vospace.io.XmlProcessor;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Transfer;
@@ -233,7 +234,7 @@ public class ClientTransfer implements Runnable {
                 //                                              ClientRecursiveSetNode.class);
                 //extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
                 String xsdFile = XmlUtil.getResourceUrlString(XmlProcessor.VOSPACE_SCHEMA_RESOURCE_21,
-                                                              ClientRecursiveSetNode.class);
+                                                              RecursiveSetNode.class);
                 extraSchemas.put(XmlProcessor.VOSPACE_NS_20, xsdFile);
                 jobReader = new JobReader(extraSchemas);
             } else {

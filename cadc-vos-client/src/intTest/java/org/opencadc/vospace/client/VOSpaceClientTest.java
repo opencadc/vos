@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2024.                            (c) 2024.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,7 +69,6 @@
 
 package org.opencadc.vospace.client;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.reg.Standards;
@@ -77,7 +76,6 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.net.URI;
-import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import org.apache.log4j.Level;
@@ -92,6 +90,8 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.client.async.RecursiveDeleteNode;
+import org.opencadc.vospace.client.async.RecursiveSetNode;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -112,13 +112,15 @@ public class VOSpaceClientTest extends VOSTest {
         Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
     }
     
-    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
+    //private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/cavern");
+    //private String baseURI = "vos://opencadc.org~cavern/client-int-tests";
+    //private boolean linksSupportProps = false;
+    private static URI RESOURCE_ID = URI.create("ivo://opencadc.org/vault");
+    private String baseURI = "vos://opencadc.org~vault/client-int-tests";
+    private boolean linksSupportProps = true;
     
     private static File CERT = FileUtil.getFileFromResource(
             System.getProperty("user.name") + ".pem", VOSpaceClientTest.class);
-    
-    private String baseURI = "vos://opencadc.org~cavern/client-int-tests";
-    
     
     public VOSpaceClientTest() {
         super(RESOURCE_ID, CERT);
@@ -320,12 +322,14 @@ public class VOSpaceClientTest extends VOSTest {
             Assert.assertEquals(orig.getTarget(), actual.getTarget());
             
             // failed update
-            orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "the missing link"));
-            try {
-                mod = client.setNode(target, orig);
-                Assert.fail("expected IllegalArgumentException but got: " + mod);
-            } catch (IllegalArgumentException ex) {
-                log.info("caught expected: " + ex);
+            if (!linksSupportProps) {
+                orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "the missing link"));
+                try {
+                    mod = client.setNode(target, orig);
+                    Assert.fail("expected IllegalArgumentException but got: " + mod);
+                } catch (IllegalArgumentException ex) {
+                    log.info("caught expected: " + ex);
+                }
             }
             
             // delete
@@ -360,6 +364,7 @@ public class VOSpaceClientTest extends VOSTest {
             Protocol p = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
             p.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
             push.getProtocols().add(p);
+            push.getProtocols().add(new Protocol(VOS.PROTOCOL_HTTPS_PUT)); // anon for preauth
             ClientTransfer putTrans = client.createTransfer(push);
             putTrans.setFile(srcFile);
             putTrans.run();
@@ -451,10 +456,10 @@ public class VOSpaceClientTest extends VOSTest {
             // update
             orig.isPublic = true;
             orig.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "my stuff"));
-            ClientRecursiveSetNode rec = client.setNodeRecursive(target, orig);
+            RecursiveSetNode rec = client.createRecursiveSetNode(target, orig);
             rec.setMonitor(true);
             rec.run();
-            log.info("job result: " + rec.getPhase() + " " + rec.getThrowable());
+            log.info("job result: " + rec.getPhase() + " " + rec.getException());
             
             // get
             Node cn1 = client.getNode(t1.getPath());
@@ -473,6 +478,75 @@ public class VOSpaceClientTest extends VOSTest {
             client.deleteNode(t1.getPath());
             client.deleteNode(t2.getPath());
             client.deleteNode(target.getPath());
+            try {
+                client.getNode(target.getPath());
+            } catch (ResourceNotFoundException ex) {
+                log.info("caught expected: " + ex);
+            }
+            
+            return null;
+        });
+    }
+    
+    @Test
+    public void testRecursiveDelete() throws Exception {
+        VOSpaceClient client = new VOSpaceClient(resourceID);
+        ContainerNode orig = new ContainerNode("testRecursiveDelete");
+        VOSURI target = new VOSURI(baseURI + "/" + orig.getName());
+        
+        ContainerNode c1 = new ContainerNode("c1");
+        VOSURI t1 = new VOSURI(baseURI + "/" + orig.getName() + "/" + c1.getName());
+        ContainerNode c2 = new ContainerNode("c2");
+        VOSURI t2 = new VOSURI(baseURI + "/" + orig.getName() + "/" + c2.getName());
+            
+        Subject.doAs(authSubject, (PrivilegedExceptionAction<Void>) () -> {
+            // cleanup
+            try {
+                client.deleteNode(t1.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+            try {
+                client.deleteNode(t2.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+            try {
+                client.deleteNode(target.getPath());
+            } catch (ResourceNotFoundException ignore) {
+                log.info("cleanup: " + ignore);
+            }
+        
+            // create
+            Node created = client.createNode(target, orig);
+            log.info("created: " + created);
+
+            // get
+            Node n1 = client.getNode(target.getPath());
+            log.info("found: " + n1);
+            Assert.assertNotNull(n1);
+            Assert.assertEquals(orig.getName(), n1.getName());
+            Assert.assertEquals(orig.getClass(), n1.getClass());
+            
+            // create children
+            client.createNode(t1, c1);
+            client.createNode(t2, c2);
+            
+            // get
+            Node cn1 = client.getNode(t1.getPath());
+            log.info("found: " + cn1 + " with public=" + cn1.isPublic);
+            Assert.assertNotNull(cn1);
+
+            Node cn2 = client.getNode(t1.getPath());
+            log.info("found: " + cn2 + " with public=" + cn2.isPublic);
+            Assert.assertNotNull(cn2);
+            
+            // delete
+            RecursiveDeleteNode rec = client.createRecursiveDelete(target);
+            rec.setMonitor(true);
+            rec.run();
+            log.info("job result: " + rec.getPhase() + " " + rec.getException());
+            
             try {
                 client.getNode(target.getPath());
             } catch (ResourceNotFoundException ex) {
