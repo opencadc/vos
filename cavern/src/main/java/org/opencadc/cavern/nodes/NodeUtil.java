@@ -540,6 +540,11 @@ class NodeUtil {
                 }
             }
             
+            Long quota = quotaImpl.getQuota(p);
+            if (quota != null) {
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, quota.toString()));
+            }
+            
             boolean isDir = (ret instanceof ContainerNode);
             AclCommandExecutor acl = new AclCommandExecutor(p, isDir);
             
