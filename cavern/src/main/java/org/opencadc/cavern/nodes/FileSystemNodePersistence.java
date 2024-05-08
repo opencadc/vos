@@ -137,6 +137,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     private final PosixIdentityManager identityManager;
     private final PosixMapperClient posixMapper;
     private final GroupCache groupCache;
+    private final QuotaPlugin quotaImpl = new NoQuotaPlugin(); // TODO: configurable
     
     private final ContainerNode root;
     private final Set<ContainerNode> allocationParents = new TreeSet<>();
@@ -285,7 +286,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public Node get(ContainerNode parent, String name) throws TransientException {
         identityManager.addToCache(AuthenticationUtil.getCurrentSubject());
         try {
-            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
             Node ret = nut.get(parent, name);
             if (ret == null) {
                 return null;
@@ -313,7 +314,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         }
         
         try {
-            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
+            NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
             // this is a complicated way to get the Path
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
@@ -431,7 +432,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             }
         }
 
-        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
 
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
@@ -463,7 +464,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             throw new IllegalArgumentException("args must both be peristent nodes before move");
         }
         
-        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         PosixPrincipal owner = identityManager.addToCache(caller);
         
@@ -480,7 +481,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     
     @Override
     public void delete(Node node) throws TransientException {
-        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache);
+        NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
         Subject caller = AuthenticationUtil.getCurrentSubject();
         identityManager.addToCache(caller);
         try {
