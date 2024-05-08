@@ -72,8 +72,6 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.ResourceAlreadyExistsException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.LocalAuthority;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -99,7 +97,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
@@ -138,18 +135,21 @@ class NodeUtil {
             VOS.PROPERTY_URI_GROUPREAD,
             VOS.PROPERTY_URI_GROUPWRITE,
             VOS.PROPERTY_URI_ISLOCKED, // but not supported
-            VOS.PROPERTY_URI_ISPUBLIC
+            VOS.PROPERTY_URI_ISPUBLIC,
+            VOS.PROPERTY_URI_QUOTA
         )
     );
 
     private final Path root;
     private final VOSURI rootURI;
     private final GroupCache groupCache;
+    private final QuotaPlugin quotaImpl;
     
-    public NodeUtil(Path root, VOSURI rootURI, GroupCache groupCache) {
+    public NodeUtil(Path root, VOSURI rootURI, GroupCache groupCache, QuotaPlugin quotaImpl) {
         this.root = root;
         this.rootURI = rootURI;
         this.groupCache = groupCache;
+        this.quotaImpl = quotaImpl;
     }
     
     /**
@@ -209,7 +209,7 @@ class NodeUtil {
         assertNotNull("group", group);
 
         Path ret = null;
-        Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
+        Set<PosixFilePermission> perms = new HashSet<>();
         perms.add(PosixFilePermission.OWNER_READ);
         perms.add(PosixFilePermission.OWNER_WRITE);
         perms.add(PosixFilePermission.GROUP_READ);
@@ -283,6 +283,28 @@ class NodeUtil {
                 }
                 ExtendedFileAttributes.setFileAttribute(path, prop.getKey().toASCIIString(), prop.getValue());
             }
+        }
+        
+        NodeProperty prop = node.getProperty(VOS.PROPERTY_URI_QUOTA);
+        if (prop != null) {
+            if (prop.isMarkedForDeletion()) {
+                quotaImpl.setQuota(path, null);
+                node.getProperties().remove(prop);
+            } else {
+                try {
+                    Long quota = Long.valueOf(prop.getValue());
+                    quotaImpl.setQuota(path, quota);
+                    Long actual = quotaImpl.getQuota(path);
+                    if (actual != null) {
+                        prop.setValue(actual.toString());
+                    } else {
+                        node.getProperties().remove(prop);
+                    }
+                } catch (NumberFormatException ex) {
+                    throw new IllegalArgumentException("invalid quota: " + prop.getValue(), ex);
+                }
+            }
+            
         }
 
         final boolean isDir = (node instanceof ContainerNode);
@@ -518,6 +540,11 @@ class NodeUtil {
                 }
             }
             
+            Long quota = quotaImpl.getQuota(p);
+            if (quota != null) {
+                ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, quota.toString()));
+            }
+            
             boolean isDir = (ret instanceof ContainerNode);
             AclCommandExecutor acl = new AclCommandExecutor(p, isDir);
             
@@ -566,49 +593,6 @@ class NodeUtil {
         Path p = nodeToPath(root, uri);
         Files.delete(p);
     }
-    
-    /* 
-    // magic recursive delete is obsolete
-    private static void delete(Path path) throws IOException {
-        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-            Files.walkFileTree(path, new DeleteVisitor());
-        } else {
-            Files.delete(path);
-        }
-    }
-
-    private static class DeleteVisitor implements FileVisitor<Path> {
-
-        @Override
-        public FileVisitResult preVisitDirectory(Path t,
-                BasicFileAttributes bfa) throws IOException {
-            log.debug("enter: " + t);
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult visitFile(Path t, BasicFileAttributes bfa)
-                throws IOException {
-            log.debug("delete: " + t);
-            Files.delete(t);
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult visitFileFailed(Path t, IOException ioe)
-                throws IOException {
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult postVisitDirectory(Path t, IOException ioe)
-                throws IOException {
-            Files.delete(t);
-            log.debug("delete: " + t);
-            return FileVisitResult.CONTINUE;
-        }
-    }
-    */
     
     private static class CopyVisitor implements FileVisitor<Path> {
 
