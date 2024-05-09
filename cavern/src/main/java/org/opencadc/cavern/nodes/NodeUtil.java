@@ -476,7 +476,9 @@ class NodeUtil {
         PosixFileAttributes attrs = Files.readAttributes(p,
                 PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (attrs.isDirectory()) {
-            ret = new ContainerNode(p.getFileName().toString());
+            ContainerNode cn = new ContainerNode(p.getFileName().toString());
+            cn.bytesUsed = quotaImpl.getBytesUsed(p);
+            ret = cn;
         } else if (attrs.isRegularFile()) {
             DataNode dn = new DataNode(p.getFileName().toString());
             dn.bytesUsed = attrs.size();

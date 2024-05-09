@@ -81,7 +81,7 @@ public interface QuotaPlugin {
      * Get the current quota in bytes.
      * 
      * @param directory directory to check
-     * @return current quota in bytes
+     * @return current quota in bytes, null if not set or not supported
      */
     public Long getQuota(Path directory);
     
@@ -92,4 +92,12 @@ public interface QuotaPlugin {
      * @param quota the new quota, null to clear the current quota
      */
     public void setQuota(Path directory, Long quota);
+    
+    /**
+     * Get the number of bytes used in a directory (recursive).
+     * 
+     * @param directory the target directory
+     * @return bytes used in target directory, or null of not available for the target path
+     */
+    public Long getBytesUsed(Path directory);
 }
