@@ -550,6 +550,19 @@ class NodeUtil {
             boolean isDir = (ret instanceof ContainerNode);
             AclCommandExecutor acl = new AclCommandExecutor(p, isDir);
             
+            // backwards compat: check for default ACLs and assume inheritPermission is true
+            if (ret instanceof ContainerNode) {
+                ContainerNode cn = (ContainerNode) ret;
+                if (cn.inheritPermissions == null || !cn.inheritPermissions) {
+                    // check for inconsistency with default ACLs
+                    Set<Integer> dro = acl.getReadOnlyACL(true);
+                    Set<Integer> drw = acl.getReadWriteACL(true);
+                    cn.inheritPermissions = !dro.isEmpty() || !drw.isEmpty();
+                    log.debug("default ACLs imply inheritPermissions==" + cn.inheritPermissions);
+                }
+            }
+            
+            
             // TODO: could collect all gids from read-only and read-write and prime the gid cache in 1 call instead of 2
             Set<Integer> rogids = acl.getReadOnlyACL();
             if (!rogids.isEmpty()) {
