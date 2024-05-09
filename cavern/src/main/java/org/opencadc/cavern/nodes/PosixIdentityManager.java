@@ -203,7 +203,9 @@ public class PosixIdentityManager implements IdentityManager {
             return subject;
         }
         if (pp != null && pp.getUidNumber() == 0) {
-            log.warn("augment: root", new RuntimeException());
+            String msg = "someone tried to augment uid=0 aka root";
+            log.warn(msg + " (turn on debug to see stack trace)");
+            log.debug(msg, new RuntimeException(msg));
             return subject;
         }
         

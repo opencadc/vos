@@ -71,7 +71,8 @@ import java.nio.file.Path;
 import org.apache.log4j.Logger;
 
 /**
- *
+ * Default plugin that does nothing.
+ * 
  * @author pdowler
  */
 public class NoQuotaPlugin implements QuotaPlugin {
@@ -89,5 +90,11 @@ public class NoQuotaPlugin implements QuotaPlugin {
     @Override
     public void setQuota(Path directory, Long quota) {
         log.debug("setQuota: " + directory + " -> " + quota + " IGNORED");
+    }
+
+    @Override
+    public Long getBytesUsed(Path directory) {
+        log.debug("getBytesUsed: " + directory + " IGNORED");
+        return null;
     }
 }

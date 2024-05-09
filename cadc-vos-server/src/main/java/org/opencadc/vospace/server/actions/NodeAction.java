@@ -136,20 +136,22 @@ public abstract class NodeAction extends RestAction {
 
     @Override
     protected String getServerImpl() {
-        String jndiKey = super.appName + "-" + Version.class.getName();
+        String jndiVersionKey = super.appName + "-" + Version.class.getName();
         try {
             Context ctx = new InitialContext();
-            this.version = (Version) ctx.lookup(jndiKey);
+            this.version = (Version) ctx.lookup(jndiVersionKey);
         } catch (NamingException oops) {
-            log.warn("not found: " + jndiKey);
+            log.debug("not found: " + jndiVersionKey);
         }
+        
         if (version == null) {
+            // lazy init
             try {
                 Context ctx = new InitialContext();
                 this.version = getLibraryVersion(NodeAction.class);
-                ctx.bind(jndiKey, version); // for future use
+                ctx.bind(jndiVersionKey, version); // for future use
             } catch (NamingException oops) {
-                log.warn("failed to bind: " + jndiKey);
+                log.warn("failed to bind: " + jndiVersionKey);
             }
         }
         if (version == null) {

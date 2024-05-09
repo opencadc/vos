@@ -357,11 +357,17 @@ public class FileSystemNodePersistence implements NodePersistence {
         
         @Override
         public boolean hasNext() {
-            return childIter.hasNext();
+            if (childIter != null) {
+                return childIter.hasNext();
+            }
+            return false; // already closed
         }
 
         @Override
         public Node next() {
+            if (childIter == null) {
+                throw new NoSuchElementException("iterator closed");
+            }
             Node ret = childIter.next();
             PosixPrincipal owner = NodeUtil.getOwner(ret);
             Subject so = identityManager.toSubject(owner);
