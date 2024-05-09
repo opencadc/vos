@@ -221,10 +221,11 @@ public class GetNodeAction extends NodeAction {
             nodePersistence.getProperties(serverNode);
 
             if (VOS.Detail.max.getValue().equals(detailLevel)) {
-                // to get here the node must have been readable so tag it as such
-                serverNode.getProperties().add(PROP_READABLE);
-                
                 Subject subject = AuthenticationUtil.getCurrentSubject();
+                // readable may have been checked if listing children so we could avoid repeating here
+                if (voSpaceAuthorizer.hasSingleNodeReadPermission(serverNode, subject)) {
+                    serverNode.getProperties().add(PROP_READABLE);
+                }
                 if (voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, subject)) {
                     serverNode.getProperties().add(PROP_WRITABLE);
                 }
