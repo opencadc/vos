@@ -164,6 +164,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         root.ownerID = identityManager.toPosixPrincipal(root.owner);
         root.isPublic = true;
         root.inheritPermissions = false;
+        identityManager.addToCache(root.owner);
         
         // create root directories for node/files
         try {
