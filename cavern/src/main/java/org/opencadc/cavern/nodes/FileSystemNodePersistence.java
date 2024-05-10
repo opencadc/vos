@@ -164,6 +164,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         root.ownerID = identityManager.toPosixPrincipal(root.owner);
         root.isPublic = true;
         root.inheritPermissions = false;
+        identityManager.addToCache(root.owner);
         
         // create root directories for node/files
         try {
@@ -204,28 +205,21 @@ public class FileSystemNodePersistence implements NodePersistence {
                 try {
 
                     // simple top-level names only
-                    // We can't use the internal get() here because it expects to be able to query the owner
-                    // details, which we can't do on init.  The owner is replaced with the root's (proper) owner
-                    // anyway.
-                    NodeUtil nut = new NodeUtil(rootPath, rootURI, groupCache, quotaImpl);
-                    ContainerNode cn = (ContainerNode) nut.get(root, ap);
+                    ContainerNode cn = (ContainerNode) get(root, ap);
                     String str = "";
                     if (cn == null) {
                         cn = new ContainerNode(ap);
+                        cn.parent = root;
                         str = "created/";
                     }
-                    cn.parent = root;
                     cn.isPublic = true;
                     cn.owner = root.owner;
-                    cn.ownerID = identityManager.toPosixPrincipal(cn.owner);
                     cn.inheritPermissions = false;
                     put(cn);
                     allocationParents.add(cn);
                     log.info(str + "loaded allocationParent: /" + cn.getName());
                 } catch (NodeNotSupportedException bug) {
                     throw new RuntimeException("BUG: failed to update isPublic=true on allocationParent " + ap, bug);
-                } catch (IOException | InterruptedException ex) {
-                    throw new RuntimeException("oops", ex);
                 }
             }
         }
