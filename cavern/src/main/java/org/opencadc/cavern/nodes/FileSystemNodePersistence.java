@@ -83,7 +83,6 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -135,9 +134,8 @@ public class FileSystemNodePersistence implements NodePersistence {
             ));
     
     private final PosixIdentityManager identityManager;
-    private final PosixMapperClient posixMapper;
     private final GroupCache groupCache;
-    private final QuotaPlugin quotaImpl = new NoQuotaPlugin(); // TODO: configurable
+    private final QuotaPlugin quotaImpl;
     
     private final ContainerNode root;
     private final Set<ContainerNode> allocationParents = new TreeSet<>();
@@ -149,6 +147,7 @@ public class FileSystemNodePersistence implements NodePersistence {
     public FileSystemNodePersistence() {
         this.config = new CavernConfig();
         this.rootPath = config.getRoot();
+        this.quotaImpl = config.getQuotaPlugin();
         
         LocalServiceURI loc = new LocalServiceURI(config.getResourceID());
         this.rootURI = loc.getVOSBase();
@@ -183,15 +182,16 @@ public class FileSystemNodePersistence implements NodePersistence {
         // only require a group mapper because IVOA GMS does not include numeric gid
         // assume user mapper is the same service
         URI posixMapperID = la.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        PosixMapperClient posixMapper;
         if ("https".equals(posixMapperID.getScheme())) {
             try {
                 URL baseURL = posixMapperID.toURL();
-                this.posixMapper = new MyPosixMapperClient(baseURL);
+                posixMapper = new MyPosixMapperClient(baseURL);
             } catch (MalformedURLException ex) {
                 throw new InvalidConfigException("invalid " + Standards.POSIX_GROUPMAP.toASCIIString() + " base URL: " + posixMapperID, ex);
             }
         } else {
-            this.posixMapper = new MyPosixMapperClient(posixMapperID);
+            posixMapper = new MyPosixMapperClient(posixMapperID);
         }
         this.groupCache = new GroupCache(posixMapper);
         this.localGroupsOnly = true;
@@ -320,13 +320,13 @@ public class FileSystemNodePersistence implements NodePersistence {
             LocalServiceURI loc = new LocalServiceURI(getResourceID());
             VOSURI vu = loc.getURI(parent);
             ResourceIterator<Node> ni = nut.list(vu);
-            return new IdentWrapper(parent, ni, nut);
+            return new IdentWrapper(parent, ni);
         } catch (IOException ex) {
             throw new RuntimeException("oops", ex);
         }
     }
     
-    private class EmptyNodeIterator implements ResourceIterator<Node> {
+    private static class EmptyNodeIterator implements ResourceIterator<Node> {
 
         @Override
         public boolean hasNext() {
@@ -348,12 +348,10 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         private final ContainerNode parent;
         private ResourceIterator<Node> childIter;
-        private final NodeUtil nut;
-        
-        IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter, NodeUtil nut) {
+
+        IdentWrapper(ContainerNode parent, ResourceIterator<Node> childIter) {
             this.parent = parent;
             this.childIter = childIter;
-            this.nut = nut;
         }
         
         @Override
