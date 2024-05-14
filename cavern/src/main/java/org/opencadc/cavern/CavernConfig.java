@@ -141,10 +141,7 @@ public class CavernConfig {
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
         boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
         boolean allocProp = checkProperty(mvp, sb, ALLOCATION_PARENT, false);
-
-        if (!checkProperty(mvp, sb, QUOTA_PLUGIN_IMPLEMENTATION, false)) {
-            log.debug("CONFIG: no quota plugin specified.");
-        }
+        checkProperty(mvp, sb, QUOTA_PLUGIN_IMPLEMENTATION, false);
 
         if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
             throw new InvalidConfigException(sb.toString());
