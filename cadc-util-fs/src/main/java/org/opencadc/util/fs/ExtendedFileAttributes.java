@@ -70,6 +70,7 @@ package org.opencadc.util.fs;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -129,7 +130,7 @@ public class ExtendedFileAttributes {
             if (attrValue != null) {
                 attrValue = attrValue.trim();
                 log.debug("attribute: " + attrName + " = " + attrValue);
-                ByteBuffer buf = ByteBuffer.wrap(attrValue.getBytes(Charset.forName("UTF-8")));
+                ByteBuffer buf = ByteBuffer.wrap(attrValue.getBytes(StandardCharsets.UTF_8));
                 udv.write(attrName, buf);
             } else {
                 try {
@@ -186,17 +187,15 @@ public class ExtendedFileAttributes {
                 int sz = udv.size(attrName);
                 ByteBuffer buf = ByteBuffer.allocate(2 * sz);
                 udv.read(attrName, buf);
-                return new String(buf.array(), Charset.forName("UTF-8")).trim();
+                return new String(buf.array(), StandardCharsets.UTF_8).trim();
             } catch (FileSystemException ex) {
                 log.debug("assume no such attr: " + ex);
                 return null;
             }
+        } else {
+            String key = namespace + "." + attrName;
+            return XAttrCommandExecutor.getAttribute(path, key);
         }
-        
-        // TODO: support non-user space attrs by execing setfattr
-        String key = namespace + "." + attrName;
-        // getfattr -n $key $path
-        throw new UnsupportedOperationException("attribute namespace '" + namespace + "' not supported");
     }
 
     /**
@@ -218,7 +217,7 @@ public class ExtendedFileAttributes {
                 int sz = udv.size(key);
                 ByteBuffer buf = ByteBuffer.allocate(2 * sz);
                 udv.read(key, buf);
-                String val = new String(buf.array(), Charset.forName("UTF-8")).trim();
+                String val = new String(buf.array(), StandardCharsets.UTF_8).trim();
                 ret.put(key, val);
             }
         } catch (FileSystemException ex) {
