@@ -69,22 +69,26 @@
 package org.opencadc.util.fs;
 
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
+import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class XAttrCommandExecutor {
     private static final Logger LOGGER = Logger.getLogger(XAttrCommandExecutor.class);
 
+    static final Pattern GET_COMMAND_OUTPUT_PATTERN = Pattern.compile(".*=\"(.*)\"");
     static final String GET_COMMAND = "getfattr";
     static final String SET_COMMAND = "setfattr";
 
-    static final String ATTRIBUTE_NAME_SWITCH = "--name=";
-    static final String REMOVE_SWITCH = "--remove=";
-    static final String ATTRIBUTE_VALUE_SWITCH = "--value=";
+    static final String ATTRIBUTE_NAME_SWITCH = "--name=%s";
+    static final String REMOVE_SWITCH = "--remove=%s";
+    static final String ATTRIBUTE_VALUE_SWITCH = "--value=%s";
 
 
     private static String execute(final String[] command) throws IOException {
@@ -119,14 +123,25 @@ public class XAttrCommandExecutor {
      * @throws IOException if the attribute key doesn't exist or cannot be read.
      */
     public static String get(final Path path, final String attributeKey) throws IOException {
+        if (!StringUtil.hasText(attributeKey)) {
+            throw new IllegalArgumentException("Cannot process empty key");
+        }
+
         final String[] command = new String[] {
                 XAttrCommandExecutor.GET_COMMAND,
-                XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH,
-                attributeKey,
+                String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
                 path.toAbsolutePath().toString()
         };
 
-        return XAttrCommandExecutor.execute(command);
+        // getfattr command returns the full attribute in key=value format.
+        final String commandOutput = XAttrCommandExecutor.execute(command);
+        final Matcher commandOutputMatcher = XAttrCommandExecutor.GET_COMMAND_OUTPUT_PATTERN.matcher(commandOutput);
+
+        if (!commandOutputMatcher.find()) {
+            throw new IllegalStateException("Unknown command output: " + commandOutput);
+        } else {
+            return commandOutputMatcher.group(1);
+        }
     }
 
     /**
@@ -136,10 +151,13 @@ public class XAttrCommandExecutor {
      * @param attributeKey The key of the attribute to remove.
      */
     public static void remove(final Path path, final String attributeKey) throws IOException {
+        if (!StringUtil.hasText(attributeKey)) {
+            throw new IllegalArgumentException("Cannot process empty key");
+        }
+
         final String[] command = new String[] {
                 XAttrCommandExecutor.SET_COMMAND,
-                XAttrCommandExecutor.REMOVE_SWITCH,
-                attributeKey,
+                String.format(XAttrCommandExecutor.REMOVE_SWITCH, attributeKey),
                 path.toAbsolutePath().toString()
         };
 
@@ -153,12 +171,14 @@ public class XAttrCommandExecutor {
      * @param attributeKey The key of the attribute to remove.
      */
     public static void set(final Path path, final String attributeKey, final String attributeValue) throws IOException {
+        if (!StringUtil.hasText(attributeKey)) {
+            throw new IllegalArgumentException("Cannot process empty key");
+        }
+
         final String[] command = new String[] {
                 XAttrCommandExecutor.SET_COMMAND,
-                XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH,
-                attributeKey,
-                XAttrCommandExecutor.ATTRIBUTE_VALUE_SWITCH,
-                attributeValue,
+                String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
+                String.format(XAttrCommandExecutor.ATTRIBUTE_VALUE_SWITCH, attributeValue),
                 path.toAbsolutePath().toString()
         };
 
