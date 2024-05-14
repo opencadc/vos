@@ -82,7 +82,9 @@ public class XAttrCommandExecutor {
     static final String GET_COMMAND = "getfattr";
     static final String SET_COMMAND = "setfattr";
 
-    static final String ATTRIBUTE_NAME = "--name=";
+    static final String ATTRIBUTE_NAME_SWITCH = "--name=";
+    static final String REMOVE_SWITCH = "--remove=";
+    static final String ATTRIBUTE_VALUE_SWITCH = "--value=";
 
 
     private static String execute(final String[] command) throws IOException {
@@ -110,19 +112,56 @@ public class XAttrCommandExecutor {
 
     /**
      * Obtain the value of a given attribute key.
-     * @param path      The Path to get an attribute for.
-     * @param key       The full attribute key to lookup (i.e. user.foo.bar), or other non-user keys if supported.
-     * @return          String value
-     * @throws          IOException if the attribute key doesn't exist or cannot be read.
+     *
+     * @param path         The Path to get an attribute for.
+     * @param attributeKey The full attribute key to lookup (i.e. user.foo.bar), or other non-user keys if supported.
+     * @return String value
+     * @throws IOException if the attribute key doesn't exist or cannot be read.
      */
-    public static String getAttribute(final Path path, final String key) throws IOException {
+    public static String get(final Path path, final String attributeKey) throws IOException {
         final String[] command = new String[] {
                 XAttrCommandExecutor.GET_COMMAND,
-                XAttrCommandExecutor.ATTRIBUTE_NAME,
-                key,
+                XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH,
+                attributeKey,
                 path.toAbsolutePath().toString()
         };
 
         return XAttrCommandExecutor.execute(command);
+    }
+
+    /**
+     * Remove the attribute for the given key.
+     *
+     * @param path         The Path to modify.
+     * @param attributeKey The key of the attribute to remove.
+     */
+    public static void remove(final Path path, final String attributeKey) throws IOException {
+        final String[] command = new String[] {
+                XAttrCommandExecutor.SET_COMMAND,
+                XAttrCommandExecutor.REMOVE_SWITCH,
+                attributeKey,
+                path.toAbsolutePath().toString()
+        };
+
+        XAttrCommandExecutor.execute(command);
+    }
+
+    /**
+     * Remove the attribute for the given key.
+     *
+     * @param path         The Path to modify.
+     * @param attributeKey The key of the attribute to remove.
+     */
+    public static void set(final Path path, final String attributeKey, final String attributeValue) throws IOException {
+        final String[] command = new String[] {
+                XAttrCommandExecutor.SET_COMMAND,
+                XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH,
+                attributeKey,
+                XAttrCommandExecutor.ATTRIBUTE_VALUE_SWITCH,
+                attributeValue,
+                path.toAbsolutePath().toString()
+        };
+
+        XAttrCommandExecutor.execute(command);
     }
 }

@@ -75,14 +75,37 @@ import org.opencadc.util.fs.ExtendedFileAttributes;
 import java.io.IOException;
 import java.nio.file.Path;
 
+
+/**
+ * QuotaPlugin implementation that can get and set specific values for interacting with CephFS.  This class relies
+ * on the Extended Attributes to be set on the appropriate folder.
+ */
 public class CephFSQuotaPlugin implements QuotaPlugin {
     private static final Logger LOGGER = Logger.getLogger(CephFSQuotaPlugin.class);
-    private static final String QUOTA_ATTR_KEY = "ceph.quota.max_bytes";
+    private static final String NAMESPACE = "ceph";
+    private static final String QUOTA_ATTR_KEY = "quota.max_bytes";
+    private static final String RECURSIVE_SIZE_ATTR_KEY = "dir.rbytes";
 
 
     @Override
     public Long getBytesUsed(Path directory) {
-        return 0L;
+        LOGGER.debug("getBytesUsed: " + directory);
+        if (directory == null) {
+            throw new IllegalArgumentException("Cannot get size of null directory");
+        }
+
+        try {
+            final String recursiveBytesUsedValue =
+                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
+                                                            CephFSQuotaPlugin.NAMESPACE);
+            final long recursiveBytesUsed = Long.parseLong(recursiveBytesUsedValue);
+            LOGGER.debug("getBytesUsed: " + directory + ": OK");
+            return recursiveBytesUsed;
+        } catch (IOException ioException) {
+            LOGGER.warn("Unable to find recursive folder size of " + directory + " ("
+                        + CephFSQuotaPlugin.NAMESPACE + "." + CephFSQuotaPlugin.QUOTA_ATTR_KEY + ")");
+            return null;
+        }
     }
 
     /**
@@ -95,19 +118,24 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
      */
     @Override
     public Long getQuota(Path directory) {
+        LOGGER.debug("getQuota: " + directory);
         if (directory == null) {
-            return null;
+            throw new IllegalArgumentException("Cannot check quota of null directory");
         }
 
         try {
-            return CephFSQuotaPlugin.findPathWithQuota(directory, 0);
+            final Long quotaInBytes = CephFSQuotaPlugin.scanQuotaFromPath(directory, 0);
+            LOGGER.debug("getQuota: " + directory + ": OK");
+
+            return quotaInBytes;
         } catch (IOException ioException) {
-            LOGGER.error("Unable to find a folder containing " + CephFSQuotaPlugin.QUOTA_ATTR_KEY);
+            LOGGER.warn("Unable to find a folder containing " + CephFSQuotaPlugin.NAMESPACE + "."
+                        + CephFSQuotaPlugin.QUOTA_ATTR_KEY + " from " + directory);
             return null;
         }
     }
 
-    private static Long findPathWithQuota(final Path directory, final int pathElementIndex) throws IOException {
+    private static Long scanQuotaFromPath(final Path directory, final int pathElementIndex) throws IOException {
         LOGGER.debug("findPathWithQuota: " + directory + " {" + pathElementIndex + "}");
         final int pathElementCount = directory.getNameCount();
 
@@ -115,13 +143,14 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
         if (pathElementCount > pathElementIndex) {
             // Add one to the end index as it's exclusive.
             final String quotaAttributeValue =
-                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY);
+                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY,
+                                                            CephFSQuotaPlugin.NAMESPACE);
             if (StringUtil.hasText(quotaAttributeValue)) {
                 final long quotaInBytes = Long.parseLong(quotaAttributeValue);
                 LOGGER.debug("findPathWithQuota: " + directory + " {" + pathElementIndex + "}: OK");
                 return quotaInBytes;
             } else {
-                return CephFSQuotaPlugin.findPathWithQuota(directory, pathElementIndex + 1);
+                return CephFSQuotaPlugin.scanQuotaFromPath(directory, pathElementIndex + 1);
             }
         } else {
             LOGGER.debug("findPathWithQuota: " + directory + " {" + pathElementIndex + "}: MISSING");
@@ -131,6 +160,18 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
 
     @Override
     public void setQuota(Path directory, Long quota) {
+        LOGGER.debug("setQuota: " + directory);
+        if (directory == null) {
+            throw new IllegalArgumentException("Attempt to set quota on null directory.  Doing nothing.");
+        }
 
+        final String quotaValue = (quota == null || quota == 0L) ? null : Long.toString(quota);
+
+        try {
+            ExtendedFileAttributes.setFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY, quotaValue,
+                                                    CephFSQuotaPlugin.NAMESPACE);
+        } catch (IOException ioException) {
+            throw new IllegalStateException(ioException.getMessage(), ioException);
+        }
     }
 }

@@ -69,7 +69,6 @@ package org.opencadc.util.fs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -79,6 +78,8 @@ import java.nio.file.attribute.UserDefinedFileAttributeView;
 
 import java.util.Map;
 import java.util.TreeMap;
+
+import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 
 /**
@@ -108,7 +109,7 @@ public class ExtendedFileAttributes {
      * Set an attribute on a path in the specified namespace. 
      * If attributeValue is null, the attribute will be deleted.
      * If the specified namespace is null, it defaults to the "user" namespace.
-     * The specified attribyteKey should not include the namespace; the namespace will be set by this method.
+     * The specified attrName should not include the namespace; the namespace will be set by this method.
      * 
      * @param path   The path where the attribute will be set. Must not be null
      * @param attrName  The name of the attribute to be set. Must not be null
@@ -140,13 +141,14 @@ public class ExtendedFileAttributes {
                     log.debug("assume no such attr: " + ex);
                 }
             }
-            return;
+        } else {
+            String key = namespace + "." + attrName;
+            if (StringUtil.hasText(attrValue)) {
+                XAttrCommandExecutor.set(path, key, attrValue);
+            } else {
+                XAttrCommandExecutor.remove(path, key);
+            }
         }
-        
-        // TODO: support non-user space attrs by execing setfattr
-        String key = namespace + "." + attrName;
-        // setfattr -n $key -v $attrValue $path
-        throw new UnsupportedOperationException("attribute namespace '" + namespace + "' not supported");
     }
 
     /**
@@ -160,7 +162,7 @@ public class ExtendedFileAttributes {
      * @see #getFileAttribute(java.nio.file.Path, java.lang.String, java.lang.String)
      */
     public static String getFileAttribute(Path path, String attrName) throws IOException {
-        return getFileAttribute(path, attrName, null);
+        return ExtendedFileAttributes.getFileAttribute(path, attrName, null);
     }
 
     /**
@@ -194,7 +196,7 @@ public class ExtendedFileAttributes {
             }
         } else {
             String key = namespace + "." + attrName;
-            return XAttrCommandExecutor.getAttribute(path, key);
+            return XAttrCommandExecutor.get(path, key);
         }
     }
 
