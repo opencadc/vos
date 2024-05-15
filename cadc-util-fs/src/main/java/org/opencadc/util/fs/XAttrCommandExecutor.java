@@ -79,6 +79,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+/**
+ * Command line processor for reading and writing extended attributes.  Basic User attributes ("user" namespace) are
+ * handled with the Java API, whereas extended namespaces are handled by the underlying Command Line binaries "getfattr"
+ * and "setfattr".  It is up to the storage deployer to ensure that support for extended namespaces are installed.
+ */
 public class XAttrCommandExecutor {
     private static final Logger LOGGER = Logger.getLogger(XAttrCommandExecutor.class);
 
