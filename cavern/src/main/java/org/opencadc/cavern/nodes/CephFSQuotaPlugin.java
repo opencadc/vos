@@ -68,7 +68,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.opencadc.util.fs.ExtendedFileAttributes;
 import org.opencadc.util.fs.PathUtil;
