@@ -66,91 +66,82 @@
  ************************************************************************
  */
 
-package org.opencadc.cavern.nodes;
+package org.opencadc.util.fs;
 
 import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
-import org.opencadc.util.fs.ExtendedFileAttributes;
-import org.opencadc.util.fs.PathUtil;
 
 import java.io.IOException;
 import java.nio.file.Path;
-
+import java.nio.file.Paths;
 
 /**
- * QuotaPlugin implementation that can get and set specific values for interacting with CephFS.  This class relies
- * on the Extended Attributes to be set on the appropriate folder.
+ * Utility class to work with Paths.
  */
-public class CephFSQuotaPlugin implements QuotaPlugin {
-    private static final Logger LOGGER = Logger.getLogger(CephFSQuotaPlugin.class);
-    private static final String NAMESPACE = "ceph";
-    private static final String QUOTA_ATTR_KEY = "quota.max_bytes";
-    private static final String RECURSIVE_SIZE_ATTR_KEY = "dir.rbytes";
+public class PathUtil {
+    private static final Logger LOGGER = Logger.getLogger(PathUtil.class);
 
-
-    @Override
-    public Long getBytesUsed(Path directory) {
-        LOGGER.debug("getBytesUsed: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Cannot get size of null directory");
-        }
-
-        try {
-            final String recursiveBytesUsedValue =
-                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
-                                                            CephFSQuotaPlugin.NAMESPACE);
-            final long recursiveBytesUsed = Long.parseLong(recursiveBytesUsedValue);
-            LOGGER.debug("getBytesUsed: " + directory + ": OK");
-            return recursiveBytesUsed;
-        } catch (IOException ioException) {
-            LOGGER.warn("Unable to find recursive folder size of " + directory + " ("
-                        + CephFSQuotaPlugin.NAMESPACE + "." + CephFSQuotaPlugin.QUOTA_ATTR_KEY + ")");
-            return null;
-        }
+    /**
+     * Work top down through the path to check the root and each subsequent path element for one that contains the
+     * quota element.  This method starts at the first path element.
+     *
+     * <p>Example:
+     * <code>
+     * Path directory = Path.of("/root/foo/bar")
+     * PathUtil.scanPathForQuota(directory, "my.quota.key", "foobarns");
+     * </code>
+     * <p>// Will check, in order
+     * <ul>
+     * <li>"/root"</li>
+     * <li>"/root/foo"</li>
+     * <li>"/root/foo/bar"</li>
+     * </ul>
+     *
+     * @param directory The path to check.
+     * @param quotaKey  The key of the quota's extended attribute.
+     * @param namespace The namespace of the quota's extended attribute.
+     * @return Long quota in bytes, or null if not found.
+     * @throws IOException If the extended attribute cannot be read.
+     */
+    public static Long scanPathForQuota(final Path directory, final String quotaKey,
+                                        final String namespace) throws IOException {
+        LOGGER.debug("scanPathForQuota: " + directory);
+        return PathUtil.scanPathForQuota(directory, 0, quotaKey, namespace);
     }
 
     /**
-     * Obtain the quota amount, in bytes, set at the highest level of the provided path.  This method will traverse,
-     * beginning at the first Path element, until it finds a directory containing the CephFS Quota attribute.
-     * Returning a null value means no quota is set, and users can write until the underlying storage is full.
+     * Work top down through the path to check the root and each subsequent path element for one that contains the
+     * quota element.  This method begins at <code>pathElementStartIndex</code>.
      *
-     * @param directory directory to check
-     * @return null if the directory input is null, or if no directory contains the quota attribute.
+     * @param directory             The path to check.
+     * @param pathElementStartIndex The index of the path element within the directory path.
+     * @param quotaAttributeKey     The key of the quota's extended attribute.
+     * @param namespace             The namespace of the quota's extended attribute.
+     * @return Long quota in bytes, or null if not found.
+     * @throws IOException If the extended attribute cannot be read.
      */
-    @Override
-    public Long getQuota(Path directory) {
-        LOGGER.debug("getQuota: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Cannot check quota of null directory");
-        }
+    public static Long scanPathForQuota(final Path directory, final int pathElementStartIndex,
+                                        final String quotaAttributeKey, final String namespace) throws IOException {
+        LOGGER.debug("scanPathForQuota: " + directory + " {" + pathElementStartIndex + "}");
+        final int pathElementCount = directory.getNameCount();
 
-        try {
-            final Long quotaInBytes = PathUtil.scanQuotaFromPath(directory, 0, CephFSQuotaPlugin.QUOTA_ATTR_KEY,
-                                                                 CephFSQuotaPlugin.NAMESPACE);
-            LOGGER.debug("getQuota: " + directory + ": OK");
-
-            return quotaInBytes;
-        } catch (IOException ioException) {
-            LOGGER.warn("Unable to find a folder containing " + CephFSQuotaPlugin.NAMESPACE + "."
-                        + CephFSQuotaPlugin.QUOTA_ATTR_KEY + " from " + directory);
+        // No more path elements to check, so bail out.
+        if (pathElementCount > pathElementStartIndex) {
+            // Add one to the end index as it's exclusive.
+            final String quotaAttributeValue = ExtendedFileAttributes.getFileAttribute(
+                    Paths.get("/", directory.subpath(0, pathElementStartIndex + 1).toString()),
+                    quotaAttributeKey, namespace);
+            if (StringUtil.hasText(quotaAttributeValue)) {
+                final long quotaInBytes = Long.parseLong(quotaAttributeValue);
+                LOGGER.debug("scanPathForQuota: " + directory + " {" + pathElementStartIndex + "}: OK");
+                return quotaInBytes;
+            } else {
+                return PathUtil.scanPathForQuota(directory, pathElementStartIndex + 1, quotaAttributeKey, namespace);
+            }
+        } else {
+            // We've exhausted the path elements, so return null.
+            LOGGER.debug("scanPathForQuota: " + directory + " {" + pathElementStartIndex + "}: MISSING");
             return null;
-        }
-    }
-
-    @Override
-    public void setQuota(Path directory, Long quota) {
-        LOGGER.debug("setQuota: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Attempt to set quota on null directory.  Doing nothing.");
-        }
-
-        final String quotaValue = (quota == null || quota == 0L) ? null : Long.toString(quota);
-
-        try {
-            ExtendedFileAttributes.setFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY, quotaValue,
-                                                    CephFSQuotaPlugin.NAMESPACE);
-        } catch (IOException ioException) {
-            throw new IllegalStateException(ioException.getMessage(), ioException);
         }
     }
 }

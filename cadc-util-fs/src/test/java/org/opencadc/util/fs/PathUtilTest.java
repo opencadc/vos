@@ -66,91 +66,69 @@
  ************************************************************************
  */
 
-package org.opencadc.cavern.nodes;
+package org.opencadc.util.fs;
 
-import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.opencadc.util.fs.ExtendedFileAttributes;
-import org.opencadc.util.fs.PathUtil;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Random;
+import java.util.UUID;
 
 
-/**
- * QuotaPlugin implementation that can get and set specific values for interacting with CephFS.  This class relies
- * on the Extended Attributes to be set on the appropriate folder.
- */
-public class CephFSQuotaPlugin implements QuotaPlugin {
-    private static final Logger LOGGER = Logger.getLogger(CephFSQuotaPlugin.class);
-    private static final String NAMESPACE = "ceph";
-    private static final String QUOTA_ATTR_KEY = "quota.max_bytes";
-    private static final String RECURSIVE_SIZE_ATTR_KEY = "dir.rbytes";
+public class PathUtilTest {
+    private static final Logger LOGGER = Logger.getLogger(PathUtil.class);
 
+    static final String ROOT = "build/tmp/path-util-tests";
 
-    @Override
-    public Long getBytesUsed(Path directory) {
-        LOGGER.debug("getBytesUsed: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Cannot get size of null directory");
-        }
+    static {
+        Log4jInit.setLevel("org.opencadc.util.fs", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.exec", Level.DEBUG);
+    }
 
+    static {
         try {
-            final String recursiveBytesUsedValue =
-                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
-                                                            CephFSQuotaPlugin.NAMESPACE);
-            final long recursiveBytesUsed = Long.parseLong(recursiveBytesUsedValue);
-            LOGGER.debug("getBytesUsed: " + directory + ": OK");
-            return recursiveBytesUsed;
-        } catch (IOException ioException) {
-            LOGGER.warn("Unable to find recursive folder size of " + directory + " ("
-                        + CephFSQuotaPlugin.NAMESPACE + "." + CephFSQuotaPlugin.QUOTA_ATTR_KEY + ")");
-            return null;
+            final Path root = FileSystems.getDefault().getPath(PathUtilTest.ROOT);
+            if (!Files.exists(root)) {
+                Files.createDirectory(root);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("TEST SETUP: failed to create test dir: " + PathUtilTest.ROOT, ex);
         }
     }
 
-    /**
-     * Obtain the quota amount, in bytes, set at the highest level of the provided path.  This method will traverse,
-     * beginning at the first Path element, until it finds a directory containing the CephFS Quota attribute.
-     * Returning a null value means no quota is set, and users can write until the underlying storage is full.
-     *
-     * @param directory directory to check
-     * @return null if the directory input is null, or if no directory contains the quota attribute.
-     */
-    @Override
-    public Long getQuota(Path directory) {
-        LOGGER.debug("getQuota: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Cannot check quota of null directory");
-        }
+    @Test
+    public void scanPathForQuota() throws Exception {
+        final String[] folderNames = new String[] {
+                "scanPathForQuota-1-" + UUID.randomUUID(),
+                "scanPathForQuota-2-" + UUID.randomUUID(),
+                "scanPathForQuota-3-" + UUID.randomUUID(),
+                "scanPathForQuota-4-" + UUID.randomUUID()
+        };
 
-        try {
-            final Long quotaInBytes = PathUtil.scanQuotaFromPath(directory, 0, CephFSQuotaPlugin.QUOTA_ATTR_KEY,
-                                                                 CephFSQuotaPlugin.NAMESPACE);
-            LOGGER.debug("getQuota: " + directory + ": OK");
+        final FileSystem fs = FileSystems.getDefault();
 
-            return quotaInBytes;
-        } catch (IOException ioException) {
-            LOGGER.warn("Unable to find a folder containing " + CephFSQuotaPlugin.NAMESPACE + "."
-                        + CephFSQuotaPlugin.QUOTA_ATTR_KEY + " from " + directory);
-            return null;
-        }
-    }
+        final Path root = FileSystems.getDefault().getPath(PathUtilTest.ROOT);
+        final Path target = fs.getPath(PathUtilTest.ROOT, folderNames).toAbsolutePath();
+        LOGGER.debug("Creating target " + target);
+        Files.createDirectories(target);
 
-    @Override
-    public void setQuota(Path directory, Long quota) {
-        LOGGER.debug("setQuota: " + directory);
-        if (directory == null) {
-            throw new IllegalArgumentException("Attempt to set quota on null directory.  Doing nothing.");
-        }
+        final int randomFolderIndexToSetQuota = new Random().nextInt(folderNames.length);
+        LOGGER.debug("Setting quota on element at " + randomFolderIndexToSetQuota);
+        final Path quotaPath = Paths.get("/", target.subpath(0, (target.getNameCount() - folderNames.length)
+                                                                + randomFolderIndexToSetQuota + 1).toString());
+        LOGGER.debug("Setting quota on " + quotaPath);
+        XAttrCommandExecutor.set(quotaPath, "user.foo.quota", "88");
 
-        final String quotaValue = (quota == null || quota == 0L) ? null : Long.toString(quota);
-
-        try {
-            ExtendedFileAttributes.setFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY, quotaValue,
-                                                    CephFSQuotaPlugin.NAMESPACE);
-        } catch (IOException ioException) {
-            throw new IllegalStateException(ioException.getMessage(), ioException);
-        }
+        Assert.assertEquals("Wrong quota", 88L,
+                            PathUtil.scanPathForQuota(target, "foo.quota", "user"), 0L);
     }
 }
