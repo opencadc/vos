@@ -68,9 +68,9 @@
 
 package org.opencadc.cavern.nodes;
 
+import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.opencadc.util.fs.ExtendedFileAttributes;
-import org.opencadc.util.fs.PathUtil;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -124,8 +124,11 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
         }
 
         try {
-            final Long quotaInBytes = PathUtil.scanQuotaFromPath(directory, 0, CephFSQuotaPlugin.QUOTA_ATTR_KEY,
-                                                                 CephFSQuotaPlugin.NAMESPACE);
+            final String quotaAttributeValue = ExtendedFileAttributes.getFileAttribute(directory,
+                                                                                       CephFSQuotaPlugin.QUOTA_ATTR_KEY,
+                                                                                       CephFSQuotaPlugin.NAMESPACE);
+            final Long quotaInBytes = StringUtil.hasText(quotaAttributeValue)
+                                      ? Long.parseLong(quotaAttributeValue) : null;
             LOGGER.debug("getQuota: " + directory + ": OK");
 
             return quotaInBytes;
