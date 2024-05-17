@@ -232,7 +232,7 @@ public class CavernConfig {
             log.debug("getQuotaPlugin: defaulting to NoQuotaPlugin");
             return CavernConfig.loadPlugin(NoQuotaPlugin.class.getName());
         } else {
-            return CavernConfig.loadPlugin(cname);
+            return CavernConfig.loadPlugin(QuotaPlugin.class.getPackage().getName() + "." + cname);
         }
     }
 

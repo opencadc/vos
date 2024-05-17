@@ -60,8 +60,10 @@ org.opencadc.cavern.allocationParent = {top level node}
 # (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
 # for users.
 # Optional, but the default of NoQuotaPlugin will get used if not specified, and users will have free reign.
+# - CephFSQuotaPlugin: Use CephFS's extended attributes to determine current quota and folder sizes.
+# - NoQuotaPlugin: Default - no quota checking
 #
-org.opencadc.cavern.nodes.QuotaPlugin = {plugin implementation class}
+org.opencadc.cavern.nodes.QuotaPlugin = CephFSQuotaPlugin | NoQuotaPlugin
 
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
