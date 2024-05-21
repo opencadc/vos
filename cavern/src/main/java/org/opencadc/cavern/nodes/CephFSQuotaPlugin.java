@@ -98,10 +98,13 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
             final String recursiveBytesUsedValue =
                     ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
                                                             CephFSQuotaPlugin.NAMESPACE);
+
+            // NumberFormatException is thrown if the attribute value (recursiveBytesUsedValue) is null or not a number.
             final long recursiveBytesUsed = Long.parseLong(recursiveBytesUsedValue);
+
             LOGGER.debug("getBytesUsed: " + directory + ": OK");
             return recursiveBytesUsed;
-        } catch (IOException ioException) {
+        } catch (IOException | NumberFormatException exception) {
             LOGGER.warn("Unable to find recursive folder size of " + directory + " ("
                         + CephFSQuotaPlugin.NAMESPACE + "." + CephFSQuotaPlugin.QUOTA_ATTR_KEY + ")");
             return null;
@@ -112,6 +115,8 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
      * Obtain the quota amount, in bytes, set at the highest level of the provided path.  This method will traverse,
      * beginning at the first Path element, until it finds a directory containing the CephFS Quota attribute.
      * Returning a null value means no quota is set, and users can write until the underlying storage is full.
+     *
+     * <p>Refer to <a href="https://docs.ceph.com/en/quincy/cephfs/quota/">Quota Docs</a> for details.
      *
      * @param directory directory to check
      * @return null if the directory input is null, or if no directory contains the quota attribute.
@@ -127,15 +132,28 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
             final String quotaAttributeValue = ExtendedFileAttributes.getFileAttribute(directory,
                                                                                        CephFSQuotaPlugin.QUOTA_ATTR_KEY,
                                                                                        CephFSQuotaPlugin.NAMESPACE);
-            final Long quotaInBytes = StringUtil.hasText(quotaAttributeValue)
-                                      ? Long.parseLong(quotaAttributeValue) : null;
+            final Long quotaInBytes;
+
+            if (StringUtil.hasText(quotaAttributeValue)) {
+                final long parsedQuotaValue = Long.parseLong(quotaAttributeValue);
+
+                // No quota set, so set to null.  Checking for <= 0 is likely unnecessary, but here to be thorough.
+                // Quota from the documentation:
+                // > Note that if the value of the extended attribute is 0 that means the quota is not set.
+                if (parsedQuotaValue <= 0) {
+                    quotaInBytes = null;
+                } else {
+                    quotaInBytes = parsedQuotaValue;
+                }
+            } else {
+                quotaInBytes = null;
+            }
+
             LOGGER.debug("getQuota: " + directory + ": OK");
 
             return quotaInBytes;
-        } catch (IOException ioException) {
-            LOGGER.warn("Unable to find a folder containing " + CephFSQuotaPlugin.NAMESPACE + "."
-                        + CephFSQuotaPlugin.QUOTA_ATTR_KEY + " from " + directory);
-            return null;
+        } catch (IOException | NumberFormatException exception) {
+            throw new RuntimeException(exception.getMessage(), exception);
         }
     }
 
@@ -146,13 +164,21 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
             throw new IllegalArgumentException("Attempt to set quota on null directory.  Doing nothing.");
         }
 
-        final String quotaValue = (quota == null || quota == 0L) ? null : Long.toString(quota);
+        final String quotaValue;
+
+        if (quota == null) {
+            quotaValue = null;
+        } else if (quota <= 0) {
+            throw new IllegalArgumentException("Invalid quota value: " + quota);
+        } else {
+            quotaValue = Long.toString(quota);
+        }
 
         try {
             ExtendedFileAttributes.setFileAttribute(directory, CephFSQuotaPlugin.QUOTA_ATTR_KEY, quotaValue,
                                                     CephFSQuotaPlugin.NAMESPACE);
         } catch (IOException ioException) {
-            throw new IllegalStateException(ioException.getMessage(), ioException);
+            throw new RuntimeException(ioException.getMessage(), ioException);
         }
     }
 }
