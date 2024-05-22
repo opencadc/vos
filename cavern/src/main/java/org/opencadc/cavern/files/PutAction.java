@@ -280,30 +280,14 @@ public class PutAction extends FileAction {
         } catch (IOException ex) {
             String msg = ex.getMessage();
             if (msg != null && msg.contains("quota")) {
-                // TODO: traverse up the path to find quota
-                //rootPath = Paths.get(getRoot());
-                //restoreOwnNGroup(rootPath, node);
-                long limit = -1;
-                ContainerNode curNode = node.parent;
-                while (curNode != null && limit == -1) {
-                    String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
-                    if (limitValue != null) {
-                        limit = Long.parseLong(limitValue);
-                    }
-                }
-
-                // TODO: Replace the quota limit below with the number of bytes 
-                //       remaining in the quota when we can determine it. This 
-                //       means the above code to obtain the limitValue will need
-                //       to be changed
-                
-                if (limit == -1) {
+                final Long limit = PutAction.getLimit(node);
+                if (limit == null) {
                     // VOS.PROPERTY_URI_QUOTA attribute is not set on any parent node
                     msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + ex.getMessage();
                     log.warn(msg);
+                } else if (limit <= 0) {
+                    throw new ByteLimitExceededException(ex.getMessage(), limit);
                 }
-
-                throw new ByteLimitExceededException(ex.getMessage(), limit);
             }
             
             throw ex;
@@ -318,7 +302,27 @@ public class PutAction extends FileAction {
             }
         }
     }
-    
+
+    private static Long getLimit(DataNode node) {
+        if (node == null) {
+            return null;
+        } else {
+            Long limit = null;
+            ContainerNode curNode = node.parent;
+
+            // Walk up the parent tree to find a Node with the Quota property.
+            while (curNode != null && limit == null) {
+                String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                if (limitValue != null) {
+                    // TODO: Handle if bytesUsed is null?  Check PROPERTY_URI_CONTENTLENGTH?
+                    limit = Long.parseLong(limitValue) - (curNode.bytesUsed == null ? 0L : curNode.bytesUsed);
+                }
+                curNode = curNode.parent;
+            }
+            return limit;
+        }
+    }
+
     private void cleanupOnFailure(Path target) {
         throw new UnsupportedOperationException();
     }
