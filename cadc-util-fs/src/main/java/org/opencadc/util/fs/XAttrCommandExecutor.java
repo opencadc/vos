@@ -101,22 +101,30 @@ public class XAttrCommandExecutor {
         final BuilderOutputGrabber grabber = new BuilderOutputGrabber();
         grabber.captureOutput(command);
 
+        final String value;
         if (grabber.getExitValue() != 0) {
-            throw new IOException("Command '" + String.join(" ", command) + "' failed:\n"
-                                  + grabber.getErrorOutput());
+            final String errorOutput = grabber.getErrorOutput();
+
+            // Looking for an attribute that does not exist, so return null.
+            if (errorOutput.contains("No such attribute")) {
+                value = null;
+            } else {
+                throw new IOException("Command '" + String.join(" ", command) + "' failed:\n"
+                                      + grabber.getErrorOutput());
+            }
         } else {
             final String output = grabber.getOutput(true);
 
             // Skip lines that begin with script comments ("#").
-            final String value = Arrays.stream(output.split("\n"))
+            value = Arrays.stream(output.split("\n"))
                                        .filter(line -> !line.startsWith("#"))
                                        .findFirst()
                                        .orElse(null);
 
             LOGGER.debug("execute: '" + String.join(" ", command) + "': OK");
-
-            return value;
         }
+
+        return value;
     }
 
     /**
