@@ -525,6 +525,8 @@ public class NodeReader implements XmlProcessor {
             dn.bytesUsed = getLongProperty(VOS.PROPERTY_URI_CONTENTLENGTH, properties);
             dn.getAccepts().addAll(getViewURIs(element, namespace, "accepts"));
             dn.getProvides().addAll(getViewURIs(element, namespace, "provides"));
+        } else if (node instanceof ContainerNode) {
+            ((ContainerNode) node).bytesUsed = getLongProperty(VOS.PROPERTY_URI_CONTENTLENGTH, properties);
         }
         node.clearReadOnlyGroups = getPropertyNil(VOS.PROPERTY_URI_GROUPREAD, properties);
         node.getReadOnlyGroup().addAll(getGroupURIs(VOS.PROPERTY_URI_GROUPREAD, VOS.PROPERTY_DELIM_GROUPREAD, properties));

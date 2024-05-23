@@ -73,6 +73,9 @@ import ca.nrc.cadc.io.ResourceIteratorWrapper;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.json.JSONObject;
 import org.junit.Test;
 import org.opencadc.vospace.ContainerNode;
@@ -83,6 +86,11 @@ import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 
 public class JsonNodeWriterTest {
+    private static final Set<URI> IMMUTABLE_PROPERTIES = new HashSet<>();
+    static {
+        JsonNodeWriterTest.IMMUTABLE_PROPERTIES.add(VOS.PROPERTY_URI_CONTENTLENGTH);
+        JsonNodeWriterTest.IMMUTABLE_PROPERTIES.add(VOS.PROPERTY_URI_QUOTA);
+    }
     @Test
     public void writeWithBadNumeric() throws Exception {
 
@@ -364,6 +372,8 @@ public class JsonNodeWriterTest {
 
         final VOSURI vosURI = new VOSURI(URI.create("vos://cadc.nrc.ca!vospace/OSSOS/measure3"));
         final JsonNodeWriter testSubject = new JsonNodeWriter();
+        testSubject.setImmutableProperties(JsonNodeWriterTest.IMMUTABLE_PROPERTIES);
+
         final NodeReader nodeReader = new NodeReader(false);
         final NodeReader.NodeReaderResult result = nodeReader.read(testXMLString);
         ContainerNode node = (ContainerNode) result.node;

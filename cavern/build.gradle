@@ -42,7 +42,7 @@ dependencies {
     implementation 'org.opencadc:cadc-gms:[1.0.12,)'
     implementation 'org.opencadc:cadc-dali:[1.0,)'
     implementation 'org.opencadc:cadc-pkg-server:[1.2.3,)'
-    implementation 'org.opencadc:cadc-vos:[2.0,)'
+    implementation 'org.opencadc:cadc-vos:[2.0.7,)'
     implementation 'org.opencadc:cadc-vos-server:[2.0.15,)'
 
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'
