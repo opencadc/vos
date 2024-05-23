@@ -108,12 +108,8 @@ public class XAttrCommandExecutorTest {
         final Path target = fs.getPath(XAttrCommandExecutorTest.ROOT, folderName).toAbsolutePath();
         Files.createDirectory(target);
 
-        try {
-            XAttrCommandExecutor.get(target, "user.foo");
-            Assert.fail("Should not already have user.foo attribute.");
-        } catch (IOException ioException) {
-            // Good
-        }
+        Assert.assertNull("Should not already have user.foo attribute.",
+                          XAttrCommandExecutor.get(target, "user.foo"));
 
         XAttrCommandExecutor.set(target, "user.foo", "bar");
 
@@ -141,14 +137,15 @@ public class XAttrCommandExecutorTest {
         XAttrCommandExecutor.set(target, null, "bogusValue");
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void getAttributeNoSuchKey() throws Exception {
         final String folderName = "getAttributeFail-" + UUID.randomUUID();
         final FileSystem fs = FileSystems.getDefault();
         final Path target = fs.getPath(XAttrCommandExecutorTest.ROOT, folderName).toAbsolutePath();
         Files.createDirectory(target);
 
-        XAttrCommandExecutor.get(target, "user.bogus.attr");
+        Assert.assertNull("Should be null for no such attribute.",
+                          XAttrCommandExecutor.get(target, "user.bogus.attr"));
     }
 
     @Test(expected = IllegalArgumentException.class)

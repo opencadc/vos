@@ -148,12 +148,17 @@ public class XAttrCommandExecutor {
 
         // getfattr command returns the full attribute in key=value format.
         final String commandOutput = XAttrCommandExecutor.execute(command);
-        final Matcher commandOutputMatcher = XAttrCommandExecutor.GET_COMMAND_OUTPUT_PATTERN.matcher(commandOutput);
 
-        if (!commandOutputMatcher.find()) {
-            throw new IllegalStateException("Unknown command output: " + commandOutput);
+        if (commandOutput == null) {
+            return null;
         } else {
-            return commandOutputMatcher.group(1);
+            final Matcher commandOutputMatcher = XAttrCommandExecutor.GET_COMMAND_OUTPUT_PATTERN.matcher(commandOutput);
+
+            if (!commandOutputMatcher.find()) {
+                throw new IllegalStateException("Unknown command output: " + commandOutput);
+            } else {
+                return commandOutputMatcher.group(1);
+            }
         }
     }
 
