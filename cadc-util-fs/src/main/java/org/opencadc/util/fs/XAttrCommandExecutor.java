@@ -70,13 +70,12 @@ package org.opencadc.util.fs;
 
 import ca.nrc.cadc.exec.BuilderOutputGrabber;
 import ca.nrc.cadc.util.StringUtil;
-import org.apache.log4j.Logger;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -85,16 +84,13 @@ import java.util.regex.Pattern;
  * and "setfattr".  It is up to the storage deployer to ensure that support for extended namespaces are installed.
  */
 public class XAttrCommandExecutor {
-    private static final Logger LOGGER = Logger.getLogger(XAttrCommandExecutor.class);
-
     static final Pattern GET_COMMAND_OUTPUT_PATTERN = Pattern.compile(".*=\"(.*)\"");
     static final String GET_COMMAND = "getfattr";
     static final String SET_COMMAND = "setfattr";
-
     static final String ATTRIBUTE_NAME_SWITCH = "--name=%s";
     static final String REMOVE_SWITCH = "--remove=%s";
     static final String ATTRIBUTE_VALUE_SWITCH = "--value=%s";
-
+    private static final Logger LOGGER = Logger.getLogger(XAttrCommandExecutor.class);
 
     private static String execute(final String[] command) throws IOException {
         LOGGER.debug("execute: '" + String.join(" ", command) + "'");
@@ -117,9 +113,9 @@ public class XAttrCommandExecutor {
 
             // Skip lines that begin with script comments ("#").
             value = Arrays.stream(output.split("\n"))
-                                       .filter(line -> !line.startsWith("#"))
-                                       .findFirst()
-                                       .orElse(null);
+                          .filter(line -> !line.startsWith("#"))
+                          .findFirst()
+                          .orElse(null);
 
             LOGGER.debug("execute: '" + String.join(" ", command) + "': OK");
         }
@@ -141,9 +137,9 @@ public class XAttrCommandExecutor {
         }
 
         final String[] command = new String[] {
-                XAttrCommandExecutor.GET_COMMAND,
-                String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
-                path.toAbsolutePath().toString()
+            XAttrCommandExecutor.GET_COMMAND,
+            String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
+            path.toAbsolutePath().toString()
         };
 
         // getfattr command returns the full attribute in key=value format.
@@ -174,9 +170,9 @@ public class XAttrCommandExecutor {
         }
 
         final String[] command = new String[] {
-                XAttrCommandExecutor.SET_COMMAND,
-                String.format(XAttrCommandExecutor.REMOVE_SWITCH, attributeKey),
-                path.toAbsolutePath().toString()
+            XAttrCommandExecutor.SET_COMMAND,
+            String.format(XAttrCommandExecutor.REMOVE_SWITCH, attributeKey),
+            path.toAbsolutePath().toString()
         };
 
         XAttrCommandExecutor.execute(command);
@@ -194,10 +190,10 @@ public class XAttrCommandExecutor {
         }
 
         final String[] command = new String[] {
-                XAttrCommandExecutor.SET_COMMAND,
-                String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
-                String.format(XAttrCommandExecutor.ATTRIBUTE_VALUE_SWITCH, attributeValue),
-                path.toAbsolutePath().toString()
+            XAttrCommandExecutor.SET_COMMAND,
+            String.format(XAttrCommandExecutor.ATTRIBUTE_NAME_SWITCH, attributeKey),
+            String.format(XAttrCommandExecutor.ATTRIBUTE_VALUE_SWITCH, attributeValue),
+            path.toAbsolutePath().toString()
         };
 
         XAttrCommandExecutor.execute(command);
