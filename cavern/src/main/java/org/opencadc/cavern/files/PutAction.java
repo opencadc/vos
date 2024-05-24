@@ -94,7 +94,6 @@ import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
-import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -113,12 +112,32 @@ public class PutAction extends FileAction {
         super();
     }
 
+    private static Long getLimit(DataNode node) {
+        if (node == null) {
+            return null;
+        } else {
+            Long limit = null;
+            ContainerNode curNode = node.parent;
+
+            // Walk up the parent tree to find a Node with the Quota property.
+            while (curNode != null && limit == null) {
+                String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
+                if (limitValue != null) {
+                    // TODO: Handle if bytesUsed is null?  Check PROPERTY_URI_CONTENTLENGTH?
+                    limit = Long.parseLong(limitValue) - (curNode.bytesUsed == null ? 0L : curNode.bytesUsed);
+                }
+                curNode = curNode.parent;
+            }
+            return limit;
+        }
+    }
+
     @Override
     protected InlineContentHandler getInlineContentHandler() {
         return new InlineContentHandler() {
             public Content accept(String name, String contentType,
-                    InputStream inputStream)
-                    throws InlineContentException, IOException {
+                                  InputStream inputStream)
+                throws InlineContentException, IOException {
                 InlineContentHandler.Content c = new InlineContentHandler.Content();
                 c.name = INPUT_STREAM;
                 c.value = inputStream;
@@ -134,11 +153,11 @@ public class PutAction extends FileAction {
         Path target = null;
         boolean putStarted = false;
         boolean successful = false;
-        
+
         long bytesWritten = 0L;
         try {
             log.debug("put: start " + nodeURI.getURI().toASCIIString());
-            
+
             Subject caller = AuthenticationUtil.getCurrentSubject();
             boolean preauthGranted = false;
             if (preauthToken != null) {
@@ -157,7 +176,7 @@ public class PutAction extends FileAction {
                 logInfo.setGrant("read: preauth-token");
             }
             log.debug("preauthGranted: " + preauthGranted);
-            
+
             // PathResolver checks read permission
             String parentPath = nodeURI.getParentURI().getPath();
             // TODO: disable permission checks in resolver
@@ -170,7 +189,7 @@ public class PutAction extends FileAction {
             }
             ContainerNode cn = (ContainerNode) n;
             n = nodePersistence.get(cn, nodeURI.getName());
-            
+
             // only support data nodes for now
             if (n != null && !(DataNode.class.isAssignableFrom(n.getClass()))) {
                 throw new IllegalArgumentException("not a data node");
@@ -183,7 +202,7 @@ public class PutAction extends FileAction {
                 node.parent = cn;
                 nodePersistence.put(node);
             }
-            
+
             // check write permission
             if (!preauthGranted) {
                 if (n != null && authorizer.hasSingleNodeWritePermission(n, AuthenticationUtil.getCurrentSubject())) {
@@ -194,9 +213,9 @@ public class PutAction extends FileAction {
                     throw new AccessControlException("permission denied: write to " + nodeURI.getPath());
                 }
             }
-            
+
             target = nodePersistence.nodeToPath(nodeURI);
-            
+
             InputStream in = (InputStream) syncInput.getContent(INPUT_STREAM);
             MessageDigest md = MessageDigest.getInstance("MD5");
             log.debug("copy: start " + target);
@@ -204,11 +223,11 @@ public class PutAction extends FileAction {
             // this method replace sthe existing Node with a new one owned by the tomcat user (root)
             // and that only gets fixed down at nodePersistence.put(node);
             //Files.copy(vis, target, StandardCopyOption.REPLACE_EXISTING);
-            
+
             // truncate: do not recreate file with wrong owner
             StandardOpenOption openOption = StandardOpenOption.TRUNCATE_EXISTING;
             DigestOutputStream out = new DigestOutputStream(
-                    Files.newOutputStream(target, StandardOpenOption.WRITE, openOption), md);
+                Files.newOutputStream(target, StandardOpenOption.WRITE, openOption), md);
             ByteCountOutputStream bcos = new ByteCountOutputStream(out);
             MultiBufferIO io = new MultiBufferIO();
             io.copy(in, bcos);
@@ -227,14 +246,14 @@ public class PutAction extends FileAction {
                 trunc.close();
                 actualMD5 = null;
             }
-            
+
             // re-read node from filesystem
             node = (DataNode) nodePersistence.get(cn, nodeURI.getName());
-            
+
             // update Node
             node.owner = caller;
             node.ownerID = null; // just in case
-        
+
             log.debug(nodeURI + " MD5: " + propValue);
             NodeProperty csp = node.getProperty(VOS.PROPERTY_URI_CONTENTMD5);
             if (actualMD5 == null) {
@@ -277,7 +296,7 @@ public class PutAction extends FileAction {
             successful = true;
         } catch (AccessDeniedException e) {
             // TODO: this is a deployment error because cavern doesn't have permission to filesystem
-            log.debug("403 error with PUT: ",  e);
+            log.debug("403 error with PUT: ", e);
             throw new AccessControlException(e.getLocalizedMessage());
 
         } catch (WriteException ex) {
@@ -301,26 +320,6 @@ public class PutAction extends FileAction {
             } else if (putStarted) {
                 cleanupOnFailure(target, node);
             }
-        }
-    }
-
-    private static Long getLimit(DataNode node) {
-        if (node == null) {
-            return null;
-        } else {
-            Long limit = null;
-            ContainerNode curNode = node.parent;
-
-            // Walk up the parent tree to find a Node with the Quota property.
-            while (curNode != null && limit == null) {
-                String limitValue = curNode.getPropertyValue(VOS.PROPERTY_URI_QUOTA);
-                if (limitValue != null) {
-                    // TODO: Handle if bytesUsed is null?  Check PROPERTY_URI_CONTENTLENGTH?
-                    limit = Long.parseLong(limitValue) - (curNode.bytesUsed == null ? 0L : curNode.bytesUsed);
-                }
-                curNode = curNode.parent;
-            }
-            return limit;
         }
     }
 

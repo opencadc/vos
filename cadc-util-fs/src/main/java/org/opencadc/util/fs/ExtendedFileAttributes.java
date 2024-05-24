@@ -67,6 +67,7 @@
 
 package org.opencadc.util.fs;
 
+import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -75,30 +76,25 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
-
 import java.util.Map;
 import java.util.TreeMap;
-
-import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
 
 /**
  * A class to handle the extended attributes of a file system.
- * 
- * @author pdowler
  *
+ * @author pdowler
  */
 public class ExtendedFileAttributes {
     private static final Logger log = Logger.getLogger(ExtendedFileAttributes.class);
-    
+
     /**
      * Set the attribute for the specified path. This method defaults to the "user" namespace.
-     * 
-     * @param path   The path where the attribute will be set. Must not be null
+     *
+     * @param path      The path where the attribute will be set. Must not be null
      * @param attrName  The name of the attribute to be set. Must not be null
-     * @param attrValue     The value of the attribute to be set. A null value means the attribute is to be deleted
-     * 
-     * @throws IOException  if setting attribute failed
+     * @param attrValue The value of the attribute to be set. A null value means the attribute is to be deleted
+     * @throws IOException if setting attribute failed
      * @see #setFileAttribute(java.nio.file.Path, java.lang.String, java.lang.String, java.lang.String)
      */
     public static void setFileAttribute(Path path, String attrName, String attrValue) throws IOException {
@@ -106,28 +102,27 @@ public class ExtendedFileAttributes {
     }
 
     /**
-     * Set an attribute on a path in the specified namespace. 
+     * Set an attribute on a path in the specified namespace.
      * If attributeValue is null, the attribute will be deleted.
      * If the specified namespace is null, it defaults to the "user" namespace.
      * The specified attrName should not include the namespace; the namespace will be set by this method.
-     * 
-     * @param path   The path where the attribute will be set. Must not be null
+     *
+     * @param path      The path where the attribute will be set. Must not be null
      * @param attrName  The name of the attribute to be set. Must not be null
-     * @param attrValue     The value of the attribute to be set. A null value means the attribute is to be deleted
+     * @param attrValue The value of the attribute to be set. A null value means the attribute is to be deleted
      * @param namespace attribute namespace, null defaults to the user namespace
-     * 
-     * @throws IOException  if setting attribute failed
+     * @throws IOException if setting attribute failed
      */
-    public static void setFileAttribute(Path path, String attrName, String attrValue, String namespace) 
-            throws IOException {
+    public static void setFileAttribute(Path path, String attrName, String attrValue, String namespace)
+        throws IOException {
         if (path == null || attrName == null) {
             throw new IllegalArgumentException("path or attributeKey cannot be null");
         }
-        
+
         if (namespace == null || "user".equals(namespace)) {
             log.debug("setFileAttribute: " + path);
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
-                UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+                                                                          UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             if (attrValue != null) {
                 attrValue = attrValue.trim();
                 log.debug("attribute: " + attrName + " = " + attrValue);
@@ -153,10 +148,9 @@ public class ExtendedFileAttributes {
 
     /**
      * Get the value of specified attribute for the current path. This method defaults to the "user" namespace.
-     * 
-     * @param path   The path where the attribute resides in. Must not be null
-     * @param attrName  The name of the attribute to get. Must not be null
-     * 
+     *
+     * @param path     The path where the attribute resides in. Must not be null
+     * @param attrName The name of the attribute to get. Must not be null
      * @return attribute value or null if not set
      * @throws IOException if reading attribute failed
      * @see #getFileAttribute(java.nio.file.Path, java.lang.String, java.lang.String)
@@ -167,14 +161,12 @@ public class ExtendedFileAttributes {
 
     /**
      * Get the value of specified attribute for the current path from the specified attribute namespace.
-     * 
-     * @param path   The path where the attribute resides in. Must not be null
+     *
+     * @param path      The path where the attribute resides in. Must not be null
      * @param attrName  The name of the attribute to get. Must not be null
      * @param namespace attribute namespace, null defaults to the user namespace
-     * 
      * @return attribute value or null if not set
-     * 
-     * @throws IOException  if reading attribute failed
+     * @throws IOException if reading attribute failed
      */
     public static String getFileAttribute(Path path, String attrName, String namespace) throws IOException {
         if (path == null || attrName == null) {
@@ -184,7 +176,7 @@ public class ExtendedFileAttributes {
         if (namespace == null || "user".equals(namespace)) {
             try {
                 UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
-                    UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+                                                                              UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
 
                 int sz = udv.size(attrName);
                 ByteBuffer buf = ByteBuffer.allocate(2 * sz);
@@ -202,19 +194,19 @@ public class ExtendedFileAttributes {
 
     /**
      * Get all user-defined attributes.
-     * 
+     *
      * @param path the target file
      * @return map of attribute name:value
      * @throws IOException if reading attributes failed
      */
-    public static Map<String,String> getAttributes(Path path) throws IOException {
+    public static Map<String, String> getAttributes(Path path) throws IOException {
         if (path == null) {
             throw new IllegalArgumentException("path or attributeName cannot be null");
         }
-        Map<String,String> ret = new TreeMap<>();
+        Map<String, String> ret = new TreeMap<>();
         try {
             UserDefinedFileAttributeView udv = Files.getFileAttributeView(path,
-                UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+                                                                          UserDefinedFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             for (String key : udv.list()) {
                 int sz = udv.size(key);
                 ByteBuffer buf = ByteBuffer.allocate(2 * sz);

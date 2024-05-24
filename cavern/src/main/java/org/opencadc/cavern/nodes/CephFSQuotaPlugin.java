@@ -69,11 +69,10 @@
 package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.util.StringUtil;
-import org.apache.log4j.Logger;
-import org.opencadc.util.fs.ExtendedFileAttributes;
-
 import java.io.IOException;
 import java.nio.file.Path;
+import org.apache.log4j.Logger;
+import org.opencadc.util.fs.ExtendedFileAttributes;
 
 
 /**
@@ -96,8 +95,8 @@ public class CephFSQuotaPlugin implements QuotaPlugin {
 
         try {
             final String recursiveBytesUsedValue =
-                    ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
-                                                            CephFSQuotaPlugin.NAMESPACE);
+                ExtendedFileAttributes.getFileAttribute(directory, CephFSQuotaPlugin.RECURSIVE_SIZE_ATTR_KEY,
+                                                        CephFSQuotaPlugin.NAMESPACE);
 
             // NumberFormatException is thrown if the attribute value (recursiveBytesUsedValue) is null or not a number.
             final long recursiveBytesUsed = Long.parseLong(recursiveBytesUsedValue);
