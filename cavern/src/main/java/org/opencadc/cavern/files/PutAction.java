@@ -71,7 +71,9 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteCountOutputStream;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.io.MultiBufferIO;
+import ca.nrc.cadc.io.WriteException;
 import ca.nrc.cadc.net.ResourceNotFoundException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.rest.InlineContentException;
 import ca.nrc.cadc.rest.InlineContentHandler;
 import ca.nrc.cadc.util.HexUtil;
@@ -92,6 +94,7 @@ import org.opencadc.permissions.WriteGrant;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -277,19 +280,17 @@ public class PutAction extends FileAction {
             log.debug("403 error with PUT: ",  e);
             throw new AccessControlException(e.getLocalizedMessage());
 
-        } catch (IOException ex) {
-            String msg = ex.getMessage();
-            if (msg != null && msg.contains("quota")) {
+        } catch (WriteException ex) {
+            final Throwable cause = ex.getCause();
+            if (cause != null && cause.getMessage().contains("quota")) {
                 final Long limit = PutAction.getLimit(node);
                 if (limit == null) {
                     // VOS.PROPERTY_URI_QUOTA attribute is not set on any parent node
-                    msg = "VOS.PROPERTY_URI_QUOTA attribute not set, " + ex.getMessage();
-                    log.warn(msg);
-                } else if (limit <= 0) {
-                    throw new ByteLimitExceededException(ex.getMessage(), limit);
+                    log.warn("VOS.PROPERTY_URI_QUOTA attribute not set, " + ex.getMessage());
+                } else {
+                    throw new ByteLimitExceededException(cause.getMessage().trim(), limit);
                 }
             }
-            
             throw ex;
         } finally {
             if (bytesWritten > 0L) {
@@ -298,7 +299,7 @@ public class PutAction extends FileAction {
             if (successful) {
                 log.debug("put: done " + nodeURI.getURI().toASCIIString());
             } else if (putStarted) {
-                cleanupOnFailure(target);
+                cleanupOnFailure(target, node);
             }
         }
     }
@@ -323,8 +324,15 @@ public class PutAction extends FileAction {
         }
     }
 
-    private void cleanupOnFailure(Path target) {
-        throw new UnsupportedOperationException();
+    private void cleanupOnFailure(Path target, DataNode node) {
+        log.debug("clean up on put failure " + target);
+        if (node != null) {
+            try {
+                nodePersistence.delete(node);
+            } catch (TransientException bug) {
+                log.error("Unable to clean up " + target + "\n" + bug.getMessage(), bug);
+            }
+        }
     }
     
     /*

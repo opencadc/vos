@@ -544,6 +544,8 @@ class NodeUtil {
             
             Long quota = quotaImpl.getQuota(p);
             if (quota != null) {
+                // This quota takes precedence.
+                ret.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_QUOTA));
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, quota.toString()));
             }
             
