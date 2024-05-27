@@ -77,19 +77,24 @@ import ca.nrc.cadc.util.InvalidConfigException;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.PropertiesReader;
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.Subject;
+
+import ca.nrc.cadc.util.StringUtil;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.nodes.NoQuotaPlugin;
+import org.opencadc.cavern.nodes.QuotaPlugin;
 
 public class CavernConfig {
 
     private static final Logger log = Logger.getLogger(CavernConfig.class);
 
-    public static final String DEFAULT_CONFIG_DIR = System.getProperty("user.home") + "/config/";
     public static final String CAVERN_PROPERTIES = "cavern.properties";
     private static final String CAVERN_KEY = CavernConfig.class.getPackage().getName();
     public static final String RESOURCE_ID = CAVERN_KEY + ".resourceID";
@@ -104,6 +109,8 @@ public class CavernConfig {
     public static final String ROOT_OWNER_GID = CAVERN_KEY + ".filesystem.rootOwner.gid";
     
     public static final String ALLOCATION_PARENT = CAVERN_KEY + ".allocationParent";
+
+    public static final String QUOTA_PLUGIN_IMPLEMENTATION = QuotaPlugin.class.getName();
     
     private final URI resourceID;
     private final List<String> allocationParents = new ArrayList<>();
@@ -134,7 +141,8 @@ public class CavernConfig {
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
         boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
         boolean allocProp = checkProperty(mvp, sb, ALLOCATION_PARENT, false);
-        
+        checkProperty(mvp, sb, QUOTA_PLUGIN_IMPLEMENTATION, false);
+
         if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
             throw new InvalidConfigException(sb.toString());
         }
@@ -143,10 +151,7 @@ public class CavernConfig {
         
         String baseDir = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_BASE_DIR);
         String subPath = mvp.getFirstPropertyValue(CavernConfig.FILESYSTEM_SUB_PATH);
-        String sep = "/";
-        if (baseDir.endsWith("/") || subPath.startsWith("/")) {
-            sep = "";
-        }
+
         this.root = Paths.get(baseDir, subPath);
         this.resourceID = URI.create(s);
         for (String sap : mvp.getProperty(ALLOCATION_PARENT)) {
@@ -154,7 +159,7 @@ public class CavernConfig {
             if (ap.charAt(0) == '/') {
                 ap = ap.substring(1);
             }
-            if (ap.length() > 0 && ap.charAt(ap.length() - 1) == '/') {
+            if (!ap.isEmpty() && ap.charAt(ap.length() - 1) == '/') {
                 ap = ap.substring(0, ap.length() - 1);
             }
             if (ap.indexOf('/') >= 0) {
@@ -164,11 +169,7 @@ public class CavernConfig {
             // empty string means root, otherwise child of root
             allocationParents.add(ap);
         }
-        
-        sep = "/";
-        if (baseDir.endsWith("/")) {
-            sep = "";
-        }
+
         this.secrets = Paths.get(baseDir, "secrets");
     }
 
@@ -220,7 +221,68 @@ public class CavernConfig {
         }
         return ret;
     }
-    
+
+    /**
+     * Obtain the QuotaPlugin class instance.
+     * @return  QuotaPlugin implementation, or NoQuotaPlugin instance if none set.
+     */
+    public QuotaPlugin getQuotaPlugin() {
+        String cname = mvp.getFirstPropertyValue(CavernConfig.QUOTA_PLUGIN_IMPLEMENTATION);
+        if (!StringUtil.hasText(cname)) {
+            log.debug("getQuotaPlugin: defaulting to NoQuotaPlugin");
+            return CavernConfig.loadPlugin(NoQuotaPlugin.class.getName());
+        } else {
+            return CavernConfig.loadPlugin(QuotaPlugin.class.getPackage().getName() + "." + cname);
+        }
+    }
+
+    /**
+     * TODO: Generify this?  Storage Inventory uses a plugin loader as well, which this duplicates.
+     * TODO: jenkinsd 2024.05.14
+     *
+     * <p>Load and instantiate an instance of the specified Java concrete class.
+     *
+     * <p>It assumes that the requested Class contains a constructor with an argument length matching the length of
+     * the provided constructorArgs.  No argument type checking is performed.
+     *
+     * @param <T>             Class type of the instantiated class
+     * @param implementationClassName   Class name to create
+     * @param constructorArgs The constructor arguments
+     * @return configured implementation of the interface
+     *
+     * @throws IllegalStateException if an instance cannot be created
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T loadPlugin(final String implementationClassName, final Object... constructorArgs)
+            throws IllegalStateException {
+        if (implementationClassName == null) {
+            throw new IllegalStateException("Implementation class name cannot be null.");
+        }
+        try {
+            Class<?> c = Class.forName(implementationClassName);
+            for (final Constructor<?> constructor : c.getDeclaredConstructors()) {
+                if (constructor.getParameterCount() == constructorArgs.length) {
+                    return (T) constructor.newInstance(constructorArgs);
+                }
+            }
+            throw new IllegalStateException("No matching constructor found.");
+        } catch (ClassNotFoundException ex) {
+            throw new IllegalStateException("CONFIG: " + implementationClassName + " implementation not found in classpath: " + implementationClassName,
+                                            ex);
+        } catch (InstantiationException ex) {
+            throw new IllegalStateException(
+                    "CONFIG: " + implementationClassName + " implementation " + implementationClassName + " does not have a matching constructor", ex);
+        } catch (InvocationTargetException ex) {
+            Throwable cause = ex.getCause();
+            if (cause != null) { // it has to be, but just to be safe
+                throw new IllegalStateException("CONFIG: " + implementationClassName + " init failed: " + cause.getMessage(), cause);
+            }
+            throw new IllegalStateException("CONFIG: " + implementationClassName + " init failed: " + ex.getMessage(), ex);
+        } catch (IllegalAccessException ex) {
+            throw new IllegalStateException("CONFIG: failed to instantiate " + implementationClassName, ex);
+        }
+    }
+
     // for non-mandatory prop use
     public MultiValuedProperties getProperties() {
         return mvp;

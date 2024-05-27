@@ -57,6 +57,14 @@ org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 # (optional) identify which container nodes are allocations
 org.opencadc.cavern.allocationParent = {top level node}
 
+# (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
+# for users.
+# Optional, but the default of NoQuotaPlugin will get used if not specified, and users will have free reign.
+# - CephFSQuotaPlugin: Use CephFS's extended attributes to determine current quota and folder sizes.
+# - NoQuotaPlugin: Default - no quota checking
+#
+org.opencadc.cavern.nodes.QuotaPlugin = CephFSQuotaPlugin | NoQuotaPlugin
+
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
 org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content that could be mounted in other containers}
@@ -78,8 +86,8 @@ org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
 The _resourceID_ is the resourceID of _this_ `cavern` service.
 
 The _allocationParent_ is a path to a container node (directory) which contains space allocations. An allocation
-is owned by a user (uisually different from the _rootOwner_ admin user) who is responsible for the allocation
-and all conntent therein. The owner of an allocation is granted additional permissions within their 
+is owned by a user (usually different from the _rootOwner_ admin user) who is responsible for the allocation
+and all content therein. The owner of an allocation is granted additional permissions within their 
 allocation (they can read/write/delete anything) so the owner cannot be blocked from access to any content
 within their allocation. This probably only matters for multi-user projects. Multiple _allocationParent_(s) may
 be configured to organise the top level of the content (e.g. /home and /projects). Paths configured to be 
@@ -91,11 +99,15 @@ The _filesystem.baseDir_ is the path to a base directory containing the `cavern`
 The _filesystem.subPath_ is the relative path to the node/file content that could be mounted in other containers.
 
 The _filesystem.rootOwner_ is the username of the owner of the root container in the VOSpace. The root owner has some admin
-priviledges: can create allocations (create a container node owned by another user) and can set the quota property
+privileges: can create allocations (create a container node owned by another user) and can set the quota property
 on such containers. Note: quota is not currently implemented in `cavern`.
 
+The _org.opencadc.cavern.nodes.QuotaPlugin_ is the concrete class that implements the 
+[QuotaPlugin](./src/main/java/org/opencadc/cavern/nodes/QuotaPlugin.java) interface.  Absences of this property 
+assumes no quota support and users can fill underlying storage in an uncontrolled way.
+
 The `cavern` service must be able to resolve the root owner username to a POSIX uid and gid pair during startup. If
-the configured IdentityManager does not suport priviledged access to user info, the correct values must be configured 
+the configured IdentityManager does not support privileged access to user info, the correct values must be configured 
 using the optional _filesystem.rootOwner.uid_ and _filesystem.rootOwner.gid_ properties.
 
 NOT FUNCTIONAL: The optional _sshfs.serverBase_ is the host name, port, and path to the sshfs mount of the `cavern` content. Clients
