@@ -384,6 +384,10 @@ public class NodeWriter implements XmlProcessor {
         } else if (node.clearInheritPermissions) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_INHERIT_PERMISSIONS));
         }
+
+        if (node.bytesUsed != null) {
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, node.bytesUsed.toString()));
+        }
     }
 
     /**

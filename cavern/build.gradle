@@ -10,7 +10,7 @@ repositories {
 
 apply from: '../opencadc.gradle'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 11
 
 group = 'org.opencadc'
 
@@ -30,7 +30,7 @@ dependencies {
     implementation 'commons-net:commons-net:[2.0,)'
 
     implementation 'org.opencadc:cadc-util:[1.11.2,)'
-    implementation 'org.opencadc:cadc-util-fs:[1.1.0,)'
+    implementation 'org.opencadc:cadc-util-fs:[1.1.2,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'
     implementation 'org.opencadc:cadc-registry:[1.7.6,)'
@@ -42,7 +42,7 @@ dependencies {
     implementation 'org.opencadc:cadc-gms:[1.0.12,)'
     implementation 'org.opencadc:cadc-dali:[1.0,)'
     implementation 'org.opencadc:cadc-pkg-server:[1.2.3,)'
-    implementation 'org.opencadc:cadc-vos:[2.0,)'
+    implementation 'org.opencadc:cadc-vos:[2.0.7,)'
     implementation 'org.opencadc:cadc-vos-server:[2.0.15,)'
 
     runtimeOnly 'org.opencadc:cadc-access-control-identity:[1.2.0,)'

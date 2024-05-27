@@ -75,6 +75,7 @@ import ca.nrc.cadc.net.ResourceNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -435,7 +436,19 @@ class NodeUtil {
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
         log.warn("atomic move: " + sourcePath + " -> " + destPath);
-        Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
+        try {
+            Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException atomicMoveNotSupportedException) {
+            log.error("Atomic move failed: " + atomicMoveNotSupportedException.getMessage());
+            // Atomic move is not supported by the underlying storage system.  Fall back to a copy and delete (non-atomic) method.
+            Files.copy(sourcePath, destPath);
+
+            // TODO: Deleting without knowing if the copy succeeded is dangerous!
+            // TODO: Is checksum validation worthwhile here?
+            // TODO: We could check length, but the toFile() method requires both Paths to be in the default filesystem, which may be why the
+            // TODO: AtomicMoveNotSupportedException was thrown to begin with.
+            Files.delete(sourcePath);
+        }
 
         Integer group = getDefaultGroup(owner);
         setPosixOwnerGroup(destPath, owner.getUidNumber(), group);
@@ -544,6 +557,8 @@ class NodeUtil {
             
             Long quota = quotaImpl.getQuota(p);
             if (quota != null) {
+                // This quota takes precedence.
+                ret.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_QUOTA));
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, quota.toString()));
             }
             
