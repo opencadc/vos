@@ -135,6 +135,7 @@ class NodeUtil {
             VOS.PROPERTY_URI_DATE,
             VOS.PROPERTY_URI_GROUPREAD,
             VOS.PROPERTY_URI_GROUPWRITE,
+            VOS.PROPERTY_URI_INHERIT_PERMISSIONS, // presence of default ACLs
             VOS.PROPERTY_URI_ISLOCKED, // but not supported
             VOS.PROPERTY_URI_ISPUBLIC,
             VOS.PROPERTY_URI_QUOTA
@@ -533,18 +534,17 @@ class NodeUtil {
         ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, df.format(modified)));
         
         if (getAttrs && !attrs.isSymbolicLink()) {
-            Map<String,String> uda = ExtendedFileAttributes.getAttributes(p);
+            Map<String,String> uda = ExtendedFileAttributes.getAttributes(p); // no namespace: user attrs
             for (Map.Entry<String,String> me : uda.entrySet()) {
                 try {
                     URI pk = new URI(me.getKey());
                     log.debug("found prop: " + pk + " = " + me.getValue());
-                    if (VOS.PROPERTY_URI_INHERIT_PERMISSIONS.equals(pk)) {
-                        if (ret instanceof ContainerNode) {
-                            ContainerNode cn = (ContainerNode) ret;
-                            cn.inheritPermissions = Boolean.parseBoolean(me.getValue());
-                        } else {
-                            log.error("found " + VOS.PROPERTY_URI_INHERIT_PERMISSIONS + " on a " + ret.getClass().getSimpleName());
-                        }
+                    // check if this prop should not be set and fix
+                    // could happen is user set it manually or it was not in the restructed set
+                    // in a previous version
+                    if (FILESYSTEM_PROPS.contains(pk)) {
+                        ExtendedFileAttributes.setFileAttribute(p, pk.toASCIIString(), null);
+                        log.debug("removed bogus user prop: " + pk.toASCIIString() + " from " + p);
                     } else {
                         ret.getProperties().add(new NodeProperty(pk, me.getValue()));
                     }
@@ -557,26 +557,21 @@ class NodeUtil {
             
             Long quota = quotaImpl.getQuota(p);
             if (quota != null) {
-                // This quota takes precedence.
-                ret.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_QUOTA));
                 ret.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, quota.toString()));
             }
             
             boolean isDir = (ret instanceof ContainerNode);
             AclCommandExecutor acl = new AclCommandExecutor(p, isDir);
             
-            // backwards compat: check for default ACLs and assume inheritPermission is true
+            // check for default ACLs aka inheritPermissions
             if (ret instanceof ContainerNode) {
                 ContainerNode cn = (ContainerNode) ret;
-                if (cn.inheritPermissions == null || !cn.inheritPermissions) {
-                    // check for inconsistency with default ACLs
-                    Set<Integer> dro = acl.getReadOnlyACL(true);
-                    Set<Integer> drw = acl.getReadWriteACL(true);
-                    cn.inheritPermissions = !dro.isEmpty() || !drw.isEmpty();
-                    log.debug("default ACLs imply inheritPermissions==" + cn.inheritPermissions);
-                }
+                // check for inconsistency with default ACLs
+                Set<Integer> dro = acl.getReadOnlyACL(true);
+                Set<Integer> drw = acl.getReadWriteACL(true);
+                cn.inheritPermissions = !dro.isEmpty() || !drw.isEmpty();
+                log.debug("default ACLs imply inheritPermissions==" + cn.inheritPermissions);
             }
-            
             
             // TODO: could collect all gids from read-only and read-write and prime the gid cache in 1 call instead of 2
             Set<Integer> rogids = acl.getReadOnlyACL();
