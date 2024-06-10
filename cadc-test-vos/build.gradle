@@ -12,11 +12,11 @@ repositories {
 
 apply from: '../opencadc.gradle'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 11 
 
 group = 'org.opencadc'
 
-version = '2.1.9'
+version = '2.1.10'
 
 description = 'OpenCADC VOSpace test library'
 def git_url = 'https://github.com/opencadc/vos'
