@@ -400,7 +400,7 @@ public class AclCommandExecutor {
         if (!resolve) {
             cmdList.add("--numeric");
         }
-        cmdList.add("--omit-header");
+        //cmdList.add("--omit-header");
         cmdList.add("--skip-base");
         cmdList.add("--physical"); // do not follow symlinks
         cmdList.add(toAbsolutePath(path));
@@ -413,35 +413,52 @@ public class AclCommandExecutor {
         }
         String out = grabber.getOutput(true);
         String[] lines = out.split("[\n]");
+        String groupToken = null;
         for (String s : lines) {
             String[] tokens = s.split("[:#]"); // hash to split effective permissions when masked
-            log.debug("raw: (" + tokens.length + ") " + s);
-            String gidToken = null;
-            String permToken = null;
-            if (defaultACL && "default".equals(tokens[0]) && "group".equals(tokens[1])) {
-                if (tokens.length >= 4 && tokens[2].length() > 0) {
-                    gidToken = tokens[2];
-                    permToken = tokens[3];
-                }
-            } else if (!defaultACL && "group".equals(tokens[0]) && tokens[1].length() > 0) {
-                if (tokens.length == 3) {
-                    gidToken = tokens[1];
-                    permToken = tokens[2];
-                } else if (tokens.length == 5) {
-                    gidToken = tokens[1];
-                    permToken = tokens[4]; // effective permissions due to masked
+            if (s.startsWith("#")) {
+                // header line
+                String tk = tokens[1].trim();
+                log.debug("header tokens: " + tk + " " + tokens[2]);
+                if ("group".equals(tk)) {
+                    groupToken = tokens[2].trim();
+                    log.debug("default group: " + groupToken);
                 }
             } else {
-                log.debug("skip: " + s);
-            }
-            log.debug("found: " + gidToken + "," + permToken + " in " + s);
-            if (gidToken != null && permToken != null && permToken.startsWith(perm)) {
-                if (resolve) {
-                    aclList.add(gidToken);
+                log.debug("raw: (" + tokens.length + ") " + s);
+                String gidToken = null;
+                String permToken = null;
+                if (defaultACL && "default".equals(tokens[0]) && "group".equals(tokens[1])) {
+                    if (tokens.length >= 4) {
+                        if (tokens[2].length() == 0) {
+                            // the default ACL for the default group
+                            gidToken = groupToken; // from header
+                            permToken = tokens[3];
+                        } else if (tokens[2].length() > 0) {
+                            gidToken = tokens[2];
+                            permToken = tokens[3];
+                        }
+                    }
+                } else if (!defaultACL && "group".equals(tokens[0]) && tokens[1].length() > 0) {
+                    if (tokens.length == 3) {
+                        gidToken = tokens[1];
+                        permToken = tokens[2];
+                    } else if (tokens.length == 5) {
+                        gidToken = tokens[1];
+                        permToken = tokens[4]; // effective permissions due to masked
+                    }
                 } else {
-                    aclList.add(Integer.parseInt(gidToken));
+                    log.debug("skip: " + s);
                 }
-            }                   
+                log.debug("found: " + gidToken + "," + permToken + " in " + s);
+                if (gidToken != null && permToken != null && permToken.startsWith(perm)) {
+                    if (resolve) {
+                        aclList.add(gidToken);
+                    } else {
+                        aclList.add(Integer.parseInt(gidToken));
+                    }
+                }
+            }
         }
         return aclList;
     }
