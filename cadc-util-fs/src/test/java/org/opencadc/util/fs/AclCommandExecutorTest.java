@@ -83,6 +83,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -244,6 +245,22 @@ public class AclCommandExecutorTest {
             rwDefault = acl.getReadWriteACL(true);
             Assert.assertNotNull(rwDefault);
             Assert.assertTrue(rwDefault.isEmpty());
+            
+            // verify that defaults ACL can be set and minimally seen without actual group ACLs
+            Set<Integer> emptySet = new TreeSet<>();
+            acl.setACL(worldReadable, emptySet, emptySet, true);
+            roDefault = acl.getReadOnlyACL(true);
+            Assert.assertNotNull(roDefault);
+            Assert.assertTrue(roDefault.isEmpty());
+            rwDefault = acl.getReadWriteACL(true);
+            Assert.assertNotNull(rwDefault);
+            // shows up here as a rw default
+            for (Integer i : rwDefault) {
+                log.info("found bare default RW: " + i);
+            }
+            Assert.assertFalse(rwDefault.isEmpty());
+            
+            
         } else {
             try {
                 acl.setACL(worldReadable, readGroupPrincipals, writeGroupPrincipals, true);
