@@ -313,13 +313,10 @@ class NodeUtil {
         boolean inherit = false;
         if (isDir) {
             ContainerNode cn = (ContainerNode) node;
-            if (cn.inheritPermissions != null) {
-                // set
-                String val = cn.inheritPermissions.toString();
-                ExtendedFileAttributes.setFileAttribute(path, VOS.PROPERTY_URI_INHERIT_PERMISSIONS.toASCIIString(), val);
+            if (cn.clearInheritPermissions) {
+                inherit = false;
+            } else {
                 inherit = cn.inheritPermissions;
-            } else if (cn.clearInheritPermissions) {
-                ExtendedFileAttributes.setFileAttribute(path, VOS.PROPERTY_URI_INHERIT_PERMISSIONS.toASCIIString(), null);
             }
         }
 
