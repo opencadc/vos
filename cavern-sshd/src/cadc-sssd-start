@@ -1,0 +1,32 @@
+#!/bin/bash
+
+SELF=cadc-sssd-start
+CONFIG=/etc/sssd/sssd.conf
+
+TS=$(date)
+echo "$TS $SELF START"
+echo "user: $USER"
+echo "home: $HOME"
+CONFIG=/etc/sssd/sssd.conf
+
+if [ -f $CONFIG ]; then
+    echo "finding sssd domain"
+    DOMAIN=$(sed -n "/domains = /s/domains = //p" $CONFIG)
+    echo "domain=$DOMAIN"
+else
+    echo "missing sssd config: $CONFIG"
+    exit -1
+fi
+
+if [ -z ${DOMAIN+x} ]; then
+    echo "could not find domain in sssd config: $CONFIG"
+    exit -1
+fi
+
+TS=$(date)
+echo "$TS $SELF DONE"
+
+/usr/sbin/sssd -D --logger=files
+
+PID=$(pgrep -x 'sssd')
+echo "SSSD PID: $PID"

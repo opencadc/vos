@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Start the SSSD daemon here to have it running behind SSHD.
+
+/usr/bin/cadc-sssd-start
+
+exec ${@}
