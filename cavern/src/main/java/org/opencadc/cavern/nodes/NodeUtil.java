@@ -236,7 +236,7 @@ class NodeUtil {
                 if ("file".equals(target.getScheme())) {
                     // link to external filesystem object
                     String path = target.getPath();
-                    log.warn("[create] external link: " + np + "\ntarget: " + target + "\nabs: " + path);
+                    log.debug("[create] external link: " + np + "\ntarget: " + target + "\nabs: " + path);
                     ret = Files.createSymbolicLink(np, root.getFileSystem().getPath(path));
                 } else {
                     String targPath = ln.getTarget().getPath().substring(1);
@@ -443,7 +443,7 @@ class NodeUtil {
         }
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
-        log.warn("atomic move: " + sourcePath + " -> " + destPath);
+        log.debug("atomic move: " + sourcePath + " -> " + destPath);
         try {
             Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException atomicMoveNotSupportedException) {
@@ -508,24 +508,24 @@ class NodeUtil {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
             Path rel = root.relativize(abs);
-            log.warn("[pathToNode] link: " +  p + "\ntarget: " + tp
+            log.debug("[pathToNode] link: " +  p + "\ntarget: " + tp
                 + "\nabs: " + abs
                 + "\nrel: " + rel);
             if (!abs.startsWith(root)) {
                 // absolute link to an additional mounted filesystem (double slash: omit host from URI)
                 URI turi = URI.create("file://" + abs.toString());
-                log.warn("[pathToNode] link: " + abs + " -> " + turi);
+                log.debug("[pathToNode] link: " + abs + " -> " + turi);
                 ret = new LinkNode(p.getFileName().toString(), turi);
             } else if (!rel.startsWith("..")) {
                 // link inside vos filesystem
                 URI turi = URI.create(rootURI.getScheme() + "://"
                     + rootURI.getAuthority() + "/" + rel.toString());
-                log.warn("[pathToNode] link: " + abs + " -> " + turi);
+                log.debug("[pathToNode] link: " + abs + " -> " + turi);
                 ret = new LinkNode(p.getFileName().toString(), turi);
             } else {
                 // relative link to target outside the vos filesystem
                 URI turi = URI.create("file://" + tp.toString());
-                log.warn("[pathToNode] external relative link: " + abs + " -> " + turi);
+                log.debug("[pathToNode] external relative link: " + abs + " -> " + turi);
                 ret = new LinkNode(p.getFileName().toString(), turi);
             }
         } else {
