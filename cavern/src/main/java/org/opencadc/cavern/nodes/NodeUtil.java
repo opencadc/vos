@@ -498,11 +498,26 @@ class NodeUtil {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
             Path rel = root.relativize(abs);
-            URI turi = URI.create(rootURI.getScheme() + "://"
+            log.warn("[pathToNode] link: " +  p + "\ntarget: " + tp
+                + "\nabs: " + abs
+                + "\nrel: " + rel);
+            if (!abs.startsWith(root)) {
+                // absolute link to an additional mounted filesystem (double slash: omit host from URI)
+                URI turi = URI.create("file://" + abs.toString());
+                log.warn("[pathToNode] link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            } else if (!rel.startsWith("..")) {
+                // link inside vos filesystem
+                URI turi = URI.create(rootURI.getScheme() + "://"
                     + rootURI.getAuthority() + "/" + rel.toString());
-            log.debug("[pathToNode] link: " + p + "\ntarget: " + tp + "\nabs: "
-                    + abs + "\nrel: " + rel + "\nuri: " + turi);
-            ret = new LinkNode(p.getFileName().toString(), turi);
+                log.warn("[pathToNode] link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            } else {
+                // relative link to target outside the vos filesystem
+                URI turi = URI.create("file://" + tp.toString());
+                log.warn("[pathToNode] external relative link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            }
         } else {
             throw new IllegalStateException(
                     "found unexpected file system object: " + p);
