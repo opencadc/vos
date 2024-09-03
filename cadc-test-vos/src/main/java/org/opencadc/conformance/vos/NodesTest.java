@@ -109,6 +109,7 @@ public class NodesTest extends VOSTest {
     private GroupURI group1;
     private GroupURI group2;
     
+    protected boolean linkExternalFile = false; // try to make link -> file:///path/to/something
     protected boolean linkNodeProps = true;
     protected boolean paginationSupported = true;
     protected boolean paginationLimitIgnored = false;
@@ -349,6 +350,69 @@ public class NodesTest extends VOSTest {
             // PUT the node
             log.info("put: " + nodeURI + " -> " + nodeURL);
             LinkNode testNode = new LinkNode(name, targetURI.getURI());
+            put(nodeURL, nodeURI, testNode);
+
+            // GET the new node
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
+            log.info("found: " + result.vosURI + " owner: " + result.node.ownerDisplay);
+            Assert.assertTrue(result.node instanceof LinkNode);
+            LinkNode persistedNode = (LinkNode) result.node;
+            Assert.assertEquals(testNode, persistedNode);
+            Assert.assertEquals(nodeURI, result.vosURI);
+            Assert.assertEquals(testNode.getTarget(), persistedNode.getTarget());
+            Assert.assertEquals(testNode.getName(), persistedNode.getName());
+
+            if (linkNodeProps) {
+                // POST an update to the node
+                NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
+                testNode.getProperties().add(nodeProperty);
+                post(nodeURL, nodeURI, testNode);
+
+                // GET the updated node
+                result = get(nodeURL, 200, XML_CONTENT_TYPE);
+                Assert.assertTrue(result.node instanceof LinkNode);
+                LinkNode updatedNode = (LinkNode) result.node;
+                Assert.assertEquals(testNode, updatedNode);
+                Assert.assertEquals(nodeURI, result.vosURI);
+                Assert.assertEquals(testNode.getTarget(), updatedNode.getTarget());
+                Assert.assertEquals(testNode.getName(), updatedNode.getName());
+                Assert.assertTrue(updatedNode.getProperties().contains(nodeProperty));
+            }
+            
+            if (cleanupOnSuccess) {
+                delete(nodeURL);
+            }
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    @Test
+    public void testLinkNodeExternalFile() {
+        if (!linkExternalFile) {
+            log.info("linkExternalFile not enabled");
+            return;
+        }
+
+        try {
+            // create a simple link node
+            String name = "testLinkNode";
+            URL nodeURL = getNodeURL(nodesServiceURL, name);
+            VOSURI nodeURI = getVOSURI(name);
+            URI targetURI = URI.create("file:///path/to/external/data");
+            log.info("link node: " + nodeURI + " -> " + targetURI);
+            
+            // cleanup
+            delete(nodeURL, false);
+            
+            // not found
+            get(nodeURL, 404, TEXT_CONTENT_TYPE);
+            
+            // PUT the node
+            log.info("put: " + nodeURI + " -> " + nodeURL);
+            LinkNode testNode = new LinkNode(name, targetURI);
             put(nodeURL, nodeURI, testNode);
 
             // GET the new node

@@ -112,6 +112,8 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Utility methods for interacting with nodes. This is now like a DAO class
@@ -230,12 +232,20 @@ class NodeUtil {
             } else if (node instanceof LinkNode) {
                 log.debug("[create] link: " + np);
                 LinkNode ln = (LinkNode) node;
-                String targPath = ln.getTarget().getPath().substring(1);
-                Path absPath = root.resolve(targPath);
-                Path rel = np.getParent().relativize(absPath);
-                log.debug("[create] link: " + np + "\ntarget: " + targPath
-                        + "\nabs: " + absPath + "\nrel: " + rel);
-                ret = Files.createSymbolicLink(np, rel);
+                URI target = ln.getTarget();
+                if ("file".equals(target.getScheme())) {
+                    // link to external filesystem object
+                    String path = target.getPath();
+                    log.warn("[create] external link: " + np + "\ntarget: " + target + "\nabs: " + path);
+                    ret = Files.createSymbolicLink(np, root.getFileSystem().getPath(path));
+                } else {
+                    String targPath = ln.getTarget().getPath().substring(1);
+                    Path absPath = root.resolve(targPath);
+                    Path rel = np.getParent().relativize(absPath);
+                    log.debug("[create] link: " + np + "\ntarget: " + targPath
+                            + "\nabs: " + absPath + "\nrel: " + rel);
+                    ret = Files.createSymbolicLink(np, rel);
+                }
             } else {
                 throw new UnsupportedOperationException(
                         "unexpected node type: " + node.getClass().getName());
