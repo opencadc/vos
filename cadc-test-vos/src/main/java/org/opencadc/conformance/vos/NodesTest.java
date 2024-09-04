@@ -398,7 +398,7 @@ public class NodesTest extends VOSTest {
 
         try {
             // create a simple link node
-            String name = "testLinkNode";
+            String name = "testLinkNodeExternalFile";
             URL nodeURL = getNodeURL(nodesServiceURL, name);
             VOSURI nodeURI = getVOSURI(name);
             URI targetURI = URI.create("file:///path/to/external/data");
