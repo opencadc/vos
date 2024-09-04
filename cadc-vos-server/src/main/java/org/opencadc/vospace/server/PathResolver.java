@@ -71,6 +71,7 @@ package org.opencadc.vospace.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.util.StringUtil;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -244,11 +245,15 @@ public class PathResolver {
      */
     public VOSURI validateTargetURI(LinkNode linkNode) throws Exception {
         LocalServiceURI localServiceURI = new LocalServiceURI(nodePersistence.getResourceID());
-        VOSURI targetURI = new VOSURI(linkNode.getTarget());
+        URI turi = linkNode.getTarget();
+        if (!"vos".equals(turi.getScheme())) {
+            throw NodeFault.InvalidArgument.getStatus("cannot navigate external link " + turi);
+        }
+        VOSURI targetURI = new VOSURI(turi);
 
         log.debug("Validating target: " + targetURI.getServiceURI() + " vs " + localServiceURI.getVOSBase().getServiceURI());
         if (!localServiceURI.getVOSBase().getServiceURI().equals(targetURI.getServiceURI())) {
-            throw NodeFault.InvalidArgument.getStatus("External link " + targetURI.getServiceURI().toASCIIString());
+            throw NodeFault.InvalidArgument.getStatus("cannot navigate external vospace link " + turi);
         }
         return targetURI;
     }

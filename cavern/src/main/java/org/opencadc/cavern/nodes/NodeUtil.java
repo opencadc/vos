@@ -112,6 +112,8 @@ import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.PathResolver;
+import org.opencadc.vospace.server.auth.VOSpaceAuthorizer;
 
 /**
  * Utility methods for interacting with nodes. This is now like a DAO class
@@ -230,12 +232,20 @@ class NodeUtil {
             } else if (node instanceof LinkNode) {
                 log.debug("[create] link: " + np);
                 LinkNode ln = (LinkNode) node;
-                String targPath = ln.getTarget().getPath().substring(1);
-                Path absPath = root.resolve(targPath);
-                Path rel = np.getParent().relativize(absPath);
-                log.debug("[create] link: " + np + "\ntarget: " + targPath
-                        + "\nabs: " + absPath + "\nrel: " + rel);
-                ret = Files.createSymbolicLink(np, rel);
+                URI target = ln.getTarget();
+                if ("file".equals(target.getScheme())) {
+                    // link to external filesystem object
+                    String path = target.getPath();
+                    log.debug("[create] external link: " + np + "\ntarget: " + target + "\nabs: " + path);
+                    ret = Files.createSymbolicLink(np, root.getFileSystem().getPath(path));
+                } else {
+                    String targPath = ln.getTarget().getPath().substring(1);
+                    Path absPath = root.resolve(targPath);
+                    Path rel = np.getParent().relativize(absPath);
+                    log.debug("[create] link: " + np + "\ntarget: " + targPath
+                            + "\nabs: " + absPath + "\nrel: " + rel);
+                    ret = Files.createSymbolicLink(np, rel);
+                }
             } else {
                 throw new UnsupportedOperationException(
                         "unexpected node type: " + node.getClass().getName());
@@ -433,7 +443,7 @@ class NodeUtil {
         }
         VOSURI destWithName = new VOSURI(URI.create(destDir.toString() + "/" + destName));
         Path destPath = nodeToPath(root, destWithName);
-        log.warn("atomic move: " + sourcePath + " -> " + destPath);
+        log.debug("atomic move: " + sourcePath + " -> " + destPath);
         try {
             Files.move(sourcePath, destPath, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException atomicMoveNotSupportedException) {
@@ -498,11 +508,26 @@ class NodeUtil {
             Path tp = Files.readSymbolicLink(p);
             Path abs = p.getParent().resolve(tp);
             Path rel = root.relativize(abs);
-            URI turi = URI.create(rootURI.getScheme() + "://"
+            log.debug("[pathToNode] link: " +  p + "\ntarget: " + tp
+                + "\nabs: " + abs
+                + "\nrel: " + rel);
+            if (!abs.startsWith(root)) {
+                // absolute link to an additional mounted filesystem (double slash: omit host from URI)
+                URI turi = URI.create("file://" + abs.toString());
+                log.debug("[pathToNode] link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            } else if (!rel.startsWith("..")) {
+                // link inside vos filesystem
+                URI turi = URI.create(rootURI.getScheme() + "://"
                     + rootURI.getAuthority() + "/" + rel.toString());
-            log.debug("[pathToNode] link: " + p + "\ntarget: " + tp + "\nabs: "
-                    + abs + "\nrel: " + rel + "\nuri: " + turi);
-            ret = new LinkNode(p.getFileName().toString(), turi);
+                log.debug("[pathToNode] link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            } else {
+                // relative link to target outside the vos filesystem
+                URI turi = URI.create("file://" + tp.toString());
+                log.debug("[pathToNode] external relative link: " + abs + " -> " + turi);
+                ret = new LinkNode(p.getFileName().toString(), turi);
+            }
         } else {
             throw new IllegalStateException(
                     "found unexpected file system object: " + p);

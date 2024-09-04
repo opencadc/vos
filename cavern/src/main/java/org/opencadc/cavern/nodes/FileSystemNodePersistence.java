@@ -441,14 +441,16 @@ public class FileSystemNodePersistence implements NodePersistence {
 
         if (node instanceof LinkNode) {
             LinkNode ln = (LinkNode) node;
-            try {
-                PathResolver ps = new PathResolver(this, new VOSpaceAuthorizer(this));
-                ps.validateTargetURI(ln);
-            } catch (Exception ex) {
-                throw new UnsupportedOperationException("link to external resource", ex);
+            if (!"file".equals(ln.getTarget().getScheme())) {
+                try {
+                    PathResolver ps = new PathResolver(this, new VOSpaceAuthorizer(this));
+                    ps.validateTargetURI(ln);
+                } catch (Exception ex) {
+                    throw new UnsupportedOperationException("link to external resource", ex);
+                }
             }
         }
-
+        
         // this is a complicated way to get the Path
         LocalServiceURI loc = new LocalServiceURI(getResourceID());
         VOSURI vu = loc.getURI(node);

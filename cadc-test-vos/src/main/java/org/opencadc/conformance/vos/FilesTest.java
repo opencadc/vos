@@ -96,9 +96,9 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.opencadc.vospace.DataNode;
+import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.io.NodeReader;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -111,6 +111,7 @@ public class FilesTest extends VOSTest {
     protected final URL filesServiceURL;
     protected Subject altSubject;
     protected boolean enablePassthroughParamTest = false;
+    protected boolean linkExternalFile = false;
 
     protected FilesTest(URI resourceID, File testCert) {
         super(resourceID, testCert);
@@ -357,6 +358,56 @@ public class FilesTest extends VOSTest {
 
             // Delete the node
             delete(nodeURL);
+
+        } catch (Exception e) {
+            log.error("Unexpected error", e);
+            Assert.fail("Unexpected error: " + e);
+        }
+    }
+
+    @Test
+    public void testLinkNodeExternalFile() {
+        if (!linkExternalFile) {
+            log.info("linkExternalFile not enabled");
+            return;
+        }
+
+        String[] targets = new String[] {
+            "file:///path/to/external/data",
+            "file:///../../something-above"
+        };
+
+        try {
+            for (String t : targets) {
+                // create a simple link node
+                String name = "testLinkNodeExternalFile";
+                URL nodeURL = getNodeURL(nodesServiceURL, name);
+                VOSURI nodeURI = getVOSURI(name);
+                URI targetURI = URI.create(t);
+                log.info("link node: " + nodeURI + " -> " + targetURI);
+
+                // cleanup
+                delete(nodeURL, false);
+
+                // not found
+                get(nodeURL, 404, TEXT_CONTENT_TYPE);
+
+                // PUT the node
+                log.info("put: " + nodeURI + " -> " + nodeURL);
+                LinkNode testNode = new LinkNode(name, targetURI);
+                put(nodeURL, nodeURI, testNode);
+
+                URL fileURL = getNodeURL(filesServiceURL, name);
+                log.info("files: " + fileURL);
+
+                // GET should fail
+                HttpGet get = new HttpGet(fileURL, true);
+                Subject.doAs(authSubject, new RunnableAction(get));
+                log.info("get: " + get.getResponseCode() + " " + get.getThrowable());
+                Assert.assertEquals(400, get.getResponseCode());
+
+                delete(nodeURL);
+            }
 
         } catch (Exception e) {
             log.error("Unexpected error", e);

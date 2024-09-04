@@ -95,6 +95,7 @@ public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
     public NodesTest() {
         super(Constants.RESOURCE_ID, Constants.TEST_CERT);
         super.linkNodeProps = false;       // xattrs on links not supported in posix filesystem
+        super.linkExternalFile = true;     // allow links to external filesystem using file:///path/target
         super.paginationSupported = false; // not implemented because it is not scalable
         super.nodelockSupported = false;   // not implemented, maybe never
         
