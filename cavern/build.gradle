@@ -29,7 +29,7 @@ dependencies {
     providedCompile 'javax.servlet:javax.servlet-api:[3.1.0,)'
     implementation 'commons-net:commons-net:[2.0,)'
 
-    implementation 'org.opencadc:cadc-util:[1.11.2,)'
+    implementation 'org.opencadc:cadc-util:[1.11.4,)'
     implementation 'org.opencadc:cadc-util-fs:[1.1.2,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
     implementation 'org.opencadc:cadc-permissions:[0.3.3,)'

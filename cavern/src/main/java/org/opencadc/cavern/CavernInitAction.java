@@ -109,10 +109,11 @@ public class CavernInitAction extends InitAction {
     
     private void initDatabase() {
         try {
-            // Init UWS database
+            log.info("InitDatabaseUWS: START");
             DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
             InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");
             uwsi.doInit();
+            log.info("InitDatabaseUWS: OK");
         }  catch (Exception ex) {
             throw new RuntimeException("INIT FAIL", ex);
         }
