@@ -125,6 +125,7 @@ public class UpdateNodeAction extends NodeAction {
         if (serverNode instanceof ContainerNode 
                 && nodePersistence.isAllocation((ContainerNode) serverNode) 
                 && Utils.isAdmin(caller, nodePersistence)) {
+            // allow admin to update node properties: quota
             log.debug("write permission granted to admin " + caller);
         } else if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
             log.debug("write permission denied to " + caller);
