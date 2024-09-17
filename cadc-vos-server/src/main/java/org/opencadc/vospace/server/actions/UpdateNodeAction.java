@@ -122,7 +122,13 @@ public class UpdateNodeAction extends NodeAction {
         }
 
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
+        if (serverNode instanceof ContainerNode 
+                && nodePersistence.isAllocation((ContainerNode) serverNode) 
+                && Utils.isAdmin(caller, nodePersistence)) {
+            // allow admin to update node properties: quota
+            log.debug("write permission granted to admin " + caller);
+        } else if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
+            log.debug("write permission denied to " + caller);
             throw NodeFault.PermissionDenied.getStatus(Utils.getPath(serverNode));
         }
 
@@ -141,7 +147,9 @@ public class UpdateNodeAction extends NodeAction {
 
     public static Node updateProperties(Node serverNode, Node clientNode, NodePersistence nodePersistence, Subject caller)
             throws Exception {
-        // merge change request
+        // merge properties that are Node fields and in Node.properties set
+        // TODO: admin could in principle change owner
+        
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();
             serverNode.getReadOnlyGroup().addAll(clientNode.getReadOnlyGroup());
