@@ -210,11 +210,14 @@ public class FileSystemNodePersistence implements NodePersistence {
                     if (cn == null) {
                         cn = new ContainerNode(ap);
                         cn.parent = root;
+                        // set default permissions at create
+                        cn.isPublic = false;
+                        cn.inheritPermissions = false;
                         str = "created/";
                     }
-                    cn.isPublic = true;
+                    // allow change of cavern admin user in config
+                    // bug: this currently doesn't work (put does not chown)
                     cn.owner = root.owner;
-                    cn.inheritPermissions = false;
                     put(cn);
                     allocationParents.add(cn);
                     log.info(str + "loaded allocationParent: /" + cn.getName());
