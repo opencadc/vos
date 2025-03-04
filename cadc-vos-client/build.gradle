@@ -1,6 +1,5 @@
 plugins {
-    id 'java'
-    id 'maven'
+    id 'java-library'
     id 'maven-publish'
     id 'application'
     id 'checkstyle'
@@ -17,7 +16,7 @@ sourceCompatibility = 11
 
 group = 'org.opencadc'
 
-version = '2.0.5'
+version = '2.0.6'
 
 description = 'OpenCADC VOSpace client library'
 def git_url = 'https://github.com/opencadc/vos'
@@ -25,10 +24,12 @@ def git_url = 'https://github.com/opencadc/vos'
 mainClassName = 'org.opencadc.vospace.client.Main'
   
 dependencies {
+    implementation 'javax.servlet:javax.servlet-api:3.1.0'
     implementation 'org.opencadc:cadc-util:[1.11.0,2.0)'
-    implementation 'org.opencadc:cadc-uws:[1.0,2.0)'
+    api 'org.opencadc:cadc-uws:[1.0,2.0)'
     implementation 'org.opencadc:cadc-registry:[1.7,2.0)'
-    implementation 'org.opencadc:cadc-vos:[2.0,3.0)'
+    api 'org.opencadc:cadc-vos:[2.0,3.0)'
+    api 'org.opencadc:cadc-gms:[1.0,2.0)'
 
     testImplementation 'junit:junit:[4.0,5.0)'
 
@@ -36,5 +37,6 @@ dependencies {
 }
 
 configurations {
+  runtime.exclude group: 'javax.servlet'
   runtime.exclude group: 'org.springframework'
 }
