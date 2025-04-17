@@ -180,6 +180,8 @@ public class FilesTest extends VOSTest {
             Assert.assertTrue("expected GET Content-Type starting with " + VOSTest.XML_CONTENT_TYPE,
                               get.getContentType().startsWith(VOSTest.XML_CONTENT_TYPE));
 
+            // TODO: spec requires that the node was created by the above transfer negotiaiton: verify
+
             // Get the endpoint from the transfer details
             log.debug("transfer details XML: " + out);
             TransferReader transferReader = new TransferReader();
@@ -203,15 +205,14 @@ public class FilesTest extends VOSTest {
             HttpGet headFile = new HttpGet(fileURL, out);
             headFile.setHeadOnly(true);
             Subject.doAs(authSubject, new RunnableAction(headFile));
-            log.info("GET response: " + headFile.getResponseCode() + " " + headFile.getThrowable());
-            Assert.assertEquals("expected GET response code = 200", 200, headFile.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", headFile.getThrowable());
+            log.info("HEAD response: " + headFile.getResponseCode() + " " + headFile.getThrowable());
+            Assert.assertEquals(200, headFile.getResponseCode());
+            Assert.assertNull(headFile.getThrowable());
             Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
             String contentDisposition = "inline; filename=\"" + name + "\"";
-            Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-            if (headFile.getDigest() != null) {
-                Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
-            }
+            Assert.assertEquals(contentDisposition, headFile.getResponseHeader("Content-Disposition"));
+            Assert.assertNotNull(headFile.getDigest());
+            Assert.assertEquals(computeChecksumURI(expected.getBytes()), headFile.getDigest());
             Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
             Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
 
@@ -221,13 +222,12 @@ public class FilesTest extends VOSTest {
             getFile.setFollowRedirects(true);
             Subject.doAs(authSubject, new RunnableAction(getFile));
             log.info("GET response: " + getFile.getResponseCode() + " " + getFile.getThrowable());
-            Assert.assertEquals("expected GET response code = 200", 200, getFile.getResponseCode());
-            Assert.assertNull("expected GET throwable == null", getFile.getThrowable());
-            Assert.assertEquals(expected.getBytes().length, headFile.getContentLength());
-            Assert.assertTrue(contentDisposition.equals(headFile.getResponseHeader("Content-Disposition")));
-            if (headFile.getDigest() != null) {
-                Assert.assertTrue(computeChecksumURI(expected.getBytes()).equals(headFile.getDigest()));
-            }
+            Assert.assertEquals(200, getFile.getResponseCode());
+            Assert.assertNull(getFile.getThrowable());
+            Assert.assertEquals(expected.getBytes().length, getFile.getContentLength());
+            Assert.assertEquals(contentDisposition, getFile.getResponseHeader("Content-Disposition"));
+            Assert.assertNotNull(getFile.getDigest());
+            Assert.assertEquals(computeChecksumURI(expected.getBytes()), getFile.getDigest());
             Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
             Assert.assertEquals(VOSTest.TEXT_CONTENT_TYPE, headFile.getContentType());
 

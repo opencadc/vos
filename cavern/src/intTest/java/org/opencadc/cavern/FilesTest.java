@@ -82,6 +82,7 @@ public class FilesTest extends org.opencadc.conformance.vos.FilesTest {
         Log4jInit.setLevel("org.opencadc.conformance.vos", Level.INFO);
         Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
         Log4jInit.setLevel("org.opencadc.cavern", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
     
     public FilesTest() {
