@@ -160,7 +160,11 @@ public class HeadAction extends FileAction {
             String contentMD5 = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
             if (contentMD5 != null) {
                 try {
-                    URI md5 = new URI("md5:" + contentMD5);
+                    // backwards compatible hack in case the stored attribute does not have the full URI
+                    if (!contentMD5.startsWith("md5")) {
+                        contentMD5 = "md5:" + contentMD5;
+                    }
+                    URI md5 = new URI(contentMD5);
                     syncOutput.setDigest(md5);
                 } catch (URISyntaxException ex) {
                     log.error("found invalid checksum attribute " + contentMD5 + " on node " + nodeURI);
