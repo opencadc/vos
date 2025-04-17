@@ -225,7 +225,7 @@ public class FilesTest extends VOSTest {
             Assert.assertEquals(200, getFile.getResponseCode());
             Assert.assertNull(getFile.getThrowable());
             Assert.assertEquals(expected.getBytes().length, getFile.getContentLength());
-            Assert.assertTrue(contentDisposition.equals(getFile.getResponseHeader("Content-Disposition")));
+            Assert.assertEquals(contentDisposition, getFile.getResponseHeader("Content-Disposition"));
             Assert.assertNotNull(getFile.getDigest());
             Assert.assertEquals(computeChecksumURI(expected.getBytes()), getFile.getDigest());
             Assert.assertTrue(System.currentTimeMillis() > headFile.getLastModified().getTime());
