@@ -25,9 +25,6 @@ war {
 }
 
 dependencies {
-    // xml and jxon dependencies controlled by cadc-util
-    //implementation 'commons-net:commons-net:[2.0,)'
-
     implementation 'org.opencadc:cadc-util:[1.12.3,)'
     implementation 'org.opencadc:cadc-util-fs:[1.1.2,)'
     implementation 'org.opencadc:cadc-log:[1.0,)'
