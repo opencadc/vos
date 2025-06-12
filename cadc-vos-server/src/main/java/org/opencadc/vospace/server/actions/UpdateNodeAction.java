@@ -102,8 +102,8 @@ public class UpdateNodeAction extends NodeAction {
         final VOSURI clientNodeTarget = getInputURI();
         final VOSURI target = getTargetURI();
         
-        // validate doc vs path because some redundancy in API
-        if (!clientNodeTarget.equals(target)) {
+        // validate doc vos path because some redundancy in API
+        if (!target.equals(clientNodeTarget)) {
             throw NodeFault.InvalidArgument.getStatus(
                     "invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
         }
@@ -112,7 +112,7 @@ public class UpdateNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         Node serverNode = pathResolver.getNode(target.getPath(), false);
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget.toString());
+            throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget);
         }
 
         if (!clientNode.getClass().equals(serverNode.getClass())) {
