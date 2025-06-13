@@ -135,33 +135,13 @@ public class CreateNodeAction extends NodeAction {
         clientNode.parent = parent;
         if (Utils.isAdmin(caller, nodePersistence)) {
             NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
-            if (creatorJWT != null) {
-                log.debug("Creating user allocation on behalf of OIDC account.");
-                if (clientNode.ownerDisplay == null) {
-                    Subject nodeOwner = new Subject();
-                    final String token = creatorJWT.getValue();
-                    final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
-                                                                                                                    AuthenticationUtil.CHALLENGE_TYPE_BEARER
-                                                                                                                    + " " + token);
+            if (creatorJWT != null && clientNode.ownerDisplay != null) {
+                // The "creator" property clashes with the "creator-jwt" property.
+                throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
+                                                              + " is present. This should not happen.");
+            }
 
-                    nodeOwner.getPrincipals().add(authorizationTokenPrincipal);
-
-                    nodeOwner = AuthenticationUtil.validateSubject(nodeOwner);
-                    nodeOwner = AuthenticationUtil.augmentSubject(nodeOwner);
-
-                    log.debug("Setting new allocation node owner to " + im.toDisplayString(nodeOwner));
-                    clientNode.owner = nodeOwner;
-                    clientNode.ownerID = null; // just in case
-                } else {
-                    // The "creator" property clashes with the "creator-jwt" property.
-                    throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
-                                                                  + " is present. This should not happen.");
-                }
-
-                // remove the creator JWT property if it exists
-                clientNode.getProperties().remove(creatorJWT);
-                log.debug("Creating user allocation on behalf of OIDC account: OK");
-            } else if (clientNode.ownerDisplay != null) {
+            if (clientNode.ownerDisplay != null) {
                 // admin is allowed to assign a different owner
                 try {
                     Subject tmp = new Subject();
@@ -176,6 +156,24 @@ public class CreateNodeAction extends NodeAction {
                     log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
                     throw ex;
                 }
+            } else if (creatorJWT != null) {
+                log.debug("Creating user allocation on behalf of OIDC account.");
+                Subject nodeOwner = new Subject();
+                final String token = creatorJWT.getValue();
+                final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
+                                                                                                                AuthenticationUtil.CHALLENGE_TYPE_BEARER
+                                                                                                                    + " " + token);
+
+                nodeOwner.getPrincipals().add(authorizationTokenPrincipal);
+
+                nodeOwner = AuthenticationUtil.validateSubject(nodeOwner);
+                nodeOwner = AuthenticationUtil.augmentSubject(nodeOwner);
+
+                log.debug("Setting new allocation node owner to " + im.toDisplayString(nodeOwner));
+                clientNode.owner = nodeOwner;
+                clientNode.ownerID = null; // just in case
+
+                log.debug("Creating user allocation on behalf of OIDC account: OK");
             } else {
                 clientNode.owner = caller;
             }

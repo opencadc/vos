@@ -118,7 +118,8 @@ public class FileSystemNodePersistence implements NodePersistence {
     
     static final Set<URI> ADMIN_PROPS = new TreeSet<>(
             Arrays.asList(
-                    VOS.PROPERTY_URI_CREATOR, 
+                    VOS.PROPERTY_URI_CREATOR,
+                    VOS.PROPERTY_URI_CREATOR_JWT,
                     VOS.PROPERTY_URI_QUOTA
             ));
 
@@ -130,6 +131,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     VOS.PROPERTY_URI_CONTENTDATE,
                     VOS.PROPERTY_URI_DATE,
                     VOS.PROPERTY_URI_CREATOR,
+                    VOS.PROPERTY_URI_CREATOR_JWT,
                     VOS.PROPERTY_URI_QUOTA
             ));
     
@@ -181,7 +183,7 @@ public class FileSystemNodePersistence implements NodePersistence {
         LocalAuthority la = new LocalAuthority();
         // only require a group mapper because IVOA GMS does not include numeric gid
         // assume user mapper is the same service
-        URI posixMapperID = la.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+        URI posixMapperID = la.getResourceID(Standards.POSIX_GROUPMAP);
         PosixMapperClient posixMapper;
         if ("https".equals(posixMapperID.getScheme())) {
             try {
@@ -417,7 +419,7 @@ public class FileSystemNodePersistence implements NodePersistence {
             if (!node.getReadOnlyGroup().isEmpty() || !node.getReadWriteGroup().isEmpty()) {
                 LocalAuthority loc = new LocalAuthority();
                 try {
-                    URI localGMS = loc.getServiceURI(Standards.GMS_SEARCH_10.toASCIIString());
+                    URI localGMS = loc.getResourceID(Standards.GMS_SEARCH_10);
                     StringBuilder serr = new StringBuilder("non-local groups:");
                     int len = serr.length();
                     for (GroupURI g : node.getReadOnlyGroup()) {
