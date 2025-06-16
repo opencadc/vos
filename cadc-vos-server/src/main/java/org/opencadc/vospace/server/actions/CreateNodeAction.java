@@ -133,8 +133,10 @@ public class CreateNodeAction extends NodeAction {
         // attempt to set owner
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         clientNode.parent = parent;
+
+        // Extract here to remove later.
+        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
         if (Utils.isAdmin(caller, nodePersistence)) {
-            NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
             if (creatorJWT != null && clientNode.ownerDisplay != null) {
                 // The "creator" property clashes with the "creator-jwt" property.
                 throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
@@ -178,6 +180,10 @@ public class CreateNodeAction extends NodeAction {
                 clientNode.owner = caller;
             }
         }
+
+        // Ensure it's always removed after being handled in the admin block.  This property is never persisted, as it's just a means to an end for the
+        // creator property.
+        clientNode.getProperties().remove(creatorJWT);
 
         // inherit
         if (parent.inheritPermissions != null && parent.inheritPermissions) {

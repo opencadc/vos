@@ -119,7 +119,6 @@ public class FileSystemNodePersistence implements NodePersistence {
     static final Set<URI> ADMIN_PROPS = new TreeSet<>(
             Arrays.asList(
                     VOS.PROPERTY_URI_CREATOR,
-                    VOS.PROPERTY_URI_CREATOR_JWT,
                     VOS.PROPERTY_URI_QUOTA
             ));
 
@@ -131,7 +130,6 @@ public class FileSystemNodePersistence implements NodePersistence {
                     VOS.PROPERTY_URI_CONTENTDATE,
                     VOS.PROPERTY_URI_DATE,
                     VOS.PROPERTY_URI_CREATOR,
-                    VOS.PROPERTY_URI_CREATOR_JWT,
                     VOS.PROPERTY_URI_QUOTA
             ));
     

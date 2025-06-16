@@ -179,6 +179,12 @@ public class UpdateNodeAction extends NodeAction {
                 scn.inheritPermissions = ccn.inheritPermissions;
             }
         }
+
+        // Remove the special Creator JWT property from the client node before copying into the server node as it will never be persisted.
+        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
+        if (creatorJWT != null) {
+            clientNode.getProperties().remove(creatorJWT);
+        }
         
         // pick out eligible admin-only props (they are immutable to normal users)
         List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(),
