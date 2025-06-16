@@ -132,7 +132,6 @@ public class UpdateNodeAction extends NodeAction {
             throw NodeFault.PermissionDenied.getStatus(Utils.getPath(serverNode));
         }
 
-        // TODO: attempt to set owner if admin
         Node storedNode = updateProperties(serverNode, clientNode, nodePersistence, caller);
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
@@ -149,6 +148,12 @@ public class UpdateNodeAction extends NodeAction {
             throws Exception {
         // merge properties that are Node fields and in Node.properties set
         // TODO: admin could in principle change owner
+
+        // Remove the special Creator JWT property from the client node before copying into the server node as it will never be persisted.
+        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
+        if (creatorJWT != null) {
+            clientNode.getProperties().remove(creatorJWT);
+        }
         
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();
@@ -178,12 +183,6 @@ public class UpdateNodeAction extends NodeAction {
             if (ccn.inheritPermissions != null) {
                 scn.inheritPermissions = ccn.inheritPermissions;
             }
-        }
-
-        // Remove the special Creator JWT property from the client node before copying into the server node as it will never be persisted.
-        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
-        if (creatorJWT != null) {
-            clientNode.getProperties().remove(creatorJWT);
         }
         
         // pick out eligible admin-only props (they are immutable to normal users)

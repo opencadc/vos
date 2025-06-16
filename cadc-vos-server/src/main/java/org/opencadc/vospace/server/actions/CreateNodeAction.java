@@ -134,6 +134,9 @@ public class CreateNodeAction extends NodeAction {
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         clientNode.parent = parent;
 
+        // Ensure the caller is set.  It MAY be overridden below.
+        clientNode.owner = caller;
+
         // Extract here to remove later.
         NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
         if (Utils.isAdmin(caller, nodePersistence)) {
@@ -176,8 +179,6 @@ public class CreateNodeAction extends NodeAction {
                 clientNode.ownerID = null; // just in case
 
                 log.debug("Creating user allocation on behalf of OIDC account: OK");
-            } else {
-                clientNode.owner = caller;
             }
         }
 
