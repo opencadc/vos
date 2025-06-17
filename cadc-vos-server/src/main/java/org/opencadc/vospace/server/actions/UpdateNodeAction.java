@@ -102,8 +102,8 @@ public class UpdateNodeAction extends NodeAction {
         final VOSURI clientNodeTarget = getInputURI();
         final VOSURI target = getTargetURI();
         
-        // validate doc vs path because some redundancy in API
-        if (!clientNodeTarget.equals(target)) {
+        // validate doc vos path because some redundancy in API
+        if (!target.equals(clientNodeTarget)) {
             throw NodeFault.InvalidArgument.getStatus(
                     "invalid input: vos URI mismatch: doc=" + clientNodeTarget + " and path=" + target);
         }
@@ -112,7 +112,7 @@ public class UpdateNodeAction extends NodeAction {
         PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
         Node serverNode = pathResolver.getNode(target.getPath(), false);
         if (serverNode == null) {
-            throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget.toString());
+            throw NodeFault.NodeNotFound.getStatus("Target " + clientNodeTarget);
         }
 
         if (!clientNode.getClass().equals(serverNode.getClass())) {
@@ -132,7 +132,6 @@ public class UpdateNodeAction extends NodeAction {
             throw NodeFault.PermissionDenied.getStatus(Utils.getPath(serverNode));
         }
 
-        // TODO: attempt to set owner if admin
         Node storedNode = updateProperties(serverNode, clientNode, nodePersistence, caller);
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         storedNode.ownerDisplay = im.toDisplayString(storedNode.owner);
@@ -149,6 +148,12 @@ public class UpdateNodeAction extends NodeAction {
             throws Exception {
         // merge properties that are Node fields and in Node.properties set
         // TODO: admin could in principle change owner
+
+        // Remove the special Creator JWT property from the client node before copying into the server node as it will never be persisted.
+        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
+        if (creatorJWT != null) {
+            clientNode.getProperties().remove(creatorJWT);
+        }
         
         if (clientNode.clearReadOnlyGroups || !clientNode.getReadOnlyGroup().isEmpty()) {
             serverNode.getReadOnlyGroup().clear();

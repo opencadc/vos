@@ -119,7 +119,7 @@ public class VOS {
     public static final String DEFAULT_PROPERTY_VALUE_DELIM = ",";
     
     public static final String VOSPACE_URI_NAMESPACE = "ivo://ivoa.net/vospace";
-    
+
     // Denotes a name given to the resource
     public static final URI PROPERTY_URI_TITLE = URI.create(VOSPACE_URI_NAMESPACE + "/core#title");
 
@@ -231,6 +231,10 @@ public class VOS {
     /*
      * CADC Node Properties
      */
+
+    // Custom prefix for CADC properties.
+    public static final String VOSPACE_CUSTOM_URI_NAMESPACE = "ivo://opencadc.org/vospace";
+
     // Flag indicating if the Node locked (true/false)
     public static final URI PROPERTY_URI_ISLOCKED = URI.create("ivo://cadc.nrc.ca/vospace/core#islocked");
 
@@ -242,6 +246,9 @@ public class VOS {
 
     // Flag indicating that the Node children inherit the parent node permissions
     public static final URI PROPERTY_URI_INHERIT_PERMISSIONS = URI.create("ivo://cadc.nrc.ca/vospace/core#inheritPermissions");
+
+    // Denotes the JSON Web Token (Bearer Token) passed in to represent the owner of the resource
+    public static final URI PROPERTY_URI_CREATOR_JWT = URI.create(VOSPACE_CUSTOM_URI_NAMESPACE + "/core#creatorJWT");
 
     /*
     * List of IVOA Standard Faults

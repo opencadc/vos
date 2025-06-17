@@ -68,6 +68,7 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
@@ -105,8 +106,8 @@ public class CreateNodeAction extends NodeAction {
         final VOSURI clientNodeURI = getInputURI();
         final VOSURI target = getTargetURI();
         
-        // validate doc vs path because some redundancy in API
-        if (!clientNodeURI.equals(target)) {
+        // validate doc vos path because some redundancy in API
+        if (!target.equals(clientNodeURI)) {
             throw NodeFault.InvalidURI.getStatus("invalid input: vos URI mismatch: doc=" + clientNodeURI + " and path=" + target);
         }
         
@@ -132,25 +133,59 @@ public class CreateNodeAction extends NodeAction {
         // attempt to set owner
         IdentityManager im = AuthenticationUtil.getIdentityManager();
         clientNode.parent = parent;
-        if (clientNode.ownerDisplay != null && Utils.isAdmin(caller, nodePersistence)) {
-            // admin allowed to assign a different owner
-            try {
-                Subject tmp = new Subject();
-                // HACK: known IdentityManager implementations prefer the HttpPrincipal aka
-                // network username for toDisplayString(Subject) so that's the value that
-                // normally gets put into node.ownerDisplay and rendered in node documents
-                // so chosing HttpPrincipal here makes output and input (set owner) use the
-                // same values... but seems kind of sketchy.
-                tmp.getPrincipals().add(new HttpPrincipal(clientNode.ownerDisplay));
-                clientNode.owner = im.augment(tmp);
-            } catch (Exception ex) {
-                log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
-                throw ex;
+
+        // Ensure the caller is set.  It MAY be overridden below.
+        clientNode.owner = caller;
+
+        // Extract here to remove later.
+        NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
+        if (Utils.isAdmin(caller, nodePersistence)) {
+            if (creatorJWT != null && clientNode.ownerDisplay != null) {
+                // The "creator" property clashes with the "creator-jwt" property.
+                throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
+                                                              + " is present. This should not happen.");
             }
-        } else {
-            clientNode.owner = caller;
+
+            if (clientNode.ownerDisplay != null) {
+                // admin is allowed to assign a different owner
+                try {
+                    Subject tmp = new Subject();
+                    // HACK: known IdentityManager implementations prefer the HttpPrincipal aka
+                    // network username for toDisplayString(Subject) so that's the value that
+                    // normally gets put into node.ownerDisplay and rendered in node documents
+                    // so choosing HttpPrincipal here makes output and input (set owner) use the
+                    // same values... but seems kind of sketchy.
+                    tmp.getPrincipals().add(new HttpPrincipal(clientNode.ownerDisplay));
+                    clientNode.owner = im.augment(tmp);
+                } catch (Exception ex) {
+                    log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
+                    throw ex;
+                }
+            } else if (creatorJWT != null) {
+                log.debug("Creating user allocation on behalf of OIDC account.");
+                Subject nodeOwner = new Subject();
+                final String token = creatorJWT.getValue();
+                final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
+                                                                                                                AuthenticationUtil.CHALLENGE_TYPE_BEARER
+                                                                                                                    + " " + token);
+
+                nodeOwner.getPrincipals().add(authorizationTokenPrincipal);
+
+                nodeOwner = AuthenticationUtil.validateSubject(nodeOwner);
+                nodeOwner = AuthenticationUtil.augmentSubject(nodeOwner);
+
+                log.debug("Setting new allocation node owner to " + im.toDisplayString(nodeOwner));
+                clientNode.owner = nodeOwner;
+                clientNode.ownerID = null; // just in case
+
+                log.debug("Creating user allocation on behalf of OIDC account: OK");
+            }
         }
-        
+
+        // Ensure it's always removed after being handled in the admin block.  This property is never persisted, as it's just a means to an end for the
+        // creator property.
+        clientNode.getProperties().remove(creatorJWT);
+
         // inherit
         if (parent.inheritPermissions != null && parent.inheritPermissions) {
             // explicit clientNode settings override inherit
