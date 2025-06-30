@@ -184,7 +184,9 @@ public class CreateNodeAction extends NodeAction {
 
         // Ensure it's always removed after being handled in the admin block.  This property is never persisted, as it's just a means to an end for the
         // creator property.
-        clientNode.getProperties().remove(creatorJWT);
+        if (creatorJWT != null) {
+            clientNode.getProperties().remove(creatorJWT);
+        }
 
         // inherit
         if (parent.inheritPermissions != null && parent.inheritPermissions) {

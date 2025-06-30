@@ -15,7 +15,7 @@ sourceCompatibility = 11
 
 group = 'org.opencadc'
 
-version = '2.0.19'
+version = '2.0.20'
 
 description = 'OpenCADC VOSpace server'
 def git_url = 'https://github.com/opencadc/vos'
@@ -35,5 +35,5 @@ dependencies {
     implementation 'org.opencadc:cadc-gms:[1.0.5,2.0)'
     implementation 'org.opencadc:cadc-pkg-server:[1.2.3,)'
 
-    testImplementation 'junit:junit:4.13'
+    testImplementation 'junit:junit:4.13.1'
 }
