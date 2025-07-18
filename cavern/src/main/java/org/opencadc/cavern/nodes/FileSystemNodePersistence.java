@@ -68,12 +68,14 @@
 package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.AuthorizationToken;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.InvalidConfigException;
+import ca.nrc.cadc.util.StringUtil;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -82,7 +84,11 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -97,6 +103,7 @@ import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.LinkNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
+import org.opencadc.vospace.NodeProperty;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
@@ -132,7 +139,7 @@ public class FileSystemNodePersistence implements NodePersistence {
                     VOS.PROPERTY_URI_CREATOR,
                     VOS.PROPERTY_URI_QUOTA
             ));
-    
+
     private final PosixIdentityManager identityManager;
     private final GroupCache groupCache;
     private final QuotaPlugin quotaImpl;
@@ -144,10 +151,15 @@ public class FileSystemNodePersistence implements NodePersistence {
     private final CavernConfig config;
     private final boolean localGroupsOnly;
 
+    // Set of default properties for nodes.  This will be built from configuration.
+    private final List<NodeProperty> defaultProperties = new ArrayList<>();
+
     public FileSystemNodePersistence() {
         this.config = new CavernConfig();
         this.rootPath = config.getRoot();
         this.quotaImpl = config.getQuotaPlugin();
+
+        defaultProperties.add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, Long.toString(config.getDefaultQuotaBytes())));
         
         LocalServiceURI loc = new LocalServiceURI(config.getResourceID());
         this.rootURI = loc.getVOSBase();
@@ -274,6 +286,74 @@ public class FileSystemNodePersistence implements NodePersistence {
     @Override
     public Set<URI> getImmutableProps() {
         return IMMUTABLE_PROPS;
+    }
+
+    /**
+     * Get the default value of a Node Property.  This will likely be used by create operations when values are missing.
+     *
+     * @param propertyKey The URI of the property key to get the default value for.
+     * @return String default value for the given property key, or null if no default value is set.
+     */
+    @Override
+    public String getDefaultPropertyValue(URI propertyKey) {
+        final NodeProperty defaultNodeProperty = this.defaultProperties.get(this.defaultProperties.indexOf(new NodeProperty(propertyKey)));
+        return defaultNodeProperty == null ? null : defaultNodeProperty.getValue();
+    }
+
+    /**
+     * Check if the given caller can administer allocations.  Used by create operations.
+     *
+     * @param caller The caller subject, used to check permissions.
+     * @return True if the given caller can create new administer new allocations, false otherwise.
+     */
+    @Override
+    public boolean isAdmin(Subject caller) {
+        if (caller == null || (caller.getPrincipals().isEmpty() && caller.getPublicCredentials().isEmpty())) {
+            return false;
+        }
+
+        ContainerNode root = getRootNode();
+        for (Principal owner : root.owner.getPrincipals()) {
+            for (Principal p : caller.getPrincipals()) {
+                if (AuthenticationUtil.equals(owner, p)) {
+                    return true;
+                }
+            }
+        }
+
+        return StringUtil.hasText(getAdminGrant(caller));
+    }
+
+    /**
+     * Get the admin grant for the given caller. This is used to log the specific API Key call.
+     *
+     * @param caller The caller subject, used to pull the token.
+     * @return String grant, or null if not applicable or not available.
+     */
+    @Override
+    public String getAdminGrant(Subject caller) {
+        final Set<AuthorizationToken> authTokens = caller.getPublicCredentials(AuthorizationToken.class);
+        for (final AuthorizationToken authorizationToken : authTokens) {
+            if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(authorizationToken.getType().trim())) {
+                final String tokenValue = authorizationToken.getCredentials();
+
+                // Only return two elements.  This allows a colon (":") to exist in the token if so desired.
+                final String[] tokenValueParts = tokenValue.split(":", 2);
+                if (tokenValueParts.length != 2) {
+                    log.warn(
+                        "Invalid Authorization Token value format checking admin.  Should be in format '<client-application-name>:<api-key-token>', but got " +
+                            tokenValue);
+                } else {
+                    final String clientApplicationName = tokenValueParts[0].trim();
+                    final String apiKeyToken = tokenValueParts[1].trim();
+                    final Map<String, String> apiKeys = config.getAllocationAPIKeys();
+                    return (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken))
+                        ? clientApplicationName : null;
+                }
+            }
+        }
+
+        return null;
     }
 
     @Override

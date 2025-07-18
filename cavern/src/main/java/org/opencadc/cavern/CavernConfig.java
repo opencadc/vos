@@ -85,6 +85,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NoQuotaPlugin;
@@ -93,6 +95,9 @@ import org.opencadc.cavern.nodes.QuotaPlugin;
 public class CavernConfig {
 
     private static final Logger log = Logger.getLogger(CavernConfig.class);
+
+    // The challenge type (after the authorization header and before the token) for API Key authentication.  This is isolated in Cavern for now.
+    public static final String ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE = "api-key";
 
     public static final String CAVERN_PROPERTIES = "cavern.properties";
     private static final String CAVERN_KEY = CavernConfig.class.getPackage().getName();
@@ -109,10 +114,20 @@ public class CavernConfig {
     
     public static final String ALLOCATION_PARENT = CAVERN_KEY + ".allocationParent";
 
+    // An API Key representing a client that has administrative access to create User Allocations.  More than one is possible.
+    // Format is <applicationClientName>:<apiKeyToken>
+    public static final String ALLOCATION_API_KEY = CAVERN_KEY + ".allocationAPIKey";
+
+    // Default quota in GB for new allocations, if not specified in the allocation request.
+    public static final String DEFAULT_QUOTA_GB = CAVERN_KEY + ".defaultQuotaGB";
+
     public static final String QUOTA_PLUGIN_IMPLEMENTATION = QuotaPlugin.class.getName();
     
     private final URI resourceID;
     private final List<String> allocationParents = new ArrayList<>();
+
+    private final List<String> allocationAPIKeys = new ArrayList<>();
+    private final double defaultQuotaGB;
     
     private final Path root;
     private final Path secrets;
@@ -169,6 +184,19 @@ public class CavernConfig {
             allocationParents.add(ap);
         }
 
+        allocationAPIKeys.addAll(mvp.getProperty(CavernConfig.ALLOCATION_API_KEY));
+
+        final String configuredDefaultQuotaGB = mvp.getFirstPropertyValue(CavernConfig.DEFAULT_QUOTA_GB);
+        if (configuredDefaultQuotaGB == null) {
+            throw new InvalidConfigException(CavernConfig.DEFAULT_QUOTA_GB + " must be specified");
+        } else {
+            try {
+                this.defaultQuotaGB = Double.parseDouble(configuredDefaultQuotaGB);
+            } catch (NumberFormatException e) {
+                throw new InvalidConfigException(CavernConfig.DEFAULT_QUOTA_GB + " must be a valid number: (" + configuredDefaultQuotaGB + ")");
+            }
+        }
+
         this.secrets = Paths.get(baseDir, "secrets");
     }
 
@@ -182,6 +210,20 @@ public class CavernConfig {
     
     public List<String> getAllocationParents() {
         return allocationParents;
+    }
+
+    /**
+     * Obtain the API keys for allocation creation.  The Key is the application client name, and the Value is the API key token.
+     * @return  Map of allocation API keys, where the key is the application client name, and the value is the API key token.
+     */
+    public Map<String, String> getAllocationAPIKeys() {
+        return this.allocationAPIKeys.stream().map(apiKey -> apiKey.split(":")).collect(
+            Collectors.toMap(splitKey -> splitKey[0], splitKey -> splitKey[1]));
+    }
+
+    public long getDefaultQuotaBytes() {
+        // Convert to bytes as that's what the NodeProperty expects.  This assumes that the default quota is in GiB.
+        return (long) (defaultQuotaGB * 1024L * 1024L * 1024L);
     }
 
     public Path getSecrets() {
