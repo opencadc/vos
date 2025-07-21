@@ -69,6 +69,7 @@ package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.AuthorizationToken;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
@@ -165,7 +166,13 @@ public class FileSystemNodePersistence implements NodePersistence {
         this.rootURI = loc.getVOSBase();
 
         // must be hard coded to this and not set via java system properties
-        this.identityManager = new PosixIdentityManager();
+        final IdentityManager configuredIdentityManager = AuthenticationUtil.getIdentityManager();
+
+        if (!(configuredIdentityManager instanceof PosixIdentityManager)) {
+            throw new InvalidConfigException("BUG: PosixIdentityManager required but found: " + configuredIdentityManager.getClass().getName());
+        }
+
+        this.identityManager = (PosixIdentityManager) AuthenticationUtil.getIdentityManager();
         
         // root node
         UUID rootID = new UUID(0L, 0L); // cosmetic: not used in cavern

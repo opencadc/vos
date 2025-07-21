@@ -67,18 +67,21 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.AuthorizationToken;
+import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
+import ca.nrc.cadc.util.InvalidConfigException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.security.Principal;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.opencadc.cavern.CavernConfig;
 
 /**
  * An IdentityManager implementation that picks the PosixPrincipal(uid) as
@@ -93,12 +96,33 @@ public class PosixIdentityManager implements IdentityManager {
 
     private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
+    public static final String WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY = IdentityManager.class.getName() + ".wrappedIdentityManagerClass";
+
     // implementation note: here we have an identity cache inside the function so 
     // other code doesn't know about the caching -- for groups the GroupCache is
     // currently more explicit
     private final Map<PosixPrincipal,Subject> identityCache = new ConcurrentHashMap<>();
+
+    // The configured IdentityManager as read in from System properties.
+    private final IdentityManager wrappedIdentityManager;
+
     
     public PosixIdentityManager() {
+        final String wrappedIdentityManagerClassName = System.getProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+        if (wrappedIdentityManagerClassName == null) {
+            throw new IllegalArgumentException("BUG: wrappedIdentityManager cannot be null.  System property should be set in init: "
+                                                   + PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+        }
+
+        try {
+            final Class<?> c = Class.forName(wrappedIdentityManagerClassName);
+            final Object o = c.getConstructor().newInstance();
+            this.wrappedIdentityManager = (IdentityManager) o;
+        } catch (ClassNotFoundException
+                 | IllegalAccessException | IllegalArgumentException | InstantiationException
+                 | NoSuchMethodException | SecurityException | InvocationTargetException ex) {
+            throw new InvalidConfigException("failed to load configured IdentityManager: " + wrappedIdentityManagerClassName, ex);
+        }
     }
     
     // FileSystemNodePersistence can prime the cache with caller
@@ -122,8 +146,7 @@ public class PosixIdentityManager implements IdentityManager {
     @Override
     public Set<URI> getSecurityMethods() {
         // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.getSecurityMethods();
+        return this.wrappedIdentityManager.getSecurityMethods();
     }
 
     @Override
@@ -175,15 +198,30 @@ public class PosixIdentityManager implements IdentityManager {
     @Override
     public String toDisplayString(Subject subject) {
         // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.toDisplayString(subject);
+        return this.wrappedIdentityManager.toDisplayString(subject);
     }
 
     @Override
     public Subject validate(Subject subject) throws NotAuthenticatedException {
-        // delegate to configured IM
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        return im.validate(subject);
+        if (subject != null) {
+            final Set<AuthorizationTokenPrincipal> tokenPrincipals = subject.getPrincipals(AuthorizationTokenPrincipal.class);
+            for (final AuthorizationTokenPrincipal tokenPrincipal : tokenPrincipals) {
+                final String tokenValue = tokenPrincipal.getHeaderValue();
+                final String[] parts = tokenValue.split(" ", 2);
+                if (parts.length == 2) {
+                    final String challengeType = parts[0];
+                    if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
+                        final String apiKeyValue = parts[1].trim();
+
+                        subject.getPrincipals().remove(tokenPrincipal);
+                        subject.getPublicCredentials().add(new AuthorizationToken(challengeType, apiKeyValue, Collections.emptyList()));
+                    }
+                }
+            }
+        }
+
+        // delegate to the configured IdentityManager, assuming it can handle a null Subject
+        return this.wrappedIdentityManager.validate(subject);
     }
 
     @Override
@@ -210,8 +248,7 @@ public class PosixIdentityManager implements IdentityManager {
         }
         
         log.debug("augment: " + subject);
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        Subject ret = im.augment(subject);
+        Subject ret = this.wrappedIdentityManager.augment(subject);
         addToCache(ret);
         return ret;
     }

@@ -74,6 +74,7 @@ import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.util.StringUtil;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
@@ -120,17 +121,14 @@ public class CreateNodeAction extends NodeAction {
         Subject actualCaller = AuthenticationUtil.getCurrentSubject();
         final Subject caller;
         boolean isCallerAdmin = nodePersistence.isAdmin(actualCaller);
-        AuthMethod actualCallerAuthMethod = AuthenticationUtil.getAuthMethod(actualCaller);
-        if (AuthMethod.TOKEN == actualCallerAuthMethod && !actualCaller.getPublicCredentials(AuthorizationToken.class).isEmpty()) {
-
-            // Log attempted Grant.
-            super.logInfo.setGrant(nodePersistence.getAdminGrant(actualCaller));
-
-            if (isCallerAdmin) {
-                caller = nodePersistence.getRootNode().owner;
-            } else {
-                throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
+        if (isCallerAdmin) {
+            // Log attempted Grant, if present.
+            final String grant = nodePersistence.getAdminGrant(actualCaller);
+            if (StringUtil.hasText(grant)) {
+                super.logInfo.setGrant(grant);
             }
+
+            caller = nodePersistence.getRootNode().owner;
         } else {
             caller = actualCaller;
         }
