@@ -121,12 +121,12 @@ public class CreateNodeAction extends NodeAction {
         Subject actualCaller = AuthenticationUtil.getCurrentSubject();
         final Subject caller;
         boolean isCallerAdmin = nodePersistence.isAdmin(actualCaller);
-        if (isCallerAdmin) {
-            // Log attempted Grant, if present.
-            final String grant = nodePersistence.getAdminGrant(actualCaller);
-            if (StringUtil.hasText(grant)) {
-                super.logInfo.setGrant(grant);
-            }
+        String grant = nodePersistence.getAdminGrant(actualCaller);
+
+        // Special case where the caller is an admin and has a valid grant taken from an API key.
+        if (isCallerAdmin && StringUtil.hasText(grant)) {
+            // Log attempted Grant.
+            super.logInfo.setGrant(grant);
 
             caller = nodePersistence.getRootNode().owner;
         } else {
