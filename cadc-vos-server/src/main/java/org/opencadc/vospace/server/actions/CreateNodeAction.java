@@ -75,6 +75,7 @@ import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.util.StringUtil;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
@@ -133,25 +134,31 @@ public class CreateNodeAction extends NodeAction {
             caller = actualCaller;
         }
 
-        final ContainerNode parent = Subject.doAs(caller, (PrivilegedExceptionAction<ContainerNode>) () -> {
-            PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-            Node serverNode = pathResolver.getNode(target.getParentURI().getPath(), true);
-            if (!(serverNode instanceof ContainerNode)) {
-                throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
-            }
+        final ContainerNode parent;
 
-            ContainerNode parentContainerNode = (ContainerNode) serverNode;
-            Node cur = nodePersistence.get(parentContainerNode, target.getName());
-            if (cur != null) {
-                throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
-            }
+        try {
+            parent = Subject.doAs(caller, (PrivilegedExceptionAction<ContainerNode>) () -> {
+                PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+                Node serverNode = pathResolver.getNode(target.getParentURI().getPath(), true);
+                if (!(serverNode instanceof ContainerNode)) {
+                    throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
+                }
 
-            if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parentContainerNode, caller)) {
-                throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
-            }
+                ContainerNode parentContainerNode = (ContainerNode) serverNode;
+                Node cur = nodePersistence.get(parentContainerNode, target.getName());
+                if (cur != null) {
+                    throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
+                }
 
-            return parentContainerNode;
-        });
+                if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parentContainerNode, caller)) {
+                    throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
+                }
+
+                return parentContainerNode;
+            });
+        } catch (PrivilegedActionException privilegedActionException) {
+            throw privilegedActionException.getException();
+        }
 
         // attempt to set owner
         IdentityManager im = AuthenticationUtil.getIdentityManager();
