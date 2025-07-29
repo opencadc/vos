@@ -27,6 +27,8 @@
             <param-value>
             org.opencadc.cavern
             org.opencadc.vospace
+            org.opencadc.auth
+            org.opencadc.gms
             ca.nrc.cadc.db.version
             ca.nrc.cadc.rest
             ca.nrc.cadc.vosi
