@@ -37,7 +37,7 @@ dependencies {
     implementation 'org.opencadc:cadc-cdp:[1.0,)'
     implementation 'org.opencadc:cadc-gms:[1.0.5,)'
     implementation 'org.opencadc:cadc-dali:[1.0,)'
-    implementation 'org.opencadc:cadc-pkg-server:[1.2.3,)'
+    implementation 'org.opencadc:cadc-pkg-server:[1.2.5,)'
     implementation 'org.opencadc:cadc-vos:[2.0.9,)'
     implementation 'org.opencadc:cadc-vos-server:[2.0.21,)'
 
