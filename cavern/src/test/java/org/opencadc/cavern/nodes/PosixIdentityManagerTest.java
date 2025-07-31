@@ -69,6 +69,8 @@ package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.NoOpIdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.util.Log4jInit;
 import java.security.Principal;
@@ -98,6 +100,8 @@ public class PosixIdentityManagerTest {
 
     @Test
     public void testNull() {
+        System.setProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY, NoOpIdentityManager.class.getName());
+
         try {
             PosixIdentityManager im = new PosixIdentityManager();
 
@@ -110,6 +114,8 @@ public class PosixIdentityManagerTest {
         } catch (Exception unexpected) {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
+        } finally {
+            System.getProperties().remove(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
         }
     }
 

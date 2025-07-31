@@ -213,6 +213,28 @@ public class VOSpaceAuthorizerTest {
             return Utils.getPath(allocParentNode).equals(Utils.getPath(node.parent));
         }
 
+        /**
+         * Check if the given caller can administer allocations.  Used by create operations.
+         *
+         * @param caller The caller subject, used to check permissions.
+         * @return True if the given caller can create new administer new allocations, false otherwise.
+         */
+        @Override
+        public boolean isAdmin(Subject caller) {
+            return false;
+        }
+
+        /**
+         * Get the admin grant for the given caller. This is used to log the specific API Key call.
+         *
+         * @param caller The caller subject, used to pull the token.
+         * @return String grant, or null if not applicable or not available.
+         */
+        @Override
+        public String getAdminGrant(Subject caller) {
+            return null;
+        }
+
         // methods below are not used/implemented
         @Override
         public Set<URI> getAdminProps() {
@@ -231,6 +253,17 @@ public class VOSpaceAuthorizerTest {
 
         @Override
         public Set<URI> getImmutableProps() {
+            return null;
+        }
+
+        /**
+         * Get the default value of a Node Property.  This will likely be used by create operations when values are missing.
+         *
+         * @param propertyKey The URI of the property key to get the default value for.
+         * @return String default value for the given property key, or null if no default value is set.
+         */
+        @Override
+        public String getDefaultPropertyValue(URI propertyKey) {
             return null;
         }
 

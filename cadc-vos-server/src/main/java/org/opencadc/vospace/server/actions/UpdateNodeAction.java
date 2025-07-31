@@ -124,7 +124,7 @@ public class UpdateNodeAction extends NodeAction {
         Subject caller = AuthenticationUtil.getCurrentSubject();
         if (serverNode instanceof ContainerNode 
                 && nodePersistence.isAllocation((ContainerNode) serverNode) 
-                && Utils.isAdmin(caller, nodePersistence)) {
+                && nodePersistence.isAdmin(caller)) {
             // allow admin to update node properties: quota
             log.debug("write permission granted to admin " + caller);
         } else if (!voSpaceAuthorizer.hasSingleNodeWritePermission(serverNode, caller)) {
