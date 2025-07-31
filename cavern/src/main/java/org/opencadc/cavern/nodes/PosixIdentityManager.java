@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2017.                            (c) 2017.
+*  (c) 2025.                            (c) 2025.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -133,7 +133,8 @@ public class PosixIdentityManager implements IdentityManager {
         }
         PosixPrincipal pp = toPosixPrincipal(s);
         if (pp == null) {
-            throw new RuntimeException("BUG or CONFIG: no PosixPrincipal in subject: " + s);
+            log.debug("no PosixPrincipal in subject: " + s);
+            return null;
         }
         
         // copy and cache only immutable identities and not credentials
