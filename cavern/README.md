@@ -57,6 +57,15 @@ org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 # (optional) identify which container nodes are allocations
 org.opencadc.cavern.allocationParent = {top level node}
 
+# (optional) API Keys with administrative privileges.  Multiple keys can be specified, one per line.
+# Example:
+# org.opencadc.cavern.adminAPIKey = prepareData:p1wqj1Xj2SVg1
+# org.opencadc.cavern.adminAPIKey = skaha:CmCQ1O7OMOaxr
+#
+# - {applicationClientName} is the name of the application client (e.g. "skaha", "prepareData")
+# - {apiKeyToken} is any string of characters that is used to authenticate the application client.
+# org.opencadc.cavern.adminAPIKey = {applicationClientName}:{apiKeyToken}
+
 # (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
 # for users.
 # Optional, but the default of NoQuotaPlugin will get used if not specified, and users will have free reign.
