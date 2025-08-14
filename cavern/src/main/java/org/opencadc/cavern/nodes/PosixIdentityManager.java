@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthorizationToken;
 import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
@@ -75,13 +74,16 @@ import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.util.InvalidConfigException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.CavernConfig;
+import org.opencadc.vospace.server.NodePersistence;
 
 /**
  * An IdentityManager implementation that picks the PosixPrincipal(uid) as
@@ -97,6 +99,9 @@ public class PosixIdentityManager implements IdentityManager {
     private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
     public static final String WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY = IdentityManager.class.getName() + ".wrappedIdentityManagerClass";
+
+    // A bit of a hack.  This will be set by the CavernInitAction.
+    public static String JNDI_NODE_PERSISTENCE_PROPERTY = "cavern-" + NodePersistence.class.getName();
 
     // implementation note: here we have an identity cache inside the function so 
     // other code doesn't know about the caching -- for groups the GroupCache is
@@ -181,8 +186,7 @@ public class PosixIdentityManager implements IdentityManager {
 
         Set<PosixPrincipal> principals = subject.getPrincipals(PosixPrincipal.class);
         if (!principals.isEmpty()) {
-            PosixPrincipal p = principals.iterator().next();
-            return p;
+            return principals.iterator().next();
         }
         return null;
     }
@@ -210,23 +214,53 @@ public class PosixIdentityManager implements IdentityManager {
 
             final Set<AuthorizationTokenPrincipal> tokenPrincipals = validatedSubject.getPrincipals(AuthorizationTokenPrincipal.class);
             for (final AuthorizationTokenPrincipal tokenPrincipal : tokenPrincipals) {
-                final String tokenValue = tokenPrincipal.getHeaderValue();
-                final String[] parts = tokenValue.split(" ", 2);
+                final String tokenHeaderValue = tokenPrincipal.getHeaderValue();
+                final String[] parts = tokenHeaderValue.split(" ", 2);
                 if (parts.length == 2) {
                     final String challengeType = parts[0];
                     if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
-                        final String apiKeyValue = parts[1].trim();
-
-                        validatedSubject.getPrincipals().remove(tokenPrincipal);
-                        validatedSubject.getPublicCredentials().add(new AuthorizationToken(challengeType, apiKeyValue, Collections.emptyList()));
+                        final String tokenValue = parts[1].trim();
+                        final String[] tokenValueParts = tokenValue.split(":", 2);
+                        if (tokenValueParts.length != 2) {
+                            log.warn(
+                                    "Invalid Authorization Token value format checking admin.  Should be in format '<client-application-name>:<admin-api-key-token>', but got " +
+                                            tokenValue);
+                        } else {
+                            final String clientApplicationName = tokenValueParts[0].trim();
+                            final String apiKeyToken = tokenValueParts[1].trim();
+                            try {
+                                final Context ctx = new InitialContext();
+                                final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
+                                final CavernConfig config = fileSystemNodePersistence.getConfig();
+                                final Map<String, String> apiKeys = config.getAdminAPIKeys();
+                                if (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken)) {
+                                    log.debug("Found Admin API Key Token for client application: " + clientApplicationName);
+                                    return fileSystemNodePersistence.getRootNode().owner;
+                                }
+                            } catch (NamingException namingException) {
+                                throw new IllegalStateException(namingException.getMessage(), namingException);
+                            }
+                        }
                     }
                 }
             }
 
             return validatedSubject;
         }
+
         // if subject is null, return null
         return null;
+    }
+
+    private Map<String, String> getAdminAPIKeys() {
+        try {
+            final Context ctx = new InitialContext();
+            final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup("cavern-" + NodePersistence.class.getName());
+            final CavernConfig config = fileSystemNodePersistence.getConfig();
+            return config.getAdminAPIKeys();
+        } catch (NamingException namingException) {
+            throw new IllegalStateException(namingException.getMessage(), namingException);
+        }
     }
 
     @Override

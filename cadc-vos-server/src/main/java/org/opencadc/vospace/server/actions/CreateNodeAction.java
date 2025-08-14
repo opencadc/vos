@@ -1,4 +1,4 @@
- /*
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,16 +67,11 @@
 
 package org.opencadc.vospace.server.actions;
 
-import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.AuthorizationToken;
 import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.net.HttpTransfer;
-import ca.nrc.cadc.util.StringUtil;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -92,7 +87,7 @@ import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
 
- /**
+/**
  * Class to perform the creation of a Node action.
  *
  * @author majorb
@@ -118,46 +113,21 @@ public class CreateNodeAction extends NodeAction {
         
         // get parent container node
         // TBD: resolveLinks=true?
-
-        Subject actualCaller = AuthenticationUtil.getCurrentSubject();
-        final Subject caller;
-        boolean isCallerAdmin = nodePersistence.isAdmin(actualCaller);
-        String grant = nodePersistence.getAdminGrant(actualCaller);
-
-        // Special case where the caller is an admin and has a valid grant taken from an API key.
-        if (isCallerAdmin && StringUtil.hasText(grant)) {
-            // Log attempted Grant.
-            super.logInfo.setGrant(grant);
-
-            caller = nodePersistence.getRootNode().owner;
-        } else {
-            caller = actualCaller;
+        PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
+        Node serverNode = pathResolver.getNode(target.getParentURI().getPath(), true);
+        if (!(serverNode instanceof ContainerNode)) {
+            throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
         }
 
-        final ContainerNode parent;
+        ContainerNode parent = (ContainerNode) serverNode;
+        Node cur = nodePersistence.get(parent, target.getName());
+        if (cur != null) {
+            throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
+        }
 
-        try {
-            parent = Subject.doAs(caller, (PrivilegedExceptionAction<ContainerNode>) () -> {
-                PathResolver pathResolver = new PathResolver(nodePersistence, voSpaceAuthorizer);
-                Node serverNode = pathResolver.getNode(target.getParentURI().getPath(), true);
-                if (!(serverNode instanceof ContainerNode)) {
-                    throw NodeFault.ContainerNotFound.getStatus(clientNodeURI.toString());
-                }
-
-                ContainerNode parentContainerNode = (ContainerNode) serverNode;
-                Node cur = nodePersistence.get(parentContainerNode, target.getName());
-                if (cur != null) {
-                    throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
-                }
-
-                if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parentContainerNode, caller)) {
-                    throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
-                }
-
-                return parentContainerNode;
-            });
-        } catch (PrivilegedActionException privilegedActionException) {
-            throw privilegedActionException.getException();
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
+            throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
         }
 
         // attempt to set owner
@@ -169,8 +139,7 @@ public class CreateNodeAction extends NodeAction {
 
         // Extract here to remove later.
         NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
-
-        if (isCallerAdmin) {
+        if (Utils.isAdmin(caller, nodePersistence)) {
             if (creatorJWT != null && clientNode.ownerDisplay != null) {
                 // The "creator" property clashes with the "creator-jwt" property.
                 throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
@@ -194,22 +163,16 @@ public class CreateNodeAction extends NodeAction {
                 }
             } else if (creatorJWT != null) {
                 log.debug("Creating user allocation on behalf of OIDC account.");
-                // Call this as "null" to force a posix-mapper call as the subject being validated.  The root node owner is incomplete and not allowed to
-                // do this.
-                final Subject nodeOwner = Subject.doAs(null, (PrivilegedExceptionAction<Subject>) () -> {
-                    final String token = creatorJWT.getValue();
-                    final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
-                                                                                                                    AuthenticationUtil.CHALLENGE_TYPE_BEARER
-                                                                                                                        + " " + token);
+                Subject nodeOwner = new Subject();
+                final String token = creatorJWT.getValue();
+                final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
+                                                                                                                AuthenticationUtil.CHALLENGE_TYPE_BEARER
+                                                                                                                    + " " + token);
 
-                    Subject newNodeOwner = new Subject();
-                    newNodeOwner.getPrincipals().add(authorizationTokenPrincipal);
+                nodeOwner.getPrincipals().add(authorizationTokenPrincipal);
 
-                    newNodeOwner = AuthenticationUtil.validateSubject(newNodeOwner);
-                    newNodeOwner = AuthenticationUtil.augmentSubject(newNodeOwner);
-
-                    return newNodeOwner;
-                });
+                nodeOwner = AuthenticationUtil.validateSubject(nodeOwner);
+                nodeOwner = AuthenticationUtil.augmentSubject(nodeOwner);
 
                 log.debug("Setting new allocation node owner to " + im.toDisplayString(nodeOwner));
                 clientNode.owner = nodeOwner;
@@ -253,17 +216,6 @@ public class CreateNodeAction extends NodeAction {
                 if (cn.inheritPermissions == null) {
                     cn.inheritPermissions = false;
                 }
-            }
-        }
-
-        boolean isAllocation = false;
-
-        // quota (if applicable)
-        if (clientNode instanceof ContainerNode) {
-            final ContainerNode cn = (ContainerNode) clientNode;
-            isAllocation = nodePersistence.isAllocation(cn);
-            if (isAllocation && cn.getProperty(VOS.PROPERTY_URI_QUOTA) == null) {
-                cn.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, nodePersistence.getDefaultPropertyValue(VOS.PROPERTY_URI_QUOTA)));
             }
         }
 

@@ -150,6 +150,9 @@ public class CavernInitAction extends InitAction {
                                                  + " System Property is set to a valid implementation.");
         }
 
+        // Assuming there isn't more than one Cavern deployed within a JVM.
+        PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY = this.jndiNodePersistence;
+
         // To be used by the PosixIdentityManager to wrap the existing IdentityManager.
         System.setProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY, configuredIdentityManagerClassName);
 

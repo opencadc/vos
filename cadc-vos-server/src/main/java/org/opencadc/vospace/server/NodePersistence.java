@@ -69,13 +69,10 @@
 
 package org.opencadc.vospace.server;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import java.net.URI;
-import java.security.Principal;
 import java.util.Set;
-import javax.security.auth.Subject;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
@@ -133,27 +130,6 @@ public interface NodePersistence {
      * @return set of immutable property keys
      */
     public Set<URI> getImmutableProps();
-
-    /**
-     * Get the default value of a Node Property.  This will likely be used by create operations when values are missing.
-     * @param propertyKey   The URI of the property key to get the default value for.
-     * @return  String default value for the given property key, or null if no default value is set.
-     */
-    String getDefaultPropertyValue(final URI propertyKey);
-
-    /**
-     * Check if the given caller can administer allocations.  Used by create operations.
-     * @param caller    The caller subject, used to check permissions.
-     * @return  True if the given caller can create new administer new allocations, false otherwise.
-     */
-    boolean isAdmin(Subject caller);
-
-    /**
-     * Get the admin grant for the given caller. This is used to log the specific API Key call.
-     * @param caller    The caller subject, used to pull the token.
-     * @return  String grant, or null if not applicable or not available.
-     */
-    String getAdminGrant(Subject caller);
 
     /**
      * Get the views supported by this node persistence implementation.

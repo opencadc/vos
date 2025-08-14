@@ -235,11 +235,30 @@ public class Utils {
             }
         }
         // clear if not admin
-        if (!aps.isEmpty() && !nodePersistence.isAdmin(caller)) {
+        if (!aps.isEmpty() && !isAdmin(caller, nodePersistence)) {
             log.debug("Not admin - cleared admin props");
             aps.clear();
         }
         log.debug("Admin props " + aps.size());
         return aps;
+    }
+
+    // needed by create
+    public static boolean isAdmin(Subject caller, NodePersistence nodePersistence) {
+        if (caller == null || caller.getPrincipals().isEmpty()) {
+            return false;
+        }
+
+        ContainerNode root = nodePersistence.getRootNode();
+        for (Principal owner : root.owner.getPrincipals()) {
+            for (Principal p : caller.getPrincipals()) {
+                if (AuthenticationUtil.equals(owner, p)) {
+                    return true;
+                }
+            }
+        }
+
+        // TODO: also check admin group(s) aka root.getReadWriteGroup() membership
+        return false;
     }
 }
