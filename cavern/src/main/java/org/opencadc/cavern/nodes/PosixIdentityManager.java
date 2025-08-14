@@ -233,8 +233,9 @@ public class PosixIdentityManager implements IdentityManager {
                                 final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
                                 final CavernConfig config = fileSystemNodePersistence.getConfig();
                                 final Map<String, String> apiKeys = config.getAdminAPIKeys();
+
                                 if (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken)) {
-                                    log.debug("Found Admin API Key Token for client application: " + clientApplicationName);
+                                    log.info("CAVERN ADMIN GRANT: " + clientApplicationName);
                                     return fileSystemNodePersistence.getRootNode().owner;
                                 }
                             } catch (NamingException namingException) {
