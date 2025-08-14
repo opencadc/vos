@@ -292,17 +292,6 @@ public class FileSystemNodePersistence implements NodePersistence {
         return IMMUTABLE_PROPS;
     }
 
-    /**
-     * Get the default value of a Node Property.  This will likely be used by create operations when values are missing.
-     *
-     * @param propertyKey The URI of the property key to get the default value for.
-     * @return String default value for the given property key, or null if no default value is set.
-     */
-    public String getDefaultPropertyValue(URI propertyKey) {
-        final NodeProperty defaultNodeProperty = this.defaultProperties.get(this.defaultProperties.indexOf(new NodeProperty(propertyKey)));
-        return defaultNodeProperty == null ? null : defaultNodeProperty.getValue();
-    }
-
     @Override
     public Views getViews() {
         throw new UnsupportedOperationException();
@@ -476,9 +465,13 @@ public class FileSystemNodePersistence implements NodePersistence {
                     throw new UnsupportedOperationException("link to external resource", ex);
                 }
             }
-        } else if ((node instanceof ContainerNode) && isAllocation((ContainerNode) node)) {
-            if (node.getProperty(VOS.PROPERTY_URI_QUOTA) == null) {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, getDefaultPropertyValue(VOS.PROPERTY_URI_QUOTA)));
+        } else if ((node instanceof ContainerNode) && isAllocation((ContainerNode) node)
+                && node.getProperty(VOS.PROPERTY_URI_QUOTA) == null) {
+            final NodeProperty defaultNodeProperty = this.defaultProperties.get(this.defaultProperties.indexOf(new NodeProperty(VOS.PROPERTY_URI_QUOTA)));
+            if (defaultNodeProperty == null) {
+                log.warn("No default quota (" + VOS.PROPERTY_URI_QUOTA + ") configured.");
+            } else {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, defaultNodeProperty.getValue()));
             }
         }
         
