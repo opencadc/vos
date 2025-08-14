@@ -205,7 +205,10 @@ public class PosixIdentityManager implements IdentityManager {
     @Override
     public Subject validate(Subject subject) throws NotAuthenticatedException {
         if (subject != null) {
-            final Set<AuthorizationTokenPrincipal> tokenPrincipals = subject.getPrincipals(AuthorizationTokenPrincipal.class);
+            // delegate to the configured IdentityManager
+            final Subject validatedSubject = this.wrappedIdentityManager.validate(subject);
+
+            final Set<AuthorizationTokenPrincipal> tokenPrincipals = validatedSubject.getPrincipals(AuthorizationTokenPrincipal.class);
             for (final AuthorizationTokenPrincipal tokenPrincipal : tokenPrincipals) {
                 final String tokenValue = tokenPrincipal.getHeaderValue();
                 final String[] parts = tokenValue.split(" ", 2);
@@ -214,15 +217,16 @@ public class PosixIdentityManager implements IdentityManager {
                     if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
                         final String apiKeyValue = parts[1].trim();
 
-                        subject.getPrincipals().remove(tokenPrincipal);
-                        subject.getPublicCredentials().add(new AuthorizationToken(challengeType, apiKeyValue, Collections.emptyList()));
+                        validatedSubject.getPrincipals().remove(tokenPrincipal);
+                        validatedSubject.getPublicCredentials().add(new AuthorizationToken(challengeType, apiKeyValue, Collections.emptyList()));
                     }
                 }
             }
-        }
 
-        // delegate to the configured IdentityManager, assuming it can handle a null Subject
-        return this.wrappedIdentityManager.validate(subject);
+            return validatedSubject;
+        }
+        // if subject is null, return null
+        return null;
     }
 
     @Override
