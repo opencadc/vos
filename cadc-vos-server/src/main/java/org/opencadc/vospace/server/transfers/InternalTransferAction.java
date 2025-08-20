@@ -183,7 +183,7 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 }
             }
             log.debug("Resolved move dest: " + destContainer + " move name: " + destName);
-
+            
             Subject caller = AuthenticationUtil.getCurrentSubject();
             // check permission to remove src from its current parent
             if (!authorizer.hasSingleNodeWritePermission(srcNode.parent, caller)) {
@@ -199,13 +199,19 @@ public class InternalTransferAction extends VOSpaceTransfer {
             }
             log.debug("dest permissions OK: " + srcURI + " -> " + destURI);
 
+            // prevent overwrite destination
+            Node dn = nodePersistence.get(destContainer, destName);
+            if (dn != null) {
+                throw NodeFault.DuplicateNode.getStatus(loc.getURI(dn).getPath());
+            }
+            
             // perform the move
             log.debug("performing move: " + srcNode + " -> " + destContainer + "/" + destName);
             nodePersistence.move(srcNode, destContainer, destName);
 
             // final job state
             List<Result> resultsList = new ArrayList<>();
-            String newPath = loc.getURI(srcNode).getPath() + "/" + destName;
+            String newPath = loc.getURI(destContainer).getURI().toASCIIString() + "/" + destName;
             resultsList.add(new Result("destination", new URI(newPath)));
             job.setResultsList(resultsList);
             log.debug("setting final job state: " + ExecutionPhase.COMPLETED + " " + newPath);
