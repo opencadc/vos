@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2024.                            (c) 2024.
+ *  (c) 2025.                            (c) 2025.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -81,6 +81,7 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.Result;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -89,7 +90,6 @@ import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -380,33 +380,49 @@ public class TransferTest extends VOSTest {
             final ContainerNode childContainerNode = new ContainerNode(childContainerName);
 
             // Source child DataNode
-            String childDataName = "move-source-data-child-node";
-            String childDataPath = sourceName + "/" + childDataName;
-            URL childDataNodeURL = getNodeURL(nodesServiceURL, childDataPath);
-            final VOSURI childDataNodeURI = getVOSURI(childDataPath);
-            final DataNode childDataNode = new DataNode(childDataName);
-
+            String childDataName1 = "move-source-data-child-node1";
+            String childDataPath1 = sourceName + "/" + childDataName1;
+            URL childDataNodeURL1 = getNodeURL(nodesServiceURL, childDataPath1);
+            final VOSURI childDataNodeURI1 = getVOSURI(childDataPath1);
+            final DataNode childDataNode1 = new DataNode(childDataName1);
+            
+            // other child DataNode
+            String childDataName2 = "move-source-data-child-node2";
+            String childDataPath2 = sourceName + "/" + childDataName2;
+            URL childDataNodeURL2 = getNodeURL(nodesServiceURL, childDataPath2);
+            final VOSURI childDataNodeURI2 = getVOSURI(childDataPath2);
+            final DataNode childDataNode2 = new DataNode(childDataName2);
+            
             // Cleanup old nodes
             delete(childContainerNodeURL, false);
-            delete(childDataNodeURL, false);
+            delete(childDataNodeURL1, false);
             delete(sourceNodeURL, false);
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName), false);
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName1), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName2), false);
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
             delete(destinationNodeURL, false);
 
             // Put new nodes
             put(sourceNodeURL, sourceNodeURI, sourceNode);
             put(destinationNodeURL, destinationNodeURI, destinationNode);
-
             log.debug("source-container-child URL: " + childContainerNodeURL);
             put(childContainerNodeURL, childContainerNodeURI, childContainerNode);
+            log.debug("source-data-child URL: " + childDataNodeURL1);
+            put(childDataNodeURL1, childDataNodeURI1, childDataNode1);
+            put(childDataNodeURL2, childDataNodeURI2, childDataNode2);
 
-            log.debug("source-data-child URL: " + childDataNodeURL);
-            put(childDataNodeURL, childDataNodeURI, childDataNode);
-
+            // expectation:
+            String destDataPath = destinationName + "/" + sourceName;
+            final VOSURI destinationResult = getVOSURI(destDataPath);
+            
             Job job = runMove(sourceNodeURI, destinationNodeURI);
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
+            List<Result> results = job.getResultsList();
+            Assert.assertNotNull(results);
+            Assert.assertEquals(1, results.size());
+            Result r = results.get(0);
+            Assert.assertEquals(destinationResult.getURI(), r.getURI());
 
             // Source node should not be found
             get(sourceNodeURL, 404, TEXT_CONTENT_TYPE);
@@ -420,13 +436,23 @@ public class TransferTest extends VOSTest {
             // Get the moved source node
             result = get(new URL(destinationNodeURL + "/" + sourceName), 200, XML_CONTENT_TYPE);
             ContainerNode movedSourceNode = (ContainerNode) result.node;
-            Assert.assertEquals("expected 2 child nodes in source node", 2, movedSourceNode.getNodes().size());
+            Assert.assertEquals("expected 3 child nodes in source node", 3, movedSourceNode.getNodes().size());
             Assert.assertTrue("expected child container node", movedSourceNode.getNodes().contains(childContainerNode));
-            Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode));
+            Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode1));
+            Assert.assertTrue("expected child data node", movedSourceNode.getNodes().contains(childDataNode2));
 
+            // try to overwrite a node with a move: childDataNode1 -> childDataNode2
+            VOSURI cdn1 = getVOSURI(destinationName + "/" + sourceName + "/" + childDataName1);
+            VOSURI cdn2 = getVOSURI(destinationName + "/" + sourceName + "/" + childDataName2);
+            job = runMove(cdn1, cdn2);
+            Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
+            Assert.assertNotNull(job.getErrorSummary());
+            log.info("expected: " + job.getErrorSummary().getSummaryMessage());
+            
             // Delete nodes
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName1));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName2));
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName));
             delete(destinationNodeURL);
 
