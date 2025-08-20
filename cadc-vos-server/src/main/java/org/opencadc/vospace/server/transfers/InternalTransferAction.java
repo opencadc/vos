@@ -82,6 +82,7 @@ import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOSURI;
 import org.opencadc.vospace.server.LocalServiceURI;
@@ -154,9 +155,15 @@ public class InternalTransferAction extends VOSpaceTransfer {
                 throw NodeFault.NodeNotFound.getStatus("Parent directory for destination " + destURI.getPath());
             }
 
-            if ((rn.node != null) && !(rn.node instanceof ContainerNode)) {
-                throw NodeFault.NodeNotFound.getStatus("Resolved parent ("
-                        + loc.getURI(rn.node) + ") is not ContainerNode in destination " + destURI.getPath());
+            if (rn.node != null) {
+                if (rn.node instanceof ContainerNode) {
+                    log.debug("destination is container node - ok");
+                } else if (rn.node instanceof DataNode) {
+                    // this only detects the case where destination data node name is in the request
+                    throw NodeFault.DuplicateNode.getStatus("destination is an existing DataNode: " + destURI.getPath());
+                } else {
+                    throw NodeFault.DuplicateNode.getStatus("destination (parent) is not ContainerNode: " + destURI.getPath());
+                }
             }
             ContainerNode destContainer;
             String destName;
@@ -199,10 +206,10 @@ public class InternalTransferAction extends VOSpaceTransfer {
             }
             log.debug("dest permissions OK: " + srcURI + " -> " + destURI);
 
-            // prevent overwrite destination
+            // prevent overwrite destination when requested destination is path to parent
             Node dn = nodePersistence.get(destContainer, destName);
             if (dn != null) {
-                throw NodeFault.DuplicateNode.getStatus(loc.getURI(dn).getPath());
+                throw NodeFault.DuplicateNode.getStatus("destination is an existing DataNode: " + loc.getURI(dn).getPath());
             }
             
             // perform the move
