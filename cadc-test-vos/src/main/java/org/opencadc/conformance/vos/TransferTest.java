@@ -393,13 +393,15 @@ public class TransferTest extends VOSTest {
             final VOSURI childDataNodeURI2 = getVOSURI(childDataPath2);
             final DataNode childDataNode2 = new DataNode(childDataName2);
             
-            // Cleanup old nodes
+            // cleanup old source nodes
             delete(childContainerNodeURL, false);
             delete(childDataNodeURL1, false);
+            delete(childDataNodeURL2, false);
             delete(sourceNodeURL, false);
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName), false);
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName1), false);
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName2), false);
+            // possible old destination nodes
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childContainerPath));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath1));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath2));
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
             delete(destinationNodeURL, false);
 
@@ -450,11 +452,11 @@ public class TransferTest extends VOSTest {
             log.info("expected: " + job.getErrorSummary().getSummaryMessage());
             
             // Delete nodes
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childContainerName));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName1));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName + "/" + childDataName2));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName));
-            delete(destinationNodeURL);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childContainerPath));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath1));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath2));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
+            delete(destinationNodeURL, false);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
