@@ -399,9 +399,9 @@ public class TransferTest extends VOSTest {
             delete(childDataNodeURL2, false);
             delete(sourceNodeURL, false);
             // possible old destination nodes
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childContainerPath));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath1));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath2));
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childContainerPath), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath1), false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath2), false);
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
             delete(destinationNodeURL, false);
 
@@ -455,8 +455,8 @@ public class TransferTest extends VOSTest {
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + childContainerPath));
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath1));
             delete(getNodeURL(nodesServiceURL, destinationName + "/" + childDataPath2));
-            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName), false);
-            delete(destinationNodeURL, false);
+            delete(getNodeURL(nodesServiceURL, destinationName + "/" + sourceName));
+            delete(destinationNodeURL);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
