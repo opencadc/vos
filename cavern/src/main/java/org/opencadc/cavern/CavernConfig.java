@@ -127,7 +127,10 @@ public class CavernConfig {
     private final List<String> allocationParents = new ArrayList<>();
 
     private final List<String> adminAPIKeys = new ArrayList<>();
-    private final double defaultQuotaGB;
+
+     // Default quota in bytes for new allocations, if not specified in the allocation request.
+     // If null, no default quota is set.
+    public final Long defaultQuotaBytes;
     
     private final Path root;
     private final Path secrets;
@@ -187,14 +190,15 @@ public class CavernConfig {
         adminAPIKeys.addAll(mvp.getProperty(CavernConfig.ADMIN_API_KEY));
 
         final String configuredDefaultQuotaGB = mvp.getFirstPropertyValue(CavernConfig.DEFAULT_QUOTA_GB);
-        if (configuredDefaultQuotaGB == null) {
-            throw new InvalidConfigException(CavernConfig.DEFAULT_QUOTA_GB + " must be specified");
-        } else {
+        if (configuredDefaultQuotaGB != null) {
             try {
-                this.defaultQuotaGB = Double.parseDouble(configuredDefaultQuotaGB);
+                final double parsedQuotaGB = Double.parseDouble(configuredDefaultQuotaGB);
+                this.defaultQuotaBytes = (long) (parsedQuotaGB * 1024L * 1024L * 1024L); // convert GB to bytes
             } catch (NumberFormatException e) {
                 throw new InvalidConfigException(CavernConfig.DEFAULT_QUOTA_GB + " must be a valid number: (" + configuredDefaultQuotaGB + ")");
             }
+        } else {
+            this.defaultQuotaBytes = null;
         }
 
         this.secrets = Paths.get(baseDir, "secrets");
@@ -219,11 +223,6 @@ public class CavernConfig {
     public Map<String, String> getAdminAPIKeys() {
         return this.adminAPIKeys.stream().map(apiKey -> apiKey.split(":")).collect(
             Collectors.toMap(splitKey -> splitKey[0], splitKey -> splitKey[1]));
-    }
-
-    public long getDefaultQuotaBytes() {
-        // Convert to bytes as that's what the NodeProperty expects.  This assumes that the default quota is in GiB.
-        return (long) (defaultQuotaGB * 1024L * 1024L * 1024L);
     }
 
     public Path getSecrets() {

@@ -106,8 +106,8 @@ public class CavernInitAction extends InitAction {
 
     @Override
     public void doInit() {
-        initIdentityManager();
         initNodePersistence();
+        initIdentityManager();
         initDatabase();
     }
     
@@ -159,7 +159,8 @@ public class CavernInitAction extends InitAction {
         // Override the existing IdentityManager.
         System.setProperty(IdentityManager.class.getName(), PosixIdentityManager.class.getName());
 
-        log.debug("IdentityManager set to: " + PosixIdentityManager.class.getName() + " from " + configuredIdentityManagerClassName);
+        log.info(IdentityManager.class.getName() + " = " + PosixIdentityManager.class.getName()
+                + " delegating to " + configuredIdentityManagerClassName);
     }
     
     // generate key pair for preauth URL generation

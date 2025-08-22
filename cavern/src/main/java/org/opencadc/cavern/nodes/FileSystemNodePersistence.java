@@ -68,7 +68,6 @@
 package org.opencadc.cavern.nodes;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
@@ -84,9 +83,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -149,27 +146,29 @@ public class FileSystemNodePersistence implements NodePersistence {
     private final CavernConfig config;
     private final boolean localGroupsOnly;
 
-    // Set of default properties for nodes.  This will be built from configuration.
-    private final List<NodeProperty> defaultProperties = new ArrayList<>();
+    // Default property for Quota in GB in new Allocations.  This will be built from configuration.
+    private final NodeProperty defaultQuotaProperty;
 
     public FileSystemNodePersistence() {
         this.config = new CavernConfig();
         this.rootPath = config.getRoot();
         this.quotaImpl = config.getQuotaPlugin();
 
-        defaultProperties.add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, Long.toString(config.getDefaultQuotaBytes())));
+        if (config.defaultQuotaBytes != null) {
+            this.defaultQuotaProperty = new NodeProperty(VOS.PROPERTY_URI_QUOTA,
+                    Long.toString(config.defaultQuotaBytes));
+        } else {
+            this.defaultQuotaProperty = null;
+        }
         
         LocalServiceURI loc = new LocalServiceURI(config.getResourceID());
         this.rootURI = loc.getVOSBase();
 
-        // must be hard coded to this and not set via java system properties
-        final IdentityManager configuredIdentityManager = AuthenticationUtil.getIdentityManager();
-
-        if (!(configuredIdentityManager instanceof PosixIdentityManager)) {
-            throw new InvalidConfigException("BUG: PosixIdentityManager required but found: " + configuredIdentityManager.getClass().getName());
+        try {
+            this.identityManager = (PosixIdentityManager) AuthenticationUtil.getIdentityManager();
+        } catch (ClassCastException ex) {
+            throw new RuntimeException("BUG: init failed to wrap IdentityManager with PosixIdentityManager", ex);
         }
-
-        this.identityManager = (PosixIdentityManager) AuthenticationUtil.getIdentityManager();
         
         // root node
         UUID rootID = new UUID(0L, 0L); // cosmetic: not used in cavern
@@ -465,13 +464,14 @@ public class FileSystemNodePersistence implements NodePersistence {
                     throw new UnsupportedOperationException("link to external resource", ex);
                 }
             }
-        } else if ((node instanceof ContainerNode) && isAllocation((ContainerNode) node)
+        }
+
+        if ((node instanceof ContainerNode) && isAllocation((ContainerNode) node)
                 && node.getProperty(VOS.PROPERTY_URI_QUOTA) == null) {
-            final NodeProperty defaultNodeProperty = this.defaultProperties.get(this.defaultProperties.indexOf(new NodeProperty(VOS.PROPERTY_URI_QUOTA)));
-            if (defaultNodeProperty == null) {
-                log.warn("No default quota (" + VOS.PROPERTY_URI_QUOTA + ") configured.");
+            if (this.defaultQuotaProperty == null) {
+                log.debug("No default quota property (org.opencadc.cavern.defaultQuotaGB) configured.");
             } else {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, defaultNodeProperty.getValue()));
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_QUOTA, this.defaultQuotaProperty.getValue()));
             }
         }
         
