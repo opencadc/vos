@@ -43,6 +43,8 @@ import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.ResourceAlreadyExistsException;
+import ca.nrc.cadc.net.ResourceNotFoundException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -311,6 +313,16 @@ public class TransferRunner implements JobRunner {
             } catch (NotAuthenticatedException ne) {
                 log.debug("not authenticated", ne);
                 sendError(job.getExecutionPhase(), ErrorType.FATAL, "NotAuthenticated", HttpURLConnection.HTTP_UNAUTHORIZED, true);
+                return;
+            } catch (ResourceNotFoundException ex) {
+                String msg = ex.getMessage();
+                log.debug(msg, ex);
+                sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_NOT_FOUND, true);
+                return;
+            } catch (ResourceAlreadyExistsException ex) {
+                String msg = ex.getMessage();
+                log.debug(msg, ex);
+                sendError(job.getExecutionPhase(), ErrorType.FATAL, msg, HttpURLConnection.HTTP_CONFLICT, true);
                 return;
             } catch (IllegalArgumentException ex) {
                 // target not valid for specified operation
