@@ -67,12 +67,14 @@
 
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.rest.InitAction;
+import ca.nrc.cadc.util.InvalidConfigException;
 import ca.nrc.cadc.util.RsaSignatureGenerator;
 import ca.nrc.cadc.uws.server.impl.InitDatabaseUWS;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -87,6 +89,7 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.FileSystemNodePersistence;
+import org.opencadc.cavern.nodes.PosixIdentityManager;
 import org.opencadc.vospace.server.NodePersistence;
 
 /**
@@ -104,6 +107,7 @@ public class CavernInitAction extends InitAction {
     @Override
     public void doInit() {
         initNodePersistence();
+        initIdentityManager();
         initDatabase();
     }
     
@@ -137,6 +141,26 @@ public class CavernInitAction extends InitAction {
         } catch (NamingException ex) {
             log.error("Failed to create JNDI Key " + jndiNodePersistence, ex);
         }
+    }
+
+    private void initIdentityManager() {
+        final String configuredIdentityManagerClassName = System.getProperty(IdentityManager.class.getName());
+        if (configuredIdentityManagerClassName == null) {
+            throw new InvalidConfigException("No existing IdentityManager found.  Ensure that the " + IdentityManager.class.getName()
+                                                 + " System Property is set to a valid implementation.");
+        }
+
+        // Assuming there isn't more than one Cavern deployed within a JVM.
+        PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY = this.jndiNodePersistence;
+
+        // To be used by the PosixIdentityManager to wrap the existing IdentityManager.
+        System.setProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY, configuredIdentityManagerClassName);
+
+        // Override the existing IdentityManager.
+        System.setProperty(IdentityManager.class.getName(), PosixIdentityManager.class.getName());
+
+        log.info(IdentityManager.class.getName() + " = " + PosixIdentityManager.class.getName()
+                + " delegating to " + configuredIdentityManagerClassName);
     }
     
     // generate key pair for preauth URL generation

@@ -57,6 +57,9 @@ org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 # (optional) identify which container nodes are allocations
 org.opencadc.cavern.allocationParent = {top level node}
 
+# (optional) API Keys with administrative privileges.  Multiple keys can be specified, one per line.
+# org.opencadc.cavern.adminAPIKey = {applicationClientName}:{apiKeyToken}
+
 # (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
 # for users.
 # Optional, but the default of NoQuotaPlugin will get used if not specified, and users will have free reign.
@@ -64,6 +67,9 @@ org.opencadc.cavern.allocationParent = {top level node}
 # - NoQuotaPlugin: Default - no quota checking
 #
 org.opencadc.cavern.nodes.QuotaPlugin = CephFSQuotaPlugin | NoQuotaPlugin
+
+# (optional) Default Quota in GB for new allocations.
+org.opencadc.cavern.defaultQuotaGB = 10
 
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
@@ -91,7 +97,7 @@ and all content therein. The owner of an allocation is granted additional permis
 allocation (they can read/write/delete anything) so the owner cannot be blocked from access to any content
 within their allocation. This probably only matters for multi-user projects. Multiple _allocationParent_(s) may
 be configured to organise the top level of the content (e.g. /home and /projects). Paths configured to be 
-_allocationParent_(s) will be automatically created (if necessary) (owned by the _rootOwner_ and intially set to
+_allocationParent_(s) will be automatically created (if necessary) (owned by the _rootOwner_ and initially set to
 private). It is up to the admin user to grant read access by setting `isPublic` or `groupRead` properties in order to
 enable allowed users to use directories beneath the _allocationParent_(s). Limitation: only top-level container 
 nodes can be configured as _allocationParent_(s).
@@ -104,9 +110,17 @@ The _filesystem.rootOwner_ is the username of the owner of the root container in
 privileges: can create allocations (create a container node owned by another user) and can set the quota property
 on such containers. Note: quota is not currently implemented in `cavern`.
 
+The _org.opencadc.cavern.adminAPIKey_ properties are API keys unique to this Cavern instance that can be used to 
+authenticate and perform administrative tasks.  They are of the form `{applicationClientName}:{apiKeyToken}`, where
+- `{applicationClientName}` is the name of the application client (e.g. "skaha", "prepareData")
+- `{apiKeyToken}` is any string of characters that is used to authenticate the application client.
+
 The _org.opencadc.cavern.nodes.QuotaPlugin_ is the concrete class that implements the 
 [QuotaPlugin](./src/main/java/org/opencadc/cavern/nodes/QuotaPlugin.java) interface.  Absences of this property 
 assumes no quota support and users can fill underlying storage in an uncontrolled way.
+
+The _org.opencadc.cavern.defaultQuotaGB_ property is the default quota in GB for new allocations. This is only used if
+no quota was specified when creating the allocation.
 
 The `cavern` service must be able to resolve the root owner username to a POSIX uid and gid pair during startup. If
 the configured IdentityManager does not support privileged access to user info, the correct values must be configured 
