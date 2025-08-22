@@ -275,11 +275,6 @@ public class PosixIdentityManager implements IdentityManager {
             }
         }
         
-        // these two cases should not happen so warn with stack trace and bail
-        if (pp != null && subject.getPrincipals().size() > 1) {
-            log.warn("augment: skip " + subject, new RuntimeException());
-            return subject;
-        }
         if (pp != null && pp.getUidNumber() == 0) {
             String msg = "someone tried to augment uid=0 aka root";
             log.warn(msg + " (turn on debug to see stack trace)");

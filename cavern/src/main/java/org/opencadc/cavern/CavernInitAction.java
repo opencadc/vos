@@ -106,8 +106,9 @@ public class CavernInitAction extends InitAction {
 
     @Override
     public void doInit() {
-        initNodePersistence();
+        this.jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
         initIdentityManager();
+        initNodePersistence();
         initDatabase();
     }
     
@@ -124,7 +125,6 @@ public class CavernInitAction extends InitAction {
     }
     
     private void initNodePersistence() {
-        this.jndiNodePersistence = appName + "-" + NodePersistence.class.getName();
         try {
             Context ctx = new InitialContext();
             try {
