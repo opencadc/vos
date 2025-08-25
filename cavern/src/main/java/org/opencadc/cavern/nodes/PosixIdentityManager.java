@@ -221,18 +221,15 @@ public class PosixIdentityManager implements IdentityManager {
                     if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
                         final String tokenValue = parts[1].trim();
                         final String[] tokenValueParts = tokenValue.split(":", 2);
-                        if (tokenValueParts.length != 2) {
-                            log.warn(
-                                    "Invalid Authorization Token value format checking admin.  Should be in format '<client-application-name>:<admin-api-key-token>', but got " +
-                                            tokenValue);
-                        } else {
+                        if (tokenValueParts.length == 2) {
                             final String clientApplicationName = tokenValueParts[0].trim();
                             final String apiKeyToken = tokenValueParts[1].trim();
                             try {
-                                final Context ctx = new InitialContext();
-                                final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
-                                final CavernConfig config = fileSystemNodePersistence.getConfig();
-                                final Map<String, String> apiKeys = config.getAdminAPIKeys();
+                                Context ctx = new InitialContext();
+                                FileSystemNodePersistence fileSystemNodePersistence = 
+                                        (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
+                                CavernConfig config = fileSystemNodePersistence.getConfig();
+                                Map<String, String> apiKeys = config.getAdminAPIKeys();
 
                                 if (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken)) {
                                     log.info("CAVERN ADMIN GRANT: " + clientApplicationName);
@@ -242,6 +239,8 @@ public class PosixIdentityManager implements IdentityManager {
                                 throw new IllegalStateException(namingException.getMessage(), namingException);
                             }
                         }
+                        // intentionally vague error message for failed admin-api-key
+                        throw new NotAuthenticatedException("invalid token");
                     }
                 }
             }
