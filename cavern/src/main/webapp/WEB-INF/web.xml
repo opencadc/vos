@@ -28,6 +28,7 @@
             org.opencadc.cavern
             org.opencadc.vospace
             org.opencadc.auth
+            ca.nrc.cadc.reg
             org.opencadc.gms
             ca.nrc.cadc.db.version
             ca.nrc.cadc.rest
