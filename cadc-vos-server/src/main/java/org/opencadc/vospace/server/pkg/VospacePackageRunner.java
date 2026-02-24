@@ -166,7 +166,7 @@ public class VospacePackageRunner extends PackageRunner {
 
             // Get the target list from the job
             TransferReader tr = new TransferReader();
-            this.packageTransfer = tr.read(jobInfo.getContent(), VOSURI.SCHEME);
+            this.packageTransfer = tr.read(jobInfo.getFirstContent(), VOSURI.SCHEME);
             this.targetList = packageTransfer.getTargets();
 
             StringBuilder sb = new StringBuilder();

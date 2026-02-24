@@ -107,7 +107,7 @@ public class RecursiveNodePropsRunner extends AbstractRecursiveRunner {
             NodeReader reader = new NodeReader();
             NodeReader.NodeReaderResult res = null;
             try {
-                res = reader.read(jobInfo.getContent());
+                res = reader.read(jobInfo.getFirstContent());
             } catch (Exception e) {
                 this.sendError("Error parsing input properties");
             }
