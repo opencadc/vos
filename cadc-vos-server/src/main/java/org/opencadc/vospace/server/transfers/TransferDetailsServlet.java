@@ -275,7 +275,7 @@ public class TransferDetailsServlet extends HttpServlet {
                 if (Boolean.TRUE.equals(jobInfo.getValid())
                         && TEXT_XML.equals(jobInfo.getContentType())) {
                     TransferReader reader = new TransferReader();
-                    Transfer transfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
+                    Transfer transfer = reader.read(jobInfo.getFirstContent(), VOSURI.SCHEME);
 
                     // Check early to see if this is a package transfer request
                     boolean isPackageTransfer = false;

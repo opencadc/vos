@@ -229,7 +229,7 @@ public class TransferRunner implements JobRunner {
                         && jobInfo.getContentType().equalsIgnoreCase("text/xml")) {
                     log.debug("transfer XML: \n\n" + jobInfo.getContent());
                     TransferReader reader = new TransferReader();
-                    transfer = reader.read(jobInfo.getContent(), VOSURI.SCHEME);
+                    transfer = reader.read(jobInfo.getFirstContent(), VOSURI.SCHEME);
                     log.debug("*** transfer version: " + transfer.version);
                 }
             } catch (IllegalArgumentException ex) {
