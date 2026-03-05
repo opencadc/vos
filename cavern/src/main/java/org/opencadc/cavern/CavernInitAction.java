@@ -116,7 +116,9 @@ public class CavernInitAction extends InitAction {
         try {
             log.info("InitDatabaseUWS: START");
             DataSource uws = DBUtil.findJNDIDataSource("jdbc/uws");
-            InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws");
+            // 1.3 changes jobInfo database; backfill expensive
+            boolean forceRolloverBeforeMinorUpgrade = true; 
+            InitDatabaseUWS uwsi = new InitDatabaseUWS(uws, null, "uws", forceRolloverBeforeMinorUpgrade);
             uwsi.doInit();
             log.info("InitDatabaseUWS: OK");
         }  catch (Exception ex) {
