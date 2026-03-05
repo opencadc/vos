@@ -150,35 +150,40 @@ public class ServiceAvailability implements AvailabilityPlugin {
             
             URI credURI = null;
             try {
-                credURI = localAuthority.getServiceURI(Standards.CRED_PROXY_10.toString());
-                URL url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
-                if (url != null) {
-                    CheckResource checkResource = new CheckWebService(url);
-                    checkResource.check();
+                credURI = localAuthority.getResourceID(Standards.CRED_PROXY_10);
+
+                // The CDP is not applicable to all deployments, so don't throw an exception
+                if (credURI != null) {
+                    URL url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                    if (url != null) {
+                        CheckResource checkResource = new CheckWebService(url);
+                        checkResource.check();
+                    } else {
+                        log.debug("check skipped: " + credURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                    }
                 } else {
-                    log.debug("check skipped: " + credURI + " does not provide " + Standards.VOSI_AVAILABILITY);
+                    log.debug("check skipped: " + Standards.CRED_PROXY_10 + " not applicable");
                 }
-            } catch (NoSuchElementException ex) {
+            } catch (NoSuchElementException | IllegalArgumentException ex) {
                 log.debug("not configured: " + Standards.CRED_PROXY_10);
             }
 
             URI usersURI = null;
             try {
-                usersURI = localAuthority.getServiceURI(Standards.UMS_USERS_01.toString());
-                URL url = reg.getServiceURL(credURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                usersURI = localAuthority.getResourceID(Standards.UMS_USERS_10);
+                URL url = reg.getServiceURL(usersURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
                 if (url != null) {
                     CheckResource checkResource = new CheckWebService(url);
                     checkResource.check();
                 } else {
                     log.debug("check skipped: " + usersURI + " does not provide " + Standards.VOSI_AVAILABILITY);
                 }
-            } catch (NoSuchElementException ex) {
-                log.debug("not configured: " + Standards.UMS_USERS_01);
+            } catch (NoSuchElementException | IllegalArgumentException ex) {
+                log.debug("not configured: " + Standards.UMS_USERS_10);
             }
 
-            URI groupsURI = null;
             try {
-                groupsURI = localAuthority.getServiceURI(Standards.GMS_SEARCH_10.toString());
+                URI groupsURI = localAuthority.getResourceID(Standards.GMS_SEARCH_10);
                 if (!groupsURI.equals(usersURI)) {
                     URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
                     if (url != null) {
@@ -188,28 +193,28 @@ public class ServiceAvailability implements AvailabilityPlugin {
                         log.debug("check skipped: " + groupsURI + " does not provide " + Standards.VOSI_AVAILABILITY);
                     }
                 }
-            } catch (NoSuchElementException ex) {
+            } catch (NoSuchElementException | IllegalArgumentException ex) {
                 log.debug("not configured: " + Standards.GMS_SEARCH_10);
             }
 
             URI posixUserMapURI = null;
             try {
-                posixUserMapURI = localAuthority.getServiceURI(Standards.POSIX_USERMAP.toASCIIString());
-                URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                posixUserMapURI = localAuthority.getResourceID(Standards.POSIX_USERMAP);
+                URL url = reg.getServiceURL(posixUserMapURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
                 if (url != null) {
                     CheckResource checkResource = new CheckWebService(url);
                     checkResource.check();
                 } else {
                     log.debug("check skipped: " + posixUserMapURI + " does not provide " + Standards.VOSI_AVAILABILITY);
                 }
-            } catch (NoSuchElementException ex) {
+            } catch (NoSuchElementException | IllegalArgumentException ex) {
                 log.debug("not configured: " + Standards.POSIX_USERMAP);
             }
-            URI posixGroupMapURI = null;
+
             try {
-                posixGroupMapURI = localAuthority.getServiceURI(Standards.POSIX_GROUPMAP.toASCIIString());
+                URI posixGroupMapURI = localAuthority.getResourceID(Standards.POSIX_GROUPMAP);
                 if (!posixGroupMapURI.equals(posixUserMapURI)) {
-                    URL url = reg.getServiceURL(groupsURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
+                    URL url = reg.getServiceURL(posixGroupMapURI, Standards.VOSI_AVAILABILITY, AuthMethod.ANON);
                     if (url != null) {
                         CheckResource checkResource = new CheckWebService(url);
                         checkResource.check();
@@ -217,7 +222,7 @@ public class ServiceAvailability implements AvailabilityPlugin {
                         log.debug("check skipped: " + posixGroupMapURI + " does not provide " + Standards.VOSI_AVAILABILITY);
                     }
                 }
-            } catch (NoSuchElementException ex) {
+            } catch (NoSuchElementException | IllegalArgumentException ex) {
                 log.debug("not configured: " + Standards.POSIX_GROUPMAP);
             }
             
