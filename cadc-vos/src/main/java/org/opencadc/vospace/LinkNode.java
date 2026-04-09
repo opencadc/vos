@@ -68,7 +68,6 @@
 package org.opencadc.vospace;
 
 import java.net.URI;
-
 import java.util.UUID;
 import org.apache.log4j.Logger;
 
