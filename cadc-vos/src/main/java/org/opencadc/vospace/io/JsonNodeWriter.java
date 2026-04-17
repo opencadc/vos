@@ -68,10 +68,8 @@
 package org.opencadc.vospace.io;
 
 import ca.nrc.cadc.xml.JsonOutputter;
-
 import java.io.IOException;
 import java.io.Writer;
-
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.output.Format;

@@ -68,7 +68,6 @@
 package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.HttpPost;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
