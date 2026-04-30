@@ -326,7 +326,6 @@ public class FilesTest extends VOSTest {
             // Create a DataNode.
             String nodeName = "files-data-node-permissions";
             URL nodeURL = getNodeURL(nodesServiceURL, nodeName);
-            VOSURI nodeURI = getVOSURI(nodeName);
             DataNode testNode = new DataNode(nodeName);
             testNode.owner = authSubject;
             testNode.isPublic = false;
@@ -336,6 +335,7 @@ public class FilesTest extends VOSTest {
             delete(nodeURL, false);
 
             // PUT the node
+            VOSURI nodeURI = getVOSURI(nodeName);
             put(nodeURL, nodeURI, testNode);
 
             // URL to the files endpoint for the node

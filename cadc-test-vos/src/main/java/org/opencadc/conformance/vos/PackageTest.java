@@ -327,12 +327,12 @@ public class PackageTest extends VOSTest {
     @Test
     public void fullTest() {
         try {
-             //   full-root-folder/
-             //   full-root-folder/pkg-root/file1.txt
-             //   full-root-folder/pkg-root/dir1/
-             //   full-root-folder/pkg-root/dir2/
-             //   full-root-folder/pkg-root/dir2/file2.txt
-             //   full-root-folder/pkg-root/dir2/file3.txt
+            //   full-root-folder/
+            //   full-root-folder/pkg-root/file1.txt
+            //   full-root-folder/pkg-root/dir1/
+            //   full-root-folder/pkg-root/dir2/
+            //   full-root-folder/pkg-root/dir2/file2.txt
+            //   full-root-folder/pkg-root/dir2/file3.txt
 
             // nodes paths
             String root = "full-root-folder/";

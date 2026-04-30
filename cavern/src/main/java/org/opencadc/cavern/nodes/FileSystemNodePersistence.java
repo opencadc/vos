@@ -74,7 +74,6 @@ import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.InvalidConfigException;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;

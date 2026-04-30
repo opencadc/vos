@@ -93,7 +93,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -543,12 +542,12 @@ public class TransferTest extends VOSTest {
 
     /**
      * Test that a user can write to a data node after being given write permission.
-     *
-     * The authSubject user is the owner of the parent ContainerNode and child DataNode.
+     * <p>The authSubject user is the owner of the parent ContainerNode and child DataNode.
      * The altSubject user is a member of the altGroup group.
      * The altGroup by default does not have write access to the parent or child nodes.
      * The altGroup group is given write access to the child node, which should
      * allow the altSubject to write to the child node.
+     * </p>
      */
     @Test
     public void testDataNodePermission() throws Exception {
@@ -560,7 +559,6 @@ public class TransferTest extends VOSTest {
             // Parent ContainerNode
             String parentName = "transfer-data-node-permissions-parent";
             URL parentURL = getNodeURL(nodesServiceURL, parentName);
-            VOSURI parentURI = getVOSURI(parentName);
             ContainerNode parentNode = new ContainerNode(parentName);
             parentNode.owner = authSubject;
             parentNode.isPublic = false;
@@ -570,7 +568,6 @@ public class TransferTest extends VOSTest {
             String childName = "transfer-data-node-permissions-child";
             String childPath = parentName + "/" + childName;
             URL childURL = getNodeURL(nodesServiceURL, childPath);
-            VOSURI childURI = getVOSURI(childPath);
             DataNode childNode = new DataNode(childName);
             childNode.owner = authSubject;
             childNode.isPublic = false;
@@ -581,6 +578,8 @@ public class TransferTest extends VOSTest {
             delete(parentURL, false);
 
             // PUT the nodes
+            VOSURI parentURI = getVOSURI(parentName);
+            VOSURI childURI = getVOSURI(childPath);
             put(parentURL, parentURI, parentNode);
             put(childURL, childURI, childNode);
 

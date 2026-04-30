@@ -69,7 +69,6 @@ package org.opencadc.vospace.client;
 
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
-
 import org.apache.log4j.Logger;
 
 /**

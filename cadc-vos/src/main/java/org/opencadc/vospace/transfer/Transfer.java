@@ -70,7 +70,6 @@ package org.opencadc.vospace.transfer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.View;

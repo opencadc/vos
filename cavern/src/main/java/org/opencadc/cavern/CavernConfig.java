@@ -128,8 +128,8 @@ public class CavernConfig {
 
     private final List<String> adminAPIKeys = new ArrayList<>();
 
-     // Default quota in bytes for new allocations, if not specified in the allocation request.
-     // If null, no default quota is set.
+    // Default quota in bytes for new allocations, if not specified in the allocation request.
+    // If null, no default quota is set.
     public final Long defaultQuotaBytes;
     
     private final Path root;
