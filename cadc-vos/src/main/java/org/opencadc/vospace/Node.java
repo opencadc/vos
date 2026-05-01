@@ -142,13 +142,13 @@ public abstract class Node extends Entity implements Comparable<Node> {
 
     protected Node(String name) {
         super(ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
-        NodeUtil.assertNotNull(Node.class, "name", "name");
+        NodeUtil.assertNotNull(Node.class, "name", name);
         this.name = name;
     }
     
     protected Node(UUID id, String name) {
         super(id, ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
-        NodeUtil.assertNotNull(Node.class, "name", "name");
+        NodeUtil.assertNotNull(Node.class, "name", name);
         this.name = name;
     }
 
