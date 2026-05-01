@@ -93,8 +93,8 @@ public class NodeProperty implements Comparable<NodeProperty> {
      * @param value The property value.
      */
     public NodeProperty(URI key, String value) {
-        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
-        NodeUtil.assertNotNull(NodeProperty.class, "value", "value");
+        NodeUtil.assertNotNull(NodeProperty.class, "key", key);
+        NodeUtil.assertNotNull(NodeProperty.class, "value", value);
         this.key = key;
         this.value = value;
         this.markedForDeletion = false;
@@ -107,7 +107,7 @@ public class NodeProperty implements Comparable<NodeProperty> {
      * @param key The property identifier.
      */
     public NodeProperty(URI key) {
-        NodeUtil.assertNotNull(NodeProperty.class, "key", "key");
+        NodeUtil.assertNotNull(NodeProperty.class, "key", key);
         this.key = key;
         this.value = null;
         this.markedForDeletion = true;

@@ -244,7 +244,7 @@ public class VOSURITest {
                             if (b1 == b2 && p1 == p2) {
                                 Assert.assertEquals(vos1, vos2);
                             } else {
-                                junit.framework.Assert.assertNotSame(vos1, vos2);
+                                Assert.assertNotSame(vos1, vos2);
                             }
                         }
                     }

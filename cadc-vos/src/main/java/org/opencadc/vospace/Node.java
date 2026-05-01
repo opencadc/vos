@@ -93,6 +93,8 @@ public abstract class Node extends Entity implements Comparable<Node> {
     // Entity metaChecksum algorithm setup: DO NOT CHANGE
     static final boolean ENTITY_TRUNCATE_DATES = false;
     static final boolean ENTITY_DIGEST_FIELD_NAMES = true;
+    static final boolean ENTITY_DIGEST_FIELD_NAMES_LOWER = false;
+    static final boolean ENTITY_DIGEST_ZERO_BYTE = false;
 
     /**
      * Server-side support for connecting a node to a parent container node. 
@@ -142,13 +144,17 @@ public abstract class Node extends Entity implements Comparable<Node> {
 
     protected Node(String name) {
         super(ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
-        NodeUtil.assertNotNull(Node.class, "name", "name");
+        //super(ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES,
+        //        ENTITY_DIGEST_FIELD_NAMES_LOWER, ENTITY_DIGEST_ZERO_BYTE);
+        NodeUtil.assertNotNull(Node.class, "name", name);
         this.name = name;
     }
     
     protected Node(UUID id, String name) {
         super(id, ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES);
-        NodeUtil.assertNotNull(Node.class, "name", "name");
+        //super(id, ENTITY_TRUNCATE_DATES, ENTITY_DIGEST_FIELD_NAMES,
+        //        ENTITY_DIGEST_FIELD_NAMES_LOWER, ENTITY_DIGEST_ZERO_BYTE);
+        NodeUtil.assertNotNull(Node.class, "name", name);
         this.name = name;
     }
 

@@ -1,6 +1,9 @@
 configurations {
     checkstyleDep
     intTestImplementation.extendsFrom testImplementation
+
+    runtimeOnly.exclude module: 'slf4j-reload4j'
+    runtimeOnly.exclude module: 'reload4j'
 }
 
 dependencies {
@@ -13,6 +16,11 @@ checkstyle {
     config = resources.text.fromArchiveEntry(configurations.checkstyleDep, 'cadc_checkstyle.xml')
     toolVersion = '10.12.5'
     sourceSets = []
+}
+
+// enable additional warnings
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
 }
 
 sourceSets {
@@ -43,7 +51,7 @@ tasks.withType(Test) {
     // reset the report destinations so that intTests go to their own page
     //reports.html.destination = file("${reporting.baseDir}/${name}")
     reports.html.destination = file(reporting.baseDir.getAbsolutePath() + '/' + name)
-    
+
     // Assign all Java system properties from
     // the command line to the tests
     systemProperties System.properties
