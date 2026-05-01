@@ -1344,16 +1344,24 @@ public class Main implements Runnable {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
         }
 
-        String groupRead = argMap.getValue(ARG_GROUP_READ);
-        if (groupRead != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+        if (argMap.isSet(ARG_GROUP_READ)) {
+            String groupRead = argMap.getValue(ARG_GROUP_READ);
+            if (groupRead != null && !groupRead.isEmpty() && !"false".equals(groupRead)) {
+                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+            } else {
+                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD)); // delete
+            }
         }
 
-        String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
-        if (groupWrite != null) {
-            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+        if (argMap.isSet(ARG_GROUP_WRITE)) {
+            String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
+            if (groupWrite != null && !groupWrite.isEmpty() && !"false".equals(groupWrite)) {
+                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+            } else {
+                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE)); // delete
+            }
         }
-
+        
         if (isLockSet) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(isLockValue)));
         }

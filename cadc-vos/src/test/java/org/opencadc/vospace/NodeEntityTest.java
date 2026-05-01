@@ -74,6 +74,7 @@ import java.net.URI;
 import java.security.MessageDigest;
 import java.util.UUID;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -335,4 +336,52 @@ public class NodeEntityTest {
             Entity.MCS_DEBUG = false;
         }
     }
+
+    @Test
+    public void testStableChecksum() {
+        try {
+            Entity.MCS_DEBUG = true;
+            
+            final URI expected = URI.create("md5:2d73c797acecc07d78a6fc71324c3d22");
+            
+            final GroupURI guri1 = new GroupURI(URI.create("ivo://opencadc.org/gms?FOO-1"));
+            final GroupURI guri2 = new GroupURI(URI.create("ivo://opencadc.org/gms?FOO-2"));
+            
+            ContainerNode n = new ContainerNode(new UUID(123L, 456L), "foo");
+            n.metaProducer = URI.create("test:cadc-vos/NodeEntityTest/testComplete");
+            n.parentID = new UUID(0L, 0L);
+            n.bytesUsed = 123L;
+            n.inheritPermissions = true;
+            n.isLocked = true;
+            n.isPublic = true;
+            n.ownerID = 54321L;
+            
+            NodeProperty qnp = new NodeProperty(VOS.PROPERTY_URI_QUOTA, "640000");
+            qnp.readOnly = true;
+            n.getProperties().add(qnp);
+            
+            NodeProperty tnp = new NodeProperty(VOS.PROPERTY_URI_TITLE, "My Stuff");
+            tnp.readOnly = false;
+            n.getProperties().add(tnp);
+            
+            n.getReadOnlyGroup().add(guri1);
+            n.getReadOnlyGroup().add(guri2);
+            
+            n.getReadWriteGroup().add(guri1);
+            n.getReadWriteGroup().add(guri2);
+            
+            
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            URI mcs = n.computeMetaChecksum(digest);
+            log.info("complete metaChecksum: " + mcs);
+            Assert.assertEquals(expected, mcs);
+            
+        } catch (Exception unexpected) {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        } finally {
+            Entity.MCS_DEBUG = false;
+        }
+    }
+
 }

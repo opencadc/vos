@@ -83,7 +83,9 @@ public class DeletedNodeEvent extends Entity {
     public URI storageID;
     
     public DeletedNodeEvent(UUID id, Class nodeType) {
-        super(id, Node.ENTITY_TRUNCATE_DATES, Node.ENTITY_DIGEST_FIELD_NAMES);
+        super(id, Node.ENTITY_TRUNCATE_DATES, 
+                Node.ENTITY_DIGEST_FIELD_NAMES, Node.ENTITY_DIGEST_FIELD_NAMES_LOWER,
+                Node.ENTITY_DIGEST_ZERO_BYTE);
         NodeUtil.assertNotNull(DeletedNodeEvent.class, "nodeType", nodeType);
         this.nodeType = nodeType.getSimpleName();
         this.storageID = null;
