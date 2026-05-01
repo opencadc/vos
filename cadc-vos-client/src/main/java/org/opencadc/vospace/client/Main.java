@@ -283,20 +283,18 @@ public class Main implements Runnable {
             Node up = null;
             if (n instanceof ContainerNode) {
                 up = new ContainerNode(target.getName());
-                up.getProperties().addAll(properties);
             } else if (n instanceof DataNode) {
                 up = new DataNode(target.getName());
-                up.getProperties().addAll(properties);
             } else if (n instanceof LinkNode) {
                 URI link = ((LinkNode) n).getTarget();
                 up = new LinkNode(target.getName(), link);
-                up.getProperties().addAll(properties);
             } else {
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             }
-
+            log.info("setNode: updating " + properties.size() + " node properties");
+            up.getProperties().addAll(properties);
             this.client.setNode(this.target, up);
-            log.info("updated properties: " + this.target);
+            log.info("setNode: updated properties on " + this.target);
         } catch (ResourceNotFoundException ex) {
             msg("not found: " + target);
             System.exit(NET_STATUS);
@@ -1346,19 +1344,23 @@ public class Main implements Runnable {
 
         if (argMap.isSet(ARG_GROUP_READ)) {
             String groupRead = argMap.getValue(ARG_GROUP_READ);
-            if (groupRead != null && !groupRead.isEmpty() && !"false".equals(groupRead)) {
-                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
-            } else {
-                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD)); // delete
+            if (groupRead != null && !groupRead.isEmpty()) {
+                if ("false".equals(groupRead)) {
+                    properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD)); // delete
+                } else {
+                    properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+                }
             }
         }
 
         if (argMap.isSet(ARG_GROUP_WRITE)) {
             String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
-            if (groupWrite != null && !groupWrite.isEmpty() && !"false".equals(groupWrite)) {
-                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-            } else {
-                properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE)); // delete
+            if (groupWrite != null && !groupWrite.isEmpty()) {
+                if ("false".equals(groupWrite)) {
+                    properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE)); // delete
+                } else {
+                    properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+                }
             }
         }
         
@@ -1369,6 +1371,8 @@ public class Main implements Runnable {
         if (isPublicSet) {
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublicValue)));
         }
+        
+        log.debug("validateCommandArguments: found " + properties.size() + " properties");
     }
 
     /**
@@ -1412,8 +1416,10 @@ public class Main implements Runnable {
             "    [--prop=<properties file>]                                                                    ",
             "    [--content-type=<mimetype of source>]       : DataNode only",
             "    [--content-encoding=<encoding of source>]   : DataNode only",
-            "    [--group-read=<group URIs (in double quotes, space separated, 4 maximum)>]                    ",
-            "    [--group-write=<group URIs (in double quotes, space separated, 4 maximum)>]                   ",
+            "    [--group-read=<group URIs (in double quotes, space separated, 4 maximum)>]            ",
+            "    [--group-read=false (to clear this permission)",
+            "    [--group-write=<group URIs (in double quotes, space separated, 4 maximum)>]           ",
+            "    [--group-write=false (to clear this permission)",
             "    [--lock]                                                                                      ",
             "    [--public]                                                                                    ",
             "    [--prop=<properties file>]                                                                    ",
