@@ -260,7 +260,8 @@ public class PosixIdentityManager implements IdentityManager {
                             break;
                         }
                         default: {
-                            log.warn("invalid authoriseType in permissions client config: " + permissionsClientConfig.getAuthoriseType());
+                            log.warn("invalid authoriseType in permissions client config: "
+                                    + permissionsClientConfig.getAuthoriseType());
                         }
                     }
                 }
