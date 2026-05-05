@@ -245,7 +245,7 @@ public class PosixIdentityManager implements IdentityManager {
                             break;
                         }
                         case "route": {
-                            AuthorisationResult result = permissionsAPIClient.authoriseRoute(
+                            AuthorisationResult routeResult = permissionsAPIClient.authoriseRoute(
                                     permissionsClientConfig.getServiceName(),
                                     getAuthorizationToken(validatedSubject).getCredentials(),
                                     permissionsClientConfig.getRoutePath(),
@@ -253,7 +253,7 @@ public class PosixIdentityManager implements IdentityManager {
                                     new JSONObject(),
                                     permissionsClientConfig.getVersion());
 
-                            if (result.isAuthorised) {
+                            if (routeResult.isAuthorised) {
                                 log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
                                 return fileSystemNodePersistence.getRootNode().owner;
                             }
