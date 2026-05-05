@@ -67,11 +67,13 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.AuthorizationToken;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
 import ca.nrc.cadc.util.InvalidConfigException;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.util.Map;
@@ -82,7 +84,11 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.json.JSONObject;
 import org.opencadc.cavern.CavernConfig;
+import org.opencadc.cavern.PermissionsClientConfig;
+import org.opencadc.permissions.client.srcnet.AuthorisationResult;
+import org.opencadc.permissions.client.srcnet.PermissionsAPIClient;
 import org.opencadc.vospace.server.NodePersistence;
 
 /**
@@ -212,37 +218,54 @@ public class PosixIdentityManager implements IdentityManager {
             // delegate to the configured IdentityManager
             final Subject validatedSubject = this.wrappedIdentityManager.validate(subject);
 
-            final Set<AuthorizationTokenPrincipal> tokenPrincipals = validatedSubject.getPrincipals(AuthorizationTokenPrincipal.class);
-            for (final AuthorizationTokenPrincipal tokenPrincipal : tokenPrincipals) {
-                final String tokenHeaderValue = tokenPrincipal.getHeaderValue();
-                final String[] parts = tokenHeaderValue.split(" ", 2);
-                if (parts.length == 2) {
-                    final String challengeType = parts[0];
-                    if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
-                        final String tokenValue = parts[1].trim();
-                        final String[] tokenValueParts = tokenValue.split(":", 2);
-                        if (tokenValueParts.length == 2) {
-                            final String clientApplicationName = tokenValueParts[0].trim();
-                            final String apiKeyToken = tokenValueParts[1].trim();
-                            try {
-                                Context ctx = new InitialContext();
-                                FileSystemNodePersistence fileSystemNodePersistence = 
-                                        (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
-                                CavernConfig config = fileSystemNodePersistence.getConfig();
-                                Map<String, String> apiKeys = config.getAdminAPIKeys();
+            try {
+                Context ctx = new InitialContext();
+                FileSystemNodePersistence fileSystemNodePersistence =
+                        (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
+                final CavernConfig config = fileSystemNodePersistence.getConfig();
+                final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
+                // Permissions Client was configured.
+                if (permissionsClientConfig != null) {
+                    log.debug("permissions client config is present, validating permissions API token if present");
+                    final PermissionsAPIClient permissionsAPIClient =
+                            new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
+                                    permissionsClientConfig.getPermissionsApiAuthBaseUrl());
+                    switch (permissionsClientConfig.getAuthoriseType().toLowerCase()) {
+                        case "plugin": {
+                            AuthorisationResult pluginResult = permissionsAPIClient.authorisePlugin(
+                                    permissionsClientConfig.getServiceName(),
+                                    getAuthorizationToken(validatedSubject).getCredentials(),
+                                    new JSONObject(),
+                                    permissionsClientConfig.getVersion());
 
-                                if (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken)) {
-                                    log.info("CAVERN ADMIN GRANT: " + clientApplicationName);
-                                    return fileSystemNodePersistence.getRootNode().owner;
-                                }
-                            } catch (NamingException namingException) {
-                                throw new IllegalStateException(namingException.getMessage(), namingException);
+                            if (pluginResult.isAuthorised) {
+                                log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
+                                return fileSystemNodePersistence.getRootNode().owner;
                             }
+                            break;
                         }
-                        // intentionally vague error message for failed admin-api-key
-                        throw new NotAuthenticatedException("invalid token");
+                        case "route": {
+                            AuthorisationResult result = permissionsAPIClient.authoriseRoute(
+                                    permissionsClientConfig.getServiceName(),
+                                    getAuthorizationToken(validatedSubject).getCredentials(),
+                                    permissionsClientConfig.getRoutePath(),
+                                    permissionsClientConfig.getMethod(),
+                                    new JSONObject(),
+                                    permissionsClientConfig.getVersion());
+
+                            if (result.isAuthorised) {
+                                log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
+                                return fileSystemNodePersistence.getRootNode().owner;
+                            }
+                            break;
+                        }
+                        default: {
+                            log.warn("invalid authoriseType in permissions client config: " + permissionsClientConfig.getAuthoriseType());
+                        }
                     }
                 }
+            } catch (NamingException | IOException exception) {
+                throw new IllegalStateException(exception.getMessage(), exception);
             }
 
             return validatedSubject;
@@ -252,15 +275,17 @@ public class PosixIdentityManager implements IdentityManager {
         return null;
     }
 
-    private Map<String, String> getAdminAPIKeys() {
-        try {
-            final Context ctx = new InitialContext();
-            final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup("cavern-" + NodePersistence.class.getName());
-            final CavernConfig config = fileSystemNodePersistence.getConfig();
-            return config.getAdminAPIKeys();
-        } catch (NamingException namingException) {
-            throw new IllegalStateException(namingException.getMessage(), namingException);
-        }
+    /**
+     * Obtain the given Subject's bearer token. Null if none found.,
+     *
+     * @param subject The Subject to look through.
+     * @return AuthorizationToken with type "Bearer", or null if none found.
+     */
+    public static AuthorizationToken getAuthorizationToken(final Subject subject) {
+        return subject.getPublicCredentials(AuthorizationToken.class).stream()
+                .filter(token -> AuthenticationUtil.CHALLENGE_TYPE_BEARER.equalsIgnoreCase(token.getType()))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

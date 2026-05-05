@@ -2,7 +2,6 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.StringUtil;
-
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -34,7 +33,7 @@ public class PermissionsClientConfig {
      * @param configPrefix  The cavern prefix to look in the config file.
      * @return  PermissionsClientConfig instance, or null if not configured.
      */
-    public static PermissionsClientConfig fromProperties(final MultiValuedProperties properties, final String configPrefix) {
+    static PermissionsClientConfig fromProperties(final MultiValuedProperties properties, final String configPrefix) {
         final String baseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_BASE_URL);
         return StringUtil.hasText(baseUrl)
                 ? new PermissionsClientConfig(properties, configPrefix)
