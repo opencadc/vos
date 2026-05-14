@@ -12,6 +12,8 @@ import org.opencadc.cavern.PermissionsClientConfig;
 import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.permissions.client.srcnet.AuthorisationResult;
 import org.opencadc.permissions.client.srcnet.PermissionsAPIClient;
+import org.opencadc.vospace.ContainerNode;
+import org.opencadc.vospace.Node;
 
 /**
  * Overridden create action to allow the use of a permissions client to access a remote service and do verification
@@ -33,8 +35,10 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                 fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
         final CavernConfig config = fileSystemNodePersistence.getConfig();
         final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
+        final Node inputNode = getInputNode();
         // Permissions Client was configured.
-        if (permissionsClientConfig != null) {
+        if (permissionsClientConfig != null && inputNode instanceof ContainerNode
+                && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode))) {
             log.debug("permissions client config is present, validating permissions API token if present");
             final PermissionsAPIClient permissionsAPIClient =
                     new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
