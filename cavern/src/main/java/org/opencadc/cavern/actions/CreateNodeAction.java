@@ -5,6 +5,7 @@ import ca.nrc.cadc.auth.AuthorizationToken;
 import ca.nrc.cadc.util.InvalidConfigException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Objects;
 import javax.security.auth.Subject;
 import org.json.JSONObject;
 import org.opencadc.cavern.CavernConfig;
@@ -22,65 +23,69 @@ import org.opencadc.vospace.Node;
 public class CreateNodeAction extends org.opencadc.vospace.server.actions.CreateNodeAction {
     @Override
     public void doAction() throws Exception {
-            final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
-            final Subject validatedSubject = validateCurrentSubject(fileSystemNodePersistence);
-            final CavernConfig config = fileSystemNodePersistence.getConfig();
-            final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
-            final Node inputNode = getInputNode();
+        final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
+        final Subject validatedSubject = validateCurrentSubject(fileSystemNodePersistence);
+        final CavernConfig config = fileSystemNodePersistence.getConfig();
+        final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
+        final Node inputNode = getInputNode();
 
-            if (shouldUsePermissionsClient(permissionsClientConfig, inputNode, fileSystemNodePersistence)) {
-                log.debug("Using permissions client to allocate user.");
-                final AuthorisationResult authorisationResult =
-                        authoriseAllocation(validatedSubject, permissionsClientConfig);
-                handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
-            }
+        if (isSelfAllocation(validatedSubject, inputNode, fileSystemNodePersistence)) {
+            log.debug("Using permissions client to allocate user.");
+            final AuthorisationResult authorisationResult =
+                    authoriseAllocation(validatedSubject, permissionsClientConfig);
+            handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
+        }
 
-            super.doAction();
+        super.doAction();
     }
 
-        private FileSystemNodePersistence getFileSystemNodePersistence() {
-            // Should never happen, but here for completeness.
-            if (this.nodePersistence instanceof FileSystemNodePersistence) {
-                return (FileSystemNodePersistence) this.nodePersistence;
-            }
-
-            throw new IllegalStateException("Node persistence is not an instance of FileSystemNodePersistence");
+    private FileSystemNodePersistence getFileSystemNodePersistence() {
+        // Should never happen, but here for completeness.
+        if (this.nodePersistence instanceof FileSystemNodePersistence) {
+            return (FileSystemNodePersistence) this.nodePersistence;
         }
 
-        private Subject validateCurrentSubject(final FileSystemNodePersistence fileSystemNodePersistence)
-                throws InvalidConfigException {
-            return fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
+        throw new IllegalStateException("Node persistence is not an instance of FileSystemNodePersistence");
+    }
+
+    private Subject validateCurrentSubject(final FileSystemNodePersistence fileSystemNodePersistence)
+            throws InvalidConfigException {
+        return fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
+    }
+
+    private boolean isSelfAllocation(final Subject callingSubject,
+                                     final Node inputNode,
+                                     final FileSystemNodePersistence fileSystemNodePersistence) {
+        final Subject owner = fileSystemNodePersistence.getRootNode().owner;
+        return !owner.equals(callingSubject)
+                && inputNode instanceof ContainerNode
+                && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode));
+    }
+
+    private AuthorisationResult authoriseAllocation(final Subject validatedSubject,
+                                                    final PermissionsClientConfig permissionsClientConfig)
+            throws Exception {
+        log.debug("permissions client config is present, validating permissions API token if present");
+        if (permissionsClientConfig == null) {
+            throw new IllegalStateException("Permissions client config is null");
         }
 
-        private boolean shouldUsePermissionsClient(final PermissionsClientConfig permissionsClientConfig,
-                                                   final Node inputNode,
-                                                   final FileSystemNodePersistence fileSystemNodePersistence) {
-            return permissionsClientConfig != null
-                    && inputNode instanceof ContainerNode
-                    && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode));
-        }
+        final PermissionsAPIClient permissionsAPIClient =
+                new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
+                        permissionsClientConfig.getPermissionsApiAuthBaseUrl());
 
-        private AuthorisationResult authoriseAllocation(final Subject validatedSubject,
-                                                        final PermissionsClientConfig permissionsClientConfig)
-                throws Exception {
-            log.debug("permissions client config is present, validating permissions API token if present");
+        return permissionsAPIClient.authoriseRoute(
+                permissionsClientConfig.getServiceName(),
+                getAuthorizationToken(validatedSubject).getCredentials(),
+                permissionsClientConfig.getRoutePath(),
+                permissionsClientConfig.getMethod(),
+                new JSONObject(),
+                permissionsClientConfig.getVersion());
+    }
 
-            final PermissionsAPIClient permissionsAPIClient =
-                    new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
-                            permissionsClientConfig.getPermissionsApiAuthBaseUrl());
-
-            return permissionsAPIClient.authoriseRoute(
-                    permissionsClientConfig.getServiceName(),
-                    getAuthorizationToken(validatedSubject).getCredentials(),
-                    permissionsClientConfig.getRoutePath(),
-                    permissionsClientConfig.getMethod(),
-                    new JSONObject(),
-                    permissionsClientConfig.getVersion());
-        }
-
-    private void handleAuthenticatedAction(FileSystemNodePersistence fileSystemNodePersistence,
-                                           PermissionsClientConfig permissionsClientConfig,
-                                           AuthorisationResult authorisationResult) throws Exception {
+    private void handleAuthenticatedAction(final FileSystemNodePersistence fileSystemNodePersistence,
+                                           final PermissionsClientConfig permissionsClientConfig,
+                                           final AuthorisationResult authorisationResult) throws Exception {
         if (authorisationResult.isAuthorised) {
             log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
             Subject.doAs(fileSystemNodePersistence.getRootNode().owner, (PrivilegedExceptionAction<Void>) () -> {
