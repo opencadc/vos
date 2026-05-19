@@ -22,53 +22,61 @@ import org.opencadc.vospace.Node;
 public class CreateNodeAction extends org.opencadc.vospace.server.actions.CreateNodeAction {
     @Override
     public void doAction() throws Exception {
-        final FileSystemNodePersistence fileSystemNodePersistence;
+            final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
+            final Subject validatedSubject = validateCurrentSubject(fileSystemNodePersistence);
+            final CavernConfig config = fileSystemNodePersistence.getConfig();
+            final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
+            final Node inputNode = getInputNode();
 
-        // Should never happen, but here for completeness.
-        if (this.nodePersistence instanceof FileSystemNodePersistence) {
-            fileSystemNodePersistence = (FileSystemNodePersistence) this.nodePersistence;
-        } else {
+            if (shouldUsePermissionsClient(permissionsClientConfig, inputNode, fileSystemNodePersistence)) {
+                log.debug("Using permissions client to allocate user.");
+                final AuthorisationResult authorisationResult =
+                        authoriseAllocation(validatedSubject, permissionsClientConfig);
+                handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
+            }
+
+            super.doAction();
+    }
+
+        private FileSystemNodePersistence getFileSystemNodePersistence() {
+            // Should never happen, but here for completeness.
+            if (this.nodePersistence instanceof FileSystemNodePersistence) {
+                return (FileSystemNodePersistence) this.nodePersistence;
+            }
+
             throw new IllegalStateException("Node persistence is not an instance of FileSystemNodePersistence");
         }
 
-        final Subject validatedSubject =
-                fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
-        final CavernConfig config = fileSystemNodePersistence.getConfig();
-        final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
-        final Node inputNode = getInputNode();
-        // Permissions Client was configured.
-        if (permissionsClientConfig != null && inputNode instanceof ContainerNode
-                && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode))) {
+        private Subject validateCurrentSubject(final FileSystemNodePersistence fileSystemNodePersistence)
+                throws InvalidConfigException {
+            return fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
+        }
+
+        private boolean shouldUsePermissionsClient(final PermissionsClientConfig permissionsClientConfig,
+                                                   final Node inputNode,
+                                                   final FileSystemNodePersistence fileSystemNodePersistence) {
+            return permissionsClientConfig != null
+                    && inputNode instanceof ContainerNode
+                    && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode));
+        }
+
+        private AuthorisationResult authoriseAllocation(final Subject validatedSubject,
+                                                        final PermissionsClientConfig permissionsClientConfig)
+                throws Exception {
             log.debug("permissions client config is present, validating permissions API token if present");
+
             final PermissionsAPIClient permissionsAPIClient =
                     new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
                             permissionsClientConfig.getPermissionsApiAuthBaseUrl());
-            final AuthorisationResult authorisationResult;
-            if (permissionsClientConfig.getAuthoriseType().equalsIgnoreCase("plugin")) {
-                log.debug("Authorising with plugin type");
-                authorisationResult = permissionsAPIClient.authorisePlugin(
-                        permissionsClientConfig.getServiceName(),
-                        getAuthorizationToken(validatedSubject).getCredentials(),
-                        new JSONObject(),
-                        permissionsClientConfig.getVersion());
-            } else if (permissionsClientConfig.getAuthoriseType().equalsIgnoreCase("route")) {
-                log.debug("Authorising with route type");
-                authorisationResult = permissionsAPIClient.authoriseRoute(
-                        permissionsClientConfig.getServiceName(),
-                        getAuthorizationToken(validatedSubject).getCredentials(),
-                        permissionsClientConfig.getRoutePath(),
-                        permissionsClientConfig.getMethod(),
-                        new JSONObject(),
-                        permissionsClientConfig.getVersion());
-            } else {
-                throw new InvalidConfigException("Invalid authoriseType in permissions client config: "
-                        + permissionsClientConfig.getAuthoriseType());
-            }
 
-            handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
+            return permissionsAPIClient.authoriseRoute(
+                    permissionsClientConfig.getServiceName(),
+                    getAuthorizationToken(validatedSubject).getCredentials(),
+                    permissionsClientConfig.getRoutePath(),
+                    permissionsClientConfig.getMethod(),
+                    new JSONObject(),
+                    permissionsClientConfig.getVersion());
         }
-        super.doAction();
-    }
 
     private void handleAuthenticatedAction(FileSystemNodePersistence fileSystemNodePersistence,
                                            PermissionsClientConfig permissionsClientConfig,
