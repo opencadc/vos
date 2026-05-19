@@ -25,12 +25,12 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
     public void doAction() throws Exception {
         final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
         final Subject validatedSubject = validateCurrentSubject(fileSystemNodePersistence);
-        final CavernConfig config = fileSystemNodePersistence.getConfig();
-        final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
         final Node inputNode = getInputNode();
 
         if (isSelfAllocation(validatedSubject, inputNode, fileSystemNodePersistence)) {
             log.debug("Using permissions client to allocate user.");
+            final CavernConfig config = fileSystemNodePersistence.getConfig();
+            final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
             final AuthorisationResult authorisationResult =
                     authoriseAllocation(validatedSubject, permissionsClientConfig);
             handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
