@@ -3,6 +3,7 @@ package org.opencadc.cavern.actions;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.AuthorizationToken;
 import java.security.AccessControlException;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import org.json.JSONObject;
@@ -24,6 +25,18 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
         if (isSelfAllocation()) {
             log.debug("Using permissions client to allocate user.");
             authorize();
+            try {
+                Subject.doAs(getFileSystemNodePersistence().getRootNode().owner, (PrivilegedExceptionAction<Void>) () -> {
+                    super.doAction();
+                    return null;
+                });
+            } catch (PrivilegedActionException e) {
+                // Use the underlying Exception as it's the relevant one.
+                if (e.getException() != null) {
+                    throw e.getException();
+                }
+                throw e;
+            }
         } else {
             // Handle normal create action.
             super.doAction();
@@ -72,16 +85,12 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                 new JSONObject(),
                 permissionsClientConfig.getVersion());
 
-        if (authorisationResult.isAuthorised) {
-            log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
-            Subject.doAs(fileSystemNodePersistence.getRootNode().owner, (PrivilegedExceptionAction<Void>) () -> {
-                super.doAction();
-                return null;
-            });
-        } else {
+        if (!authorisationResult.isAuthorised) {
             throw new AccessControlException(
                     "Subject is not authorized to create user allocations due to Permissions API Rules.");
         }
+
+        log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
     }
 
     /**

@@ -7,24 +7,22 @@ import java.net.URI;
 import java.net.URL;
 
 public class PermissionsClientConfig {
-    private static final String PREFIX = ".permissions";
+    private static final String PREFIX = ".papi";
     private static final String PERMISSIONS_API_BASE_URL = PREFIX + ".baseUrl";
     private static final String PERMISSIONS_API_AUTH_BASE_URL = PREFIX + ".authBaseUrl";
-    private static final String PERMISSIONS_API_SERVICE_NAME = PREFIX + ".serviceName";
-    private static final String PERMISSIONS_API_AUTHORISE_TYPE = PREFIX + ".authoriseType";
-    private static final String PERMISSIONS_API_ROUTE = PREFIX + ".route";
-    private static final String PERMISSIONS_API_VERSION = PREFIX + ".version";
-    private static final String PERMISSIONS_API_METHOD = PREFIX + ".method";
 
     private final String configPrefix;
 
     private final String permissionsApiBaseUrl;
     private final String permissionsApiAuthBaseUrl;
-    private final String serviceName;
-    private final String authoriseType;
-    private final String routePath;
-    private final String version;
-    private final String method;
+
+    // Hard-coded values for now.
+    private final String serviceName = "canfar-api";
+    private final String authoriseType = "route";
+    private final String routePath = "/nodes/home/{username}";
+    private final String version = "1";
+    private final String method = "PUT";
+
 
     /**
      * Read in the configuration from properties.  This will be NULL if no base URL is set (presumed to not be
@@ -45,11 +43,6 @@ public class PermissionsClientConfig {
 
         this.permissionsApiBaseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_BASE_URL);
         this.permissionsApiAuthBaseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_AUTH_BASE_URL);
-        this.serviceName = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_SERVICE_NAME);
-        this.authoriseType = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_AUTHORISE_TYPE);
-        this.routePath = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_ROUTE);
-        this.version = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_VERSION);
-        this.method = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_METHOD);
     }
 
     public URL getPermissionsApiBaseUrl() {
