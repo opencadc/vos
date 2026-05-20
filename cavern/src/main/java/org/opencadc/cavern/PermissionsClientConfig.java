@@ -19,7 +19,7 @@ public class PermissionsClientConfig {
     // Hard-coded values for now.
     private final String serviceName = "canfar-api";
     private final String authoriseType = "route";
-    private final String routePath = "/nodes/home/{username}";
+    private final String routePath = "/home/{username}";
     private final String version = "1";
     private final String method = "PUT";
 

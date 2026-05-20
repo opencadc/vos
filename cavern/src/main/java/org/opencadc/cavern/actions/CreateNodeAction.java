@@ -2,7 +2,6 @@ package org.opencadc.cavern.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.AuthorizationToken;
-import java.security.AccessControlException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
@@ -14,6 +13,7 @@ import org.opencadc.permissions.client.srcnet.AuthorisationResult;
 import org.opencadc.permissions.client.srcnet.PermissionsAPIClient;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.server.Utils;
 
 /**
  * Overridden create action to allow the use of a permissions client to access a remote service and do verification
@@ -22,14 +22,19 @@ import org.opencadc.vospace.Node;
 public class CreateNodeAction extends org.opencadc.vospace.server.actions.CreateNodeAction {
     @Override
     public void doAction() throws Exception {
-        if (isSelfAllocation()) {
+        if (isSelfAllocation() && authorize()) {
             log.debug("Using permissions client to allocate user.");
-            authorize();
+
             try {
+                final Node inputNode = getInputNode();
+                if (inputNode != null) {
+                    inputNode.ownerDisplay = getOwnerDisplay();
+                }
                 Subject.doAs(getFileSystemNodePersistence().getRootNode().owner, (PrivilegedExceptionAction<Void>) () -> {
                     super.doAction();
                     return null;
                 });
+                return;
             } catch (PrivilegedActionException e) {
                 // Use the underlying Exception as it's the relevant one.
                 if (e.getException() != null) {
@@ -37,10 +42,10 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                 }
                 throw e;
             }
-        } else {
-            // Handle normal create action.
-            super.doAction();
         }
+
+        // Handle normal create action.
+        super.doAction();
     }
 
     private FileSystemNodePersistence getFileSystemNodePersistence() {
@@ -52,17 +57,21 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
         throw new IllegalStateException("Node persistence is not an instance of FileSystemNodePersistence");
     }
 
+    private String getOwnerDisplay() {
+        return getFileSystemNodePersistence().getIdentityManager().toDisplayString(
+                AuthenticationUtil.getCurrentSubject());
+    }
+
     private boolean isSelfAllocation() {
         final Subject caller = AuthenticationUtil.getCurrentSubject();
         final Node inputNode = getInputNode();
         final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
-        final Subject owner = fileSystemNodePersistence.getRootNode().owner;
-        return !owner.equals(caller)
+        return !Utils.isAdmin(caller, fileSystemNodePersistence)
                 && inputNode instanceof ContainerNode
                 && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode));
     }
 
-    private void authorize() throws Exception {
+    private boolean authorize() throws Exception {
         final Subject caller = AuthenticationUtil.getCurrentSubject();
         final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
         final CavernConfig config = fileSystemNodePersistence.getConfig();
@@ -70,7 +79,8 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
 
         log.debug("permissions client config is present, validating permissions API token if present");
         if (permissionsClientConfig == null) {
-            throw new IllegalStateException("Permissions client config is null");
+            log.debug("permissions client config is null - could be a misconfiguration or intentional");
+            return false;
         }
 
         final PermissionsAPIClient permissionsAPIClient =
@@ -85,12 +95,11 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                 new JSONObject(),
                 permissionsClientConfig.getVersion());
 
-        if (!authorisationResult.isAuthorised) {
-            throw new AccessControlException(
-                    "Subject is not authorized to create user allocations due to Permissions API Rules.");
-        }
+        final boolean isAuthorised = authorisationResult.isAuthorised;
 
-        log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
+        log.debug("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName() + "(" + isAuthorised + ")");
+
+        return isAuthorised;
     }
 
     /**
