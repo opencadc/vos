@@ -2,10 +2,8 @@ package org.opencadc.cavern.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.AuthorizationToken;
-import ca.nrc.cadc.util.InvalidConfigException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Objects;
 import javax.security.auth.Subject;
 import org.json.JSONObject;
 import org.opencadc.cavern.CavernConfig;
@@ -23,20 +21,13 @@ import org.opencadc.vospace.Node;
 public class CreateNodeAction extends org.opencadc.vospace.server.actions.CreateNodeAction {
     @Override
     public void doAction() throws Exception {
-        final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
-        final Subject validatedSubject = validateCurrentSubject(fileSystemNodePersistence);
-        final Node inputNode = getInputNode();
-
-        if (isSelfAllocation(validatedSubject, inputNode, fileSystemNodePersistence)) {
+        if (isSelfAllocation()) {
             log.debug("Using permissions client to allocate user.");
-            final CavernConfig config = fileSystemNodePersistence.getConfig();
-            final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
-            final AuthorisationResult authorisationResult =
-                    authoriseAllocation(validatedSubject, permissionsClientConfig);
-            handleAuthenticatedAction(fileSystemNodePersistence, permissionsClientConfig, authorisationResult);
+            authorize();
+        } else {
+            // Handle normal create action.
+            super.doAction();
         }
-
-        super.doAction();
     }
 
     private FileSystemNodePersistence getFileSystemNodePersistence() {
@@ -48,23 +39,22 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
         throw new IllegalStateException("Node persistence is not an instance of FileSystemNodePersistence");
     }
 
-    private Subject validateCurrentSubject(final FileSystemNodePersistence fileSystemNodePersistence)
-            throws InvalidConfigException {
-        return fileSystemNodePersistence.getIdentityManager().validate(AuthenticationUtil.getCurrentSubject());
-    }
-
-    private boolean isSelfAllocation(final Subject callingSubject,
-                                     final Node inputNode,
-                                     final FileSystemNodePersistence fileSystemNodePersistence) {
+    private boolean isSelfAllocation() {
+        final Subject caller = AuthenticationUtil.getCurrentSubject();
+        final Node inputNode = getInputNode();
+        final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
         final Subject owner = fileSystemNodePersistence.getRootNode().owner;
-        return !owner.equals(callingSubject)
+        return !owner.equals(caller)
                 && inputNode instanceof ContainerNode
                 && fileSystemNodePersistence.isAllocation(((ContainerNode) inputNode));
     }
 
-    private AuthorisationResult authoriseAllocation(final Subject validatedSubject,
-                                                    final PermissionsClientConfig permissionsClientConfig)
-            throws Exception {
+    private void authorize() throws Exception {
+        final Subject caller = AuthenticationUtil.getCurrentSubject();
+        final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
+        final CavernConfig config = fileSystemNodePersistence.getConfig();
+        final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
+
         log.debug("permissions client config is present, validating permissions API token if present");
         if (permissionsClientConfig == null) {
             throw new IllegalStateException("Permissions client config is null");
@@ -74,18 +64,14 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                 new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
                         permissionsClientConfig.getPermissionsApiAuthBaseUrl());
 
-        return permissionsAPIClient.authoriseRoute(
+        final AuthorisationResult authorisationResult = permissionsAPIClient.authoriseRoute(
                 permissionsClientConfig.getServiceName(),
-                getAuthorizationToken(validatedSubject).getCredentials(),
+                CreateNodeAction.getAuthorizationToken(caller).getCredentials(),
                 permissionsClientConfig.getRoutePath(),
                 permissionsClientConfig.getMethod(),
                 new JSONObject(),
                 permissionsClientConfig.getVersion());
-    }
 
-    private void handleAuthenticatedAction(final FileSystemNodePersistence fileSystemNodePersistence,
-                                           final PermissionsClientConfig permissionsClientConfig,
-                                           final AuthorisationResult authorisationResult) throws Exception {
         if (authorisationResult.isAuthorised) {
             log.info("CAVERN ADMIN GRANT: " + permissionsClientConfig.getServiceName());
             Subject.doAs(fileSystemNodePersistence.getRootNode().owner, (PrivilegedExceptionAction<Void>) () -> {
