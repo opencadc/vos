@@ -53,7 +53,7 @@
         </init-param>
         <init-param>
             <param-name>put</param-name>
-            <param-value>org.opencadc.vospace.server.actions.CreateNodeAction</param-value>
+            <param-value>org.opencadc.cavern.actions.CreateNodeAction</param-value>
         </init-param>
         <init-param>
             <param-name>post</param-name>

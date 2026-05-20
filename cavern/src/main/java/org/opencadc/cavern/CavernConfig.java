@@ -126,6 +126,8 @@ public class CavernConfig {
     private final URI resourceID;
     private final List<String> allocationParents = new ArrayList<>();
 
+    // Configuration for Permissions API Client
+    private final PermissionsClientConfig permissionsClientConfig;
     private final List<String> adminAPIKeys = new ArrayList<>();
 
     // Default quota in bytes for new allocations, if not specified in the allocation request.
@@ -148,6 +150,8 @@ public class CavernConfig {
             throw new IllegalStateException("CONFIG: file not found or no properties found in file - "
                     + CAVERN_PROPERTIES);
         }
+
+        this.permissionsClientConfig = PermissionsClientConfig.fromProperties(this.mvp, CAVERN_KEY);
 
         StringBuilder sb = new StringBuilder();
         sb.append("CONFIG: incomplete/invalid: ");
@@ -223,6 +227,14 @@ public class CavernConfig {
     public Map<String, String> getAdminAPIKeys() {
         return this.adminAPIKeys.stream().map(apiKey -> apiKey.split(":")).collect(
             Collectors.toMap(splitKey -> splitKey[0], splitKey -> splitKey[1]));
+    }
+
+    /**
+     * Obtain the configuration to connect to a Permissions Client.
+     * @return  PermissionsClientConfig
+     */
+    public PermissionsClientConfig getPermissionsClientConfig() {
+        return this.permissionsClientConfig;
     }
 
     public Path getSecrets() {
