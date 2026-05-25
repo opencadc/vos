@@ -81,16 +81,20 @@ import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.cavern.nodes.NoQuotaPlugin;
 import org.opencadc.cavern.nodes.QuotaPlugin;
+import org.opencadc.gms.GroupURI;
 
 public class CavernConfig {
 
@@ -113,6 +117,7 @@ public class CavernConfig {
     public static final String ROOT_OWNER_GID = CAVERN_KEY + ".filesystem.rootOwner.gid";
     
     public static final String ALLOCATION_PARENT = CAVERN_KEY + ".allocationParent";
+    public static final String SELF_ALLOCATE = CAVERN_KEY + ".selfAllocateGroup";
 
     // An API Key representing a client that has administrative access.  More than one is possible.
     // Format is <applicationClientName>:<apiKeyToken>
@@ -125,6 +130,7 @@ public class CavernConfig {
     
     private final URI resourceID;
     private final List<String> allocationParents = new ArrayList<>();
+    private final Set<GroupURI> selfAllocateGroups = new TreeSet<>();
 
     // Configuration for Permissions API Client
     private final PermissionsClientConfig permissionsClientConfig;
@@ -156,12 +162,15 @@ public class CavernConfig {
         StringBuilder sb = new StringBuilder();
         sb.append("CONFIG: incomplete/invalid: ");
 
+        // required:
         boolean resourceProp = checkProperty(mvp, sb, RESOURCE_ID, true);
         boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
         boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
         boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
-        boolean sshfsServerBaseProp = checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
-        boolean allocProp = checkProperty(mvp, sb, ALLOCATION_PARENT, false);
+        // optional:
+        checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
+        checkProperty(mvp, sb, ALLOCATION_PARENT, false);
+        checkProperty(mvp, sb, SELF_ALLOCATE, false);
         checkProperty(mvp, sb, QUOTA_PLUGIN_IMPLEMENTATION, false);
 
         if (!resourceProp || !baseDirProp || !subPathProp || !rootOwnerProp) {
@@ -191,6 +200,16 @@ public class CavernConfig {
             allocationParents.add(ap);
         }
 
+        for (String sag : mvp.getProperty(SELF_ALLOCATE)) {
+            try {
+                URI uri = new URI(sag);
+                GroupURI guri = new GroupURI(uri);
+                this.selfAllocateGroups.add(guri);
+            } catch (URISyntaxException ex) {
+                throw new InvalidConfigException(SELF_ALLOCATE + " = " + sag + " INVALID GroupURI");
+            }
+        }
+
         adminAPIKeys.addAll(mvp.getProperty(CavernConfig.ADMIN_API_KEY));
 
         final String configuredDefaultQuotaGB = mvp.getFirstPropertyValue(CavernConfig.DEFAULT_QUOTA_GB);
@@ -218,6 +237,10 @@ public class CavernConfig {
     
     public List<String> getAllocationParents() {
         return allocationParents;
+    }
+
+    public Set<GroupURI> getSelfAllocateGroups() {
+        return selfAllocateGroups;
     }
 
     /**

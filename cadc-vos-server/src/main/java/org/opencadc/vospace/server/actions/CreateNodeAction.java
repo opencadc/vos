@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2026.                            (c) 2026.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -68,10 +68,13 @@
 package org.opencadc.vospace.server.actions;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.net.HttpConstants;
 import ca.nrc.cadc.net.HttpTransfer;
+import java.io.IOException;
+import java.security.AccessControlException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -124,66 +127,52 @@ public class CreateNodeAction extends NodeAction {
         if (cur != null) {
             throw NodeFault.DuplicateNode.getStatus(clientNodeURI.toString());
         }
-
+        // does not exist, parent resolved
+        clientNode.parent = parent;
+        
+        // there are 3 kinds of create node:
+        // 1. admin-allocate: admin creates a node owned by someone else, optionally assigns admin props
+        // 2. self-allocate: a user creates there own allocation
+        // 3. normal/common: a user creates a node
+        final IdentityManager im = AuthenticationUtil.getIdentityManager();
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, caller)) {
+        final List<NodeProperty> allowedAdminProps;
+        Subject writePerm = caller;
+        if (Utils.isAdmin(caller, nodePersistence)) {
+            if (clientNode.ownerDisplay != null) {
+                // admin assigns owner
+                clientNode.owner = toOwnerSubject(clientNode.ownerDisplay, im);
+                if (clientNode.owner == null) {
+                    throw new RuntimeException("admin-allocate: failed to convert '" + clientNode.ownerDisplay + "' "
+                        + " to a Subject");
+                }
+            } else {
+                // admin is owner
+                clientNode.owner = caller;
+            }
+            allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller, nodePersistence);
+            logInfo.setMessage("admin-allocate");
+        } else if (isSelfAllocate(caller, clientNode)) {
+            checkSelfAllocatePermission(caller, clientNodeURI);
+            clientNode.owner = caller;
+            allowedAdminProps = new ArrayList<>();
+            allowedAdminProps.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR));
+            writePerm = nodePersistence.getRootNode().owner; // elevate write permission check below
+            logInfo.setMessage("self-allocate");
+        } else {
+            // normal create: caller is owner
+            clientNode.owner = caller;
+            allowedAdminProps = new ArrayList<>();
+        }
+
+        if (!voSpaceAuthorizer.hasSingleNodeWritePermission(parent, writePerm)) {
             throw NodeFault.PermissionDenied.getStatus(clientNodeURI.toString());
         }
-
-        // attempt to set owner
-        IdentityManager im = AuthenticationUtil.getIdentityManager();
-        clientNode.parent = parent;
-
-        // Ensure the caller is set.  It MAY be overridden below.
-        clientNode.owner = caller;
-
-        // Extract here to remove later.
+        // protected against accidentally using this again
+        writePerm = null;
+        
+        // backwards compat: ignore if clients still send this, just in case
         NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
-        if (Utils.isAdmin(caller, nodePersistence)) {
-            if (creatorJWT != null && clientNode.ownerDisplay != null) {
-                // The "creator" property clashes with the "creator-jwt" property.
-                throw NodeFault.InvalidArgument.getStatus("BUG: " + VOS.PROPERTY_URI_CREATOR + " property already exists, but " + VOS.PROPERTY_URI_CREATOR_JWT
-                                                              + " is present. This should not happen.");
-            }
-
-            if (clientNode.ownerDisplay != null) {
-                // admin is allowed to assign a different owner
-                try {
-                    Subject tmp = new Subject();
-                    // HACK: known IdentityManager implementations prefer the HttpPrincipal aka
-                    // network username for toDisplayString(Subject) so that's the value that
-                    // normally gets put into node.ownerDisplay and rendered in node documents
-                    // so choosing HttpPrincipal here makes output and input (set owner) use the
-                    // same values... but seems kind of sketchy.
-                    tmp.getPrincipals().add(new HttpPrincipal(clientNode.ownerDisplay));
-                    clientNode.owner = im.augment(tmp);
-                } catch (Exception ex) {
-                    log.error("failed to map " + clientNode.ownerDisplay + " to a known user", ex);
-                    throw ex;
-                }
-            } else if (creatorJWT != null) {
-                log.debug("Creating user allocation on behalf of OIDC account.");
-                Subject nodeOwner = new Subject();
-                final String token = creatorJWT.getValue();
-                final AuthorizationTokenPrincipal authorizationTokenPrincipal = new AuthorizationTokenPrincipal(AuthenticationUtil.AUTHORIZATION_HEADER,
-                                                                                                                AuthenticationUtil.CHALLENGE_TYPE_BEARER
-                                                                                                                    + " " + token);
-
-                nodeOwner.getPrincipals().add(authorizationTokenPrincipal);
-
-                nodeOwner = AuthenticationUtil.validateSubject(nodeOwner);
-                nodeOwner = AuthenticationUtil.augmentSubject(nodeOwner);
-
-                log.debug("Setting new allocation node owner to " + im.toDisplayString(nodeOwner));
-                clientNode.owner = nodeOwner;
-                clientNode.ownerID = null; // just in case
-
-                log.debug("Creating user allocation on behalf of OIDC account: OK");
-            }
-        }
-
-        // Ensure it's always removed after being handled in the admin block.  This property is never persisted, as it's just a means to an end for the
-        // creator property.
         if (creatorJWT != null) {
             clientNode.getProperties().remove(creatorJWT);
         }
@@ -218,10 +207,6 @@ public class CreateNodeAction extends NodeAction {
                 }
             }
         }
-
-        // pick out eligible admin-only props (they are immutable to normal users)
-        final List<NodeProperty> allowedAdminProps = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller,
-                nodePersistence);
         
         // sanitize input properties into clean set
         Set<NodeProperty> np = new HashSet<>();
@@ -237,8 +222,58 @@ public class CreateNodeAction extends NodeAction {
         // output modified node
         NodeWriter nodeWriter = getNodeWriter();
         syncOutput.setCode(201);
-        syncOutput.setHeader(HttpTransfer.CONTENT_TYPE, getMediaType());
+        syncOutput.setHeader(HttpConstants.HDR_CONTENT_TYPE, getMediaType());
         // TODO: should the VOSURI in the output target or actual? eg resolveLinks=true
         nodeWriter.write(localServiceURI.getURI(storedNode), storedNode, syncOutput.getOutputStream(), VOS.Detail.max);
+    }
+
+    /**
+     * Check if the caller is allowed to create a their own allocation.The uri is
+ supplied in case the permission checks need the VOSpace resourceID or the path. The default behaviour of this method is to throw an AccessControlException.
+     * 
+     * @param caller the user trying to create an allocation
+     * @param uri the vos URI of the allocation
+     * @throws AccessControlException if the caller is not allowed
+     * @throws Exception if some error prevents checking for authorisation
+     */
+    protected void checkSelfAllocatePermission(Subject caller, VOSURI uri) 
+            throws AccessControlException, Exception {
+        throw new AccessControlException("permission denied: self-allocate is not enabled");
+    }
+
+    // self-allocate: a user tries to create a ContainerNode allocation for themselves
+    private boolean isSelfAllocate(Subject caller, Node node) {
+        return node instanceof ContainerNode 
+                && nodePersistence.isAllocation((ContainerNode) node);
+    }
+    
+    private Subject toOwnerSubject(String ownerStringRep, IdentityManager im) {
+        // try IdentityManager.soSubject(Object)
+        // this could work for different principal type X IdentityManager combinations
+        try {
+            Subject ret = im.toSubject(ownerStringRep);
+            log.debug("create owner subject by im.toSubject: " + ret);
+            return ret;
+        } catch (Exception ex) {
+            log.debug("IdentityManager.toSubject() failed for " + ownerStringRep + ": " +  ex);
+        }
+
+        // HACK: known IdentityManager implementations prefer the HttpPrincipal aka
+        // network username for toDisplayString(Subject) so that's the value that
+        // normally gets put into node.ownerDisplay and rendered in node documents
+        // so choosing HttpPrincipal here makes output and input (set owner) use the
+        // same values... but seems kind of sketchy.
+        try {
+            Subject tmp = new Subject();
+            tmp.getPrincipals().add(new HttpPrincipal(ownerStringRep));
+            Subject ret = im.augment(tmp);
+            log.debug("create owner subject by im.augment(HttpPrincipal): " + ret);
+            return ret;
+        } catch (Exception ex) {
+            log.debug("IdentityManager.augment() failed for " + ownerStringRep + ": " + ex);
+        }
+        
+        // neither of those worked...
+        return null;
     }
 }
