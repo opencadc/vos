@@ -53,17 +53,17 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
         String path = uri.getPath();
         PosixPrincipal pp = getPosixUser(caller);
         if (pp == null || pp.username == null) {
-            throw new AccessControlException("permission denied: self-allocate " + uri.getURI().toASCIIString()
+            throw new AccessControlException("permission denied: self-allocate " + uri
                     + " reason: caller has no PosixPrincipal username");
         }
         String homeDir = "/home/" + pp.username; // TODO: get from local posix-mapper
         if (!path.equals(homeDir)) {
-            throw new AccessControlException("permission denied: self-allocate " + uri.getURI().toASCIIString()
+            throw new AccessControlException("permission denied: self-allocate " + uri
                     + " reason: target does not match expected home dir '" + homeDir + "'");
         }
 
         if (permissionsClientConfig != null) {
-            log.debug("permissions client config is present, validating permissions API token if present");
+            log.debug("calling Permissions API to authorise " + uri);
             final PermissionsAPIClient permissionsAPIClient =
                     new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
                             permissionsClientConfig.getPermissionsApiAuthBaseUrl());
@@ -71,7 +71,7 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
             final AuthorisationResult authorisationResult = permissionsAPIClient.authoriseRoute(
                     permissionsClientConfig.getServiceName(),
                     CreateNodeAction.getAuthorizationToken(caller).getCredentials(),
-                    permissionsClientConfig.getRoutePath(),
+                    uri.getPath(),
                     permissionsClientConfig.getMethod(),
                     new JSONObject(),
                     permissionsClientConfig.getVersion());
@@ -91,7 +91,7 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
             }
         }
         
-        throw new AccessControlException("permission denied: self-allocate " + uri.getURI().toASCIIString());
+        throw new AccessControlException("permission denied: self-allocate " + uri);
     }
 
     /**
