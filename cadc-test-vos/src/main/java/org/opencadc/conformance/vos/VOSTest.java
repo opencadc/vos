@@ -139,18 +139,24 @@ public abstract class VOSTest {
 
     @Before
     public void initTestContainer() throws Exception {
-        String name = rootTestFolderName;
-        ContainerNode testNode = new ContainerNode(name);
-        testNode.isPublic = true;
-        testNode.inheritPermissions = false;
+        // subclass may have put a relative path here, eg home/int-tests
+        ContainerNode parent = null;
+        String[] pth = rootTestFolderName.split("/");
+        for (String name : pth) {
+            ContainerNode testNode = new ContainerNode(name);
+            testNode.isPublic = true;
+            testNode.inheritPermissions = false;
+            testNode.parent = parent;
 
-        URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
-        VOSURI nodeURI = getVOSURI(null);
-        NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
-        if (result == null) {
-            put(nodeURL, nodeURI, testNode);
-        } else {
-            post(nodeURL, nodeURI, testNode);
+            URL nodeURL = getNodeURL(nodesServiceURL, null); // method already puts test folder name in
+            VOSURI nodeURI = getVOSURI(null);
+            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, false);
+            if (result == null) {
+                put(nodeURL, nodeURI, testNode);
+            } else {
+                post(nodeURL, nodeURI, testNode);
+            }
+            parent = testNode;
         }
     }
     
@@ -259,7 +265,7 @@ public abstract class VOSTest {
         HttpPost post = new HttpPost(nodeURL, content, true);
         log.debug("POST: " + nodeURL);
         Subject.doAs(authSubject, new RunnableAction(post));
-        log.debug("POST responseCode: " + post.getResponseCode() + " " + post.getThrowable());
+        log.info("POST responseCode: " + post.getResponseCode() + " " + post.getThrowable());
         if (!verify && post.getResponseCode() == 404) {
             return;
         }
