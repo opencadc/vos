@@ -174,6 +174,7 @@ public class CreateNodeAction extends NodeAction {
         // backwards compat: ignore if clients still send this, just in case
         NodeProperty creatorJWT = clientNode.getProperty(VOS.PROPERTY_URI_CREATOR_JWT);
         if (creatorJWT != null) {
+            log.warn("found obsolete " + VOS.PROPERTY_URI_CREATOR_JWT + " -- DROPPED");
             clientNode.getProperties().remove(creatorJWT);
         }
 
