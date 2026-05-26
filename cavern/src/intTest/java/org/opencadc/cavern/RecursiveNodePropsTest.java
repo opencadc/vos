@@ -105,5 +105,6 @@ public class RecursiveNodePropsTest extends org.opencadc.conformance.vos.Recursi
         super.enablePermissionTests(group2, groupMemberCert);
 
         super.cleanupOnSuccess = false;
+        super.rootTestFolderName = Constants.TEST_PATH;
     }
 }

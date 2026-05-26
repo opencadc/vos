@@ -107,5 +107,7 @@ public class NodesTest extends org.opencadc.conformance.vos.NodesTest {
         super.enablePermissionTests(group2, groupMemberCert);
         
         super.cleanupOnSuccess = false;
+        
+        super.rootTestFolderName = Constants.TEST_PATH;
     }
 }

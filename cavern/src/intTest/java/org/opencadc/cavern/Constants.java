@@ -83,6 +83,8 @@ public abstract class Constants {
     static final File AUTH_TEST_CERT;
     static final GroupURI AUTH_TEST_GROUP;
     
+    static final String TEST_PATH = "projects/int-tests";
+    
     static {
         TEST_CERT = FileUtil.getFileFromResource("cavern-test.pem", NodesTest.class);
         AUTH_TEST_CERT = FileUtil.getFileFromResource("cavern-auth-test.pem", TransferTest.class);
