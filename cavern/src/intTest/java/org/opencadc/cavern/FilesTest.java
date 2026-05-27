@@ -92,6 +92,7 @@ public class FilesTest extends org.opencadc.conformance.vos.FilesTest {
         super.enableTestDataNodePermission(Constants.AUTH_TEST_CERT);
 
         super.linkExternalFile = true;
+        super.rootTestFolderName = Constants.TEST_PATH;
     }
 
 }

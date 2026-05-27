@@ -67,7 +67,6 @@
 
 package org.opencadc.cavern.nodes;
 
-import ca.nrc.cadc.auth.AuthorizationTokenPrincipal;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.NotAuthenticatedException;
 import ca.nrc.cadc.auth.PosixPrincipal;
@@ -77,12 +76,8 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.opencadc.cavern.CavernConfig;
 import org.opencadc.vospace.server.NodePersistence;
 
 /**
@@ -210,57 +205,11 @@ public class PosixIdentityManager implements IdentityManager {
     public Subject validate(Subject subject) throws NotAuthenticatedException {
         if (subject != null) {
             // delegate to the configured IdentityManager
-            final Subject validatedSubject = this.wrappedIdentityManager.validate(subject);
-
-            final Set<AuthorizationTokenPrincipal> tokenPrincipals = validatedSubject.getPrincipals(AuthorizationTokenPrincipal.class);
-            for (final AuthorizationTokenPrincipal tokenPrincipal : tokenPrincipals) {
-                final String tokenHeaderValue = tokenPrincipal.getHeaderValue();
-                final String[] parts = tokenHeaderValue.split(" ", 2);
-                if (parts.length == 2) {
-                    final String challengeType = parts[0];
-                    if (CavernConfig.ALLOCATION_API_KEY_HEADER_CHALLENGE_TYPE.equalsIgnoreCase(challengeType)) {
-                        final String tokenValue = parts[1].trim();
-                        final String[] tokenValueParts = tokenValue.split(":", 2);
-                        if (tokenValueParts.length == 2) {
-                            final String clientApplicationName = tokenValueParts[0].trim();
-                            final String apiKeyToken = tokenValueParts[1].trim();
-                            try {
-                                Context ctx = new InitialContext();
-                                FileSystemNodePersistence fileSystemNodePersistence = 
-                                        (FileSystemNodePersistence) ctx.lookup(PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY);
-                                CavernConfig config = fileSystemNodePersistence.getConfig();
-                                Map<String, String> apiKeys = config.getAdminAPIKeys();
-
-                                if (apiKeys.containsKey(clientApplicationName) && apiKeys.get(clientApplicationName).equals(apiKeyToken)) {
-                                    log.info("CAVERN ADMIN GRANT: " + clientApplicationName);
-                                    return fileSystemNodePersistence.getRootNode().owner;
-                                }
-                            } catch (NamingException namingException) {
-                                throw new IllegalStateException(namingException.getMessage(), namingException);
-                            }
-                        }
-                        // intentionally vague error message for failed admin-api-key
-                        throw new NotAuthenticatedException("invalid token");
-                    }
-                }
-            }
-
-            return validatedSubject;
+            return this.wrappedIdentityManager.validate(subject);
         }
 
         // if subject is null, return null
         return null;
-    }
-
-    private Map<String, String> getAdminAPIKeys() {
-        try {
-            final Context ctx = new InitialContext();
-            final FileSystemNodePersistence fileSystemNodePersistence = (FileSystemNodePersistence) ctx.lookup("cavern-" + NodePersistence.class.getName());
-            final CavernConfig config = fileSystemNodePersistence.getConfig();
-            return config.getAdminAPIKeys();
-        } catch (NamingException namingException) {
-            throw new IllegalStateException(namingException.getMessage(), namingException);
-        }
     }
 
     @Override

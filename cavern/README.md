@@ -57,8 +57,12 @@ org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 # (optional) identify which container nodes are allocations
 org.opencadc.cavern.allocationParent = {top level node}
 
-# (optional) API Keys with administrative privileges.  Multiple keys can be specified, one per line.
+# (deprecated - do not use) API Keys with administrative privileges.  Multiple keys can be specified, one per line.
 # org.opencadc.cavern.adminAPIKey = {applicationClientName}:{apiKeyToken}
+
+# Specific PermissionsAPI configuration when deployed to SKAO Regional Centres.  Not for general consumption.
+# org.opencadc.cavern.papi.baseURL = https://permissions.srcnet.skao.int/api
+# org.opencadc.cavern.papi.authBaseURL = https://authn.srcnet.skao.int/api
 
 # (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
 # for users.

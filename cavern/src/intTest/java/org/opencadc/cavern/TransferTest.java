@@ -104,6 +104,7 @@ public class TransferTest extends org.opencadc.conformance.vos.TransferTest {
 
         // enables testDataNodePermission, AUTH_TEST_CERT user is a member of AUTH_TEST_GROUP.
         super.enableTestDataNodePermission(Constants.AUTH_TEST_GROUP, Constants.AUTH_TEST_CERT);
+        super.rootTestFolderName = Constants.TEST_PATH;
     }
     
     @Test

@@ -105,5 +105,6 @@ public class RecursiveNodeDeleteTest extends org.opencadc.conformance.vos.Recurs
         super.enablePermissionTests(group2, groupMemberCert);
 
         super.cleanupOnSuccess = false;
+        super.rootTestFolderName = Constants.TEST_PATH;
     }
 }
