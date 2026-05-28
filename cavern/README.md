@@ -48,6 +48,16 @@ See <a href="https://github.com/opencadc/reg/tree/master/cadc-registry">cadc-reg
 `cavern` requires an external service to provide mapping of user and group names to local POSIX uid and gid values
 using the `PosixMapperClient` in the <a href="https://github.com/opencadc/ac/tree/master/cadc-gms">cadc-gms</a> library.
 
+Self-allocation can be optionally configured to use the SRCNet Permissions API and Auth API. If configured, `cavern` 
+will call the Permissions API to get authorisation. `cavern` uses the standard OpenCADC LocalAuthority lookup to find
+common AAI related services, so configuring Permissions API requires these two lines in `cadc-registry.properties`:
+```
+ivo://skao.int/std/AuthAPI = https://....
+ivo://skao.int/std/PermissionsAPI = https://....
+```
+The keys here are like an IVOA _standardID_ that identify an API feature; the value is the base URL of the 
+service that provides the feature.
+
 ### cavern.properties
 A `cavern.properties` file in /config is required to run this service.  The following keys are required:
 ```
@@ -120,15 +130,8 @@ is restricted to `/home/{posix username}` to this feature also requires that `/h
 _allocationParent_. Self-allocations will get the default quota (can be changed by the admin user later) and it is
 **strongly advised** to only enable self-allocation when a quota system and default quotas are in place.
 
-Self-allocation can also be enabled by configuring SRCNet Permissions API and Auth API and have `cavern` call the 
-Permissions API to get authorisation. `cavern` uses the standard OpenCADC LocalAuthority lookup to find common
-AAI related services, so configuring Permissions API requires these two lines in `cadc-registry.properties`:
-```
-ivo://skao.int/std/AuthAPI = https://....
-ivo://skao.int/std/PermissionsAPI = https://....
-```
-The keys here are like an IVOA _standardID_ that identify an API feature; the value is the base URL of the 
-service that provides the feature.
+Self-allocation can also be authorised using the SRCNet Permissions API. See `cadc-registry.properties` above for 
+details (NEW in 0.10.0).
 
 Obsolete: The _adminAPIKey_ properties were removed in version 0.10 and no longer work.
 
