@@ -1,20 +1,22 @@
 package org.opencadc.cavern;
 
+import ca.nrc.cadc.reg.client.LocalAuthority;
+import ca.nrc.cadc.util.InvalidConfigException;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import ca.nrc.cadc.util.StringUtil;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import org.apache.log4j.Logger;
 
 public class PermissionsClientConfig {
-    private static final String PREFIX = ".papi";
-    private static final String PERMISSIONS_API_BASE_URL = PREFIX + ".baseUrl";
-    private static final String PERMISSIONS_API_AUTH_BASE_URL = PREFIX + ".authBaseUrl";
-
-    private final String configPrefix;
-
-    private final String permissionsApiBaseUrl;
-    private final String permissionsApiAuthBaseUrl;
+    private static final Logger log = Logger.getLogger(PermissionsClientConfig.class);
+    
+    private static final URI STD_AUTH_API = URI.create("ivo://skao.int/std/AuthAPI");
+    private static final URI STD_PERM_API = URI.create("ivo://skao.int/std/PermissionsAPI");
+    
+    private final URL permissionsApiBaseUrl;
+    private final URL permissionsApiAuthBaseUrl;
 
     // Hard-coded values for now.
     private final String serviceName = "canfar-api";
@@ -24,45 +26,41 @@ public class PermissionsClientConfig {
     private final String method = "PUT";
 
 
-    /**
-     * Read in the configuration from properties.  This will be NULL if no base URL is set (presumed to not be
-     * configured for this Cavern instance).
-     * @param properties    The MultiValuedProperties instance.
-     * @param configPrefix  The cavern prefix to look in the config file.
-     * @return  PermissionsClientConfig instance, or null if not configured.
-     */
-    static PermissionsClientConfig fromProperties(final MultiValuedProperties properties, final String configPrefix) {
-        final String baseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_BASE_URL);
-        return StringUtil.hasText(baseUrl)
-                ? new PermissionsClientConfig(properties, configPrefix)
-                : null;
+    PermissionsClientConfig() {
+        LocalAuthority loc = new LocalAuthority();
+        final URI aapi = loc.getResourceID(STD_AUTH_API, true);
+        final URI papi = loc.getResourceID(STD_PERM_API, true);
+        
+        if (aapi == null && papi == null) {
+            this.permissionsApiAuthBaseUrl = null;
+            this.permissionsApiBaseUrl = null;
+            return;
+        }
+        
+        try {
+            this.permissionsApiAuthBaseUrl = aapi.toURL();
+        } catch (MalformedURLException ex) {
+            throw new InvalidConfigException("invalid URL: " + STD_AUTH_API + " = " + aapi, ex);
+        }
+        try {
+            this.permissionsApiBaseUrl = papi.toURL();
+        } catch (MalformedURLException ex) {
+            throw new InvalidConfigException("invalid URL: " + STD_PERM_API + " = " + papi, ex);
+        }
     }
-
-    private PermissionsClientConfig(final MultiValuedProperties properties, final String configPrefix) {
-        this.configPrefix = configPrefix;
-
-        this.permissionsApiBaseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_BASE_URL);
-        this.permissionsApiAuthBaseUrl = properties.getFirstPropertyValue(configPrefix + PERMISSIONS_API_AUTH_BASE_URL);
+    
+    boolean isConfigured() {
+        return permissionsApiAuthBaseUrl != null && permissionsApiBaseUrl != null;
     }
 
     public URL getPermissionsApiBaseUrl() {
-        try {
-            return URI.create(this.permissionsApiBaseUrl).toURL();
-        } catch (MalformedURLException malformedURLException) {
-            throw new IllegalStateException("Invalid URL for " + this.configPrefix + PERMISSIONS_API_BASE_URL + ": "
-                    + this.permissionsApiBaseUrl, malformedURLException);
-        }
+        return permissionsApiBaseUrl;
     }
 
     public URL getPermissionsApiAuthBaseUrl() {
-        try {
-            return URI.create(this.permissionsApiAuthBaseUrl).toURL();
-        } catch (MalformedURLException malformedURLException) {
-            throw new IllegalStateException("Invalid URL for " + this.configPrefix + PERMISSIONS_API_AUTH_BASE_URL + ": "
-                    + this.permissionsApiAuthBaseUrl, malformedURLException);
-        }
+        return permissionsApiAuthBaseUrl;
     }
-
+    
     public String getServiceName() {
         return serviceName;
     }
@@ -82,4 +80,15 @@ public class PermissionsClientConfig {
     public String getMethod() {
         return method;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(PermissionsClientConfig.class.getSimpleName()).append(": ");
+        sb.append("\n").append(STD_PERM_API).append(" = ").append(permissionsApiBaseUrl);
+        sb.append("\n").append(STD_AUTH_API).append(" = ").append(permissionsApiAuthBaseUrl);
+        return sb.toString();
+    }
+    
+    
 }
