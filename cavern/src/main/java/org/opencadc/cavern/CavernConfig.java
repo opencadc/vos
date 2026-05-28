@@ -119,10 +119,6 @@ public class CavernConfig {
     public static final String ALLOCATION_PARENT = CAVERN_KEY + ".allocationParent";
     public static final String SELF_ALLOCATE = CAVERN_KEY + ".selfAllocateGroup";
 
-    // An API Key representing a client that has administrative access.  More than one is possible.
-    // Format is <applicationClientName>:<apiKeyToken>
-    public static final String ADMIN_API_KEY = CAVERN_KEY + ".adminAPIKey";
-
     // Default quota in GB for new allocations, if not specified in the allocation request.
     public static final String DEFAULT_QUOTA_GB = CAVERN_KEY + ".defaultQuotaGB";
 
@@ -134,7 +130,6 @@ public class CavernConfig {
 
     // Configuration for Permissions API Client
     private final PermissionsClientConfig permissionsClientConfig;
-    private final List<String> adminAPIKeys = new ArrayList<>();
 
     // Default quota in bytes for new allocations, if not specified in the allocation request.
     // If null, no default quota is set.
@@ -157,16 +152,22 @@ public class CavernConfig {
                     + CAVERN_PROPERTIES);
         }
 
-        this.permissionsClientConfig = PermissionsClientConfig.fromProperties(this.mvp, CAVERN_KEY);
+        PermissionsClientConfig pcc = new PermissionsClientConfig();
+        if (pcc.isConfigured()) {
+            this.permissionsClientConfig = pcc;
+            log.info(permissionsClientConfig);
+        } else {
+            this.permissionsClientConfig = null;
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("CONFIG: incomplete/invalid: ");
 
         // required:
-        boolean resourceProp = checkProperty(mvp, sb, RESOURCE_ID, true);
-        boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
-        boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
-        boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
+        final boolean resourceProp = checkProperty(mvp, sb, RESOURCE_ID, true);
+        final boolean baseDirProp = checkProperty(mvp, sb, FILESYSTEM_BASE_DIR, true);
+        final boolean subPathProp = checkProperty(mvp, sb, FILESYSTEM_SUB_PATH, true);
+        final boolean rootOwnerProp = checkProperty(mvp, sb, ROOT_OWNER, true);
         // optional:
         checkProperty(mvp, sb, SSHFS_SERVER_BASE, false);
         checkProperty(mvp, sb, ALLOCATION_PARENT, false);
@@ -184,6 +185,8 @@ public class CavernConfig {
 
         this.root = Paths.get(baseDir, subPath);
         this.resourceID = URI.create(s);
+        log.info(RESOURCE_ID + " = " + resourceID);
+        
         for (String sap : mvp.getProperty(ALLOCATION_PARENT)) {
             String ap = sap;
             if (ap.charAt(0) == '/') {
@@ -198,6 +201,7 @@ public class CavernConfig {
             }
             // empty string means root, otherwise child of root
             allocationParents.add(ap);
+            log.info(ALLOCATION_PARENT + " = " + ap);
         }
 
         for (String sag : mvp.getProperty(SELF_ALLOCATE)) {
@@ -205,12 +209,11 @@ public class CavernConfig {
                 URI uri = new URI(sag);
                 GroupURI guri = new GroupURI(uri);
                 this.selfAllocateGroups.add(guri);
+                log.info(SELF_ALLOCATE + " = " + guri);
             } catch (URISyntaxException ex) {
                 throw new InvalidConfigException(SELF_ALLOCATE + " = " + sag + " INVALID GroupURI");
             }
         }
-
-        adminAPIKeys.addAll(mvp.getProperty(CavernConfig.ADMIN_API_KEY));
 
         final String configuredDefaultQuotaGB = mvp.getFirstPropertyValue(CavernConfig.DEFAULT_QUOTA_GB);
         if (configuredDefaultQuotaGB != null) {
@@ -223,6 +226,7 @@ public class CavernConfig {
         } else {
             this.defaultQuotaBytes = null;
         }
+        log.info(DEFAULT_QUOTA_GB + " = " + configuredDefaultQuotaGB + " aka " + defaultQuotaBytes + " bytes");
 
         this.secrets = Paths.get(baseDir, "secrets");
     }
@@ -241,15 +245,6 @@ public class CavernConfig {
 
     public Set<GroupURI> getSelfAllocateGroups() {
         return selfAllocateGroups;
-    }
-
-    /**
-     * Obtain the API keys for administrative tasks.  The Key is the application client name, and the Value is the API key token.
-     * @return  Map of allocation API keys, where the key is the application client name, and the value is the API key token.
-     */
-    public Map<String, String> getAdminAPIKeys() {
-        return this.adminAPIKeys.stream().map(apiKey -> apiKey.split(":")).collect(
-            Collectors.toMap(splitKey -> splitKey[0], splitKey -> splitKey[1]));
     }
 
     /**

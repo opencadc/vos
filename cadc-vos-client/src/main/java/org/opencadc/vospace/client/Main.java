@@ -214,7 +214,8 @@ public class Main implements Runnable {
             Log4jInit.setLevel("org.opencadc.vospace", Level.INFO);
             Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
         } else {
-            Log4jInit.setLevel("ca", Level.WARN);
+            Log4jInit.setLevel("org.opencadc", Level.WARN);
+            Log4jInit.setLevel("ca.nrc.cadc", Level.WARN);
         }
 
         try {
@@ -883,93 +884,6 @@ public class Main implements Runnable {
         }
     }
 
-    /*
-    private View createAcceptsView(VOSURI vosuri, Node node) 
-        throws URISyntaxException {
-        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
-            public List<URI> getViews(Node node) { 
-                return node.accepts;
-            }
-        };
-        return createView(vosuri, nodeViewWrapper, node);
-    }
-
-    
-    private View createProvidesView(VOSURI vosuri, Node node) 
-        throws URISyntaxException {
-        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction() {
-            public List<URI> getViews(Node node) { 
-                return node.provides;
-            }
-        };
-        return createView(vosuri, nodeViewWrapper, node);
-    }
-    */
-    
-    /*
-    private View createView(VOSURI vosURI, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
-            throws URISyntaxException {
-        // parse the query string
-        String queryString = vosURI.getQuery();
-        final String viewKey = "view=";
-        String[] queries = queryString.split("&");
-        String viewRef = null;
-        List<String> params = new ArrayList<>();
-        for (String query : queries) {
-            if (query.startsWith(viewKey)) {
-                if (viewRef != null) {
-                    throw new IllegalArgumentException("Too many view references.");
-                }
-                viewRef = query.substring(viewKey.length());
-            } else {
-                params.add(query);
-            }
-        }
-        if (viewRef == null) {
-            log.debug("View not found in query string, using default view");
-            return null;
-        }
-
-        // get the node object if necessary
-        if (node == null) {
-            try {
-                node = client.getNode(vosURI.getPath(), "limit=0");
-            } catch (NodeNotFoundException e) {
-                throw new IllegalArgumentException("Node " + vosURI.getPath() + " not found.");
-            }
-        }
-
-        // determine if the view is supported
-        URI viewURI = null;
-        for (URI uri : acceptsOrProvides.getViews(node)) {
-            if (viewRef.equals(uri.getFragment())) {
-                viewURI = uri;
-            }
-        }
-
-        if (viewURI == null) {
-            throw new IllegalArgumentException("View '" + viewRef + "' not supported by node " + vosURI);
-        }
-
-        // add the view parameters
-        View view = new View(viewURI);
-        if (params.size() > 0) {
-            String viewURIFragment = viewURI.getFragment();
-            String paramURIBase = viewURI.toString().replace("#" + viewURIFragment, "");
-            for (String param : params) {
-                int eqIndex = param.indexOf('=');
-                if (eqIndex > 0) {
-                    String key = param.substring(0, eqIndex);
-                    URI paramURI = new URI(paramURIBase + "#" + key);
-                    View.Parameter viewParam = new View.Parameter(paramURI, param.substring(eqIndex + 1));
-                    view.getParameters().add(viewParam);
-                }
-            }
-        }
-        return view;
-    }
-    */
-    
     private static String ZERO_LENGTH = "";
 
     private String safePropertyRef(Node n, URI key) {
@@ -1219,6 +1133,9 @@ public class Main implements Runnable {
     private void validateCommandArguments(ArgumentMap argMap)
         throws IllegalArgumentException {
         List<String> args = argMap.getPositionalArgs();
+        for (String a : args) {
+            log.warn("positional arg: '" + a + "'");
+        }
         if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE)) {
             if (args.size() != 2) {
                 throw new IllegalArgumentException(operation + " requires 2 positional args, found: " + args.size());

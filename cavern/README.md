@@ -54,27 +54,6 @@ A `cavern.properties` file in /config is required to run this service.  The foll
 # service identity
 org.opencadc.cavern.resourceID = ivo://{authority}/{name}
 
-# (optional) identify which container nodes are allocations
-org.opencadc.cavern.allocationParent = {top level node}
-
-# (deprecated - do not use) API Keys with administrative privileges.  Multiple keys can be specified, one per line.
-# org.opencadc.cavern.adminAPIKey = {applicationClientName}:{apiKeyToken}
-
-# Specific PermissionsAPI configuration when deployed to SKAO Regional Centres.  Not for general consumption.
-# org.opencadc.cavern.papi.baseURL = https://permissions.srcnet.skao.int/api
-# org.opencadc.cavern.papi.authBaseURL = https://authn.srcnet.skao.int/api
-
-# (optional) provide a class implementing the org.opencadc.cavern.nodes.QuotaPlugin interface to control Quotas
-# for users.
-# Optional, but the default of NoQuotaPlugin will get used if not specified, and users will have free reign.
-# - CephFSQuotaPlugin: Use CephFS's extended attributes to determine current quota and folder sizes.
-# - NoQuotaPlugin: Default - no quota checking
-#
-org.opencadc.cavern.nodes.QuotaPlugin = CephFSQuotaPlugin | NoQuotaPlugin
-
-# (optional) Default Quota in GB for new allocations.
-org.opencadc.cavern.defaultQuotaGB = 10
-
 # base directory for cavern files
 org.opencadc.cavern.filesystem.baseDir = {persistent data directory in container}
 org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content that could be mounted in other containers}
@@ -82,18 +61,47 @@ org.opencadc.cavern.filesystem.subPath = {relative path to the node/file content
 # owner of root node has admin power
 org.opencadc.cavern.filesystem.rootOwner = {username}
 
-# (optional) username, uid, and gid (default) of the root owner
-org.opencadc.cavern.filesystem.rootOwner.username = {username}
-org.opencadc.cavern.filesystem.rootOwner.uid = {uid}
-org.opencadc.cavern.filesystem.rootOwner.gid = {gid}
+# (optional) posix username, uid, and gid (default) of the root owner
+#org.opencadc.cavern.filesystem.rootOwner.uid = {uid}
+#org.opencadc.cavern.filesystem.rootOwner.gid = {gid}
 
-# (optional) keys to generate pre-auth URLs to cavern: now generated internally
+# (optional) identify which container nodes are allocations
+#org.opencadc.cavern.allocationParent = {top level node}
+
+# (optional) group of users that are allowed to create an allocation for themselves (NEW in 0.10.0)
+#org.opencadc.cavern.selfAllocateGroup = {IVOA Group Identifier}
+
+# obsolete (REMOVED in 0.10)
+# org.opencadc.cavern.adminAPIKey = {applicationClientName}:{apiKeyToken}
+
+# Specific PermissionsAPI configuration when deployed to SKAO Regional Centres.  Not for general consumption.
+# org.opencadc.cavern.papi.baseURL = https://permissions.srcnet.skao.int/api
+# org.opencadc.cavern.papi.authBaseURL = https://authn.srcnet.skao.int/api
+
+# (optional) specify a quota implemention (default: NoQuotaPlugin) to set and enforce quotas
+# note: values are the names of classes that implement the QuotaPlugin interface
+#org.opencadc.cavern.nodes.QuotaPlugin = CephFSQuotaPlugin | NoQuotaPlugin
+
+# (optional) Default Quota in GiB for new allocations (default: no limit)
+#org.opencadc.cavern.defaultQuotaGB = 10
 
 # (optional) base directory exposed for sshfs mounts
-org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
+#org.opencadc.cavern.sshfs.serverBase = {server}[:{port}]:{path}
 ```
 
 The _resourceID_ is the resourceID of _this_ `cavern` service.
+
+The _filesystem.baseDir_ is the path to a base directory containing the `cavern` nodes/files.
+
+The _filesystem.subPath_ is the relative path to the node/file content that could be mounted in other containers.
+
+The _filesystem.rootOwner_ is the username of the owner of the root container in the VOSpace. The root owner has some admin
+privileges: can create allocations (create a container node owned by another user) and can set the quota property
+on such containers. Note: quota is not currently implemented in `cavern`.
+
+The posix details of the _filesystem.rootOwner_ can be condfigured if the configured IdentityManager cannot obtain
+these values on startup (e.g. without credentials). In general, the ACIdentityManager does not need these and the 
+StandardIdentityManager (for OpenID) does (reason: no credentials to call the local posix-mapper API).
 
 The _allocationParent_ is a path to a container node (directory) which contains space allocations. An allocation
 is owned by a user (usually different from the _rootOwner_ admin user) who is responsible for the allocation
@@ -106,18 +114,23 @@ private). It is up to the admin user to grant read access by setting `isPublic` 
 enable allowed users to use directories beneath the _allocationParent_(s). Limitation: only top-level container 
 nodes can be configured as _allocationParent_(s).
 
-The _filesystem.baseDir_ is the path to a base directory containing the `cavern` nodes/files.
+The _selfAllocateGroup_ grants permission to members to create their own allocation. Users in this group will be
+granted permission to create a VOSpace ContainerNode as a child of an _allocationParent_. Currently, self-allocation
+is restricted to `/home/{posix username}` to this feature also requires that `/home` is configured as an 
+_allocationParent_. Self-allocations will get the default quota (can be changed by the admin user later) and it is
+**strongly advised** to only enable self-allocation when a quota system and default quotas are in place.
 
-The _filesystem.subPath_ is the relative path to the node/file content that could be mounted in other containers.
+Self-allocation can also be enabled by configuring SRCNet Permissions API and Auth API and have `cavern` call the 
+Permissions API to get authorisation. `cavern` uses the standard OpenCADC LocalAuthority lookup to find common
+AAI related services, so configuring Permissions API requires these two lines in `cadc-registry.properties`:
+```
+ivo://skao.int/std/AuthAPI = https://....
+ivo://skao.int/std/PermissionsAPI = https://....
+```
+The keys here are like an IVOA _standardID_ that identify an API feature; the value is the base URL of the 
+service that provides the feature.
 
-The _filesystem.rootOwner_ is the username of the owner of the root container in the VOSpace. The root owner has some admin
-privileges: can create allocations (create a container node owned by another user) and can set the quota property
-on such containers. Note: quota is not currently implemented in `cavern`.
-
-The _org.opencadc.cavern.adminAPIKey_ properties are API keys unique to this Cavern instance that can be used to 
-authenticate and perform administrative tasks.  They are of the form `{applicationClientName}:{apiKeyToken}`, where
-- `{applicationClientName}` is the name of the application client (e.g. "skaha", "prepareData")
-- `{apiKeyToken}` is any string of characters that is used to authenticate the application client.
+Obsolete: The _adminAPIKey_ properties were removed in version 0.10 and no longer work.
 
 The _org.opencadc.cavern.nodes.QuotaPlugin_ is the concrete class that implements the 
 [QuotaPlugin](./src/main/java/org/opencadc/cavern/nodes/QuotaPlugin.java) interface.  Absences of this property 
