@@ -212,6 +212,7 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                     endPhase = ExecutionPhase.ABORTED;
                     results.add(new Result("errorcount", URI.create("final:" + errorCount)));
                 }
+                results.addAll(getAdditionalResults());
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
             }
             if (!endPhase.equals(ep)) {
@@ -307,5 +308,13 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             log.error("Failed to change the job phase from " + ExecutionPhase.EXECUTING
                     + " to " + ExecutionPhase.ERROR, t);
         }
+    }
+
+    /**
+     * Subclasses may override to attach additional UWS Result entries
+     * (e.g., computed metrics, reports). Default: no extra results.
+     */
+    protected List<Result> getAdditionalResults() {
+        return new ArrayList<>();
     }
 }
