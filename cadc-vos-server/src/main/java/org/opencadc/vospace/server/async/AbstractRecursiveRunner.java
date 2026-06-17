@@ -256,6 +256,10 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
         ++successCount;
     }
 
+    protected JobUpdater getJobUpdater() {
+        return jobUpdater;
+    }
+
     /**
      * If a minimum of PHASE_CHECK_INTERVAL time has passed, check
      * to ensure the job is still in the EXECUTING PHASE
