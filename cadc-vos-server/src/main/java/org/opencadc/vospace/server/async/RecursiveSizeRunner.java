@@ -67,8 +67,8 @@
 
 package org.opencadc.vospace.server.async;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.AuthMethod;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.Standards;
@@ -80,7 +80,6 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
-
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -90,7 +89,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
