@@ -99,9 +99,9 @@ import org.opencadc.vospace.server.Utils;
 /**
  * Async job runner that computes recursive byte usage for an allocation.
  */
-public class RecursiveSizeRunner extends AbstractRecursiveRunner {
+public class RecursiveDirectorySizeRunner extends AbstractRecursiveRunner {
 
-    private static final Logger log = Logger.getLogger(RecursiveSizeRunner.class);
+    private static final Logger log = Logger.getLogger(RecursiveDirectorySizeRunner.class);
 
     private static final String SIZE_REPORT_SERVLET_PATH = "/size-report";
 
@@ -241,7 +241,7 @@ public class RecursiveSizeRunner extends AbstractRecursiveRunner {
 
             List<Result> out = new ArrayList<>();
             out.add(new Result("bytesUsed", URI.create("final:" + totalBytes)));
-            out.add(new Result(SizeReportServlet.RESULT_NAME, buildReportURI()));
+            out.add(new Result(DirectorySizeReportServlet.RESULT_NAME, buildReportURI()));
             return out;
         } catch (Exception ex) {
             throw new RuntimeException("failed to persist allocation-size report", ex);
@@ -273,7 +273,7 @@ public class RecursiveSizeRunner extends AbstractRecursiveRunner {
         }
         JobPersistence jobPersistence = (JobPersistence) getJobUpdater();
         Job persisted = jobPersistence.get(job.getID());
-        JobInfo jobInfo = new JobInfo(SizeReportServlet.CONTENT_TYPE, Boolean.TRUE);
+        JobInfo jobInfo = new JobInfo(DirectorySizeReportServlet.CONTENT_TYPE, Boolean.TRUE);
         jobInfo.getContent().add(reportText);
         persisted.setJobInfo(jobInfo);
         jobPersistence.put(persisted);

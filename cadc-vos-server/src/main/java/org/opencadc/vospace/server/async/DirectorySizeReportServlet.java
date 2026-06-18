@@ -36,17 +36,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 
 /**
- * Servlet to serve the allocation-size report for a completed UWS job.
- * Deploy as a sibling of /nodes and map to /size-report/{jobID}.
+ * Servlet to serve the directory-size report for a completed UWS job.
  * The UWS job Result named {@link #RESULT_NAME} redirects here.
- *
- * @author pdowler
  */
-public class SizeReportServlet extends HttpServlet {
+public class DirectorySizeReportServlet extends HttpServlet {
 
     private static final long serialVersionUID = 20260316120000L;
 
-    private static final Logger log = Logger.getLogger(SizeReportServlet.class);
+    private static final Logger log = Logger.getLogger(DirectorySizeReportServlet.class);
 
     public static final String RESULT_NAME = "report";
     public static final String CONTENT_TYPE = "text/plain";
@@ -101,10 +98,8 @@ public class SizeReportServlet extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             log.error(message, t);
         } finally {
-            if (logInfo != null) {
-                logInfo.setElapsedTime(System.currentTimeMillis() - start);
-                log.info(logInfo.end());
-            }
+            logInfo.setElapsedTime(System.currentTimeMillis() - start);
+            log.info(logInfo.end());
         }
     }
 
@@ -168,7 +163,7 @@ public class SizeReportServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentType(CONTENT_TYPE);
                 PrintWriter out = response.getWriter();
-                out.print(jobInfo.getFirstContent());
+                out.print(jobInfo.getContent().get(0));
                 out.flush();
                 logInfo.setSuccess(true);
                 return null;
