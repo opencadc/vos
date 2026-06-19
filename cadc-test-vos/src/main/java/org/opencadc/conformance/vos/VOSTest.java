@@ -120,6 +120,7 @@ public abstract class VOSTest {
     public final URI resourceID;
     public final URL nodesServiceURL;
     public final URL synctransServiceURL;
+    public final URL dirSizeReportServiceURL;
     public final Subject authSubject;
     
     protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
@@ -135,6 +136,9 @@ public abstract class VOSTest {
 
         this.synctransServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_SYNC_21, AuthMethod.ANON);
         log.info(String.format("%s: %s", Standards.VOSPACE_SYNC_21, synctransServiceURL));
+
+        dirSizeReportServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODE_SIZE_REPORT, AuthMethod.ANON);
+        log.info(String.format("%s: %s", Standards.VOSPACE_NODE_SIZE_REPORT, dirSizeReportServiceURL));
     }
 
     @Before
