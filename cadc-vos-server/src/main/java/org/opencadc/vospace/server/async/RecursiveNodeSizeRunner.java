@@ -103,7 +103,11 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
     private static final Logger log = Logger.getLogger(RecursiveNodeSizeRunner.class);
 
-    private static final String SIZE_REPORT_SERVLET_PATH = "/size-report";
+    private static final String SIZE_REPORT_SERVLET_PATH = "/nodesize-report";
+    public static final String BYTES_USED_RESULT_NAME = "bytesUsed";
+    public static final String REPORT_RESULT_NAME = "report";
+    public static final String CONTENT_TYPE = "text/plain";
+    public static final String PERMISSION_DENIED_RESULT_TEXT = "Permission Denied";
 
     private final RegistryClient regClient = new RegistryClient();
 
@@ -162,19 +166,20 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             return false;
         }
 
-        Long nodeSize = accumulateNodeSize(root, subject, 0);
-        totalBytes = nodeSize >= 0L ? nodeSize : 0L;
+        long nodeSize = accumulateNodeSize(root, subject, 0);
+        totalBytes = Math.max(nodeSize, 0);
         addToReport(Utils.getPath(root), nodeSize, 0);
         return nodeSize >= 0L; // success if permissions are OK
     }
 
+    // Note: Report permission denied for all the depths
     private void addToReport(String path, long size, int depth) {
-        if (depth <= maxDepth) {
+        if (depth <= maxDepth || size < 0L) {
             reportLines.put(path, size);
         }
     }
 
-    private Long accumulateNodeSize(Node node, Subject subject, int depth) throws Exception {
+    private long accumulateNodeSize(ContainerNode node, Subject subject, int depth) throws Exception {
         if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException();
         }
@@ -188,35 +193,22 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             return -1L;
         }
 
-        if (node instanceof DataNode) {
-            throw new RuntimeException("BUG: DataNode not expected");
-        }
-
-        ContainerNode cn = (ContainerNode) node;
-
         // TODO: Need to check if the bytesUsed is in sync. If not, need to remove this block of code to keep the recursion going.
-        if (depth >= maxDepth && cn.bytesUsed != null) {
+        if (depth >= maxDepth && node.bytesUsed != null) {
             incSuccessCount();
-            addToReport(Utils.getPath(cn), cn.bytesUsed, depth);
-            return cn.bytesUsed;
+            addToReport(Utils.getPath(node), node.bytesUsed, depth);
+            return node.bytesUsed;
         }
 
+        // collect child containers for later
+        List<ContainerNode> childContainers = new ArrayList<>();
         long currentNodeSize = 0L;
-        try (ResourceIterator<Node> iter = nodePersistence.iterator(cn, null, null)) {
+        try (ResourceIterator<Node> iter = nodePersistence.iterator(node, null, null)) {
             while (iter.hasNext()) {
                 Node child = iter.next();
                 if (child instanceof ContainerNode) {
-                    Long childNodeSize = accumulateNodeSize(child, subject, depth + 1);
-                    if (childNodeSize > 0L) {
-                        currentNodeSize += childNodeSize;
-                    }
-                } else {
-                    if (!authorizer.hasSingleNodeReadPermission(child, subject)) {
-                        log.debug("Skipping this Data node for no read permission: " + Utils.getPath(child));
-                        // incErrorCount(); // Not considering this as an error. Skipping this data node.
-                        continue;
-                    }
-
+                    childContainers.add((ContainerNode) child);
+                } else if (child instanceof DataNode) {
                     DataNode dn = (DataNode) child;
                     Long bytes = dn.bytesUsed;
                     if (bytes == null) {
@@ -224,12 +216,22 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                     }
                     currentNodeSize += bytes;
                     incSuccessCount();
+                } else {
+                    // ignore LinkNode
                 }
             }
         }
 
+        // now recurse so we only have one open iterator at a time
+        for (ContainerNode cn : childContainers) {
+            long size = accumulateNodeSize(cn, subject, depth + 1);
+            if (size > 0L) {
+                currentNodeSize += size;
+            }
+        }
+
         incSuccessCount();
-        addToReport(Utils.getPath(cn), currentNodeSize, depth);
+        addToReport(Utils.getPath(node), currentNodeSize, depth);
         return currentNodeSize;
     }
 
@@ -240,8 +242,8 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             persistReport(reportText);
 
             List<Result> out = new ArrayList<>();
-            out.add(new Result("bytesUsed", URI.create("final:" + totalBytes)));
-            out.add(new Result(NodeSizeReportServlet.RESULT_NAME, buildReportURI()));
+            out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
+            out.add(new Result(REPORT_RESULT_NAME, buildReportURI()));
             return out;
         } catch (Exception ex) {
             throw new RuntimeException("failed to persist allocation-size report", ex);
@@ -261,7 +263,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, Long> entry : lines) {
-            sb.append(entry.getValue() == -1L ? "Permission Denied" : entry.getValue())
+            sb.append(entry.getValue() == -1L ? PERMISSION_DENIED_RESULT_TEXT : entry.getValue())
                     .append('\t').append(entry.getKey()).append('\n');
         }
         return sb.toString();
@@ -271,10 +273,12 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         if (!(getJobUpdater() instanceof JobPersistence)) {
             throw new IllegalStateException("BUG: JobUpdater is not JobPersistence");
         }
+
+        JobInfo jobInfo = new JobInfo(CONTENT_TYPE, Boolean.TRUE);
+        jobInfo.getContent().add(reportText);
+
         JobPersistence jobPersistence = (JobPersistence) getJobUpdater();
         Job persisted = jobPersistence.get(job.getID());
-        JobInfo jobInfo = new JobInfo(NodeSizeReportServlet.CONTENT_TYPE, Boolean.TRUE);
-        jobInfo.getContent().add(reportText);
         persisted.setJobInfo(jobInfo);
         jobPersistence.put(persisted);
     }
@@ -282,7 +286,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     private URI buildReportURI() {
         Subject subject = AuthenticationUtil.getCurrentSubject();
         AuthMethod authMethod = AuthenticationUtil.getAuthMethod(subject);
-        URL nodesURL = regClient.getServiceURL(nodePersistence.getResourceID(), Standards.VOSPACE_NODES_20, authMethod);
+        URL nodesURL = regClient.getServiceURL(nodePersistence.getResourceID(), Standards.VOSPACE_NODES_20);
         String base = nodesURL.toExternalForm().replace("/nodes", SIZE_REPORT_SERVLET_PATH);
         return URI.create(base + "/" + job.getID());
     }

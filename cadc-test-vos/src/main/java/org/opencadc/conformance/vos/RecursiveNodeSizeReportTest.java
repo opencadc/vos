@@ -88,6 +88,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -95,6 +96,9 @@ import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opencadc.gms.GroupURI;
@@ -162,7 +166,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             waitForBytesUsed(fileA, FILE_A_BYTES);
             waitForBytesUsed(fileB, FILE_B_BYTES);
 
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, null);
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, null);
 
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
@@ -184,7 +188,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         String[] tree = {baseDir, baseDir + "file"};
         try {
             createNodeTree(tree);
-            Job job = postAllocationSize(dirSizeReportServiceURL, getVOSURI(baseDir), authSubject, null);
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getVOSURI(baseDir), authSubject, null);
             Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
         } finally {
             cleanupNodeTree(tree);
@@ -195,7 +199,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizeMaxDepth0() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "0"));
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "0"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
             Assert.assertEquals(DEPTH_TOTAL_BYTES, getResultLong(job, "bytesUsed"));
 
@@ -211,7 +215,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizeMaxDepth1() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1"));
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             String report = fetchReport(authSubject);
@@ -233,7 +237,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizeMaxDepth2() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT),
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT),
                     authSubject, Map.of("maxdepth", "2"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
@@ -256,7 +260,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             buildNodesTree();
 
             // max depth 1
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "asc"));
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "asc"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             List<Long> sizes = parseReportSizes(fetchReport(authSubject));
@@ -267,7 +271,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), sizes.get(3));
 
             //max depth 2
-            job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "2", "sort", "asc"));
+            job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "2", "sort", "asc"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             sizes = parseReportSizes(fetchReport(authSubject));
@@ -287,7 +291,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizeSortDesc() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "desc"));
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "desc"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             List<Long> sizes = parseReportSizes(fetchReport(authSubject));
@@ -305,7 +309,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizePermissionDenied() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(dirSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), groupMember, Map.of("maxdepth", "2"));
+            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), groupMember, Map.of("maxdepth", "2"));
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
             Assert.assertEquals(DEPTH_VISIBLE_TO_GROUP_BYTES, getResultLong(job, "bytesUsed"));
 
@@ -544,9 +548,17 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         return reportContent;
     }
 
-    private Map<String, Long> parseReport(String report) {
+    private Map<String, Long> parseReport(String report) throws IOException, ParseException, JDOMException {
         Map<String, Long> map = new LinkedHashMap<>();
-        for (String line : report.split("\n")) {
+
+        JobReader reader = new JobReader();
+        Job job = reader.read(new StringReader(report));
+        List<String> content = job.getJobInfo().getContent();
+
+        SAXBuilder builder = new SAXBuilder();
+        Document doc = builder.build(new StringReader(content.get(0)));
+        String reportText = doc.getRootElement().getText();
+        for (String line : reportText.split("\n")) {
             if (line.isEmpty()) {
                 continue;
             }
