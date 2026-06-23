@@ -634,23 +634,27 @@ public class Main implements Runnable {
         if (!quickTransfer) {
             checkPhase(clientTransfer);
         }
-        Node node = client.getNode(destination.getPath());
+        
+        boolean verifyCopy = false;
+        if (verifyCopy) {
+            Node node = client.getNode(destination.getPath());
 
-        boolean checkProps = contentType != null || contentEncoding != null || !properties.isEmpty();
-        if (checkProps || log.isDebugEnabled()) {
-            VOSURI destinationURI = new VOSURI(destination);
-            log.debug("clientTransfer getTarget: " + node);
-            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node,
-                      VOS.Detail.max));
-            if (checkProps) {
-                log.debug("checking properties after put: " + node.getName());
-                boolean updateProps = false;
-                for (NodeProperty np : properties) {
-                    updateProps = updateProps || updateProperty(node, np.getKey(), np.getValue());
-                }
-                if (updateProps) {
-                    log.debug("updating properties after put: " + node.getName());
-                    client.setNode(destinationURI, node);
+            boolean checkProps = contentType != null || contentEncoding != null || !properties.isEmpty();
+            if (checkProps || log.isDebugEnabled()) {
+                VOSURI destinationURI = new VOSURI(destination);
+                log.debug("clientTransfer getTarget: " + node);
+                log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(destinationURI, node,
+                          VOS.Detail.max));
+                if (checkProps) {
+                    log.debug("checking properties after put: " + node.getName());
+                    boolean updateProps = false;
+                    for (NodeProperty np : properties) {
+                        updateProps = updateProps || updateProperty(node, np.getKey(), np.getValue());
+                    }
+                    if (updateProps) {
+                        log.debug("updating properties after put: " + node.getName());
+                        client.setNode(destinationURI, node);
+                    }
                 }
             }
         }

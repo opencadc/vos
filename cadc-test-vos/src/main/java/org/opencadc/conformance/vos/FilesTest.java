@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2024.                            (c) 2024.
+ *  (c) 2026.                            (c) 2026.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -117,8 +117,8 @@ public class FilesTest extends VOSTest {
         super(resourceID, testCert);
 
         RegistryClient regClient = new RegistryClient();
-        this.filesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_FILES, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_FILES, filesServiceURL));
+        this.filesServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_FILES, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_FILES, filesServiceURL));
     }
 
     /**
