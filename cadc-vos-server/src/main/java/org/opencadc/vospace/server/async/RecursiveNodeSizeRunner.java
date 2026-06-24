@@ -67,12 +67,9 @@
 
 package org.opencadc.vospace.server.async;
 
-import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
@@ -81,7 +78,6 @@ import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -103,17 +99,13 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
     private static final Logger log = Logger.getLogger(RecursiveNodeSizeRunner.class);
 
-    private static final String SIZE_REPORT_SERVLET_PATH = "/nodesize-report";
     public static final String BYTES_USED_RESULT_NAME = "bytesUsed";
-    public static final String REPORT_RESULT_NAME = "report";
     public static final String CONTENT_TYPE = "text/plain";
     public static final String PERMISSION_DENIED_RESULT_TEXT = "Permission Denied";
 
-    private final RegistryClient regClient = new RegistryClient();
-
-    private long totalBytes = 0L;
-    private int maxDepth = 0;
     private final Map<String, Long> reportLines = new LinkedHashMap<>();
+    private long totalBytes = 0;
+    private int maxDepth = 0;
     private Boolean sortDesc = null;
 
     @Override
@@ -217,6 +209,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                     incSuccessCount();
                 } else {
                     // ignore LinkNode
+                    log.debug("Skipping LinkNode : " + Utils.getPath(node));
                 }
             }
         }
@@ -242,7 +235,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
             List<Result> out = new ArrayList<>();
             out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
-            out.add(new Result(REPORT_RESULT_NAME, buildReportURI()));
             return out;
         } catch (Exception ex) {
             throw new RuntimeException("failed to persist nodesize report", ex);
@@ -268,6 +260,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         return sb.toString();
     }
 
+    // TODO: Find another way to preserve the report.
     private void persistReport(String reportText) throws TransientException, JobPersistenceException, JobNotFoundException {
         if (!(getJobUpdater() instanceof JobPersistence)) {
             throw new IllegalStateException("BUG: JobUpdater is not JobPersistence");
@@ -282,9 +275,4 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         jobPersistence.put(persisted);
     }
 
-    private URI buildReportURI() {
-        URL nodesURL = regClient.getServiceURL(nodePersistence.getResourceID(), Standards.VOSPACE_NODES_20);
-        String base = nodesURL.toExternalForm().replace("/nodes", SIZE_REPORT_SERVLET_PATH);
-        return URI.create(base + "/" + job.getID());
-    }
 }
