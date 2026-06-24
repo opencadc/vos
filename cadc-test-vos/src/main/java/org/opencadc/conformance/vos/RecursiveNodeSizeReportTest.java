@@ -118,7 +118,7 @@ import org.opencadc.vospace.transfer.TransferReader;
 import org.opencadc.vospace.transfer.TransferWriter;
 
 /**
- * Tests the recursive node-size-report endpoint.
+ * Tests the recursive async-nodesize endpoint.
  * */
 public class RecursiveNodeSizeReportTest extends VOSTest {
 

@@ -168,7 +168,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
         long nodeSize = accumulateNodeSize(root, subject, 0);
         totalBytes = Math.max(nodeSize, 0);
-        addToReport(Utils.getPath(root), nodeSize, 0);
         return nodeSize >= 0L; // success if permissions are OK
     }
 
@@ -190,7 +189,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             log.debug("no read permission on node " + Utils.getPath(node));
             // incErrorCount(); // Not considering this as an error. Just reporting permission denied for this node and continuing with the rest of the tree.
             addToReport(Utils.getPath(node), -1L, depth);
-            return -1L;
+            return -1L; // -1 represents permission denied.
         }
 
         // TODO: Need to check if the bytesUsed is in sync. If not, need to remove this block of code to keep the recursion going.
@@ -246,7 +245,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             out.add(new Result(REPORT_RESULT_NAME, buildReportURI()));
             return out;
         } catch (Exception ex) {
-            throw new RuntimeException("failed to persist allocation-size report", ex);
+            throw new RuntimeException("failed to persist nodesize report", ex);
         }
     }
 
@@ -284,8 +283,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     }
 
     private URI buildReportURI() {
-        Subject subject = AuthenticationUtil.getCurrentSubject();
-        AuthMethod authMethod = AuthenticationUtil.getAuthMethod(subject);
         URL nodesURL = regClient.getServiceURL(nodePersistence.getResourceID(), Standards.VOSPACE_NODES_20);
         String base = nodesURL.toExternalForm().replace("/nodes", SIZE_REPORT_SERVLET_PATH);
         return URI.create(base + "/" + job.getID());
