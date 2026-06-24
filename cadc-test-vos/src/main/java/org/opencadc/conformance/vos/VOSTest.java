@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2026.                            (c) 2026.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -77,7 +77,6 @@ import ca.nrc.cadc.net.HttpDelete;
 import ca.nrc.cadc.net.HttpGet;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpUpload;
-import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
@@ -130,14 +129,14 @@ public abstract class VOSTest {
         log.info("authSubject: " + authSubject);
         
         RegistryClient regClient = new RegistryClient();
-        this.nodesServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_NODES_20, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_NODES_20, nodesServiceURL));
+        this.nodesServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_NODES_20, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_NODES_20, nodesServiceURL));
 
-        this.synctransServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_SYNC_21, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_SYNC_21, synctransServiceURL));
+        this.synctransServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_SYNC_21, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_SYNC_21, synctransServiceURL));
 
-        nodeSizeReportServiceURL = regClient.getServiceURL(resourceID, Standards.VOSPACE_RECURSIVE_NODESIZE, AuthMethod.ANON);
-        log.info(String.format("%s: %s", Standards.VOSPACE_RECURSIVE_NODESIZE, nodeSizeReportServiceURL));
+        this.nodeSizeReportServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_RECURSIVE_NODESIZE, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_RECURSIVE_NODESIZE, nodeSizeReportServiceURL));
     }
 
     @Before

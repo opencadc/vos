@@ -3,7 +3,7 @@
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2023.                            (c) 2023.
+ *  (c) 2026.                            (c) 2026.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -112,6 +112,22 @@ public class VOS {
             return null;
         }
     }
+
+    // VOSpace standardID values
+    public static final URI VOSPACE_NODES_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#nodes");
+    public static final URI VOSPACE_PROPERTIES_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#properties");
+    public static final URI VOSPACE_PROTOCOLS_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#protocols");
+    public static final URI VOSPACE_SEARCHES_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#searches");
+    public static final URI VOSPACE_SYNC_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#sync");
+    public static final URI VOSPACE_SYNC_21 = URI.create("ivo://ivoa.net/std/VOSpace#sync-2.1");
+    public static final URI VOSPACE_TRANSFERS_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#transfers");
+    public static final URI VOSPACE_VIEWS_20 = URI.create("ivo://ivoa.net/std/VOSpace/v2.0#views");
+
+    // prototype standardID values for WD-VOSpace-2.2
+    public static final URI VOSPACE_FILES = URI.create("ivo://ivoa.net/std/VOSpace#files-proto");
+    public static final URI VOSPACE_RECURSIVE_DELETE = URI.create("ivo://ivoa.net/std/VOSpace#recursive-delete-proto");
+    public static final URI VOSPACE_RECURSIVE_NODEPROPS = URI.create("ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto");
+    public static final URI VOSPACE_RECURSIVE_NODESIZE = URI.create("ivo://ivoa.net/std/VOSpace#recursive-nodesize-proto");
 
     /*
      * Default property delimiter for multi-valued properties
