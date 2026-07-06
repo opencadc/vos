@@ -69,15 +69,18 @@ package org.opencadc.vospace.server.async;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
-import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistence;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -89,8 +92,13 @@ import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
+import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
+import org.opencadc.vospace.transfer.Direction;
+import org.opencadc.vospace.transfer.Protocol;
+import org.opencadc.vospace.transfer.Transfer;
 
 /**
  * Async job runner that computes recursive byte usage for an allocation.
@@ -107,6 +115,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     private long totalBytes = 0;
     private int maxDepth = 0;
     private Boolean sortDesc = null;
+    private VOSURI dest;
 
     @Override
     public void setJob(Job job) {
@@ -121,7 +130,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                     if (v < 0) {
                         v = 0;
                     }
-                    this.maxDepth = v; // TODO: max should be 5?
+                    this.maxDepth = v;
                 } catch (NumberFormatException ignore) {
                     // keep default 0
                 }
@@ -133,12 +142,22 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                 } else {
                     throw new IllegalArgumentException("Unknown sort value: " + p.getValue() + ". must be asc or desc");
                 }
+            } else if ("dest".equalsIgnoreCase(p.getName())) {
+                try {
+                    this.dest = new VOSURI(new URI(p.getValue()));
+                } catch (URISyntaxException e) {
+                    throw new IllegalArgumentException("dest must be a valid URI: " + p.getValue(), e);
+                }
             }
         }
         if (target == null) {
             throw new IllegalArgumentException("target argument required");
         }
-        log.debug("target: " + target + " maxDepth=" + maxDepth + " sortDesc=" + sortDesc);
+        if (dest == null) {
+            throw new IllegalArgumentException("dest argument required");
+        }
+        validateDest();
+        log.debug("target: " + target + " dest: " + dest + " maxDepth=" + maxDepth + " sortDesc=" + sortDesc); // TODO: debug
     }
 
     @Override
@@ -148,19 +167,32 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             return false;
         }
         ContainerNode root = (ContainerNode) node;
-        if (!nodePersistence.isAllocation(root)) {
+        /*if (!nodePersistence.isAllocation(root)) {
             sendError("target is not an allocation root");
             return false;
-        }
+        }*/
         Subject subject = AuthenticationUtil.getCurrentSubject();
         if (!authorizer.hasSingleNodeReadPermission(root, subject)) {
-            sendError("no read permission on allocation root");
+            sendError("no read permission on the container node: " + Utils.getPath(root));
             return false;
         }
 
-        long nodeSize = accumulateNodeSize(root, subject, 0);
-        totalBytes = Math.max(nodeSize, 0);
-        return nodeSize >= 0L; // success if permissions are OK
+        totalBytes = accumulateNodeSize(root, subject, 0);
+        return true;
+    }
+
+    @Override
+    protected List<Result> getAdditionalResults() {
+        try {
+            String reportText = formatReport();
+            writeReportToDest(reportText);
+
+            List<Result> out = new ArrayList<>();
+            out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
+            return out;
+        } catch (Exception ex) {
+            throw new RuntimeException("failed to persist nodesize report", ex);
+        }
     }
 
     // Note: Report permission denied for all the depths
@@ -181,7 +213,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             log.debug("no read permission on node " + Utils.getPath(node));
             // incErrorCount(); // Not considering this as an error. Just reporting permission denied for this node and continuing with the rest of the tree.
             addToReport(Utils.getPath(node), -1L, depth);
-            return -1L; // -1 represents permission denied.
+            return 0;
         }
 
         // TODO: Need to check if the bytesUsed is in sync. If not, need to remove this block of code to keep the recursion going.
@@ -216,10 +248,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
         // now recurse so we only have one open iterator at a time
         for (ContainerNode cn : childContainers) {
-            long size = accumulateNodeSize(cn, subject, depth + 1);
-            if (size > 0L) {
-                currentNodeSize += size;
-            }
+            currentNodeSize += accumulateNodeSize(cn, subject, depth + 1);
         }
 
         incSuccessCount();
@@ -227,17 +256,12 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         return currentNodeSize;
     }
 
-    @Override
-    protected List<Result> getAdditionalResults() {
-        try {
-            String reportText = formatReport();
-            persistReport(reportText);
-
-            List<Result> out = new ArrayList<>();
-            out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
-            return out;
-        } catch (Exception ex) {
-            throw new RuntimeException("failed to persist nodesize report", ex);
+    private void validateDest() {
+        if (!dest.getServiceURI().equals(target.getServiceURI())) {
+            throw new UnsupportedOperationException("dest must be the same vospace service as target");
+        }
+        if (dest.getPath().endsWith("/")) {
+            throw new IllegalArgumentException("dest must be a DataNode path, not a container");
         }
     }
 
@@ -260,19 +284,57 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         return sb.toString();
     }
 
-    // TODO: Find another way to preserve the report.
-    private void persistReport(String reportText) throws TransientException, JobPersistenceException, JobNotFoundException {
-        if (!(getJobUpdater() instanceof JobPersistence)) {
-            throw new IllegalStateException("BUG: JobUpdater is not JobPersistence");
+    private void writeReportToDest(String reportText) throws Exception {
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        ensureDestDataNode(caller);
+
+        Protocol sc = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
+        sc.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+
+        Transfer request = new Transfer(dest.getURI(), Direction.pushToVoSpace);
+        request.version = VOS.VOSPACE_21;
+        request.getProtocols().add(sc);
+        List<Protocol> endpoints = nodePersistence.getTransferGenerator().getEndpoints(dest, request, null);
+        URL putURL = new URL(endpoints.get(0).getEndpoint());
+
+        HttpUpload upload = new HttpUpload(new ByteArrayInputStream(reportText.getBytes(StandardCharsets.UTF_8)), putURL);
+        upload.setRequestProperty("Content-Type", CONTENT_TYPE);
+        upload.run();
+        if (upload.getThrowable() != null) {
+            throw new IOException("failed to write nodesize report to " + dest, upload.getThrowable());
+        }
+    }
+
+    private void ensureDestDataNode(Subject caller) throws Exception {
+        PathResolver pr = new PathResolver(nodePersistence, authorizer);
+        PathResolver.ResolvedNode rn = pr.getTargetNode(dest.getPath());
+
+        if (rn == null) {
+            throw new RuntimeException("parent path not found for dest: " + dest.getPath());
         }
 
-        JobInfo jobInfo = new JobInfo(CONTENT_TYPE, Boolean.TRUE);
-        jobInfo.getContent().add(reportText);
-
-        JobPersistence jobPersistence = (JobPersistence) getJobUpdater();
-        Job persisted = jobPersistence.get(job.getID());
-        persisted.setJobInfo(jobInfo);
-        jobPersistence.put(persisted);
+        if (rn.node == null) {
+            // create new DataNode
+            if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
+                throw new AccessControlException("no write permission on dest parent");
+            }
+            DataNode dn = new DataNode(rn.name);
+            dn.parent = rn.parent;
+            dn.owner = caller;
+            if (rn.parent.inheritPermissions != null && rn.parent.inheritPermissions) {
+                dn.isPublic = rn.parent.isPublic;
+                dn.getReadOnlyGroup().addAll(rn.parent.getReadOnlyGroup());
+                dn.getReadWriteGroup().addAll(rn.parent.getReadWriteGroup());
+            }
+            nodePersistence.put(dn);
+        } else if (rn.node instanceof DataNode) {
+            // TODO: exists → overwrite?
+            if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
+                throw new AccessControlException("no write permission on dest");
+            }
+        } else {
+            throw new IllegalArgumentException("dest must be a DataNode path, not a container");
+        }
     }
 
 }
