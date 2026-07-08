@@ -88,6 +88,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
+import org.opencadc.auth.StandardIdentityManager;
 import org.opencadc.cavern.nodes.FileSystemNodePersistence;
 import org.opencadc.cavern.nodes.PosixIdentityManager;
 import org.opencadc.vospace.server.NodePersistence;
@@ -167,6 +168,14 @@ public class CavernInitAction extends InitAction {
     
     // generate key pair for preauth URL generation
     private void initSecrets(CavernConfig conf) {
+        // preauth does not always work in a pure OpenID environment
+        // because it is not possible to check group read permission on parent dirs
+        // without a valid bearer token
+        String baseIM = System.getProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+        if (StandardIdentityManager.class.getName().equals(baseIM)) {
+            log.info("found IdentityManager = " + baseIM + " -- disabling transfer preauth key usage");
+            return;
+        }
         Path secrets = conf.getSecrets();
         try {
             if (!Files.exists(secrets, LinkOption.NOFOLLOW_LINKS)) {

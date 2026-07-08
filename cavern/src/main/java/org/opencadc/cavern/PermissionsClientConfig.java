@@ -2,18 +2,14 @@ package org.opencadc.cavern;
 
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.util.InvalidConfigException;
-import ca.nrc.cadc.util.MultiValuedProperties;
-import ca.nrc.cadc.util.StringUtil;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import org.apache.log4j.Logger;
+import org.opencadc.permissions.client.srcnet.PAPI;
 
 public class PermissionsClientConfig {
     private static final Logger log = Logger.getLogger(PermissionsClientConfig.class);
-    
-    private static final URI STD_AUTH_API = URI.create("ivo://skao.int/std/AuthAPI");
-    private static final URI STD_PERM_API = URI.create("ivo://skao.int/std/PermissionsAPI");
     
     private final URL permissionsApiBaseUrl;
     private final URL permissionsApiAuthBaseUrl;
@@ -28,8 +24,8 @@ public class PermissionsClientConfig {
 
     PermissionsClientConfig() {
         LocalAuthority loc = new LocalAuthority();
-        final URI aapi = loc.getResourceID(STD_AUTH_API, true);
-        final URI papi = loc.getResourceID(STD_PERM_API, true);
+        final URI aapi = loc.getResourceID(PAPI.STD_AUTH_API, true);
+        final URI papi = loc.getResourceID(PAPI.STD_PERM_API, true);
         
         if (aapi == null && papi == null) {
             this.permissionsApiAuthBaseUrl = null;
@@ -40,12 +36,12 @@ public class PermissionsClientConfig {
         try {
             this.permissionsApiAuthBaseUrl = aapi.toURL();
         } catch (MalformedURLException ex) {
-            throw new InvalidConfigException("invalid URL: " + STD_AUTH_API + " = " + aapi, ex);
+            throw new InvalidConfigException("invalid URL: " + PAPI.STD_AUTH_API + " = " + aapi, ex);
         }
         try {
             this.permissionsApiBaseUrl = papi.toURL();
         } catch (MalformedURLException ex) {
-            throw new InvalidConfigException("invalid URL: " + STD_PERM_API + " = " + papi, ex);
+            throw new InvalidConfigException("invalid URL: " + PAPI.STD_PERM_API + " = " + papi, ex);
         }
     }
     
@@ -85,8 +81,8 @@ public class PermissionsClientConfig {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(PermissionsClientConfig.class.getSimpleName()).append(": ");
-        sb.append("\n").append(STD_PERM_API).append(" = ").append(permissionsApiBaseUrl);
-        sb.append("\n").append(STD_AUTH_API).append(" = ").append(permissionsApiAuthBaseUrl);
+        sb.append("\n").append(PAPI.STD_PERM_API).append(" = ").append(permissionsApiBaseUrl);
+        sb.append("\n").append(PAPI.STD_AUTH_API).append(" = ").append(permissionsApiAuthBaseUrl);
         return sb.toString();
     }
     
