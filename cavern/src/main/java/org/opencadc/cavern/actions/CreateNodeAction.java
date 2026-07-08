@@ -70,8 +70,8 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
 
             final AuthorisationResult authorisationResult = permissionsAPIClient.authoriseRoute(
                     permissionsClientConfig.getServiceName(),
-                    CreateNodeAction.getAuthorizationToken(caller).getCredentials(),
                     uri.getPath(),
+                    CreateNodeAction.getAuthorizationToken(caller).getCredentials(),
                     permissionsClientConfig.getMethod(),
                     new JSONObject(),
                     permissionsClientConfig.getVersion());
