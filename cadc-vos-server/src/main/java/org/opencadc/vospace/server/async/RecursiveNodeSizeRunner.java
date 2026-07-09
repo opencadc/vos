@@ -74,19 +74,16 @@ import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.AccessControlException;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.opencadc.vospace.ContainerNode;
@@ -111,11 +108,12 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     public static final String CONTENT_TYPE = "text/plain";
     public static final String PERMISSION_DENIED_RESULT_TEXT = "Permission Denied";
 
-    private final Map<String, Long> reportLines = new LinkedHashMap<>();
     private long totalBytes = 0;
     private int maxDepth = 0;
-    private Boolean sortDesc = null;
     private VOSURI dest;
+
+    private HttpUpload upload;
+    private Writer out;
 
     @Override
     public void setJob(Job job) {
@@ -134,14 +132,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                 } catch (NumberFormatException ignore) {
                     // keep default 0
                 }
-            } else if ("sort".equalsIgnoreCase(p.getName())) {
-                if ("desc".equalsIgnoreCase(p.getValue())) {
-                    this.sortDesc = true;
-                } else if ("asc".equalsIgnoreCase(p.getValue())) {
-                    this.sortDesc = false;
-                } else {
-                    throw new IllegalArgumentException("Unknown sort value: " + p.getValue() + ". must be asc or desc");
-                }
             } else if ("dest".equalsIgnoreCase(p.getName())) {
                 try {
                     this.dest = new VOSURI(new URI(p.getValue()));
@@ -157,7 +147,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             throw new IllegalArgumentException("dest argument required");
         }
         validateDest();
-        log.debug("target: " + target + " dest: " + dest + " maxDepth=" + maxDepth + " sortDesc=" + sortDesc); // TODO: debug
+        log.debug("target: " + target + " dest: " + dest + " maxDepth=" + maxDepth);
     }
 
     @Override
@@ -172,36 +162,58 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             return false;
         }*/
         Subject subject = AuthenticationUtil.getCurrentSubject();
+        String nodePath = Utils.getPath(root);
         if (!authorizer.hasSingleNodeReadPermission(root, subject)) {
-            sendError("no read permission on the container node: " + Utils.getPath(root));
+            sendError("no read permission on the container node: " + nodePath);
             return false;
         }
 
-        totalBytes = accumulateNodeSize(root, subject, 0);
+        URL putURL = getPutURL();
+        log.debug("putURL: " + putURL);
+
+        upload = new HttpUpload(putURL);
+        upload.setRequestProperty("Content-Type", CONTENT_TYPE);
+        try {
+            log.debug("Starting recursive node size calculation for: " + nodePath);
+            totalBytes = accumulateNodeSize(root, subject, 0);
+            log.debug("Finished recursive node size calculation for: " + nodePath);
+
+            if (out != null) {
+                out.flush();
+            }
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    log.error("failed to close writer", e);
+                }
+            }
+        }
+        upload.finish();
+        log.debug("Finished uploading node-size-report to: " + putURL);
         return true;
     }
 
     @Override
     protected List<Result> getAdditionalResults() {
-        try {
-            String reportText = formatReport();
-            writeReportToDest(reportText);
-
-            List<Result> out = new ArrayList<>();
-            out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
-            return out;
-        } catch (Exception ex) {
-            throw new RuntimeException("failed to persist nodesize report", ex);
-        }
+        List<Result> out = new ArrayList<>();
+        out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
+        return out;
     }
 
     // Note: Report permission denied for all the depths
-    private void addToReport(String path, long size, int depth) {
+    private void addToReport(String path, long size, int depth) throws IOException {
         if (depth <= maxDepth || size < 0L) {
-            reportLines.put(path, size);
+            ensureOutputStreamInitialized();
+            out.write(size == -1L ? PERMISSION_DENIED_RESULT_TEXT : Long.toString(size));
+            out.write('\t');
+            out.write(path);
+            out.write('\n');
         }
     }
 
+    // calculate the size of a node and all its children. And report it to the output stream.
     private long accumulateNodeSize(ContainerNode node, Subject subject, int depth) throws Exception {
         if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException();
@@ -211,7 +223,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
         if (!authorizer.hasSingleNodeReadPermission(node, subject)) {
             log.debug("no read permission on node " + Utils.getPath(node));
-            // incErrorCount(); // Not considering this as an error. Just reporting permission denied for this node and continuing with the rest of the tree.
             addToReport(Utils.getPath(node), -1L, depth);
             return 0;
         }
@@ -265,26 +276,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
     }
 
-    private String formatReport() {
-        List<Map.Entry<String, Long>> lines = new ArrayList<>(reportLines.entrySet());
-
-        if (sortDesc != null) {
-            Comparator<Map.Entry<String, Long>> bySize = Map.Entry.comparingByValue();
-            if (sortDesc) {
-                bySize = bySize.reversed();
-            }
-            lines = lines.stream().sorted(bySize).collect(Collectors.toList());
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Long> entry : lines) {
-            sb.append(entry.getValue() == -1L ? PERMISSION_DENIED_RESULT_TEXT : entry.getValue())
-                    .append('\t').append(entry.getKey()).append('\n');
-        }
-        return sb.toString();
-    }
-
-    private void writeReportToDest(String reportText) throws Exception {
+    private URL getPutURL() throws Exception {
         Subject caller = AuthenticationUtil.getCurrentSubject();
         ensureDestDataNode(caller);
 
@@ -295,13 +287,15 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         request.version = VOS.VOSPACE_21;
         request.getProtocols().add(sc);
         List<Protocol> endpoints = nodePersistence.getTransferGenerator().getEndpoints(dest, request, null);
-        URL putURL = new URL(endpoints.get(0).getEndpoint());
+        if (endpoints == null || endpoints.isEmpty()) {
+            throw new IllegalStateException("endpoint not found for: " + dest);
+        }
+        return new URL(endpoints.get(0).getEndpoint());
+    }
 
-        HttpUpload upload = new HttpUpload(new ByteArrayInputStream(reportText.getBytes(StandardCharsets.UTF_8)), putURL);
-        upload.setRequestProperty("Content-Type", CONTENT_TYPE);
-        upload.run();
-        if (upload.getThrowable() != null) {
-            throw new IOException("failed to write nodesize report to " + dest, upload.getThrowable());
+    private void ensureOutputStreamInitialized() throws IOException {
+        if (out == null) {
+            out = new OutputStreamWriter(upload.getOutputStream(), StandardCharsets.UTF_8);
         }
     }
 
@@ -310,10 +304,11 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         PathResolver.ResolvedNode rn = pr.getTargetNode(dest.getPath());
 
         if (rn == null) {
-            throw new RuntimeException("parent path not found for dest: " + dest.getPath());
+            throw new IllegalArgumentException("parent path not found for dest: " + dest.getPath());
         }
 
         if (rn.node == null) {
+            log.debug("dest node not found, creating new DataNode");
             // create new DataNode
             if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
                 throw new AccessControlException("no write permission on dest parent");
@@ -328,7 +323,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             }
             nodePersistence.put(dn);
         } else if (rn.node instanceof DataNode) {
-            // TODO: exists → overwrite?
+            log.debug("dest node found");
             if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
                 throw new AccessControlException("no write permission on dest");
             }

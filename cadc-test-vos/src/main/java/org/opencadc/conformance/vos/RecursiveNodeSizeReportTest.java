@@ -183,9 +183,6 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             testAllocationAsyncSizeMaxDepth0();
             testAllocationAsyncSizeMaxDepth1();
             testAllocationAsyncSizeMaxDepth2();
-
-            testAllocationAsyncSizeSortAsc();
-            testAllocationAsyncSizeSortDesc();
         } finally {
             cleanupNodesTree();
         }
@@ -228,49 +225,6 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1/d2"));
         Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1"));
         Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get("/" + ALLOCATION_ROOT + "/denied"));
-    }
-
-    private void testAllocationAsyncSizeSortAsc() throws Exception {
-        log.debug("Testing /async-nodesize for sort=asc:");
-
-        // max depth 1
-        log.debug("Testing /async-nodesize for sort=asc, maxdepth=1:");
-        Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "asc"));
-        Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-
-        Map<String, Long> report = fetchNodeSizeReport(authSubject);
-        Assert.assertEquals(4, report.size());
-        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1"));
-        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get("/" + ALLOCATION_ROOT + "/denied"));
-        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + ALLOCATION_ROOT));
-
-        //max depth 2
-        log.debug("Testing /async-nodesize for sort=asc, maxdepth=2:");
-        job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "2", "sort", "asc"));
-        Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-
-        report = fetchNodeSizeReport(authSubject);
-        Assert.assertEquals(5, report.size());
-        Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1/d2"));
-        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1"));
-        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get("/" + ALLOCATION_ROOT + "/denied"));
-        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + ALLOCATION_ROOT));
-
-    }
-
-    private void testAllocationAsyncSizeSortDesc() throws Exception {
-        log.debug("Testing /async-nodesize for sort=desc:");
-        Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1", "sort", "desc"));
-        Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-
-        Map<String, Long> report = fetchNodeSizeReport(authSubject);
-        Assert.assertEquals(4, report.size());
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + ALLOCATION_ROOT));
-        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1"));
         Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get("/" + ALLOCATION_ROOT + "/denied"));
     }
 
@@ -542,6 +496,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     }
 
     private Map<String, Long> parseNodeSizeReport(String reportText) {
+        log.debug("NodeSizeReport: \n" + reportText);
         Map<String, Long> map = new LinkedHashMap<>();
         for (String line : reportText.split("\n")) {
             if (line.isEmpty()) {
