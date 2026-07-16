@@ -22,6 +22,9 @@ import org.opencadc.vospace.VOSURI;
  * that the caller has permissions to create an allocation.  Administrative access is then assumed.
  */
 public class CreateNodeAction extends org.opencadc.vospace.server.actions.CreateNodeAction {
+
+    private static final String PERMISSIONS_API_ROUTE_KEY = "username";
+    private static final String PERMISSIONS_API_ROUTE = "/home/{" + CreateNodeAction.PERMISSIONS_API_ROUTE_KEY + "}";
     
     private FileSystemNodePersistence getFileSystemNodePersistence() {
         // Should never happen, but here for completeness.
@@ -33,13 +36,12 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
     }
 
     @Override
-    protected void checkSelfAllocatePermission(Subject caller, VOSURI uri) 
-            throws AccessControlException, Exception {
+    protected void checkSelfAllocatePermission(Subject caller, VOSURI uri) throws Exception {
         final FileSystemNodePersistence fileSystemNodePersistence = getFileSystemNodePersistence();
         final CavernConfig config = fileSystemNodePersistence.getConfig();
         
         // two mechanisms to authorize self-allocate:
-        // cavern condfigured with self-allocate group
+        // cavern configured with self-allocate group
         // cavern configured to use SRCNet Permissions API
         final Set<GroupURI> allowedGroups = config.getSelfAllocateGroups();
         final PermissionsClientConfig permissionsClientConfig = config.getPermissionsClientConfig();
@@ -68,12 +70,16 @@ public class CreateNodeAction extends org.opencadc.vospace.server.actions.Create
                     new PermissionsAPIClient(permissionsClientConfig.getPermissionsApiBaseUrl(),
                             permissionsClientConfig.getPermissionsApiAuthBaseUrl());
 
+            // The JSON body with the username value set.
+            final JSONObject jsonBody = new JSONObject();
+            jsonBody.put(CreateNodeAction.PERMISSIONS_API_ROUTE_KEY, pp.username);
+
             final AuthorisationResult authorisationResult = permissionsAPIClient.authoriseRoute(
                     permissionsClientConfig.getServiceName(),
-                    uri.getPath(),
+                    CreateNodeAction.PERMISSIONS_API_ROUTE,
                     CreateNodeAction.getAuthorizationToken(caller).getCredentials(),
                     permissionsClientConfig.getMethod(),
-                    new JSONObject(),
+                    jsonBody,
                     permissionsClientConfig.getVersion());
 
             log.debug("self-allocate grant: " + permissionsClientConfig.getServiceName() + "(" + authorisationResult.isAuthorised + ")");
