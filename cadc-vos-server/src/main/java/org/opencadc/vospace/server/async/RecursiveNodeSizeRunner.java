@@ -112,8 +112,8 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     private int maxDepth = 0;
     private VOSURI dest;
 
-    private HttpUpload upload;
     private Writer out;
+    private Exception scanException = null;
 
     @Override
     public void setJob(Job job) {
@@ -171,26 +171,34 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         URL putURL = getPutURL();
         log.debug("putURL: " + putURL);
 
-        upload = new HttpUpload(putURL);
-        upload.setRequestProperty("Content-Type", CONTENT_TYPE);
-        try {
-            log.debug("Starting recursive node size calculation for: " + nodePath);
-            totalBytes = accumulateNodeSize(root, subject, 0);
-            log.debug("Finished recursive node size calculation for: " + nodePath);
-
-            if (out != null) {
-                out.flush();
-            }
-        } finally {
-            if (out != null) {
+        HttpUpload upload = new HttpUpload(
+            stream -> {
+                out = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
                 try {
-                    out.close();
-                } catch (IOException e) {
-                    log.error("failed to close writer", e);
+                    log.debug("Starting recursive node size calculation for: " + nodePath);
+                    totalBytes = accumulateNodeSize(root, subject, 0);
+                    log.debug("Finished recursive node size calculation for: " + nodePath);
+                    out.flush();
+                } catch (Exception e) {
+                    scanException = e; // save exception for later
+                    throw new RuntimeException(e);
                 }
-            }
+            },
+            putURL
+        );
+        upload.setRequestProperty("Content-Type", CONTENT_TYPE);
+        upload.run();
+
+        if (scanException != null) {
+            log.error("Error while traversing nodes : ", scanException);
+            throw scanException;
         }
-        upload.finish();
+
+        if (upload.getThrowable() != null) {
+            log.error("Error uploading node-size-report to: " + putURL, upload.getThrowable());
+            throw new IOException("upload failed : " + upload.getThrowable().getMessage(), upload.getThrowable());
+        }
+
         log.debug("Finished uploading node-size-report to: " + putURL);
         return true;
     }
@@ -205,7 +213,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     // Note: Report permission denied for all the depths
     private void addToReport(String path, long size, int depth) throws IOException {
         if (depth <= maxDepth || size < 0L) {
-            ensureOutputStreamInitialized();
             out.write(size == -1L ? PERMISSION_DENIED_RESULT_TEXT : Long.toString(size));
             out.write('\t');
             out.write(path);
@@ -291,12 +298,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             throw new IllegalStateException("endpoint not found for: " + dest);
         }
         return new URL(endpoints.get(0).getEndpoint());
-    }
-
-    private void ensureOutputStreamInitialized() throws IOException {
-        if (out == null) {
-            out = new OutputStreamWriter(upload.getOutputStream(), StandardCharsets.UTF_8);
-        }
     }
 
     private void ensureDestDataNode(Subject caller) throws Exception {
