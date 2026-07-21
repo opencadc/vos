@@ -111,8 +111,7 @@ public class RecursiveDeleteNodeRunner extends AbstractRecursiveRunner {
     private static Logger log = Logger.getLogger(RecursiveDeleteNodeRunner.class);
 
     @Override
-    public void setJob(Job job) {
-        this.job = job;
+    protected void initTarget() throws Exception {
         for (Parameter param : job.getParameterList()) {
             if (param.getName().equalsIgnoreCase("target")) {
                 this.target = new VOSURI(URI.create(param.getValue()));
@@ -123,7 +122,6 @@ public class RecursiveDeleteNodeRunner extends AbstractRecursiveRunner {
         if (target == null) {
             throw new IllegalArgumentException("target argument required");
         }
-
         log.debug("target: " + target);
     }
 
