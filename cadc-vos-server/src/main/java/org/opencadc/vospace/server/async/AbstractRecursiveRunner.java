@@ -123,9 +123,18 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
     }
 
     /**
+     * Method to initialise input (params or JobInfo.This is called before performAction.
+     * 
+     * @throws Exception of init failed
+     */
+    protected abstract void initTarget() throws Exception;
+    
+    /**
      * Method that performs an action recursively on an existing (server) node
      *
-     * @return true if successful or false otherwise
+     * @param node
+     * @return true if job succeeded, false if aborted due to too many errors
+     * @throws Exception if job failed
      */
     protected abstract boolean performAction(Node node) throws Exception;
 
@@ -142,12 +151,12 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
     }
 
     @Override
-    public void setJobUpdater(JobUpdater jobUpdater) {
+    public final void setJobUpdater(JobUpdater jobUpdater) {
         this.jobUpdater = jobUpdater;
     }
 
     @Override
-    public void setJob(Job job) {
+    public final void setJob(Job job) {
         this.job = job;
     }
 
@@ -185,6 +194,8 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                         "Could not change the job phase from " + ExecutionPhase.QUEUED
                                 + " to " + ExecutionPhase.EXECUTING);
             }
+
+            initTarget();
 
             log.debug("node: " + target);
             PathResolver pathResolver = new PathResolver(nodePersistence, authorizer);

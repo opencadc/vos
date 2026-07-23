@@ -95,43 +95,34 @@ public class RecursiveNodePropsRunner extends AbstractRecursiveRunner {
     }
 
     @Override
-    public void setJob(Job job) {
-        super.setJob(job);
-        this.job = job;
-
+    protected void initTarget() throws Exception {
         JobInfo jobInfo = job.getJobInfo();
 
         if (jobInfo != null && jobInfo.getContent() != null && !jobInfo.getContent().isEmpty()
                 && jobInfo.getContentType().equalsIgnoreCase("text/xml")) {
             log.debug("recursive set node XML: \n\n" + jobInfo.getContent());
             NodeReader reader = new NodeReader();
-            NodeReader.NodeReaderResult res = null;
-            try {
-                res = reader.read(jobInfo.getFirstContent());
-            } catch (Exception e) {
-                this.sendError("Error parsing input properties");
-            }
+            NodeReader.NodeReaderResult res = reader.read(jobInfo.getFirstContent());
             this.clientNode = res.node;
             this.target = res.vosURI;
         }
         log.debug("node: " + clientNode + " target: " + target);
-        if (clientNode == null) {
-            this.sendError("NotFound");
+        
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        List ap = Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), caller, nodePersistence);
+        if (!ap.isEmpty()) {
+            throw new IllegalArgumentException("Cannot recursively change admin props");
         }
     }
 
+    
     /**
      * Traversing depth first, update the node properties recursively
      * @throws Exception
      */
     @Override
     protected boolean performAction(Node node) throws Exception {
-        Subject subject = AuthenticationUtil.getCurrentSubject(); // TODO create this once?
-
-        if (Utils.getAdminProps(clientNode, nodePersistence.getAdminProps(), subject, nodePersistence).size() > 0) {
-            this.sendError("Cannot recursively change admin props");
-            return false;
-        }
+        Subject subject = AuthenticationUtil.getCurrentSubject();
 
         if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException();
