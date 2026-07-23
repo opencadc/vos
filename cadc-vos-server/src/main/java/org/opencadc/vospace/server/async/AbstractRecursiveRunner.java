@@ -123,12 +123,12 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
     }
 
     /**
-     * Method to initialise input (params or JobInfo.This is called before performAction.
-     * 
-     * @throws Exception of init failed
+     * Method to initialise input (params or JobInfo). This is called before performAction.
+     *
+     * @throws Exception if init failed
      */
     protected abstract void initTarget() throws Exception;
-    
+
     /**
      * Method that performs an action recursively on an existing (server) node
      *
@@ -266,6 +266,10 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
         ++successCount;
     }
 
+    protected JobUpdater getJobUpdater() {
+        return jobUpdater;
+    }
+
     /**
      * If a minimum of PHASE_CHECK_INTERVAL time has passed, check
      * to ensure the job is still in the EXECUTING PHASE
@@ -319,4 +323,5 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                     + " to " + ExecutionPhase.ERROR, t);
         }
     }
+
 }
