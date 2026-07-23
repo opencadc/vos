@@ -123,12 +123,12 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
     }
 
     /**
-     * Method to initialise input (params or JobInfo.This is called before performAction.
-     * 
-     * @throws Exception of init failed
+     * Method to initialise input (params or JobInfo). This is called before performAction.
+     *
+     * @throws Exception if init failed
      */
     protected abstract void initTarget() throws Exception;
-    
+
     /**
      * Method that performs an action recursively on an existing (server) node
      *
@@ -223,7 +223,6 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                     endPhase = ExecutionPhase.ABORTED;
                     results.add(new Result("errorcount", URI.create("final:" + errorCount)));
                 }
-                results.addAll(getAdditionalResults());
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
             }
             if (!endPhase.equals(ep)) {
@@ -325,11 +324,4 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
         }
     }
 
-    /**
-     * Subclasses may override to attach additional UWS Result entries
-     * (e.g., computed metrics, reports). Default: no extra results.
-     */
-    protected List<Result> getAdditionalResults() {
-        return new ArrayList<>();
-    }
 }

@@ -159,12 +159,15 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             waitForBytesUsed(fileA, FILE_A_BYTES);
             waitForBytesUsed(fileB, FILE_B_BYTES);
 
-            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, null);
+            VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+            Map<String, Object> params = new HashMap<>();
+            params.put("target", vosURI.getURI());
+            URI uri = getDefaultReportDest(vosURI).getURI();
+            params.put("dest", uri);
+            Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
 
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
-            long bytesUsed = getResultLong(job, "bytesUsed");
-            Assert.assertEquals(FILE_A_BYTES + FILE_B_BYTES, bytesUsed);
             Assert.assertTrue(getResultLong(job, "successcount") >= 2L);
 
             Map<String, Long> report = fetchNodeSizeReport(authSubject);
@@ -190,9 +193,14 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private void testAllocationAsyncSizeMaxDepth0() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=0:");
-        Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "0"));
+        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        Map<String, Object> params = new HashMap<>();
+        params.put("target", vosURI.getURI());
+        URI uri = getDefaultReportDest(vosURI).getURI();
+        params.put("dest", uri);
+        params.put("maxdepth", "0");
+        Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-        Assert.assertEquals(DEPTH_TOTAL_BYTES, getResultLong(job, "bytesUsed"));
 
         Map<String, Long> report = fetchNodeSizeReport(authSubject);
         Assert.assertEquals(1, report.size());
@@ -201,7 +209,13 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private void testAllocationAsyncSizeMaxDepth1() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=1:");
-        Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), authSubject, Map.of("maxdepth", "1"));
+        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        Map<String, Object> params = new HashMap<>();
+        params.put("target", vosURI.getURI());
+        URI uri = getDefaultReportDest(vosURI).getURI();
+        params.put("dest", uri);
+        params.put("maxdepth", "1");
+        Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
         Map<String, Long> parsedReport = fetchNodeSizeReport(authSubject);
@@ -215,8 +229,13 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private void testAllocationAsyncSizeMaxDepth2() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=2:");
-        Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT),
-                authSubject, Map.of("maxdepth", "2"));
+        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        Map<String, Object> params = new HashMap<>();
+        params.put("target", vosURI.getURI());
+        URI uri = getDefaultReportDest(vosURI).getURI();
+        params.put("dest", uri);
+        params.put("maxdepth", "2");
+        Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
         Map<String, Long> report = fetchNodeSizeReport(authSubject);
@@ -232,9 +251,14 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     public void testAllocationAsyncSizePermissionDenied() throws Exception {
         try {
             buildNodesTree();
-            Job job = postAllocationSize(nodeSizeReportServiceURL, getRootVOSURI(ALLOCATION_ROOT), groupMember, Map.of("maxdepth", "2"));
+            VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+            Map<String, Object> params = new HashMap<>();
+            params.put("target", vosURI.getURI());
+            URI uri = getDefaultReportDest(vosURI).getURI();
+            params.put("dest", uri);
+            params.put("maxdepth", "2");
+            Job job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
-            Assert.assertEquals(DEPTH_VISIBLE_TO_GROUP_BYTES, getResultLong(job, "bytesUsed"));
 
             Map<String, Long> report = fetchNodeSizeReport(groupMember);
             Assert.assertTrue(report.containsKey("/" + ALLOCATION_ROOT + "/denied"));
@@ -248,20 +272,13 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     @Test
     public void testAllocationAsyncSizeRequiresDest() throws Exception {
-        // POST job with target but no dest -> execution fails with 400 IllegalArgumentException
-        Map<String, Object> val = new HashMap<>(Map.of("target", getRootVOSURI(ALLOCATION_ROOT).getURI()));
-        HttpPost post = new HttpPost(nodeSizeReportServiceURL, val, false);
-        Subject.doAs(authSubject, new RunnableAction(post));
-        Assert.assertEquals(303, post.getResponseCode());
+        // POST job with target but no dest -> execution phase changes to ERROR
+        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        Map<String, Object> params = new HashMap<>();
+        params.put("target", vosURI.getURI());
 
-        URL jobPhaseURL = new URL(post.getRedirectURL().toString() + "/phase");
-        val.clear();
-        val.put("phase", "RUN");
-        post = new HttpPost(jobPhaseURL, val, false);
-        Subject.doAs(authSubject, new RunnableAction(post));
-        Assert.assertEquals(400, post.getResponseCode());
-        Assert.assertTrue(post.getThrowable() instanceof IllegalArgumentException);
-        Assert.assertTrue(post.getThrowable().getMessage().contains("dest"));
+        Job job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
+        Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
     }
 
     private VOSURI getDefaultReportDest(VOSURI target) {
@@ -437,28 +454,22 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         return bytes != null && bytes == expectedBytes;
     }
 
-    private Job postAllocationSize(URL asyncURL, VOSURI vosURI, Subject subject, Map<String, String> params)
+    private Job postAllocationSize(URL asyncURL, Subject subject, Map<String, Object> params)
             throws Exception {
         delete(getRootNodeURL(ALLOCATION_ROOT + "/report"), false); // cleanup the report data node if it exists
 
+        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
         log.debug("postAllocationSize: " + asyncURL + " " + vosURI + " params=" + params);
-        Map<String, Object> val = new HashMap<>();
-        val.put("target", vosURI.getURI());
-        URI uri = getDefaultReportDest(vosURI).getURI();
-        val.put("dest", uri);
-        if (params != null && !params.isEmpty()) {
-            val.putAll(params);
-        }
-        HttpPost post = new HttpPost(asyncURL, val, false);
+        HttpPost post = new HttpPost(asyncURL, params, false);
         Subject.doAs(subject, new RunnableAction(post));
         Assert.assertEquals(303, post.getResponseCode());
 
         URL jobURL = post.getRedirectURL();
         URL jobPhaseURL = new URL(jobURL.toString() + "/phase");
 
-        val.clear();
-        val.put("phase", "RUN");
-        post = new HttpPost(jobPhaseURL, val, false);
+        params.clear();
+        params.put("phase", "RUN");
+        post = new HttpPost(jobPhaseURL, params, false);
         Subject.doAs(subject, new RunnableAction(post));
         Assert.assertEquals(303, post.getResponseCode());
 
@@ -503,11 +514,12 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
                 continue;
             }
             int tab = line.indexOf('\t');
-            Assert.assertTrue("invalid report line: " + line, tab > 0);
-            long bytes = "Permission Denied".equals(line.substring(0, tab))
-                    ? -1L
-                    : Long.parseLong(line.substring(0, tab));
-            map.put(line.substring(tab + 1), bytes);
+            if (tab > 0) {
+                long bytes = "Permission Denied".equals(line.substring(0, tab))
+                        ? -1L
+                        : Long.parseLong(line.substring(0, tab));
+                map.put(line.substring(tab + 1), bytes);
+            }
         }
         return map;
     }

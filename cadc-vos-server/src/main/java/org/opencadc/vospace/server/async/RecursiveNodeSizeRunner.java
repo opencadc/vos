@@ -70,11 +70,11 @@ package org.opencadc.vospace.server.async;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.reg.Standards;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.Result;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
@@ -82,7 +82,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.AccessControlException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
@@ -104,21 +106,14 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
     private static final Logger log = Logger.getLogger(RecursiveNodeSizeRunner.class);
 
-    public static final String BYTES_USED_RESULT_NAME = "bytesUsed";
     public static final String CONTENT_TYPE = "text/plain";
     public static final String PERMISSION_DENIED_RESULT_TEXT = "Permission Denied";
 
-    private long totalBytes = 0;
     private int maxDepth = 0;
     private VOSURI dest;
 
-    private Writer out;
-    private Exception scanException = null;
-
     @Override
-    public void setJob(Job job) {
-        this.job = job;
-
+    protected void initTarget() throws Exception {
         for (Parameter p : job.getParameterList()) {
             if ("target".equalsIgnoreCase(p.getName())) {
                 this.target = new VOSURI(URI.create(p.getValue()));
@@ -171,27 +166,19 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         URL putURL = getPutURL();
         log.debug("putURL: " + putURL);
 
-        HttpUpload upload = new HttpUpload(
-            stream -> {
-                out = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
-                try {
-                    log.debug("Starting recursive node size calculation for: " + nodePath);
-                    totalBytes = accumulateNodeSize(root, subject, 0);
-                    log.debug("Finished recursive node size calculation for: " + nodePath);
-                    out.flush();
-                } catch (Exception e) {
-                    scanException = e; // save exception for later
-                    throw new RuntimeException(e);
-                }
-            },
-            putURL
-        );
+        DynamicReportOutput out = new DynamicReportOutput(root, subject);
+        if (out.scanException != null) {
+            log.error("Error while traversing nodes : ", out.scanException);
+            throw out.scanException;
+        }
+
+        HttpUpload upload = new HttpUpload(out, putURL);
         upload.setRequestProperty("Content-Type", CONTENT_TYPE);
         upload.run();
 
-        if (scanException != null) {
-            log.error("Error while traversing nodes : ", scanException);
-            throw scanException;
+        if (out.scanException != null) {
+            log.error("Error while traversing nodes : ", out.scanException);
+            throw out.scanException;
         }
 
         if (upload.getThrowable() != null) {
@@ -201,77 +188,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
         log.debug("Finished uploading node-size-report to: " + putURL);
         return true;
-    }
-
-    @Override
-    protected List<Result> getAdditionalResults() {
-        List<Result> out = new ArrayList<>();
-        out.add(new Result(BYTES_USED_RESULT_NAME, URI.create("final:" + totalBytes)));
-        return out;
-    }
-
-    // Note: Report permission denied for all the depths
-    private void addToReport(String path, long size, int depth) throws IOException {
-        if (depth <= maxDepth || size < 0L) {
-            out.write(size == -1L ? PERMISSION_DENIED_RESULT_TEXT : Long.toString(size));
-            out.write('\t');
-            out.write(path);
-            out.write('\n');
-        }
-    }
-
-    // calculate the size of a node and all its children. And report it to the output stream.
-    private long accumulateNodeSize(ContainerNode node, Subject subject, int depth) throws Exception {
-        if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedException();
-        }
-
-        checkJobPhase();
-
-        if (!authorizer.hasSingleNodeReadPermission(node, subject)) {
-            log.debug("no read permission on node " + Utils.getPath(node));
-            addToReport(Utils.getPath(node), -1L, depth);
-            return 0;
-        }
-
-        // TODO: Need to check if the bytesUsed is in sync. If not, need to remove this block of code to keep the recursion going.
-        if (depth >= maxDepth && node.bytesUsed != null) {
-            incSuccessCount();
-            addToReport(Utils.getPath(node), node.bytesUsed, depth);
-            return node.bytesUsed;
-        }
-
-        // collect child containers for later
-        List<ContainerNode> childContainers = new ArrayList<>();
-        long currentNodeSize = 0L;
-        try (ResourceIterator<Node> iter = nodePersistence.iterator(node, null, null)) {
-            while (iter.hasNext()) {
-                Node child = iter.next();
-                if (child instanceof ContainerNode) {
-                    childContainers.add((ContainerNode) child);
-                } else if (child instanceof DataNode) {
-                    DataNode dn = (DataNode) child;
-                    Long bytes = dn.bytesUsed;
-                    if (bytes == null) {
-                        bytes = 0L;
-                    }
-                    currentNodeSize += bytes;
-                    incSuccessCount();
-                } else {
-                    // ignore LinkNode
-                    log.debug("Skipping LinkNode : " + Utils.getPath(node));
-                }
-            }
-        }
-
-        // now recurse so we only have one open iterator at a time
-        for (ContainerNode cn : childContainers) {
-            currentNodeSize += accumulateNodeSize(cn, subject, depth + 1);
-        }
-
-        incSuccessCount();
-        addToReport(Utils.getPath(node), currentNodeSize, depth);
-        return currentNodeSize;
     }
 
     private void validateDest() {
@@ -330,6 +246,172 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             }
         } else {
             throw new IllegalArgumentException("dest must be a DataNode path, not a container");
+        }
+    }
+
+    private class DynamicReportOutput implements OutputStreamWrapper {
+
+        // Each frame on the stack represents one ContainerNode mid-traversal.
+        private final class Frame {
+            final ContainerNode node;
+            final int depth;
+            long runningSize; // accumulated byte count of children processed so far.
+            final List<ContainerNode> pendingChildren; // ordered list of child ContainerNodes not yet visited.
+
+            Frame(ContainerNode node, int depth, long runningSize, List<ContainerNode> pendingChildren) {
+                this.node = node;
+                this.depth = depth;
+                this.runningSize = runningSize;
+                this.pendingChildren = pendingChildren;
+            }
+        }
+
+        private final Subject subject;
+        private final Deque<Frame> stack = new ArrayDeque<>();
+
+        Exception scanException = null;
+        private String pendingPath = null;
+        private Long pendingSize = null; // sentinel: MIN_VALUE means "none"
+        private int permissionDeniedCount = 0;
+
+        /*
+         * Push the root frame.
+         * advance() will run until the first report line is ready,
+         * leaving that line in pendingPath/pendingSize and leaving the rest of the work on the stack.
+         * */
+        DynamicReportOutput(ContainerNode root, Subject subject) {
+            this.subject = subject;
+            try {
+                pushFrame(root, 0);
+                advance();
+                if (pendingPath == null || pendingSize == null) {
+                    throw new RuntimeException("BUG: Failed to set Pending State for root node: " + root);
+                }
+                log.debug("Initial recursive node size calculation complete, pendingPath=" + pendingPath + " pendingSize=" + pendingSize);
+            } catch (Exception e) {
+                scanException = e;
+            }
+        }
+
+        @Override
+        public void write(OutputStream os) throws IOException {
+            Writer out = new OutputStreamWriter(os, StandardCharsets.UTF_8);
+            try {
+                log.debug("Resuming recursive node size calculation");
+                // Drain whatever the ctor already produced and then drive the rest.
+                while (pendingSize != null) {
+                    writeLine(out, pendingPath, pendingSize);
+                    setPendingState(null, null); // clear pending state
+                    advance();
+                }
+                if (permissionDeniedCount > 0) {
+                    out.write("\nWARNING: " + permissionDeniedCount + " container(s) were not checked due to permissions; sizes are an under-estimate");
+                }
+                out.flush();
+                log.debug("Finished recursive node size calculation");
+            } catch (Exception e) {
+                scanException = e;
+                throw new RuntimeException(e);
+            }
+        }
+
+        /**
+         * Iterates the stack until the next report line is ready, storing it in pendingPath/pendingSize to write later,
+         * or until the stack is empty (done).
+         */
+        private void advance() throws Exception {
+            while (!stack.isEmpty()) {
+                Frame top = stack.peek();
+
+                if (!top.pendingChildren.isEmpty()) {
+                    // Dive into the next child container.
+                    ContainerNode child = top.pendingChildren.remove(0);
+
+                    if (!authorizer.hasSingleNodeReadPermission(child, subject)) {
+                        setPendingState(Utils.getPath(child), -1L);
+                        permissionDeniedCount++;
+                        return;
+                    }
+
+                    long childSize = pushFrame(child, top.depth + 1);
+                    if (childSize >= 0) {
+                        top.runningSize += childSize;
+                        if (pendingSize != null) {
+                            return; // short-circuit set pending state, yield to writer
+                        }
+                    }
+                } else {
+                    // All children of 'top' are done; this node is now fully sized.
+                    stack.pop();
+                    long nodeTotal = top.runningSize;
+
+                    // Propagate to the parent frame if one exists.
+                    if (!stack.isEmpty()) {
+                        stack.peek().runningSize += nodeTotal;
+                    }
+                    incSuccessCount();
+                    if (top.depth <= maxDepth) {
+                        setPendingState(Utils.getPath(top.node), nodeTotal);
+                        return; // caller will write the line then call advance() again
+                    }
+                }
+            }
+            // Stack exhausted -- no more lines.
+        }
+
+        /**
+         * Pushes a new frame for {@code containerNode} after collecting its direct children.
+         * Returns the resolved size immediately if the node can be short-circuited (cached bytesUsed at/beyond maxDepth), or -1
+         * if a new frame was pushed and the caller must continue iterating the stack.
+         */
+        private long pushFrame(ContainerNode node, int depth) throws Exception {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
+            checkJobPhase();
+
+            // short circuit : Need to check if the bytesUsed is in sync. If not, keep the recursion going.
+            if (depth >= maxDepth && node.bytesUsed != null) {
+                if (depth == maxDepth) {
+                    setPendingState(Utils.getPath(node), node.bytesUsed);
+                }
+                incSuccessCount();
+                return node.bytesUsed;
+            }
+
+            // Iterate children to collect DataNode bytes and child ContainerNodes.
+            List<ContainerNode> childContainers = new ArrayList<>();
+            long dataNodeBytes = 0L;
+            try (ResourceIterator<Node> iter = nodePersistence.iterator(node, null, null)) {
+                while (iter.hasNext()) {
+                    Node child = iter.next();
+                    if (child instanceof ContainerNode) {
+                        childContainers.add((ContainerNode) child);
+                    } else if (child instanceof DataNode) {
+                        Long bytes = ((DataNode) child).bytesUsed;
+                        if (bytes == null) {
+                            bytes = 0L;
+                        }
+                        dataNodeBytes += bytes;
+                        incSuccessCount();
+                    } else {
+                        log.debug("Skipping LinkNode: " + Utils.getPath(child));
+                    }
+                }
+            }
+
+            stack.push(new Frame(node, depth, dataNodeBytes, childContainers));
+            return -1;
+        }
+
+        private void writeLine(Writer out, String path, long size) throws IOException {
+            String sizeStr = (size == -1L) ? PERMISSION_DENIED_RESULT_TEXT : Long.toString(size);
+            out.write(sizeStr + '\t' + path + '\n');
+        }
+
+        private void setPendingState(String pendingPath, Long childSize) {
+            this.pendingPath = pendingPath;
+            this.pendingSize = childSize;
         }
     }
 
