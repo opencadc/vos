@@ -202,7 +202,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     // Note: Report permission denied for all the depths
     private void writeToReport(String path, long size, int depth) throws IOException {
         if (depth <= maxDepth || size < 0L) {
-            if(size <0L){
+            if (size < 0L) {
                 reportWriter.write(PERMISSION_DENIED_RESULT_TEXT);
             } else {
                 reportWriter.write(Long.toString(size));
