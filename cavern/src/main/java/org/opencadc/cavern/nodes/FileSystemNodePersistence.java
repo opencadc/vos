@@ -181,11 +181,12 @@ public class FileSystemNodePersistence implements NodePersistence {
         
         // create root directories for node/files
         try {
+            PosixPrincipal admin = identityManager.toPosixPrincipal(root.owner);
+            log.info("root node: " + rootPath + " owner: " + admin.getUidNumber() + "(" + admin.username + ")");
             if (!Files.exists(rootPath, LinkOption.NOFOLLOW_LINKS)) {
                 Files.createDirectories(rootPath);
             }
-            PosixPrincipal admin = identityManager.toPosixPrincipal(root.owner);
-            log.info("root node: " + rootPath + " owner: " + admin.getUidNumber() + "(" + admin.username + ")");
+            // rootPath must be owned by 0:0 for use in science platform (skaha)
             //NodeUtil.setPosixOwnerGroup(rootPath, admin.getUidNumber(), admin.defaultGroup);
             NodeUtil.setPosixOwnerGroup(rootPath, 0, 0);
         } catch (IOException e) {

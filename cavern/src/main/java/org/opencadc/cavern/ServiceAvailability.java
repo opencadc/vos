@@ -68,7 +68,6 @@
 package org.opencadc.cavern;
 
 import ca.nrc.cadc.auth.AuthMethod;
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.reg.client.LocalAuthority;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -78,16 +77,16 @@ import ca.nrc.cadc.vosi.avail.CheckCertificate;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
+import com.sun.security.auth.module.UnixSystem;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.Principal;
 import java.util.NoSuchElementException;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import org.apache.log4j.Logger;
+import org.opencadc.vospace.server.NodePersistence;
 
 /**
  *
@@ -99,12 +98,14 @@ public class ServiceAvailability implements AvailabilityPlugin {
 
     private static final File AAI_PEM_FILE = new File(System.getProperty("user.home") + "/.ssl/cadcproxy.pem");
     
+    private String appName;
+    
     public ServiceAvailability() {
     }
 
     @Override
     public void setAppName(String string) {
-        //no-op
+        this.appName = appName;
     }
 
     @Override
@@ -117,32 +118,20 @@ public class ServiceAvailability implements AvailabilityPlugin {
         boolean isGood = true;
         String note = "service is accepting requests";
         try {
-
-            // File system probe
-            // PropertiesReader pr = new PropertiesReader("cavern.properties");
-            // MultiValuedProperties conf = pr.getAllProperties();
-            // String rootPath = conf.getFirstPropertyValue("PROBE_ROOT");
-            // log.debug("rootPath: " + rootPath);
-            // String owner = conf.getFirstPropertyValue("PROBE_OWNER");
-            // log.debug("owner: " + owner);
-            // String linkTargetOwner = conf.getFirstPropertyValue("PROBE_LINKOWER");
-            // log.debug("linkTargetOwner: " + linkTargetOwner);
-            // File root = new File(rootPath);
-
-            // VOSURI baseURI = new LocalServiceURI().getVOSBase();
-            // if (baseURI == null) {
-            //     return new Availability(false, "Missing resourceID in VOSpaceWS.properties");
-            // }
+            // check we are running as root
+            String username = System.getProperty("user.name");
+            if (!"root".equals(username)) {
+                throw new CheckException("cavern must run as root: found " + username);
+            }
             
-            // FileSystemProbe fsp = new FileSystemProbe(root, baseURI.toString(), owner, linkTargetOwner, null);
-            // Boolean success = fsp.call();
-            // if (success == null || !success) {
-            //     return new Availability(false, "File system probe failed");
-            // }
-
-            // ReadWrite: proceed with live checks
-            // check filesystem status: readable, writable, space available?
-            // check job persistence status: memory available, cleaner thread keeping up?
+            // check that init NodePersistence succeeded
+            String jndiKey = appName + "-" + NodePersistence.class.getName();
+            try {
+                Context ctx = new InitialContext();
+                NodePersistence np = (NodePersistence) ctx.lookup(jndiKey);
+            } catch (NamingException ex) {
+                throw new CheckException("init failed: FileSystemNodePersistence not found in JNDI");
+            }
 
             // check other services we depend on
             RegistryClient reg = new RegistryClient();
