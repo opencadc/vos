@@ -104,7 +104,7 @@ public class ServiceAvailability implements AvailabilityPlugin {
     }
 
     @Override
-    public void setAppName(String string) {
+    public void setAppName(String appName) {
         this.appName = appName;
     }
 
