@@ -67,7 +67,9 @@
 
 package org.opencadc.vospace.server.async;
 
+import ca.nrc.cadc.auth.AuthMethod;
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.cred.client.CredUtil;
 import ca.nrc.cadc.io.ResourceIterator;
 import ca.nrc.cadc.net.HttpConstants;
 import ca.nrc.cadc.net.HttpUpload;
@@ -228,10 +230,19 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
 
         // if the bytesUsed is in place and depth is reached to or beyond max depth, skip further recursion, else keep the recursion going.
-        if (depth >= maxDepth && node.bytesUsed != null) {
-            incSuccessCount();
-            writeToReport(Utils.getPath(node), node.bytesUsed, depth);
-            return node.bytesUsed;
+        if (depth >= maxDepth) {
+            if (node.bytesUsed != null) {
+                incSuccessCount();
+                writeToReport(Utils.getPath(node),  node.bytesUsed, depth);
+                return node.bytesUsed;
+            } else {
+                Long dataNodeSize = nodePersistence.getDataNodeSize(node);
+                if (dataNodeSize != null) {
+                    incSuccessCount();
+                    writeToReport(Utils.getPath(node), dataNodeSize, depth);
+                    return dataNodeSize;
+                }
+            }
         }
 
         // collect child containers for later
@@ -271,8 +282,12 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         Subject caller = AuthenticationUtil.getCurrentSubject();
         ensureDestDataNode(caller);
 
+        CredUtil.checkCredentials(caller);
+        AuthMethod authType = AuthenticationUtil.getAuthMethodFromCredentials(caller);
+        URI securityMethod = Standards.getSecurityMethod(authType);
+
         Protocol sc = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
-        sc.setSecurityMethod(Standards.SECURITY_METHOD_CERT);
+        sc.setSecurityMethod(securityMethod);
 
         Transfer request = new Transfer(dest.getURI(), Direction.pushToVoSpace);
         request.version = VOS.VOSPACE_21;

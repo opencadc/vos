@@ -181,8 +181,8 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     @Test
     public void testAllocationAsyncSizeWithParams() throws Exception {
         log.debug("Testing /async-nodesize for different params.");
-        buildNodesTree();
         try {
+            buildNodesTree();
             testAllocationAsyncSizeMaxDepth0();
             testAllocationAsyncSizeMaxDepth1();
             testAllocationAsyncSizeMaxDepth2();
