@@ -230,19 +230,10 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
 
         // if the bytesUsed is in place and depth is reached to or beyond max depth, skip further recursion, else keep the recursion going.
-        if (depth >= maxDepth) {
-            if (node.bytesUsed != null) {
-                incSuccessCount();
-                writeToReport(Utils.getPath(node),  node.bytesUsed, depth);
-                return node.bytesUsed;
-            } else {
-                Long dataNodeSize = nodePersistence.getDataNodeSize(node);
-                if (dataNodeSize != null) {
-                    incSuccessCount();
-                    writeToReport(Utils.getPath(node), dataNodeSize, depth);
-                    return dataNodeSize;
-                }
-            }
+        if (depth >= maxDepth && node.bytesUsed != null) {
+            incSuccessCount();
+            writeToReport(Utils.getPath(node), node.bytesUsed, depth);
+            return node.bytesUsed;
         }
 
         // collect child containers for later
