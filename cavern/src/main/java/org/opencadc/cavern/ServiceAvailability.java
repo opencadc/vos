@@ -77,7 +77,6 @@ import ca.nrc.cadc.vosi.avail.CheckCertificate;
 import ca.nrc.cadc.vosi.avail.CheckException;
 import ca.nrc.cadc.vosi.avail.CheckResource;
 import ca.nrc.cadc.vosi.avail.CheckWebService;
-import com.sun.security.auth.module.UnixSystem;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
