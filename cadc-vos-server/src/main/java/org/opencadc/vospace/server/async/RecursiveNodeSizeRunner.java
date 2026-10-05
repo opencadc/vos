@@ -84,7 +84,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.Subject;
@@ -94,8 +93,8 @@ import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
-import org.opencadc.vospace.server.PathResolver;
 import org.opencadc.vospace.server.Utils;
+import org.opencadc.vospace.server.transfers.PushToVOSpaceNegotiation;
 import org.opencadc.vospace.transfer.Direction;
 import org.opencadc.vospace.transfer.Protocol;
 import org.opencadc.vospace.transfer.Transfer;
@@ -170,7 +169,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         tmpFile = File.createTempFile("node-size-report-", ".txt");
 
         try {
-            reportWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), StandardCharsets.UTF_8));
+            this.reportWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), StandardCharsets.UTF_8));
 
             log.debug("Initializing nodesize calculation for: " + nodePath);
             accumulateNodeSize(root, subject, 0);
@@ -271,7 +270,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
     private URL getPutURL() throws Exception {
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        ensureDestDataNode(caller);
+        PushToVOSpaceNegotiation.ensureAndGetDataNode(dest, nodePersistence, authorizer);
 
         CredUtil.checkCredentials(caller);
         AuthMethod authType = AuthenticationUtil.getAuthMethodFromCredentials(caller);
@@ -288,39 +287,6 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
             throw new IllegalStateException("endpoint not found for: " + dest);
         }
         return new URL(endpoints.get(0).getEndpoint());
-    }
-
-    private void ensureDestDataNode(Subject caller) throws Exception {
-        PathResolver pr = new PathResolver(nodePersistence, authorizer);
-        PathResolver.ResolvedNode rn = pr.getTargetNode(dest.getPath());
-
-        if (rn == null) {
-            throw new IllegalArgumentException("parent path not found for dest: " + dest.getPath());
-        }
-
-        if (rn.node == null) {
-            log.debug("dest node not found, creating new DataNode");
-            // create new DataNode
-            if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
-                throw new AccessControlException("no write permission on dest parent");
-            }
-            DataNode dn = new DataNode(rn.name);
-            dn.parent = rn.parent;
-            dn.owner = caller;
-            if (rn.parent.inheritPermissions != null && rn.parent.inheritPermissions) {
-                dn.isPublic = rn.parent.isPublic;
-                dn.getReadOnlyGroup().addAll(rn.parent.getReadOnlyGroup());
-                dn.getReadWriteGroup().addAll(rn.parent.getReadWriteGroup());
-            }
-            nodePersistence.put(dn);
-        } else if (rn.node instanceof DataNode) {
-            log.debug("dest node found");
-            if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
-                throw new AccessControlException("no write permission on dest");
-            }
-        } else {
-            throw new IllegalArgumentException("dest must be a DataNode path, not a container");
-        }
     }
 
     private void uploadReportToDest(URL putURL) throws Exception {
