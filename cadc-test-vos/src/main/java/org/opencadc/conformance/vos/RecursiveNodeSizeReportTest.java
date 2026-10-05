@@ -119,7 +119,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     private static final Logger log = Logger.getLogger(RecursiveNodeSizeReportTest.class);
 
     // Root-level allocation for async node-size-report tests
-    private static final String ALLOCATION_ROOT = "vault-async-size-test";
+    private static final String ALLOCATION_ROOT = "async-nodesize-test";
 
     private static final long FILE_A_BYTES = 100L;
     private static final long FILE_B_BYTES = 250L;
@@ -153,13 +153,13 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         String[] tree = {alloc, fileA, subDir, fileB};
 
         try {
-            createRootNodeTree(tree);
+            createNodeTree(tree);
             uploadData(fileA, FILE_A_BYTES);
             uploadData(fileB, FILE_B_BYTES);
             waitForBytesUsed(fileA, FILE_A_BYTES);
             waitForBytesUsed(fileB, FILE_B_BYTES);
 
-            VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+            VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
             Map<String, Object> params = new HashMap<>();
             params.put("target", vosURI.getURI());
             URI uri = getDefaultReportDest(vosURI).getURI();
@@ -171,10 +171,10 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Assert.assertTrue(getResultLong(job, "successcount") >= 2L);
 
             Map<String, Long> report = fetchNodeSizeReport(authSubject);
-            Assert.assertEquals(Long.valueOf(FILE_A_BYTES + FILE_B_BYTES), report.get("/" + ALLOCATION_ROOT));
+            Assert.assertEquals(Long.valueOf(FILE_A_BYTES + FILE_B_BYTES), report.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
         } finally {
             String[] cleanupTree = new String[]{alloc, fileA, subDir, fileB, alloc + "report"};
-            cleanupRootNodeTree(cleanupTree);
+            cleanupNodeTree(cleanupTree);
         }
     }
 
@@ -193,7 +193,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private void testAllocationAsyncSizeMaxDepth0() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=0:");
-        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
@@ -204,12 +204,12 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
         Map<String, Long> report = fetchNodeSizeReport(authSubject);
         Assert.assertEquals(1, report.size());
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + ALLOCATION_ROOT));
+        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + rootTestFolderName + "/" + ALLOCATION_ROOT));
     }
 
     private void testAllocationAsyncSizeMaxDepth1() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=1:");
-        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
@@ -220,16 +220,16 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
         Map<String, Long> parsedReport = fetchNodeSizeReport(authSubject);
         Assert.assertEquals(4, parsedReport.size());
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), parsedReport.get("/" + ALLOCATION_ROOT));
-        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), parsedReport.get("/" + ALLOCATION_ROOT + "/d1"));
-        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), parsedReport.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), parsedReport.get("/" + ALLOCATION_ROOT + "/denied"));
-        Assert.assertNull(parsedReport.get("/" + ALLOCATION_ROOT + "/d1/d2"));
+        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), parsedReport.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), parsedReport.get(String.format("/%s/%s/d1", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), parsedReport.get(String.format("/%s/%s/d3", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), parsedReport.get(String.format("/%s/%s/denied", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertNull(parsedReport.get(String.format("/%s/%s/d1/d2", rootTestFolderName, ALLOCATION_ROOT)));
     }
 
     private void testAllocationAsyncSizeMaxDepth2() throws Exception {
         log.debug("Testing /async-nodesize for maxdepth=2:");
-        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
@@ -240,18 +240,18 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
         Map<String, Long> report = fetchNodeSizeReport(authSubject);
         Assert.assertEquals(5, report.size());
-        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + ALLOCATION_ROOT));
-        Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1/d2"));
-        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1"));
-        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get("/" + ALLOCATION_ROOT + "/d3"));
-        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get("/" + ALLOCATION_ROOT + "/denied"));
+        Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get(String.format("/%s/%s/d1/d2", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(D1_F1_BYTES + D1_D2_F2_BYTES), report.get(String.format("/%s/%s/d1", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(D3_F3_BYTES), report.get(String.format("/%s/%s/d3", rootTestFolderName, ALLOCATION_ROOT)));
+        Assert.assertEquals(Long.valueOf(DENIED_F4_BYTES), report.get(String.format("/%s/%s/denied", rootTestFolderName, ALLOCATION_ROOT)));
     }
 
     @Test
     public void testAllocationAsyncSizePermissionDenied() throws Exception {
         try {
             buildNodesTree();
-            VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+            VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
             Map<String, Object> params = new HashMap<>();
             params.put("target", vosURI.getURI());
             URI uri = getDefaultReportDest(vosURI).getURI();
@@ -261,10 +261,10 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
 
             Map<String, Long> report = fetchNodeSizeReport(groupMember);
-            Assert.assertTrue(report.containsKey("/" + ALLOCATION_ROOT + "/denied"));
-            Assert.assertEquals(Long.valueOf(-1), report.get("/" + ALLOCATION_ROOT + "/denied"));
-            Assert.assertEquals(Long.valueOf(DEPTH_VISIBLE_TO_GROUP_BYTES), report.get("/" + ALLOCATION_ROOT));
-            Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get("/" + ALLOCATION_ROOT + "/d1/d2"));
+            Assert.assertTrue(report.containsKey(String.format("/%s/%s/denied", rootTestFolderName, ALLOCATION_ROOT)));
+            Assert.assertEquals(Long.valueOf(-1), report.get(String.format("/%s/%s/denied", rootTestFolderName, ALLOCATION_ROOT)));
+            Assert.assertEquals(Long.valueOf(DEPTH_VISIBLE_TO_GROUP_BYTES), report.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
+            Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get(String.format("/%s/%s/d1/d2", rootTestFolderName, ALLOCATION_ROOT)));
         } finally {
             cleanupNodesTree();
         }
@@ -273,7 +273,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     @Test
     public void testAllocationAsyncSizeRequiresDest() throws Exception {
         // POST job with target but no dest -> execution phase changes to ERROR
-        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
 
@@ -306,15 +306,15 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             denied,
             denied + "f4"
         };
-        createRootNodeTree(tree);
+        createNodeTree(tree);
 
         String[] readableTestDirs = {alloc, d1, d1 + "f1", d1d2, d1d2 + "f2", d3, d3 + "f3"};
-        makeReadable(readableTestDirs, accessGroup);
+        makeWritable(readableTestDirs, accessGroup);
 
         ContainerNode deniedNode = new ContainerNode(denied);
         deniedNode.isPublic = false;
         deniedNode.inheritPermissions = false;
-        post(getRootNodeURL(denied), getRootVOSURI(denied), deniedNode);
+        post(getNodeURL(nodesServiceURL, denied), getVOSURI(denied), deniedNode);
 
         uploadData(d1 + "f1", D1_F1_BYTES);
         uploadData(d1d2 + "f2", D1_D2_F2_BYTES);
@@ -325,21 +325,6 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         waitForBytesUsed(d1d2 + "f2", D1_D2_F2_BYTES);
         waitForBytesUsed(d3 + "f3", D3_F3_BYTES);
         waitForBytesUsed(denied + "f4", DENIED_F4_BYTES);
-    }
-
-    protected void makeReadable(String[] subdirNames, GroupURI accessGroup)
-            throws Exception {
-        for (String nodeName : subdirNames) {
-            URL nodeURL = getRootNodeURL(nodeName);
-            NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE);
-            result.node.getReadOnlyGroup().add(accessGroup);
-            result.node.getReadWriteGroup().add(accessGroup);
-            log.debug("Node update " + result.node.getReadOnlyGroup());
-
-            VOSURI nodeURI = getRootVOSURI(nodeName);
-            post(nodeURL, nodeURI, result.node);
-            log.debug("Added group permissions to " + nodeName);
-        }
     }
 
     private void cleanupNodesTree() throws Exception {
@@ -356,40 +341,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             alloc + "denied/f4",
             alloc + "report"
         };
-        cleanupRootNodeTree(tree);
-    }
-
-    private URL getRootNodeURL(String path) throws MalformedURLException {
-        if (path == null || path.isEmpty()) {
-            throw new IllegalArgumentException("path required");
-        }
-        return new URL(String.format("%s/%s", nodesServiceURL, path));
-    }
-
-    private VOSURI getRootVOSURI(String path) {
-        return new VOSURI(resourceID, path);
-    }
-
-    private void createRootNodeTree(String[] nodes) throws Exception {
-        cleanupRootNodeTree(nodes);
-        for (String nodeName : nodes) {
-            URL nodeURL = getRootNodeURL(nodeName);
-            VOSURI nodeURI = getRootVOSURI(nodeName);
-            Node node;
-            if (nodeName.endsWith("/")) {
-                node = new ContainerNode(nodeName);
-            } else {
-                node = new DataNode(nodeName);
-            }
-            log.debug("put: " + nodeURI + " -> " + nodeURL);
-            put(nodeURL, nodeURI, node);
-        }
-    }
-
-    private void cleanupRootNodeTree(String[] nodes) throws MalformedURLException {
-        for (int i = nodes.length - 1; i >= 0; i--) {
-            delete(getRootNodeURL(nodes[i]), false);
-        }
+        cleanupNodeTree(tree);
     }
 
     private void uploadData(String path, long numBytes) throws IOException, TransferParsingException {
@@ -398,7 +350,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             data[i] = (byte) (i & 0xff);
         }
 
-        VOSURI nodeURI = getRootVOSURI(path);
+        VOSURI nodeURI = getVOSURI(path);
         Transfer transfer = new Transfer(nodeURI.getURI(), Direction.pushToVoSpace);
         transfer.version = VOS.VOSPACE_21;
         Protocol putWithCert = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
@@ -444,7 +396,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private boolean verifyBytesUsed(String path, long expectedBytes)
             throws MalformedURLException, NodeParsingException, NodeNotSupportedException {
-        URL nodeURL = getRootNodeURL(path);
+        URL nodeURL = getNodeURL(nodesServiceURL, path);
         NodeReader.NodeReaderResult result = get(nodeURL, 200, XML_CONTENT_TYPE, true);
         if (result.node instanceof DataNode) {
             Long bytes = ((DataNode) result.node).bytesUsed;
@@ -456,9 +408,9 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private Job postAllocationSize(URL asyncURL, Subject subject, Map<String, Object> params)
             throws Exception {
-        delete(getRootNodeURL(ALLOCATION_ROOT + "/report"), false); // cleanup the report data node if it exists
+        delete(getNodeURL(nodesServiceURL, ALLOCATION_ROOT + "/report"), false); // cleanup the report data node if it exists
 
-        VOSURI vosURI = getRootVOSURI(ALLOCATION_ROOT);
+        VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         log.debug("postAllocationSize: " + asyncURL + " " + vosURI + " params=" + params);
         HttpPost post = new HttpPost(asyncURL, params, false);
         Subject.doAs(subject, new RunnableAction(post));
@@ -498,7 +450,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private Map<String, Long> fetchNodeSizeReport(Subject subject) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet get = new HttpGet(new URL(String.format("%s/%s/%s", filesURL, ALLOCATION_ROOT, "report")), out);
+        HttpGet get = new HttpGet(new URL(String.format("%s/%s/%s/%s", filesURL, rootTestFolderName, ALLOCATION_ROOT, "report")), out);
         Subject.doAs(subject, new RunnableAction(get));
         Assert.assertNull(get.getThrowable());
         Assert.assertEquals(200, get.getResponseCode());
