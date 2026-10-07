@@ -166,7 +166,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
 
         // Write the report to a local temp file first, then upload it.
-        tmpFile = File.createTempFile("node-size-report-", ".txt");
+        this.tmpFile = File.createTempFile("node-size-report-", ".txt");
 
         try {
             this.reportWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), StandardCharsets.UTF_8));
