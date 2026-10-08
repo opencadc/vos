@@ -223,16 +223,15 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
                     endPhase = ExecutionPhase.ABORTED;
                     results.add(new Result("errorcount", URI.create("final:" + errorCount)));
                 }
+                results.addAll(getAdditionalResults());
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, endPhase, results, new Date());
             }
             if (!endPhase.equals(ep)) {
                 log.warn("Could not change the job phase from " + ExecutionPhase.EXECUTING + " to " + endPhase);
             }
             logInfo.setSuccess(true);
-        } catch (ResourceNotFoundException e) {
-            sendError("NotFound");
-        } catch (AccessControlException e) {
-            sendError("PermissionDenied");
+        } catch (ResourceNotFoundException | AccessControlException | IllegalArgumentException e) {
+            sendError(e.getMessage());
         } catch (Throwable t) {
             log.error("Unexpected exception", t);
             // if the cause of this throwable is an InterruptedException, and if
@@ -250,6 +249,14 @@ public abstract class AbstractRecursiveRunner implements JobRunner {
             }
             sendError("Unexpected Exception: " + t.getMessage());
         }
+    }
+
+    /**
+     * Subclasses may override to attach additional UWS Result entries
+     * Default: no extra results.
+     */
+    protected List<Result> getAdditionalResults() {
+        return new ArrayList<>();
     }
 
     /**

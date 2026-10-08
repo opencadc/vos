@@ -98,7 +98,6 @@ import org.junit.Test;
 import org.opencadc.gms.GroupURI;
 import org.opencadc.vospace.ContainerNode;
 import org.opencadc.vospace.DataNode;
-import org.opencadc.vospace.Node;
 import org.opencadc.vospace.NodeNotSupportedException;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
@@ -145,7 +144,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     // Test the /async-nodesize endpoint without any filter/sorting parameters
     @Test
-    public void testAllocationAsyncSize() throws Exception {
+    public void testRecursiveNodeSizeReport() throws Exception {
         String alloc = ALLOCATION_ROOT + "/";
         String fileA = alloc + "fileA";
         String subDir = alloc + "sub/";
@@ -179,20 +178,20 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     }
 
     @Test
-    public void testAllocationAsyncSizeWithParams() throws Exception {
-        log.debug("Testing /async-nodesize for different params.");
+    public void testRecursiveNodeSizeReportWithParams() throws Exception {
+        log.debug("Testing /async-nodesize endpoint for different params.");
         try {
             buildNodesTree();
-            testAllocationAsyncSizeMaxDepth0();
-            testAllocationAsyncSizeMaxDepth1();
-            testAllocationAsyncSizeMaxDepth2();
+            testRecursiveSizeReportMaxDepth0();
+            testRecursiveSizeReportMaxDepth1();
+            testRecursiveSizeReportMaxDepth2();
         } finally {
             cleanupNodesTree();
         }
     }
 
-    private void testAllocationAsyncSizeMaxDepth0() throws Exception {
-        log.debug("Testing /async-nodesize for maxdepth=0:");
+    private void testRecursiveSizeReportMaxDepth0() throws Exception {
+        log.debug("Testing /async-nodesize endpoint for maxdepth=0:");
         VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
@@ -207,8 +206,8 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Assert.assertEquals(Long.valueOf(DEPTH_TOTAL_BYTES), report.get("/" + rootTestFolderName + "/" + ALLOCATION_ROOT));
     }
 
-    private void testAllocationAsyncSizeMaxDepth1() throws Exception {
-        log.debug("Testing /async-nodesize for maxdepth=1:");
+    private void testRecursiveSizeReportMaxDepth1() throws Exception {
+        log.debug("Testing /async-nodesize endpoint for maxdepth=1:");
         VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
@@ -227,8 +226,8 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Assert.assertNull(parsedReport.get(String.format("/%s/%s/d1/d2", rootTestFolderName, ALLOCATION_ROOT)));
     }
 
-    private void testAllocationAsyncSizeMaxDepth2() throws Exception {
-        log.debug("Testing /async-nodesize for maxdepth=2:");
+    private void testRecursiveSizeReportMaxDepth2() throws Exception {
+        log.debug("Testing /async-nodesize endpoint for maxdepth=2:");
         VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
@@ -248,9 +247,12 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
     }
 
     @Test
-    public void testAllocationAsyncSizePermissionDenied() throws Exception {
+    public void testRecursiveSizeReportPermissionDenied() throws Exception {
+        log.debug("Testing /async-nodesize endpoint for permission denied:");
         try {
             buildNodesTree();
+
+            // case 1: user (groupMember) has no read permission on a node in the tree
             VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
             Map<String, Object> params = new HashMap<>();
             params.put("target", vosURI.getURI());
@@ -265,6 +267,17 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Assert.assertEquals(Long.valueOf(-1), report.get(String.format("/%s/%s/denied", rootTestFolderName, ALLOCATION_ROOT)));
             Assert.assertEquals(Long.valueOf(DEPTH_VISIBLE_TO_GROUP_BYTES), report.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
             Assert.assertEquals(Long.valueOf(D1_D2_F2_BYTES), report.get(String.format("/%s/%s/d1/d2", rootTestFolderName, ALLOCATION_ROOT)));
+
+            // case 2: user (groupMember) has no read permission on the specified target node itself
+            vosURI = getVOSURI(ALLOCATION_ROOT + "/denied");
+            params = new HashMap<>();
+            params.put("target", vosURI.getURI());
+            uri = getDefaultReportDest(vosURI).getURI();
+            params.put("dest", uri);
+            params.put("maxdepth", "2");
+            job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
+            Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
+            Assert.assertEquals("PermissionDenied: " + vosURI, job.getErrorSummary().getSummaryMessage());
         } finally {
             cleanupNodesTree();
         }
@@ -279,6 +292,8 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
         Job job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
         Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
+        String summaryMessage = job.getErrorSummary().getSummaryMessage();
+        Assert.assertEquals("InvalidArgument: dest argument required", summaryMessage);
     }
 
     private VOSURI getDefaultReportDest(VOSURI target) {
@@ -287,44 +302,6 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             path = path + "/";
         }
         return new VOSURI(target.getServiceURI(), path + "report");
-    }
-
-    private void buildNodesTree() throws Exception {
-        String alloc = ALLOCATION_ROOT + "/";
-        String d1 = alloc + "d1/";
-        String d1d2 = d1 + "d2/";
-        String d3 = alloc + "d3/";
-        String denied = alloc + "denied/";
-        String[] tree = {
-            alloc,
-            d1,
-            d1 + "f1",
-            d1d2,
-            d1d2 + "f2",
-            d3,
-            d3 + "f3",
-            denied,
-            denied + "f4"
-        };
-        createNodeTree(tree);
-
-        String[] readableTestDirs = {alloc, d1, d1 + "f1", d1d2, d1d2 + "f2", d3, d3 + "f3"};
-        makeWritable(readableTestDirs, accessGroup);
-
-        ContainerNode deniedNode = new ContainerNode(denied);
-        deniedNode.isPublic = false;
-        deniedNode.inheritPermissions = false;
-        post(getNodeURL(nodesServiceURL, denied), getVOSURI(denied), deniedNode);
-
-        uploadData(d1 + "f1", D1_F1_BYTES);
-        uploadData(d1d2 + "f2", D1_D2_F2_BYTES);
-        uploadData(d3 + "f3", D3_F3_BYTES);
-        uploadData(denied + "f4", DENIED_F4_BYTES);
-
-        waitForBytesUsed(d1 + "f1", D1_F1_BYTES);
-        waitForBytesUsed(d1d2 + "f2", D1_D2_F2_BYTES);
-        waitForBytesUsed(d3 + "f3", D3_F3_BYTES);
-        waitForBytesUsed(denied + "f4", DENIED_F4_BYTES);
     }
 
     private void cleanupNodesTree() throws Exception {
@@ -381,6 +358,44 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Subject.doAs(authSubject, new RunnableAction(upload));
         Assert.assertEquals(201, upload.getResponseCode());
         Assert.assertNull(upload.getThrowable());
+    }
+
+    private void buildNodesTree() throws Exception {
+        String alloc = ALLOCATION_ROOT + "/";
+        String d1 = alloc + "d1/";
+        String d1d2 = d1 + "d2/";
+        String d3 = alloc + "d3/";
+        String denied = alloc + "denied/";
+        String[] tree = {
+                alloc,
+                d1,
+                d1 + "f1",
+                d1d2,
+                d1d2 + "f2",
+                d3,
+                d3 + "f3",
+                denied,
+                denied + "f4"
+        };
+        createNodeTree(tree);
+
+        String[] readableTestDirs = {alloc, d1, d1 + "f1", d1d2, d1d2 + "f2", d3, d3 + "f3"};
+        makeWritable(readableTestDirs, accessGroup);
+
+        ContainerNode deniedNode = new ContainerNode(denied);
+        deniedNode.isPublic = false;
+        deniedNode.inheritPermissions = false;
+        post(getNodeURL(nodesServiceURL, denied), getVOSURI(denied), deniedNode);
+
+        uploadData(d1 + "f1", D1_F1_BYTES);
+        uploadData(d1d2 + "f2", D1_D2_F2_BYTES);
+        uploadData(d3 + "f3", D3_F3_BYTES);
+        uploadData(denied + "f4", DENIED_F4_BYTES);
+
+        waitForBytesUsed(d1 + "f1", D1_F1_BYTES);
+        waitForBytesUsed(d1d2 + "f2", D1_D2_F2_BYTES);
+        waitForBytesUsed(d3 + "f3", D3_F3_BYTES);
+        waitForBytesUsed(denied + "f4", DENIED_F4_BYTES);
     }
 
     private void waitForBytesUsed(String path, long expectedBytes)

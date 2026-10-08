@@ -75,6 +75,7 @@ import ca.nrc.cadc.net.HttpConstants;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.reg.Standards;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -93,6 +94,7 @@ import org.opencadc.vospace.DataNode;
 import org.opencadc.vospace.Node;
 import org.opencadc.vospace.VOS;
 import org.opencadc.vospace.VOSURI;
+import org.opencadc.vospace.server.NodeFault;
 import org.opencadc.vospace.server.Utils;
 import org.opencadc.vospace.server.transfers.PushToVOSpaceNegotiation;
 import org.opencadc.vospace.transfer.Direction;
@@ -133,15 +135,15 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                 try {
                     this.dest = new VOSURI(new URI(p.getValue()));
                 } catch (URISyntaxException e) {
-                    throw new IllegalArgumentException("dest must be a valid URI: " + p.getValue(), e);
+                    throw NodeFault.InvalidURI.getStatus("dest must be a valid URI: " + p.getValue());
                 }
             }
         }
         if (target == null) {
-            throw new IllegalArgumentException("target argument required");
+            throw NodeFault.InvalidArgument.getStatus("target argument required");
         }
         if (dest == null) {
-            throw new IllegalArgumentException("dest argument required");
+            throw NodeFault.InvalidArgument.getStatus("dest argument required");
         }
         validateDest();
         log.debug("target: " + target + " dest: " + dest + " maxDepth=" + maxDepth);
@@ -161,42 +163,49 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         Subject subject = AuthenticationUtil.getCurrentSubject();
         String nodePath = Utils.getPath(root);
         if (!authorizer.hasSingleNodeReadPermission(root, subject)) {
-            sendError("no read permission on the container node: " + nodePath);
-            return false;
+            throw NodeFault.PermissionDenied.getStatus(target.getURI().toString());
         }
 
         // Write the report to a local temp file first, then upload it.
         this.tmpFile = File.createTempFile("node-size-report-", ".txt");
 
         try {
-            this.reportWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), StandardCharsets.UTF_8));
+            try {
+                this.reportWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), StandardCharsets.UTF_8));
 
-            log.debug("Initializing nodesize calculation for: " + nodePath);
-            accumulateNodeSize(root, subject, 0);
-            log.debug("Finished nodesize calculation for: " + nodePath);
-        } finally {
-            if (reportWriter != null) {
-                try {
-                    reportWriter.close();
-                } catch (IOException e) {
-                    log.warn("failed to close report writer", e);
+                log.debug("Initializing nodesize calculation for: " + nodePath);
+                accumulateNodeSize(root, subject, 0);
+                log.debug("Finished nodesize calculation for: " + nodePath);
+            } finally {
+                if (reportWriter != null) {
+                    try {
+                        reportWriter.close();
+                    } catch (IOException e) {
+                        log.warn("failed to close report writer", e);
+                    }
                 }
             }
-        }
 
-        URL putURL = getPutURL();
-        log.debug("Uploading node-size-report to: " + putURL);
-        uploadReportToDest(putURL);
-        log.debug("Finished uploading node-size-report to: " + putURL);
-        return true;
+            URL putURL = getPutURL();
+            log.debug("Uploading node-size-report to: " + putURL);
+            uploadReportToDest(putURL);
+            log.debug("Finished uploading node-size-report to: " + putURL);
+            return true;
+        } finally {
+            if (tmpFile != null && tmpFile.exists() && !tmpFile.delete()) {
+                log.warn("failed to delete temp file: " + tmpFile.getAbsolutePath());
+            }
+            this.tmpFile = null;
+            this.reportWriter = null;
+        }
     }
 
-    private void validateDest() {
+    private void validateDest() throws Exception {
         if (!dest.getServiceURI().equals(target.getServiceURI())) {
-            throw new UnsupportedOperationException("dest must be the same vospace service as target");
+            throw NodeFault.InvalidArgument.getStatus("dest must be the same vospace service as target");
         }
         if (dest.getPath().endsWith("/")) {
-            throw new IllegalArgumentException("dest must be a DataNode path, not a container");
+            throw NodeFault.InvalidArgument.getStatus("dest must be a DataNode path, not a container");
         }
     }
 
@@ -209,7 +218,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                 reportWriter.write(Long.toString(size));
             }
             reportWriter.write('\t');
-            reportWriter.write(path);
+            reportWriter.write(path == null || path.isEmpty() ? "/" : path);
             reportWriter.newLine();
         }
     }
@@ -298,4 +307,8 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
     }
 
+    @Override
+    protected List<Result> getAdditionalResults() {
+        return List.of(new Result("output", dest.getURI()));
+    }
 }
