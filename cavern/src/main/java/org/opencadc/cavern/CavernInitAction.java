@@ -153,11 +153,20 @@ public class CavernInitAction extends InitAction {
                                                  + " System Property is set to a valid implementation.");
         }
 
-        // Assuming there isn't more than one Cavern deployed within a JVM.
-        PosixIdentityManager.JNDI_NODE_PERSISTENCE_PROPERTY = this.jndiNodePersistence;
+        String curDelegate = System.getProperty(PosixIdentityManager.WRAPPED_IM_PROPERTY);
+        if (curDelegate != null) {
+            log.warn("OOPS: initIdentityManager called multiple times"
+                    + "\ncurrent IdentityManager: " + configuredIdentityManagerClassName
+                    + "\ndelegating to " + curDelegate);
+            return;
+        } else if (PosixIdentityManager.class.getName().equals(configuredIdentityManagerClassName)) {
+            throw new InvalidConfigException("CONFIG: " 
+                    + IdentityManager.class.getName() + " = " + configuredIdentityManagerClassName); 
+            
+        }
 
         // To be used by the PosixIdentityManager to wrap the existing IdentityManager.
-        System.setProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY, configuredIdentityManagerClassName);
+        System.setProperty(PosixIdentityManager.WRAPPED_IM_PROPERTY, configuredIdentityManagerClassName);
 
         // Override the existing IdentityManager.
         System.setProperty(IdentityManager.class.getName(), PosixIdentityManager.class.getName());
@@ -171,7 +180,7 @@ public class CavernInitAction extends InitAction {
         // preauth does not always work in a pure OpenID environment
         // because it is not possible to check group read permission on parent dirs
         // without a valid bearer token
-        String baseIM = System.getProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+        String baseIM = System.getProperty(PosixIdentityManager.WRAPPED_IM_PROPERTY);
         if (StandardIdentityManager.class.getName().equals(baseIM)) {
             log.info("found IdentityManager = " + baseIM + " -- disabling transfer preauth key usage");
             return;

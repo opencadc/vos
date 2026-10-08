@@ -93,10 +93,7 @@ public class PosixIdentityManager implements IdentityManager {
 
     private static final Logger log = Logger.getLogger(PosixIdentityManager.class);
 
-    public static final String WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY = IdentityManager.class.getName() + ".wrappedIdentityManagerClass";
-
-    // A bit of a hack.  This will be set by the CavernInitAction.
-    public static String JNDI_NODE_PERSISTENCE_PROPERTY = "cavern-" + NodePersistence.class.getName();
+    public static final String WRAPPED_IM_PROPERTY = PosixIdentityManager.class.getName() + ".wrappedIdentityManagerClass";
 
     // implementation note: here we have an identity cache inside the function so 
     // other code doesn't know about the caching -- for groups the GroupCache is
@@ -108,10 +105,9 @@ public class PosixIdentityManager implements IdentityManager {
 
     
     public PosixIdentityManager() {
-        final String wrappedIdentityManagerClassName = System.getProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+        final String wrappedIdentityManagerClassName = System.getProperty(PosixIdentityManager.WRAPPED_IM_PROPERTY);
         if (wrappedIdentityManagerClassName == null) {
-            throw new IllegalArgumentException("BUG: wrappedIdentityManager cannot be null.  System property should be set in init: "
-                                                   + PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+            throw new IllegalArgumentException("INIT: wrappedIdentityManager cannot be null");
         }
 
         try {

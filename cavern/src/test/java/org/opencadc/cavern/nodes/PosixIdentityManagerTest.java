@@ -100,7 +100,7 @@ public class PosixIdentityManagerTest {
 
     @Test
     public void testNull() {
-        System.setProperty(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY, NoOpIdentityManager.class.getName());
+        System.setProperty(PosixIdentityManager.WRAPPED_IM_PROPERTY, NoOpIdentityManager.class.getName());
 
         try {
             PosixIdentityManager im = new PosixIdentityManager();
@@ -115,7 +115,7 @@ public class PosixIdentityManagerTest {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         } finally {
-            System.getProperties().remove(PosixIdentityManager.WRAPPED_IDENTITY_MANAGER_CLASS_PROPERTY);
+            System.getProperties().remove(PosixIdentityManager.WRAPPED_IM_PROPERTY);
         }
     }
 
