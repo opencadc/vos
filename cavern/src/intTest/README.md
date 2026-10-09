@@ -1,6 +1,6 @@
 # cavern integration tests
 
-The `intTest` target uses the cadc-etst-vos library to run tests against a locally
+The `intTest` target uses the cadc-test-vos library to run tests against a locally
 deployed cavern instance. This looks up `ivo://opencadc.org/cavern` in a local `reg`
 service.
 

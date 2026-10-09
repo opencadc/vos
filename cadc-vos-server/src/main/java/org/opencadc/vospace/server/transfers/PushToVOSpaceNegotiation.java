@@ -112,38 +112,7 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
 
             VOSURI target = new VOSURI(transfer.getTargets().get(0));
 
-            PathResolver pr = new PathResolver(nodePersistence, authorizer);
-            PathResolver.ResolvedNode rn = pr.getTargetNode(target.getPath());
-            if (rn == null) {
-                throw NodeFault.ContainerNotFound.getStatus(target.getPath());
-            }
-            log.debug("Target target node: " + rn);
-
-            Subject caller = AuthenticationUtil.getCurrentSubject();
-            DataNode dn;
-            if (rn.node == null) {
-                if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
-                    throw NodeFault.PermissionDenied.getStatus(Utils.getPath(rn.parent));
-                }
-                // create: this should do the same things that CreateNodeAction does
-                dn = new DataNode(rn.name);
-                ContainerNode parent = rn.parent;
-                dn.parent = parent;
-                dn.owner = caller;
-                if (parent.inheritPermissions != null && parent.inheritPermissions) {
-                    dn.isPublic = parent.isPublic;
-                    dn.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
-                    dn.getReadWriteGroup().addAll(parent.getReadWriteGroup());
-                }
-                nodePersistence.put(dn);
-            } else if (rn.node instanceof DataNode) {
-                dn = (DataNode) rn.node;
-                if (!authorizer.hasSingleNodeWritePermission(dn, caller)) {
-                    throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
-                }
-            } else {
-                throw NodeFault.InvalidArgument.getStatus("transfer destination is not a data node");
-            }
+            DataNode dn = ensureAndGetDataNode(target, nodePersistence, authorizer);
 
             // Check the user's quota
             // Note: content length is always null until it has can
@@ -163,5 +132,42 @@ public class PushToVOSpaceNegotiation extends VOSpaceTransfer {
                 updateTransferJob(null, null, ExecutionPhase.QUEUED); // no phase change
             }
         }
+    }
+
+    public static DataNode ensureAndGetDataNode(VOSURI target, NodePersistence nodePersistence, VOSpaceAuthorizer authorizer) throws Exception {
+        PathResolver pr = new PathResolver(nodePersistence, authorizer);
+        PathResolver.ResolvedNode rn = pr.getTargetNode(target.getPath());
+        if (rn == null) {
+            throw NodeFault.ContainerNotFound.getStatus(target.getPath());
+        }
+        log.debug("Target target node: " + rn);
+
+        Subject caller = AuthenticationUtil.getCurrentSubject();
+        DataNode dn;
+        if (rn.node == null) {
+            log.debug("target node not found, creating new DataNode");
+            if (!authorizer.hasSingleNodeWritePermission(rn.parent, caller)) {
+                throw NodeFault.PermissionDenied.getStatus(Utils.getPath(rn.parent));
+            }
+            // create: this should do the same things that CreateNodeAction does
+            dn = new DataNode(rn.name);
+            ContainerNode parent = rn.parent;
+            dn.parent = parent;
+            dn.owner = caller;
+            if (parent.inheritPermissions != null && parent.inheritPermissions) {
+                dn.isPublic = parent.isPublic;
+                dn.getReadOnlyGroup().addAll(parent.getReadOnlyGroup());
+                dn.getReadWriteGroup().addAll(parent.getReadWriteGroup());
+            }
+            nodePersistence.put(dn);
+        } else if (rn.node instanceof DataNode) {
+            dn = (DataNode) rn.node;
+            if (!authorizer.hasSingleNodeWritePermission(dn, caller)) {
+                throw NodeFault.PermissionDenied.getStatus(target.getParentURI().getURI().toASCIIString());
+            }
+        } else {
+            throw NodeFault.InvalidArgument.getStatus("transfer destination is not a data node");
+        }
+        return dn;
     }
 }

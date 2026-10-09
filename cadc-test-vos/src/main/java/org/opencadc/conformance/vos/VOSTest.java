@@ -118,6 +118,8 @@ public abstract class VOSTest {
     public final URI resourceID;
     public final URL nodesServiceURL;
     public final URL synctransServiceURL;
+    public final URL nodeSizeReportServiceURL;
+    public final URL filesURL;
     public final Subject authSubject;
     
     protected String rootTestFolderName = "int-tests"; // changeable by subclasses if needed
@@ -133,6 +135,12 @@ public abstract class VOSTest {
 
         this.synctransServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_SYNC_21, AuthMethod.ANON);
         log.info(String.format("%s: %s", VOS.VOSPACE_SYNC_21, synctransServiceURL));
+
+        this.nodeSizeReportServiceURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_RECURSIVE_NODESIZE, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_RECURSIVE_NODESIZE, nodeSizeReportServiceURL));
+
+        this.filesURL = regClient.getServiceURL(resourceID, VOS.VOSPACE_FILES, AuthMethod.ANON);
+        log.info(String.format("%s: %s", VOS.VOSPACE_FILES, filesURL));
     }
 
     @Before
