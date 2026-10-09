@@ -172,7 +172,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Map<String, Long> report = fetchNodeSizeReport(authSubject);
             Assert.assertEquals(Long.valueOf(FILE_A_BYTES + FILE_B_BYTES), report.get(String.format("/%s/%s", rootTestFolderName, ALLOCATION_ROOT)));
         } finally {
-            String[] cleanupTree = new String[]{alloc, fileA, subDir, fileB, alloc + "report"};
+            String[] cleanupTree = new String[]{alloc, fileA, subDir, fileB, alloc + "report.txt"};
             cleanupNodeTree(cleanupTree);
         }
     }
@@ -301,7 +301,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         if (!path.endsWith("/")) {
             path = path + "/";
         }
-        return new VOSURI(target.getServiceURI(), path + "report");
+        return new VOSURI(target.getServiceURI(), path + "report.txt");
     }
 
     private void cleanupNodesTree() throws Exception {
@@ -316,7 +316,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             alloc + "d3/f3",
             alloc + "denied/",
             alloc + "denied/f4",
-            alloc + "report"
+            alloc + "report.txt"
         };
         cleanupNodeTree(tree);
     }
@@ -423,7 +423,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private Job postAllocationSize(URL asyncURL, Subject subject, Map<String, Object> params)
             throws Exception {
-        delete(getNodeURL(nodesServiceURL, ALLOCATION_ROOT + "/report"), false); // cleanup the report data node if it exists
+        delete(getNodeURL(nodesServiceURL, ALLOCATION_ROOT + "/report.txt"), false); // cleanup the report data node if it exists
 
         VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         log.debug("postAllocationSize: " + asyncURL + " " + vosURI + " params=" + params);
@@ -465,7 +465,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     private Map<String, Long> fetchNodeSizeReport(Subject subject) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        HttpGet get = new HttpGet(new URL(String.format("%s/%s/%s/%s", filesURL, rootTestFolderName, ALLOCATION_ROOT, "report")), out);
+        HttpGet get = new HttpGet(new URL(String.format("%s/%s/%s/%s", filesURL, rootTestFolderName, ALLOCATION_ROOT, "report.txt")), out);
         Subject.doAs(subject, new RunnableAction(get));
         Assert.assertNull(get.getThrowable());
         Assert.assertEquals(200, get.getResponseCode());
