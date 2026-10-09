@@ -112,7 +112,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     public static final String PERMISSION_DENIED_RESULT_TEXT = "Permission Denied";
 
     private int maxDepth = 0;
-    private VOSURI dest;
+    private VOSURI outputURI;
     private File tmpFile;
     private BufferedWriter reportWriter;
 
@@ -131,22 +131,22 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
                 } catch (NumberFormatException ignore) {
                     // keep default 0
                 }
-            } else if ("dest".equalsIgnoreCase(p.getName())) {
+            } else if ("output".equalsIgnoreCase(p.getName())) {
                 try {
-                    this.dest = new VOSURI(new URI(p.getValue()));
+                    this.outputURI = new VOSURI(new URI(p.getValue()));
                 } catch (URISyntaxException e) {
-                    throw NodeFault.InvalidURI.getStatus("dest must be a valid URI: " + p.getValue());
+                    throw NodeFault.InvalidURI.getStatus("output must be a valid URI: " + p.getValue());
                 }
             }
         }
         if (target == null) {
             throw NodeFault.InvalidArgument.getStatus("target argument required");
         }
-        if (dest == null) {
-            throw NodeFault.InvalidArgument.getStatus("dest argument required");
+        if (outputURI == null) {
+            throw NodeFault.InvalidArgument.getStatus("output argument required");
         }
-        validateDest();
-        log.debug("target: " + target + " dest: " + dest + " maxDepth=" + maxDepth);
+        validateOutputParam();
+        log.debug("target: " + target + " output: " + outputURI + " maxDepth=" + maxDepth);
     }
 
     @Override
@@ -188,7 +188,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
             URL putURL = getPutURL();
             log.debug("Uploading node-size-report to: " + putURL);
-            uploadReportToDest(putURL);
+            uploadReportToOutputLocation(putURL);
             log.debug("Finished uploading node-size-report to: " + putURL);
             return true;
         } finally {
@@ -200,12 +200,12 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         }
     }
 
-    private void validateDest() throws Exception {
-        if (!dest.getServiceURI().equals(target.getServiceURI())) {
-            throw NodeFault.InvalidArgument.getStatus("dest must be the same vospace service as target");
+    private void validateOutputParam() throws Exception {
+        if (!outputURI.getServiceURI().equals(target.getServiceURI())) {
+            throw NodeFault.InvalidArgument.getStatus("output must be the same vospace service as target");
         }
-        if (dest.getPath().endsWith("/")) {
-            throw NodeFault.InvalidArgument.getStatus("dest must be a DataNode path, not a container");
+        if (outputURI.getPath().endsWith("/")) {
+            throw NodeFault.InvalidArgument.getStatus("output must be a DataNode path, not a container");
         }
     }
 
@@ -213,7 +213,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
     private void writeToReport(String path, long size, int depth) throws IOException {
         if (depth <= maxDepth || size < 0L) {
             if (size < 0L) {
-                reportWriter.write(PERMISSION_DENIED_RESULT_TEXT);
+                reportWriter.write(NodeFault.PermissionDenied.toString());
             } else {
                 reportWriter.write(Long.toString(size));
             }
@@ -279,7 +279,7 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
 
     private URL getPutURL() throws Exception {
         Subject caller = AuthenticationUtil.getCurrentSubject();
-        PushToVOSpaceNegotiation.ensureAndGetDataNode(dest, nodePersistence, authorizer);
+        PushToVOSpaceNegotiation.ensureAndGetDataNode(outputURI, nodePersistence, authorizer);
 
         CredUtil.checkCredentials(caller);
         AuthMethod authType = AuthenticationUtil.getAuthMethodFromCredentials(caller);
@@ -288,27 +288,27 @@ public class RecursiveNodeSizeRunner extends AbstractRecursiveRunner {
         Protocol sc = new Protocol(VOS.PROTOCOL_HTTPS_PUT);
         sc.setSecurityMethod(securityMethod);
 
-        Transfer request = new Transfer(dest.getURI(), Direction.pushToVoSpace);
+        Transfer request = new Transfer(outputURI.getURI(), Direction.pushToVoSpace);
         request.version = VOS.VOSPACE_21;
         request.getProtocols().add(sc);
-        List<Protocol> endpoints = nodePersistence.getTransferGenerator().getEndpoints(dest, request, null);
+        List<Protocol> endpoints = nodePersistence.getTransferGenerator().getEndpoints(outputURI, request, null);
         if (endpoints == null || endpoints.isEmpty()) {
-            throw new IllegalStateException("endpoint not found for: " + dest);
+            throw new IllegalStateException("endpoint not found for: " + outputURI);
         }
         return new URL(endpoints.get(0).getEndpoint());
     }
 
-    private void uploadReportToDest(URL putURL) throws Exception {
+    private void uploadReportToOutputLocation(URL putURL) throws Exception {
         HttpUpload upload = new HttpUpload(tmpFile, putURL);
         upload.setRequestProperty(HttpConstants.HDR_CONTENT_TYPE, CONTENT_TYPE);
         upload.run();
         if (upload.getThrowable() != null) {
-            throw new IOException("failed to write nodesize report to " + dest, upload.getThrowable());
+            throw new IOException("failed to write nodesize report to " + outputURI, upload.getThrowable());
         }
     }
 
     @Override
     protected List<Result> getAdditionalResults() {
-        return List.of(new Result("output", dest.getURI()));
+        return List.of(new Result("output", outputURI.getURI()));
     }
 }

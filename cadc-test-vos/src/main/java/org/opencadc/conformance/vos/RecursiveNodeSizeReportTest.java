@@ -162,7 +162,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Map<String, Object> params = new HashMap<>();
             params.put("target", vosURI.getURI());
             URI uri = getDefaultReportDest(vosURI).getURI();
-            params.put("dest", uri);
+            params.put("output", uri);
             Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
 
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -196,7 +196,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
-        params.put("dest", uri);
+        params.put("output", uri);
         params.put("maxdepth", "0");
         Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -212,7 +212,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
-        params.put("dest", uri);
+        params.put("output", uri);
         params.put("maxdepth", "1");
         Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -232,7 +232,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
         URI uri = getDefaultReportDest(vosURI).getURI();
-        params.put("dest", uri);
+        params.put("output", uri);
         params.put("maxdepth", "2");
         Job job = postAllocationSize(nodeSizeReportServiceURL, authSubject, params);
         Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -257,7 +257,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             Map<String, Object> params = new HashMap<>();
             params.put("target", vosURI.getURI());
             URI uri = getDefaultReportDest(vosURI).getURI();
-            params.put("dest", uri);
+            params.put("output", uri);
             params.put("maxdepth", "2");
             Job job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
             Assert.assertEquals(ExecutionPhase.COMPLETED, job.getExecutionPhase());
@@ -273,7 +273,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             params = new HashMap<>();
             params.put("target", vosURI.getURI());
             uri = getDefaultReportDest(vosURI).getURI();
-            params.put("dest", uri);
+            params.put("output", uri);
             params.put("maxdepth", "2");
             job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
             Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
@@ -285,7 +285,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
 
     @Test
     public void testAllocationAsyncSizeRequiresDest() throws Exception {
-        // POST job with target but no dest -> execution phase changes to ERROR
+        // POST job with target but no output param-> execution phase changes to ERROR
         VOSURI vosURI = getVOSURI(ALLOCATION_ROOT);
         Map<String, Object> params = new HashMap<>();
         params.put("target", vosURI.getURI());
@@ -293,7 +293,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
         Job job = postAllocationSize(nodeSizeReportServiceURL, groupMember, params);
         Assert.assertEquals(ExecutionPhase.ERROR, job.getExecutionPhase());
         String summaryMessage = job.getErrorSummary().getSummaryMessage();
-        Assert.assertEquals("InvalidArgument: dest argument required", summaryMessage);
+        Assert.assertEquals("InvalidArgument: output argument required", summaryMessage);
     }
 
     private VOSURI getDefaultReportDest(VOSURI target) {
@@ -482,7 +482,7 @@ public class RecursiveNodeSizeReportTest extends VOSTest {
             }
             int tab = line.indexOf('\t');
             if (tab > 0) {
-                long bytes = "Permission Denied".equals(line.substring(0, tab))
+                long bytes = "PermissionDenied".equals(line.substring(0, tab))
                         ? -1L
                         : Long.parseLong(line.substring(0, tab));
                 map.put(line.substring(tab + 1), bytes);
