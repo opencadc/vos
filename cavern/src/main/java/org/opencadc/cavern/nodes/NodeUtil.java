@@ -288,11 +288,17 @@ class NodeUtil {
         for (Map.Entry<String,String> me : cur.entrySet()) {
             ExtendedFileAttributes.setFileAttribute(path, me.getKey(), null);
         }
+        if (node instanceof LinkNode) {
+            if (node.getProperties().isEmpty()) {
+                return;
+            } else {
+                // xattrs and ACLs cannot be assigned to symlinks
+                throw new IllegalArgumentException("cannot assign properties to LinkNode");
+            }
+        }
+
         for (NodeProperty prop : node.getProperties()) {
             if (!FILESYSTEM_PROPS.contains(prop.getKey())) {
-                if (node instanceof LinkNode) {
-                    throw new IllegalArgumentException("cannot assign properties to LinkNode");
-                }
                 ExtendedFileAttributes.setFileAttribute(path, prop.getKey().toASCIIString(), prop.getValue());
             }
         }
@@ -330,6 +336,7 @@ class NodeUtil {
             }
         }
 
+        // remaining 
         final AclCommandExecutor acl = new AclCommandExecutor(path, isDir);
 
         // important: the calling library is responsible for merging changes into the current
